@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ResumenEjecutivo } from '@/components/gobierno/ResumenEjecutivo';
 import { TablaDisponibilidad } from '@/components/gobierno/TablaDisponibilidad';
+import { ObservacionesEjecutivas } from '@/components/gobierno/ObservacionesEjecutivas';
 import { RegistroIncidentes } from '@/components/gobierno/RegistroIncidentes';
 import { CumplimientoSLA } from '@/components/gobierno/CumplimientoSLA';
 import { HistorialReportes } from '@/components/gobierno/HistorialReportes';
