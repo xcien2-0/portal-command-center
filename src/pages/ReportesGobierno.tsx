@@ -97,6 +97,18 @@ export default function ReportesGobierno() {
 
         <Separator className="bg-gob-navy/10" />
 
+        <ObservacionesEjecutivas
+          month={month}
+          year={year}
+          uptimePct={disponibilidad}
+          slaMet={slaCumplido}
+          incidentCount={incidentesRegistrados}
+          avgResolutionMin={47}
+          incidents={MOCK_GOB_INCIDENTS}
+        />
+
+        <Separator className="bg-gob-navy/10" />
+
         <TablaDisponibilidad data={dailyData} />
 
         <Separator className="bg-gob-navy/10" />
