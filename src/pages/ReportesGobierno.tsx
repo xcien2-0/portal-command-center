@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ResumenEjecutivo } from '@/components/gobierno/ResumenEjecutivo';
 import { TablaDisponibilidad } from '@/components/gobierno/TablaDisponibilidad';
+import { ObservacionesEjecutivas } from '@/components/gobierno/ObservacionesEjecutivas';
 import { RegistroIncidentes } from '@/components/gobierno/RegistroIncidentes';
 import { CumplimientoSLA } from '@/components/gobierno/CumplimientoSLA';
 import { HistorialReportes } from '@/components/gobierno/HistorialReportes';
@@ -92,6 +93,18 @@ export default function ReportesGobierno() {
           tiempoPromedioResolucion={tiempoPromedioResolucion}
           onGeneratePDF={handleGeneratePDF}
           pdfGenerating={pdfGenerating}
+        />
+
+        <Separator className="bg-gob-navy/10" />
+
+        <ObservacionesEjecutivas
+          month={month}
+          year={year}
+          uptimePct={disponibilidad}
+          slaMet={slaCumplido}
+          incidentCount={incidentesRegistrados}
+          avgResolutionMin={47}
+          incidents={MOCK_GOB_INCIDENTS}
         />
 
         <Separator className="bg-gob-navy/10" />
