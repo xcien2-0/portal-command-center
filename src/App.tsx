@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
 import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
+import PitchDeck from "./pages/PitchDeck.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
