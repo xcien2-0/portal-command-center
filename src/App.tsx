@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
 import RedEnVivo from "./pages/RedEnVivo.tsx";
+import ReportesGobierno from "./pages/ReportesGobierno.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
