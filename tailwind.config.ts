@@ -56,6 +56,9 @@ export default {
           warning: "hsl(var(--status-warning))",
           critical: "hsl(var(--status-critical))",
         },
+        gob: {
+          navy: "hsl(var(--gob-navy))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

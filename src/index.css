@@ -36,6 +36,8 @@
 
     --radius: 0.25rem;
 
+    --gob-navy: 210 53% 23%;
+
     --status-ok: 160 70% 37%;
     --status-warning: 37 78% 41%;
     --status-critical: 0 72% 59%;
