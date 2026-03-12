@@ -19,24 +19,31 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SidebarProvider>
-          <div className="min-h-screen flex w-full">
-            <AppSidebar />
-            <div className="flex-1 flex flex-col min-w-0">
-              <header className="h-10 flex items-center border-b border-border bg-background px-2">
-                <SidebarTrigger />
-              </header>
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/red-en-vivo" element={<RedEnVivo />} />
-                  <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <Routes>
+          {/* Full-screen route (no sidebar) */}
+          <Route path="/pitch" element={<PitchDeck />} />
+          {/* Main app with sidebar */}
+          <Route path="*" element={
+            <SidebarProvider>
+              <div className="min-h-screen flex w-full">
+                <AppSidebar />
+                <div className="flex-1 flex flex-col min-w-0">
+                  <header className="h-10 flex items-center border-b border-border bg-background px-2">
+                    <SidebarTrigger />
+                  </header>
+                  <main className="flex-1">
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/red-en-vivo" element={<RedEnVivo />} />
+                      <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </main>
+                </div>
+              </div>
+            </SidebarProvider>
+          } />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
