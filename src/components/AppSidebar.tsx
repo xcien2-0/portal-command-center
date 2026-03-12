@@ -1,6 +1,7 @@
-import { Home, Radio, Settings } from 'lucide-react';
+import { Home, Radio, FileText } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +17,7 @@ import {
 const items = [
   { title: 'Inicio', url: '/', icon: Home },
   { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
+  { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
 ];
 
 export function AppSidebar() {
