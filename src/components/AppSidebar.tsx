@@ -1,6 +1,7 @@
-import { Home, Radio, Settings } from 'lucide-react';
+import { Home, Radio, FileText } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +17,7 @@ import {
 const items = [
   { title: 'Inicio', url: '/', icon: Home },
   { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
+  { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
 ];
 
 export function AppSidebar() {
@@ -38,6 +40,9 @@ export function AppSidebar() {
                     <NavLink to={item.url} end className="hover:bg-accent/50" activeClassName="bg-accent text-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && (item as any).gob && (
+                        <Badge className="ml-auto bg-gob-navy text-white text-[9px] px-1 py-0 h-4">GOB</Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

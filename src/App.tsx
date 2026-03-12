@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
 import RedEnVivo from "./pages/RedEnVivo.tsx";
+import ReportesGobierno from "./pages/ReportesGobierno.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/red-en-vivo" element={<RedEnVivo />} />
+                  <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
