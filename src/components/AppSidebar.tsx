@@ -18,6 +18,7 @@ const items = [
   { title: 'Inicio', url: '/', icon: Home },
   { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
   { title: 'Coco Box', url: '/coco-monitor', icon: Satellite },
+  { title: 'Onboarding', url: '/coco-onboarding', icon: UserPlus },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];

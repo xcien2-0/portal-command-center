@@ -38,6 +38,7 @@ const App = () => (
                       <Route path="/" element={<Index />} />
                       <Route path="/red-en-vivo" element={<RedEnVivo />} />
                       <Route path="/coco-monitor" element={<CocoBoxMonitor />} />
+                      <Route path="/coco-onboarding" element={<CocoOnboarding />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
