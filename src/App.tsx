@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
 import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
+import CocoBoxMonitor from "./pages/CocoBoxMonitor.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -35,6 +36,7 @@ const App = () => (
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/red-en-vivo" element={<RedEnVivo />} />
+                      <Route path="/coco-monitor" element={<CocoBoxMonitor />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
