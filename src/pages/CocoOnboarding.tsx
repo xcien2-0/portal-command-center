@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { MessageCircle, FileText, Wifi, ShoppingCart, BarChart3, ChevronRight, CheckCircle2, AlertTriangle, Clock, Send, Video, ClipboardList } from 'lucide-react';
+import { MessageCircle, FileText, Wifi, ShoppingCart, BarChart3, ChevronRight, CheckCircle2, AlertTriangle, Clock, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type StepStatus = 'pending' | 'active' | 'completed' | 'escalated';
+type StepStatus = 'pending' | 'active' | 'completed';
 
 interface OnboardingStep {
   day: string;
