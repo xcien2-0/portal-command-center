@@ -1,4 +1,4 @@
-import { Home, Radio, FileText, Presentation, Satellite, UserPlus } from 'lucide-react';
+import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ const items = [
   { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
   { title: 'Coco Box', url: '/coco-monitor', icon: Satellite },
   { title: 'Onboarding', url: '/coco-onboarding', icon: UserPlus },
+  { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
