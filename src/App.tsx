@@ -10,6 +10,7 @@ import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
 import CocoBoxMonitor from "./pages/CocoBoxMonitor.tsx";
 import CocoOnboarding from "./pages/CocoOnboarding.tsx";
+import NocVip from "./pages/NocVip.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
