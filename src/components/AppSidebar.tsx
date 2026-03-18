@@ -19,6 +19,7 @@ const items = [
   { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
   { title: 'Coco Box', url: '/coco-monitor', icon: Satellite },
   { title: 'Onboarding', url: '/coco-onboarding', icon: UserPlus },
+  { title: 'Call Center', url: '/call-center', icon: Phone },
   { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },

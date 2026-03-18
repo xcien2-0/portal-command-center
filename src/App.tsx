@@ -41,6 +41,7 @@ const App = () => (
                       <Route path="/red-en-vivo" element={<RedEnVivo />} />
                       <Route path="/coco-monitor" element={<CocoBoxMonitor />} />
                       <Route path="/coco-onboarding" element={<CocoOnboarding />} />
+                      <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/noc-vip" element={<NocVip />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="*" element={<NotFound />} />
