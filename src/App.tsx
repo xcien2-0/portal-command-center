@@ -10,6 +10,7 @@ import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
 import CocoBoxMonitor from "./pages/CocoBoxMonitor.tsx";
 import CocoOnboarding from "./pages/CocoOnboarding.tsx";
+import CallCenter from "./pages/CallCenter.tsx";
 import NocVip from "./pages/NocVip.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -40,6 +41,7 @@ const App = () => (
                       <Route path="/red-en-vivo" element={<RedEnVivo />} />
                       <Route path="/coco-monitor" element={<CocoBoxMonitor />} />
                       <Route path="/coco-onboarding" element={<CocoOnboarding />} />
+                      <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/noc-vip" element={<NocVip />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="*" element={<NotFound />} />
