@@ -1,4 +1,4 @@
-import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone, BarChart3 } from 'lucide-react';
+import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone, BarChart3, LayoutDashboard } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ const items = [
   { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
+  { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 
