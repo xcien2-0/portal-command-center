@@ -22,6 +22,7 @@ const items = [
   { title: 'Call Center', url: '/call-center', icon: Phone },
   { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
+  { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 

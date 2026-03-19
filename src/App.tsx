@@ -45,6 +45,7 @@ const App = () => (
                       <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/noc-vip" element={<NocVip />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
+                      <Route path="/reporte-impacto" element={<ReporteImpacto />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
