@@ -12,6 +12,7 @@ import CocoBoxMonitor from "./pages/CocoBoxMonitor.tsx";
 import CocoOnboarding from "./pages/CocoOnboarding.tsx";
 import CallCenter from "./pages/CallCenter.tsx";
 import NocVip from "./pages/NocVip.tsx";
+import ReporteImpacto from "./pages/ReporteImpacto.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -44,6 +45,7 @@ const App = () => (
                       <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/noc-vip" element={<NocVip />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
+                      <Route path="/reporte-impacto" element={<ReporteImpacto />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
