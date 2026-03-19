@@ -23,6 +23,7 @@ const items = [
   { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
+  { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 
