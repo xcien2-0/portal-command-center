@@ -28,6 +28,7 @@ const App = () => (
         <Routes>
           {/* Full-screen route (no sidebar) */}
           <Route path="/pitch" element={<PitchDeck />} />
+          <Route path="/gerencia" element={<Gerencia />} />
           {/* Main app with sidebar */}
           <Route path="*" element={
             <SidebarProvider>
