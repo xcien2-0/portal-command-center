@@ -1,4 +1,4 @@
-import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone } from 'lucide-react';
+import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone, BarChart3 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
