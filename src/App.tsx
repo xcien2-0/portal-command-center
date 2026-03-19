@@ -14,6 +14,7 @@ import CallCenter from "./pages/CallCenter.tsx";
 import NocVip from "./pages/NocVip.tsx";
 import ReporteImpacto from "./pages/ReporteImpacto.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
+import Gerencia from "./pages/Gerencia.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
