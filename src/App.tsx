@@ -13,6 +13,7 @@ import CocoOnboarding from "./pages/CocoOnboarding.tsx";
 import CallCenter from "./pages/CallCenter.tsx";
 import NocVip from "./pages/NocVip.tsx";
 import ReporteImpacto from "./pages/ReporteImpacto.tsx";
+import IBlackPortal from "./pages/IBlackPortal.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import Gerencia from "./pages/Gerencia.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -29,6 +30,7 @@ const App = () => (
           {/* Full-screen route (no sidebar) */}
           <Route path="/pitch" element={<PitchDeck />} />
           <Route path="/gerencia" element={<Gerencia />} />
+          <Route path="/iblack/*" element={<IBlackPortal />} />
           {/* Main app with sidebar */}
           <Route path="*" element={
             <SidebarProvider>
