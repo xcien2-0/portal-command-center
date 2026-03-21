@@ -22,10 +22,8 @@ export default function RedEnVivo() {
   const [incidentPanelOpen, setIncidentPanelOpen] = useState(false);
   const [incidentNodeId, setIncidentNodeId] = useState<string | undefined>();
 
-  // TODO: connect to Zabbix API or LibreNMS API for real data
   useEffect(() => {
     const interval = setInterval(() => {
-      // Mock data rotation: slightly vary latency values
       setNodes(prev => prev.map(n => ({
         ...n,
         latency: Math.max(1, n.latency + Math.floor(Math.random() * 5 - 2)),
@@ -34,17 +32,15 @@ export default function RedEnVivo() {
       })));
       setBandwidthData(generateBandwidthHistory());
       setLastUpdated(new Date().toLocaleTimeString('es-MX'));
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const handleAttendAlert = useCallback((alertId: string) => {
-    // TODO: connect to Zabbix API to acknowledge alert
     setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'en_atencion' as const, isNew: false } : a));
   }, []);
 
   const handleCreateIncident = useCallback((data: Omit<Incident, 'id' | 'createdAt' | 'status'>) => {
-    // TODO: connect to Supabase incidents table
     const newIncident: Incident = {
       ...data,
       id: `inc-${Date.now()}`,
@@ -61,7 +57,6 @@ export default function RedEnVivo() {
   };
 
   const handleExportCSV = () => {
-    // TODO: connect to Supabase for full incident history
     const header = 'ID,Nodo,Descripción,Prioridad,Técnico,Estado,Creado\n';
     const rows = incidents.map(i => `${i.id},${i.nodeId},${i.description},${i.priority},${i.assignedTech},${i.status},${i.createdAt}`).join('\n');
     const blob = new Blob([header + rows], { type: 'text/csv' });
@@ -80,7 +75,7 @@ export default function RedEnVivo() {
   const activeNodes = nodes.filter(n => n.status !== 'critical').length;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#0f1923] text-[#F5F5F7]">
       <HeaderStatusBar
         healthPercent={healthPercent}
         activeAlertCount={activeAlerts}
@@ -89,25 +84,24 @@ export default function RedEnVivo() {
         onViewModeChange={setViewMode}
       />
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* Mapa de Alertas - Node Grid */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-8">
+        {/* Node Grid */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Mapa de Nodos</h2>
-          <div className="grid grid-cols-5 gap-2">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-[#8ba3b8] mb-3">Nodos de red</h2>
+          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
             {nodes.map(node => (
               <NodeCard key={node.id} node={node} onClick={setSelectedNode} />
             ))}
           </div>
         </section>
 
-        {/* Alertas Activas */}
+        {/* Alerts */}
         <section>
           <AlertsTable alerts={alerts} onAttend={handleAttendAlert} />
         </section>
 
-        {/* Métricas de Red */}
+        {/* Bandwidth Chart */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Métricas de Red</h2>
           <MetricsSection
             avgLatency={avgLatency}
             packetLoss={packetLoss}
@@ -129,7 +123,7 @@ export default function RedEnVivo() {
         />
       )}
 
-      {/* Incident Panel Slide-over */}
+      {/* Incident Panel */}
       <IncidentPanel
         open={incidentPanelOpen}
         onClose={() => { setIncidentPanelOpen(false); setIncidentNodeId(undefined); }}

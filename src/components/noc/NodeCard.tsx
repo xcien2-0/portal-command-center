@@ -1,21 +1,17 @@
 import { NetworkNode, NodeStatus } from '@/data/mockNetworkData';
 
-const statusBorderMap: Record<NodeStatus, string> = {
-  ok: 'border-status-ok',
-  warning: 'border-status-warning',
-  critical: 'border-status-critical',
+const ISP_COLORS: Record<string, string> = {
+  Xcien: 'bg-[#0ea5e9]/20 text-[#38bdf8]',
+  Luminet: 'bg-[#6366f1]/20 text-[#818cf8]',
+  iBlack: 'bg-[#F5F5F7]/15 text-[#F5F5F7]',
+  Wispi: 'bg-[#a855f7]/20 text-[#c084fc]',
+  Coco: 'bg-[#f97316]/20 text-[#fb923c]',
 };
 
-const statusBgMap: Record<NodeStatus, string> = {
-  ok: 'bg-status-ok/10 text-status-ok',
-  warning: 'bg-status-warning/10 text-status-warning',
-  critical: 'bg-status-critical/10 text-status-critical',
-};
-
-const statusLabel: Record<NodeStatus, string> = {
-  ok: 'OK',
-  warning: 'WARNING',
-  critical: 'CRITICAL',
+const borderColor: Record<NodeStatus, string> = {
+  ok: '#34C759',
+  warning: '#FF9F0A',
+  critical: '#FF3B30',
 };
 
 interface NodeCardProps {
@@ -24,26 +20,35 @@ interface NodeCardProps {
 }
 
 export function NodeCard({ node, onClick }: NodeCardProps) {
+  const isCritical = node.status === 'critical';
+  const latencyColor = node.latency > 150 ? 'text-[#FF3B30]' : node.latency > 30 ? 'text-[#FF9F0A]' : 'text-[#34C759]';
+  const uptimeColor = node.uptime < 95 ? 'text-[#FF3B30]' : node.uptime < 99 ? 'text-[#FF9F0A]' : 'text-[#34C759]';
+
   return (
     <button
       onClick={() => onClick(node)}
-      className={`w-full text-left rounded border-l-2 ${statusBorderMap[node.status]} bg-card p-3 hover:bg-accent transition-colors cursor-pointer`}
+      className={`w-full text-left rounded-lg p-3.5 transition-all cursor-pointer border-l-[3px] ${
+        isCritical
+          ? 'bg-[#FF3B30]/[0.08] animate-pulse-alert'
+          : 'bg-[#1a2733] hover:bg-[#223344]'
+      }`}
+      style={{ borderLeftColor: borderColor[node.status] }}
     >
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <span className="text-xs font-semibold font-mono truncate">{node.name}</span>
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${statusBgMap[node.status]}`}>
-          {statusLabel[node.status]}
+      <div className="flex items-start justify-between mb-1.5">
+        <span className="text-[14px] font-semibold text-[#F5F5F7] leading-tight">{node.shortName}</span>
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${ISP_COLORS[node.isp] || 'bg-[#2a3f50] text-[#8ba3b8]'}`}>
+          {node.isp}
         </span>
       </div>
-      <p className="text-[11px] text-muted-foreground mb-2">{node.location}</p>
-      <div className="flex items-center gap-3 text-[11px]">
-        <span className="font-mono">
-          <span className="text-muted-foreground">Lat:</span>{' '}
-          <span className={node.latency > 50 ? 'text-status-warning' : node.latency > 150 ? 'text-status-critical' : 'text-foreground'}>{node.latency}ms</span>
+      <p className="text-[12px] text-[#8ba3b8] mb-2.5">{node.location}</p>
+      <div className="border-t border-[#2a3f50] pt-2 flex items-center gap-4 text-[12px] font-mono">
+        <span>
+          <span className={latencyColor}>{node.latency}ms</span>
+          <span className="text-[#5a7080] ml-1 text-[10px]">Lat.</span>
         </span>
-        <span className="font-mono">
-          <span className="text-muted-foreground">Up:</span>{' '}
-          <span className={node.uptime < 95 ? 'text-status-critical' : node.uptime < 99 ? 'text-status-warning' : 'text-foreground'}>{node.uptime}%</span>
+        <span>
+          <span className={uptimeColor}>{node.uptime}%</span>
+          <span className="text-[#5a7080] ml-1 text-[10px]">Up</span>
         </span>
       </div>
     </button>

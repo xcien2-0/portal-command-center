@@ -1,7 +1,4 @@
-import { useState } from 'react';
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 interface HeaderStatusBarProps {
   healthPercent: number;
@@ -12,40 +9,47 @@ interface HeaderStatusBarProps {
 }
 
 export function HeaderStatusBar({ healthPercent, activeAlertCount, lastUpdated, viewMode, onViewModeChange }: HeaderStatusBarProps) {
-  const statusColor = healthPercent >= 98 ? 'text-status-ok' : healthPercent >= 90 ? 'text-status-warning' : 'text-status-critical';
+  const statusColor = healthPercent >= 95 ? 'text-[#34C759]' : healthPercent >= 85 ? 'text-[#FF9F0A]' : 'text-[#FF3B30]';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur px-4 py-2">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#2a3f50] bg-[#0f1923]/90 backdrop-blur-xl px-5 py-3">
+      {/* Left */}
       <div className="flex items-center gap-3">
-        <Activity className={`h-5 w-5 ${statusColor}`} />
-        <span className="text-sm font-semibold">
-          Red Operando al <span className={`font-mono ${statusColor}`}>{healthPercent}%</span>
-        </span>
-        <Badge variant="destructive" className="animate-pulse-alert flex items-center gap-1 text-xs px-2 py-0.5">
-          <AlertTriangle className="h-3 w-3" />
-          {activeAlertCount}
-        </Badge>
+        <h1 className="text-[15px] font-semibold text-[#F5F5F7]">Red en Vivo</h1>
+        <span className="text-[12px] text-[#8ba3b8] font-mono">{lastUpdated}</span>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="h-3 w-3" />
-          <span className="font-mono">{lastUpdated}</span>
-        </div>
+      {/* Center */}
+      <div className="flex items-center gap-2">
+        <Activity className={`h-4 w-4 ${statusColor}`} />
+        <span className={`text-[17px] font-bold ${statusColor}`}>
+          Red operando al {healthPercent}%
+        </span>
+      </div>
 
-        <div className="flex rounded border border-border overflow-hidden">
-          <button
-            onClick={() => onViewModeChange('operador')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'operador' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
-          >
-            Operador
-          </button>
-          <button
-            onClick={() => onViewModeChange('gerencial')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'gerencial' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}
-          >
-            Gerencial
-          </button>
+      {/* Right */}
+      <div className="flex items-center gap-3">
+        {activeAlertCount > 0 && (
+          <div className="flex items-center gap-1.5 bg-[#FF3B30]/15 text-[#FF3B30] px-2.5 py-1 rounded-full text-[12px] font-semibold animate-pulse-alert">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {activeAlertCount}
+          </div>
+        )}
+
+        <div className="flex rounded-lg overflow-hidden border border-[#2a3f50]">
+          {(['operador', 'gerencial'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => onViewModeChange(mode)}
+              className={`px-3 py-1.5 text-[12px] font-medium capitalize transition-colors ${
+                viewMode === mode
+                  ? 'bg-[#F5F5F7] text-[#0f1923]'
+                  : 'bg-transparent text-[#8ba3b8] hover:text-[#F5F5F7]'
+              }`}
+            >
+              {mode === 'operador' ? 'Operador' : 'Gerencial'}
+            </button>
+          ))}
         </div>
       </div>
     </header>
