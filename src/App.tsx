@@ -31,6 +31,7 @@ const App = () => (
           {/* Full-screen route (no sidebar) */}
           <Route path="/pitch" element={<PitchDeck />} />
           <Route path="/gerencia" element={<Gerencia />} />
+          <Route path="/scan" element={<Scan />} />
           <Route path="/iblack/*" element={<IBlackPortal />} />
           {/* Main app with sidebar */}
           <Route path="*" element={

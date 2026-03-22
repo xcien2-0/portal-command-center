@@ -103,4 +103,33 @@
   .animate-fade-collapse {
     animation: fade-collapse 0.3s ease-out forwards;
   }
+
+  @keyframes scan-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+
+  .animate-scan-pulse {
+    animation: scan-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes scan-line {
+    0% { top: 10%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 90%; opacity: 0; }
+  }
+
+  .animate-scan-line {
+    animation: scan-line 2s ease-in-out infinite;
+  }
+
+  @keyframes slide-in-bottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .animate-slide-in-bottom {
+    animation: slide-in-bottom 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }

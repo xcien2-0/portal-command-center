@@ -24,6 +24,7 @@ const items = [
   { title: 'Reportes GOB', url: '/reportes-gobierno', icon: FileText, gob: true },
   { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
   { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
+  { title: 'Scanner', url: '/scan', icon: ScanLine },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 
