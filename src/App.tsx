@@ -16,6 +16,7 @@ import ReporteImpacto from "./pages/ReporteImpacto.tsx";
 import IBlackPortal from "./pages/IBlackPortal.tsx";
 import PitchDeck from "./pages/PitchDeck.tsx";
 import Gerencia from "./pages/Gerencia.tsx";
+import Scan from "./pages/Scan.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
