@@ -14,7 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_online: boolean
+          name: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_online?: boolean
+          name: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_online?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          odoo_client_id: string | null
+          phone: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          odoo_client_id?: string | null
+          phone?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          odoo_client_id?: string | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          assigned_agent_id: string | null
+          channel: Database["public"]["Enums"]["conversation_channel"]
+          company_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["conversation_status"]
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          channel?: Database["public"]["Enums"]["conversation_channel"]
+          company_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          channel?: Database["public"]["Enums"]["conversation_channel"]
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["conversation_status"]
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_name: string | null
+          sender_type: Database["public"]["Enums"]["message_sender_type"]
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_name?: string | null
+          sender_type?: Database["public"]["Enums"]["message_sender_type"]
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_name?: string | null
+          sender_type?: Database["public"]["Enums"]["message_sender_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +204,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      conversation_channel: "whatsapp" | "call" | "ticket"
+      conversation_status:
+        | "bot_active"
+        | "escalated"
+        | "in_progress"
+        | "resolved"
+      message_sender_type: "bot" | "client" | "agent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +337,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      conversation_channel: ["whatsapp", "call", "ticket"],
+      conversation_status: [
+        "bot_active",
+        "escalated",
+        "in_progress",
+        "resolved",
+      ],
+      message_sender_type: ["bot", "client", "agent"],
+    },
   },
 } as const
