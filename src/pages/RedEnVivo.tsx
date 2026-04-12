@@ -22,6 +22,7 @@ export default function RedEnVivo() {
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [incidentPanelOpen, setIncidentPanelOpen] = useState(false);
   const [incidentNodeId, setIncidentNodeId] = useState<string | undefined>();
+  const [dispatchNode, setDispatchNode] = useState<NetworkNode | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
