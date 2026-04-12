@@ -124,6 +124,13 @@ export default function RedEnVivo() {
         />
       )}
 
+      {/* Dispatch Modal */}
+      <DispatchModal
+        open={!!dispatchNode}
+        onClose={() => setDispatchNode(null)}
+        node={dispatchNode}
+      />
+
       {/* Incident Panel */}
       <IncidentPanel
         open={incidentPanelOpen}
