@@ -196,6 +196,33 @@ export type Database = {
           },
         ]
       }
+      technicians: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          speciality: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          speciality?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          speciality?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
