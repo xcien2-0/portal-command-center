@@ -53,9 +53,8 @@ export default function RedEnVivo() {
   }, []);
 
   const handleOpenIncidentFromNode = (nodeId: string) => {
-    setIncidentNodeId(nodeId);
-    setSelectedNode(null);
-    setIncidentPanelOpen(true);
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) setDispatchNode(node);
   };
 
   const handleExportCSV = () => {
