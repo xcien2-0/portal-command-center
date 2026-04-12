@@ -10,6 +10,7 @@ import { NodeDetailPanel } from '@/components/noc/NodeDetailPanel';
 import { AlertsTable } from '@/components/noc/AlertsTable';
 import { MetricsSection } from '@/components/noc/MetricsSection';
 import { IncidentPanel } from '@/components/noc/IncidentPanel';
+import { DispatchModal } from '@/components/noc/DispatchModal';
 
 export default function RedEnVivo() {
   const [nodes, setNodes] = useState(MOCK_NODES);
