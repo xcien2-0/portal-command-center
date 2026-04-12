@@ -10,6 +10,7 @@ import { NodeDetailPanel } from '@/components/noc/NodeDetailPanel';
 import { AlertsTable } from '@/components/noc/AlertsTable';
 import { MetricsSection } from '@/components/noc/MetricsSection';
 import { IncidentPanel } from '@/components/noc/IncidentPanel';
+import { DispatchModal } from '@/components/noc/DispatchModal';
 
 export default function RedEnVivo() {
   const [nodes, setNodes] = useState(MOCK_NODES);
@@ -21,6 +22,7 @@ export default function RedEnVivo() {
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [incidentPanelOpen, setIncidentPanelOpen] = useState(false);
   const [incidentNodeId, setIncidentNodeId] = useState<string | undefined>();
+  const [dispatchNode, setDispatchNode] = useState<NetworkNode | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -51,9 +53,8 @@ export default function RedEnVivo() {
   }, []);
 
   const handleOpenIncidentFromNode = (nodeId: string) => {
-    setIncidentNodeId(nodeId);
-    setSelectedNode(null);
-    setIncidentPanelOpen(true);
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) setDispatchNode(node);
   };
 
   const handleExportCSV = () => {
@@ -122,6 +123,13 @@ export default function RedEnVivo() {
           onCreateIncident={handleOpenIncidentFromNode}
         />
       )}
+
+      {/* Dispatch Modal */}
+      <DispatchModal
+        open={!!dispatchNode}
+        onClose={() => setDispatchNode(null)}
+        node={dispatchNode}
+      />
 
       {/* Incident Panel */}
       <IncidentPanel
