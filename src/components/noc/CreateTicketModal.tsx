@@ -52,13 +52,26 @@ export function CreateTicketModal({ open, onClose, alert, tenantId, tenantType }
     };
 
     try {
+      // Save to dispatch_tickets table
+      await supabase.from('dispatch_tickets').insert({
+        city: alert.cityName,
+        site: alert.siteName,
+        host_ip: alert.hostIp,
+        description,
+        priority,
+        source: 'noc_alert',
+        technician_id: technicianId || null,
+        tenant_id: tenantId,
+        tenant_type: tenantType,
+      });
+
       const webhookUrl = import.meta.env.VITE_N8N_DISPATCH_WEBHOOK;
       if (webhookUrl) {
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        });
+        }).catch(() => {});
       }
       toast.success('Ticket enviado a Dispatch ✓');
       onClose();

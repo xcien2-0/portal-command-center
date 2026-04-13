@@ -86,13 +86,27 @@ export function DispatchModal({ open, onClose, node }: DispatchModalProps) {
     };
 
     try {
-      // POST to n8n webhook — replace URL with your actual webhook
+      // Save to dispatch_tickets table
+      await supabase.from('dispatch_tickets').insert({
+        city: node.location,
+        host_ip: node.ip,
+        host_name: node.name,
+        description,
+        priority,
+        source: 'red_en_vivo',
+        technician_id: selectedTechId,
+        technician_name: tech?.name || null,
+        isp: node.isp,
+        zone: node.zone,
+      });
+
+      // POST to n8n webhook
       const webhookUrl = 'https://n8n.ispilot.mx/webhook/dispatch-incidente';
       await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
+      }).catch(() => {});
       setSent(true);
     } catch (err) {
       console.error('Error dispatching:', err);
