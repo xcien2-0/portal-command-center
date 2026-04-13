@@ -161,6 +161,83 @@ export type Database = {
           },
         ]
       }
+      dispatch_tickets: {
+        Row: {
+          city: string
+          created_at: string
+          description: string
+          host_ip: string | null
+          host_name: string | null
+          id: string
+          isp: string | null
+          notes: string | null
+          priority: string
+          resolved_at: string | null
+          site: string | null
+          source: string
+          status: string
+          technician_id: string | null
+          technician_name: string | null
+          tenant_id: string | null
+          tenant_type: string | null
+          ticket_number: string
+          updated_at: string
+          zone: string | null
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          description: string
+          host_ip?: string | null
+          host_name?: string | null
+          id?: string
+          isp?: string | null
+          notes?: string | null
+          priority?: string
+          resolved_at?: string | null
+          site?: string | null
+          source?: string
+          status?: string
+          technician_id?: string | null
+          technician_name?: string | null
+          tenant_id?: string | null
+          tenant_type?: string | null
+          ticket_number?: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          description?: string
+          host_ip?: string | null
+          host_name?: string | null
+          id?: string
+          isp?: string | null
+          notes?: string | null
+          priority?: string
+          resolved_at?: string | null
+          site?: string | null
+          source?: string
+          status?: string
+          technician_id?: string | null
+          technician_name?: string | null
+          tenant_id?: string | null
+          tenant_type?: string | null
+          ticket_number?: string
+          updated_at?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_tickets_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

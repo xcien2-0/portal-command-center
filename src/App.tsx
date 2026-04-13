@@ -18,6 +18,7 @@ import PitchDeck from "./pages/PitchDeck.tsx";
 import Gerencia from "./pages/Gerencia.tsx";
 import Scan from "./pages/Scan.tsx";
 import NOC from "./pages/NOC.tsx";
+import Dispatch from "./pages/Dispatch.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
+          <Route path="/dispatch" element={<Dispatch />} />
           <Route path="/iblack/*" element={<IBlackPortal />} />
           {/* Main app with sidebar */}
           <Route path="*" element={

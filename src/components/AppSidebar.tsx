@@ -1,4 +1,4 @@
-import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone, BarChart3, LayoutDashboard, ScanLine, Monitor } from 'lucide-react';
+import { Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone, BarChart3, LayoutDashboard, ScanLine, Monitor, Send } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ const items = [
   { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
   { title: 'NOC', url: '/noc', icon: Monitor },
   { title: 'Scanner', url: '/scan', icon: ScanLine },
+  { title: 'Dispatch', url: '/dispatch', icon: Send },
   { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 
