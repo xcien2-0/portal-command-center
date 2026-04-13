@@ -77,8 +77,9 @@ export default function Dispatch() {
 
   const updateTicketStatus = async (ticketId: string, newStatus: string) => {
     setUpdatingStatus(true);
-    const updates: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'resuelto') updates.resolved_at = new Date().toISOString();
+    const updates = newStatus === 'resuelto'
+      ? { status: newStatus, resolved_at: new Date().toISOString() }
+      : { status: newStatus };
     
     const { error } = await supabase.from('dispatch_tickets').update(updates).eq('id', ticketId);
     if (error) {
