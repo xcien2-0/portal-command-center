@@ -20,6 +20,13 @@ import Scan from "./pages/Scan.tsx";
 import NOC from "./pages/NOC.tsx";
 import Dispatch from "./pages/Dispatch.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import AcademiaLayout from "./pages/academia/AcademiaLayout.tsx";
+import AcademiaDashboard from "./pages/academia/AcademiaDashboard.tsx";
+import AcademiaModulos from "./pages/academia/AcademiaModulos.tsx";
+import AcademiaExamenes from "./pages/academia/AcademiaExamenes.tsx";
+import AcademiaPerfil from "./pages/academia/AcademiaPerfil.tsx";
+import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
+import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +44,14 @@ const App = () => (
           <Route path="/noc" element={<NOC />} />
           <Route path="/dispatch" element={<Dispatch />} />
           <Route path="/iblack/*" element={<IBlackPortal />} />
+          <Route path="/academia" element={<AcademiaLayout />}>
+            <Route index element={<AcademiaDashboard />} />
+            <Route path="modulos" element={<AcademiaModulos />} />
+            <Route path="examenes" element={<AcademiaExamenes />} />
+            <Route path="perfil" element={<AcademiaPerfil />} />
+            <Route path="leaderboard" element={<AcademiaLeaderboard />} />
+            <Route path="admin" element={<AcademiaAdmin />} />
+          </Route>
           {/* Main app with sidebar */}
           <Route path="*" element={
             <SidebarProvider>
