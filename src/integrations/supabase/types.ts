@@ -653,6 +653,7 @@ export type Database = {
     }
     Functions: {
       calcular_xp_mes: { Args: { p_technician_id: string }; Returns: Json }
+      is_supervisor: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       conversation_channel: "whatsapp" | "call" | "ticket"
