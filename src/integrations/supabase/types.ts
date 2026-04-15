@@ -224,6 +224,190 @@ export type Database = {
           },
         ]
       }
+      dispatch_job_technicians: {
+        Row: {
+          assigned_at: string
+          id: string
+          job_id: string
+          technician_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          id?: string
+          job_id: string
+          technician_id: string
+        }
+        Update: {
+          assigned_at?: string
+          id?: string
+          job_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_job_technicians_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "dispatch_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatch_job_technicians_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispatch_jobs: {
+        Row: {
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string
+          crew_id: string | null
+          customer_name: string
+          customer_status: Database["public"]["Enums"]["dispatch_customer_status"]
+          estimated_duration_minutes: number | null
+          id: string
+          job_number: string
+          notes: string | null
+          odoo_order_id: string | null
+          priority: string
+          project_id: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          service_type: Database["public"]["Enums"]["dispatch_service_type"]
+          site_address: string
+          status: Database["public"]["Enums"]["dispatch_job_status"]
+          territory: string | null
+          updated_at: string
+          visit_type: Database["public"]["Enums"]["dispatch_visit_type"]
+          work_order_id: string | null
+          zone: string | null
+        }
+        Insert: {
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          crew_id?: string | null
+          customer_name: string
+          customer_status?: Database["public"]["Enums"]["dispatch_customer_status"]
+          estimated_duration_minutes?: number | null
+          id?: string
+          job_number?: string
+          notes?: string | null
+          odoo_order_id?: string | null
+          priority?: string
+          project_id?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_type?: Database["public"]["Enums"]["dispatch_service_type"]
+          site_address: string
+          status?: Database["public"]["Enums"]["dispatch_job_status"]
+          territory?: string | null
+          updated_at?: string
+          visit_type?: Database["public"]["Enums"]["dispatch_visit_type"]
+          work_order_id?: string | null
+          zone?: string | null
+        }
+        Update: {
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          crew_id?: string | null
+          customer_name?: string
+          customer_status?: Database["public"]["Enums"]["dispatch_customer_status"]
+          estimated_duration_minutes?: number | null
+          id?: string
+          job_number?: string
+          notes?: string | null
+          odoo_order_id?: string | null
+          priority?: string
+          project_id?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_type?: Database["public"]["Enums"]["dispatch_service_type"]
+          site_address?: string
+          status?: Database["public"]["Enums"]["dispatch_job_status"]
+          territory?: string | null
+          updated_at?: string
+          visit_type?: Database["public"]["Enums"]["dispatch_visit_type"]
+          work_order_id?: string | null
+          zone?: string | null
+        }
+        Relationships: []
+      }
+      dispatch_notes: {
+        Row: {
+          author_name: string
+          content: string
+          created_at: string
+          id: string
+          job_id: string
+        }
+        Insert: {
+          author_name?: string
+          content: string
+          created_at?: string
+          id?: string
+          job_id: string
+        }
+        Update: {
+          author_name?: string
+          content?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_notes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "dispatch_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispatch_status_history: {
+        Row: {
+          changed_by_name: string | null
+          created_at: string
+          id: string
+          job_id: string
+          new_status: Database["public"]["Enums"]["dispatch_job_status"]
+          notes: string | null
+          old_status: Database["public"]["Enums"]["dispatch_job_status"] | null
+        }
+        Insert: {
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          new_status: Database["public"]["Enums"]["dispatch_job_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["dispatch_job_status"] | null
+        }
+        Update: {
+          changed_by_name?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          new_status?: Database["public"]["Enums"]["dispatch_job_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["dispatch_job_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_status_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "dispatch_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dispatch_tickets: {
         Row: {
           city: string
@@ -662,6 +846,32 @@ export type Database = {
         | "escalated"
         | "in_progress"
         | "resolved"
+      dispatch_customer_status:
+        | "pending"
+        | "confirmed"
+        | "unavailable"
+        | "access_denied"
+        | "reschedule"
+      dispatch_job_status:
+        | "pending_dispatch"
+        | "scheduled"
+        | "in_route"
+        | "on_site"
+        | "completed"
+        | "blocked"
+      dispatch_service_type:
+        | "instalacion_residencial"
+        | "instalacion_empresarial"
+        | "mantenimiento"
+        | "reparacion"
+        | "retiro"
+        | "migracion"
+        | "otro"
+      dispatch_visit_type:
+        | "primera_visita"
+        | "seguimiento"
+        | "revisita"
+        | "emergencia"
       message_sender_type: "bot" | "client" | "agent"
       module_tipo_enum: "video" | "documento" | "practica"
       plaza_enum:
@@ -822,6 +1032,36 @@ export const Constants = {
         "escalated",
         "in_progress",
         "resolved",
+      ],
+      dispatch_customer_status: [
+        "pending",
+        "confirmed",
+        "unavailable",
+        "access_denied",
+        "reschedule",
+      ],
+      dispatch_job_status: [
+        "pending_dispatch",
+        "scheduled",
+        "in_route",
+        "on_site",
+        "completed",
+        "blocked",
+      ],
+      dispatch_service_type: [
+        "instalacion_residencial",
+        "instalacion_empresarial",
+        "mantenimiento",
+        "reparacion",
+        "retiro",
+        "migracion",
+        "otro",
+      ],
+      dispatch_visit_type: [
+        "primera_visita",
+        "seguimiento",
+        "revisita",
+        "emergencia",
       ],
       message_sender_type: ["bot", "client", "agent"],
       module_tipo_enum: ["video", "documento", "practica"],
