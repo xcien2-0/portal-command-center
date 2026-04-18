@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
-import { CASA_TENANTS, Tenant } from '@/types/tenant';
+import { CASA_TENANTS } from '@/types/tenant';
 import { NOCCity, NOCAlert } from '@/types/noc';
 import { getAllCasaData, getNOCData, getAllAlerts, getAlertsForTenant, getTotalAlertCount } from '@/services/nocboard';
 import { TENANT_COLORS } from '@/data/noc-mock';
@@ -10,17 +11,28 @@ import { CityCard } from '@/components/noc/CityCard';
 import { BenchmarkTable } from '@/components/noc/BenchmarkTable';
 import { AlertsDrawer } from '@/components/noc/AlertsDrawer';
 import { CreateTicketModal } from '@/components/noc/CreateTicketModal';
-import { AdBanner } from '@/components/noc/AdBanner';
-import { ScoreCircle } from '@/components/noc/ScoreCircle';
+import { TenantGrid } from '@/components/noc/TenantGrid';
+import { RegionFilter, CITY_REGION, TENANT_NET_TYPE, type Region, type NetworkType } from '@/components/noc/RegionFilter';
+
+const TENANT_SUBNOC_ROUTE: Record<string, string> = {
+  iblack: '/iblack',
+  coco: '/coco-monitor',
+  xcien: '/noc-vip',
+};
 
 export default function NOC() {
+  const navigate = useNavigate();
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [ticketAlert, setTicketAlert] = useState<NOCAlert | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString('es-MX'));
 
-  // Mock polling every 30s
+  // Cross-cutting filters (apply only in global view)
+  const [selectedTenants, setSelectedTenants] = useState<Set<string>>(new Set());
+  const [region, setRegion] = useState<Region>('all');
+  const [netType, setNetType] = useState<NetworkType>('all');
+
   useEffect(() => {
     const interval = setInterval(() => {
       setLastUpdated(new Date().toLocaleTimeString('es-MX'));
@@ -31,28 +43,38 @@ export default function NOC() {
   const isGlobal = activeTenantId === null;
   const activeTenant = CASA_TENANTS.find(t => t.id === activeTenantId);
 
-  // Build cities list with tenant info
+  // Build cities list with tenant info + apply filters
   const cities = useMemo(() => {
+    let result: Array<NOCCity & { tenantId: string }> = [];
     if (isGlobal) {
       const allData = getAllCasaData();
-      const allCities: Array<NOCCity & { tenantId: string }> = [];
       Object.entries(allData).forEach(([tid, td]) => {
-        td.cities.forEach(c => allCities.push({ ...c, tenantId: tid }));
+        td.cities.forEach(c => result.push({ ...c, tenantId: tid }));
       });
-      return allCities;
+    } else {
+      const data = getNOCData(activeTenantId!);
+      result = data ? data.cities.map(c => ({ ...c, tenantId: activeTenantId! })) : [];
     }
-    const data = getNOCData(activeTenantId!);
-    return data ? data.cities.map(c => ({ ...c, tenantId: activeTenantId! })) : [];
-  }, [activeTenantId, isGlobal]);
 
-  const filteredCities = selectedCityId
-    ? cities.filter(c => c.id === selectedCityId)
-    : cities;
+    if (isGlobal) {
+      if (selectedTenants.size > 0) {
+        result = result.filter(c => selectedTenants.has(c.tenantId));
+      }
+      if (region !== 'all') {
+        result = result.filter(c => CITY_REGION[c.id] === region);
+      }
+      if (netType !== 'all') {
+        result = result.filter(c => TENANT_NET_TYPE[c.tenantId] === netType);
+      }
+    }
+    return result;
+  }, [activeTenantId, isGlobal, selectedTenants, region, netType]);
+
+  const filteredCities = selectedCityId ? cities.filter(c => c.id === selectedCityId) : cities;
 
   const alerts = isGlobal ? getAllAlerts() : getAlertsForTenant(activeTenantId!);
   const totalAlertCount = getTotalAlertCount();
 
-  // Compute per-tenant score for tab indicators
   const tenantScores = useMemo(() => {
     const allData = getAllCasaData();
     const scores: Record<string, number> = {};
@@ -70,6 +92,30 @@ export default function NOC() {
     setAlertsOpen(false);
   };
 
+  const handleSelectTenantFromCard = (tenantId: string) => {
+    const sub = TENANT_SUBNOC_ROUTE[tenantId];
+    if (sub) {
+      navigate(sub);
+    } else {
+      setActiveTenantId(tenantId);
+      setSelectedCityId(null);
+    }
+  };
+
+  const toggleTenant = (id: string) => {
+    setSelectedTenants(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedTenants(new Set());
+    setRegion('all');
+    setNetType('all');
+  };
+
   return (
     <div className="min-h-screen bg-[#0D1B2A] text-[#e2e8f0]">
       {/* Header */}
@@ -77,6 +123,11 @@ export default function NOC() {
         <div className="flex items-center gap-3">
           <h1 className="text-[16px] font-bold tracking-wide">NOC Monitor</h1>
           <span className="text-[10px] text-[#64748b] font-mono">Actualizado: {lastUpdated}</span>
+          {isGlobal && (
+            <span className="text-[10px] uppercase tracking-wider text-[#00B4D8] bg-[#00B4D8]/10 px-2 py-0.5 rounded-full border border-[#00B4D8]/30">
+              Vista Global · {CASA_TENANTS.length} redes
+            </span>
+          )}
         </div>
         <button
           onClick={() => setAlertsOpen(true)}
@@ -123,12 +174,25 @@ export default function NOC() {
 
       {/* Content */}
       <div className="p-6 space-y-6">
-        {/* Global metrics */}
-        {isGlobal && <GlobalMetrics />}
+        {/* Global view: KPIs + tenant grid + filters */}
+        {isGlobal && (
+          <>
+            <GlobalMetrics />
+            <TenantGrid onSelectTenant={handleSelectTenantFromCard} />
+            <RegionFilter
+              selectedTenants={selectedTenants}
+              region={region}
+              netType={netType}
+              onToggleTenant={toggleTenant}
+              onRegionChange={setRegion}
+              onNetTypeChange={setNetType}
+              onClear={clearFilters}
+            />
+          </>
+        )}
 
         {/* Map + Cities split */}
         <div className="grid grid-cols-1 lg:grid-cols-[45%_55%] gap-6">
-          {/* Map */}
           <MexicoMap
             cities={cities}
             selectedCityId={selectedCityId}
@@ -136,7 +200,6 @@ export default function NOC() {
             isGlobal={isGlobal}
           />
 
-          {/* Cities panel */}
           <div className="space-y-3">
             {selectedCityId && (
               <button onClick={() => setSelectedCityId(null)} className="text-[11px] text-[#00B4D8] hover:underline mb-1">
@@ -152,16 +215,18 @@ export default function NOC() {
               />
             ))}
             {filteredCities.length === 0 && (
-              <p className="text-center text-[#64748b] text-[12px] py-12">Sin datos disponibles</p>
+              <p className="text-center text-[#64748b] text-[12px] py-12">
+                {isGlobal && (selectedTenants.size > 0 || region !== 'all' || netType !== 'all')
+                  ? 'Sin ciudades que coincidan con los filtros'
+                  : 'Sin datos disponibles'}
+              </p>
             )}
           </div>
         </div>
 
-        {/* Benchmark (global only) */}
         {isGlobal && <BenchmarkTable />}
       </div>
 
-      {/* Alerts drawer */}
       <AlertsDrawer
         open={alertsOpen}
         onClose={() => setAlertsOpen(false)}
@@ -170,7 +235,6 @@ export default function NOC() {
         onCreateTicket={handleCreateTicket}
       />
 
-      {/* Ticket modal */}
       <CreateTicketModal
         open={ticketAlert !== null}
         onClose={() => setTicketAlert(null)}
