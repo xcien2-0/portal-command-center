@@ -11,11 +11,11 @@ export interface Tenant {
 }
 
 export const CASA_TENANTS: Tenant[] = [
-  { id: 'xcien', name: 'XCIEN', type: 'casa', slug: 'xcien', nocboardApiUrl: 'https://noc.xcien.mx/api' },
-  { id: 'wispi', name: 'Wispi', type: 'casa', slug: 'wispi' },
+  { id: 'xcien',   name: 'XCIEN',       type: 'casa', slug: 'xcien',   nocboardApiUrl: 'https://noc.xcien.mx/api' },
+  { id: 'wispi',   name: 'Wispi',       type: 'casa', slug: 'wispi' },
   { id: 'luminet', name: 'Luminet WAN', type: 'casa', slug: 'luminet' },
-  { id: 'iblack', name: 'iBlack', type: 'casa', slug: 'iblack' },
-  { id: 'coco', name: 'Coco', type: 'casa', slug: 'coco' },
+  { id: 'huus',    name: 'Huus',        type: 'casa', slug: 'huus' },
+  { id: 'sandur',  name: 'Sandur',      type: 'casa', slug: 'sandur' },
 ];
 
 export interface AdBanner {

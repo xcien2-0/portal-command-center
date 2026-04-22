@@ -34,11 +34,7 @@ const nocGroup: { label: string; icon: any; main: Item; children: Item[] } = {
   label: 'NOC',
   icon: Shield,
   main: { title: 'Vista Global NOC', url: '/noc', icon: Monitor },
-  children: [
-    { title: 'NOC VIP', url: '/noc-vip', icon: Shield },
-    { title: 'Coco Box', url: '/coco-monitor', icon: Satellite },
-    { title: 'iBlack', url: '/iblack', icon: Activity },
-  ],
+  children: [],
 };
 
 const opsGroup: { label: string; icon: any; children: Item[] } = {
@@ -48,7 +44,6 @@ const opsGroup: { label: string; icon: any; children: Item[] } = {
     { title: 'Dispatch', url: '/dispatch', icon: Send },
     { title: 'Call Center', url: '/call-center', icon: Phone },
     { title: 'Scanner', url: '/scan', icon: ScanLine },
-    { title: 'Onboarding', url: '/coco-onboarding', icon: UserPlus },
   ],
 };
 
@@ -64,7 +59,6 @@ const reportsGroup: { label: string; icon: any; children: Item[] } = {
 
 const bottomItems: Item[] = [
   { title: 'Academia', url: '/academia', icon: GraduationCap },
-  { title: 'Pitch Deck', url: '/pitch', icon: Presentation },
 ];
 
 export function AppSidebar() {

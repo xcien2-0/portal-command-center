@@ -8,13 +8,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
 import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
-import CocoBoxMonitor from "./pages/CocoBoxMonitor.tsx";
-import CocoOnboarding from "./pages/CocoOnboarding.tsx";
 import CallCenter from "./pages/CallCenter.tsx";
-import NocVip from "./pages/NocVip.tsx";
 import ReporteImpacto from "./pages/ReporteImpacto.tsx";
-import IBlackPortal from "./pages/IBlackPortal.tsx";
-import PitchDeck from "./pages/PitchDeck.tsx";
 import Gerencia from "./pages/Gerencia.tsx";
 import Scan from "./pages/Scan.tsx";
 import NOC from "./pages/NOC.tsx";
@@ -38,12 +33,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           {/* Full-screen route (no sidebar) */}
-          <Route path="/pitch" element={<PitchDeck />} />
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
           <Route path="/dispatch" element={<Dispatch />} />
-          <Route path="/iblack/*" element={<IBlackPortal />} />
           <Route path="/academia" element={<AcademiaLayout />}>
             <Route index element={<AcademiaDashboard />} />
             <Route path="modulos" element={<AcademiaModulos />} />
@@ -65,10 +58,7 @@ const App = () => (
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/red-en-vivo" element={<RedEnVivo />} />
-                      <Route path="/coco-monitor" element={<CocoBoxMonitor />} />
-                      <Route path="/coco-onboarding" element={<CocoOnboarding />} />
                       <Route path="/call-center" element={<CallCenter />} />
-                      <Route path="/noc-vip" element={<NocVip />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="/reporte-impacto" element={<ReporteImpacto />} />
                       <Route path="*" element={<NotFound />} />
