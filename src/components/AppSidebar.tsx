@@ -152,7 +152,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest">
-            {!collapsed && 'ISP Portal'}
+            {!collapsed && 'XCIEN 2.0'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
