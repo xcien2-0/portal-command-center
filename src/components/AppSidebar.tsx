@@ -152,7 +152,14 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest">
-            {!collapsed && 'XCIEN 2.0'}
+            {collapsed ? (
+              <img src="/xcien.png" alt="XCIEN" className="h-6 w-6 object-contain mx-auto" />
+            ) : (
+              <div className="flex items-center gap-2 py-1">
+                <img src="/xcien.png" alt="XCIEN" className="h-7 w-auto object-contain" />
+                <span className="text-[11px] font-semibold tracking-widest text-sidebar-foreground">2.0</span>
+              </div>
+            )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
