@@ -1,252 +1,220 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
-import { CheckCircle2, XCircle, ArrowRight, Clock } from 'lucide-react';
+import { getLevelInfo } from '@/lib/academia-utils';
+import { CheckCircle2, XCircle, ClipboardCheck, ArrowLeft, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API = 'http://localhost:8000/api';
-
-interface Question {
-  id: number;
-  pilar: string;
-  pregunta: string;
-  opciones: string[];
-  respuesta_correcta: number;
-  explicacion: string;
-}
-
-interface Exam {
-  titulo: string;
-  tiempo_limite: number;
-  pilares: string[];
-  preguntas: Question[];
-}
-
-const PILAR_COLORS: Record<string, string> = {
-  'Instalación':         '#1B7F4A',
-  'Soporte':             '#0EA5E9',
-  'Seguridad':           '#d97706',
-  'Odoo/Admin':          '#7C3AED',
-  'Atención al Cliente': '#EA580C',
-};
 
 export default function AcademiaExamenes() {
   const { technician } = useAcademia();
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [started, setStarted] = useState(false);
+  const [exams, setExams] = useState<any[]>([]);
+  const [attempts, setAttempts] = useState<any[]>([]);
+  const [activeExam, setActiveExam] = useState<any | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showFeedback, setShowFeedback] = useState(false);
-  const [finished, setFinished] = useState(false);
-  const [results, setResults] = useState<Record<string, { correct: number; total: number }>>({});
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [result, setResult] = useState<any>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API}/diagnostic_exam`)
-      .then(r => r.json())
-      .then(data => { setExam(data); setTimeLeft(data.tiempo_limite * 60); })
-      .catch(() => toast.error('No se pudo cargar el examen. Verifica que Antigravity esté corriendo.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchData = () => {
+    if (!technician) return;
+    supabase.from('exams').select('*, academy_modules(titulo, nivel_requerido)').order('created_at')
+      .then(({ data }) => data && setExams(data));
+    supabase.from('technician_exam_attempts').select('*').eq('technician_id', technician.id)
+      .then(({ data }) => data && setAttempts(data));
+  };
 
-  useEffect(() => {
-    if (!started || finished || timeLeft <= 0) return;
-    const t = setInterval(() => setTimeLeft(p => {
-      if (p <= 1) { clearInterval(t); finishExam(); return 0; }
-      return p - 1;
-    }), 1000);
-    return () => clearInterval(t);
-  }, [started, finished, timeLeft]);
+  useEffect(fetchData, [technician?.id]);
 
-  const selectAnswer = (idx: number) => {
+  const getExamStatus = (exam: any) => {
+    const examAttempts = attempts.filter(a => a.exam_id === exam.id);
+    const passed = examAttempts.some(a => a.aprobado);
+    const attemptsUsed = examAttempts.length;
+    const available = !passed && attemptsUsed < exam.max_intentos;
+    const moduleLvl = exam.academy_modules?.nivel_requerido || 1;
+    const locked = moduleLvl > (technician?.nivel || 1);
+    return { passed, attemptsUsed, available, locked, examAttempts };
+  };
+
+  const startExam = async (exam: any) => {
+    setActiveExam(exam);
+    setCurrentQ(0);
+    setAnswers({});
+    setShowFeedback(false);
+    setResult(null);
+    const { data } = await supabase.from('exam_questions').select('*').eq('exam_id', exam.id);
+    setQuestions(data || []);
+  };
+
+  const selectAnswer = (qIdx: number, ansIdx: number) => {
     if (showFeedback) return;
-    setAnswers(prev => ({ ...prev, [currentQ]: idx }));
+    setAnswers(prev => ({ ...prev, [qIdx]: ansIdx }));
     setShowFeedback(true);
   };
 
   const nextQuestion = () => {
     setShowFeedback(false);
-    if (!exam) return;
-    if (currentQ < exam.preguntas.length - 1) {
+    if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
       finishExam();
     }
   };
 
-  const finishExam = () => {
-    if (!exam) return;
-    const r: Record<string, { correct: number; total: number }> = {};
-    exam.preguntas.forEach((q, i) => {
-      if (!r[q.pilar]) r[q.pilar] = { correct: 0, total: 0 };
-      r[q.pilar].total++;
-      if (answers[i] === q.respuesta_correcta) r[q.pilar].correct++;
+  const finishExam = async () => {
+    if (!technician || !activeExam) return;
+    const correct = questions.reduce((sum, q, i) => sum + (answers[i] === q.respuesta_correcta ? 1 : 0), 0);
+    const score = Math.round((correct / questions.length) * 100);
+    const passed = score >= activeExam.calificacion_minima;
+    const examAttempts = attempts.filter(a => a.exam_id === activeExam.id);
+    const attemptNum = examAttempts.length + 1;
+    const isFirst = attemptNum === 1;
+    const xp = passed ? (isFirst ? activeExam.xp_primer_intento : activeExam.xp_reintento) : 0;
+
+    await supabase.from('technician_exam_attempts').insert({
+      technician_id: technician.id,
+      exam_id: activeExam.id,
+      calificacion: score,
+      aprobado: passed,
+      intento_num: attemptNum,
     });
-    setResults(r);
-    setFinished(true);
-    if (technician) {
-      const resultados: Record<string, number> = {};
-      Object.entries(r).forEach(([pilar, v]) => {
-        resultados[pilar] = Math.round((v.correct / v.total) * 100);
+
+    if (passed && xp > 0) {
+      await supabase.from('xp_log').insert({
+        technician_id: technician.id,
+        tipo: (isFirst ? 'examen_1er' : 'examen_reintento') as any,
+        puntos: xp,
+        referencia_id: activeExam.id,
       });
-      fetch(`${API}/save_skill_result`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre_tecnico: technician.nombre, resultados }),
-      }).catch(() => {});
     }
+
+    setResult({ score, passed, xp, attemptNum });
+    if (passed) toast.success(`🎓 Examen aprobado — +${xp} XP`);
+    else toast.error(`Examen reprobado — ${score}%`);
+    fetchData();
   };
 
-  const formatTime = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+  if (!technician) return null;
 
-  const resetExam = () => {
-    if (!exam) return;
-    setStarted(false); setFinished(false);
-    setCurrentQ(0); setAnswers({});
-    setShowFeedback(false);
-    setTimeLeft(exam.tiempo_limite * 60);
-  };
+  // Result screen
+  if (result) {
+    return (
+      <div className="max-w-md mx-auto text-center space-y-6 py-12">
+        <div className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center ${result.passed ? 'bg-emerald-50' : 'bg-red-50'}`}>
+          {result.passed ? <CheckCircle2 className="w-10 h-10 text-emerald-500" /> : <XCircle className="w-10 h-10 text-red-500" />}
+        </div>
+        <div>
+          <h2 className="text-2xl font-semibold mb-1">{result.passed ? '¡Aprobado!' : 'No aprobado'}</h2>
+          <p className="text-gray-500">Calificación: {result.score}%</p>
+        </div>
+        {result.xp > 0 && (
+          <div className="text-3xl font-bold" style={{ color: '#1D9E75' }}>+{result.xp} XP</div>
+        )}
+        <button onClick={() => { setActiveExam(null); setResult(null); }} className="px-6 py-2.5 rounded-xl text-white text-sm font-medium" style={{ background: '#1D9E75' }}>
+          Volver a exámenes
+        </button>
+      </div>
+    );
+  }
 
-  if (loading) return <div className="text-center py-20 text-gray-400">Cargando examen...</div>;
-
-  if (!exam) return (
-    <div className="text-center py-20 text-gray-400">
-      <div className="text-4xl mb-3">⚠️</div>
-      <p>No se pudo conectar con Antigravity.</p>
-      <p className="text-sm mt-1">Verifica que el servidor esté corriendo en localhost:8000</p>
-    </div>
-  );
-
-  // Resultados
-  if (finished) {
-    const total = Object.values(results).reduce((a, b) => a + b.correct, 0);
-    const totalQ = Object.values(results).reduce((a, b) => a + b.total, 0);
-    const pct = Math.round((total / totalQ) * 100);
+  // Active exam view
+  if (activeExam && questions.length > 0) {
+    const q = questions[currentQ];
+    const opciones = typeof q.opciones === 'string' ? JSON.parse(q.opciones) : q.opciones;
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="rounded-2xl p-8 bg-white text-center" style={{ border: '0.5px solid #e5e7eb' }}>
-          <div className="text-5xl mb-4">{pct >= 90 ? '🏆' : pct >= 70 ? '✅' : '📚'}</div>
-          <h1 className="text-3xl font-bold mb-1">{pct}%</h1>
-          <p className="text-gray-500 text-sm mb-4">{total} de {totalQ} respuestas correctas</p>
-          <div className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold text-white" style={{ background: pct >= 90 ? '#1B7F4A' : pct >= 70 ? '#d97706' : '#ef4444' }}>
-            {pct >= 90 ? '🎓 Certificado' : pct >= 70 ? 'Aprobado' : 'Necesita refuerzo'}
+        <button onClick={() => setActiveExam(null)} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
+          <ArrowLeft className="w-4 h-4" /> Salir del examen
+        </button>
+        {/* Progress */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">{currentQ + 1}/{questions.length}</span>
+          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${((currentQ + 1) / questions.length) * 100}%`, background: '#1D9E75' }} />
           </div>
         </div>
-        <div className="rounded-2xl p-5 bg-white" style={{ border: '0.5px solid #e5e7eb' }}>
-          <h2 className="text-sm font-semibold mb-4">Resultados por pilar</h2>
-          <div className="space-y-3">
-            {Object.entries(results).map(([pilar, v]) => {
-              const p = Math.round((v.correct / v.total) * 100);
+        <div className="rounded-2xl p-6 bg-white" style={{ border: '0.5px solid #e5e7eb' }}>
+          <h2 className="text-base font-semibold mb-5">{q.pregunta}</h2>
+          <div className="space-y-2.5">
+            {(opciones as string[]).map((opt: string, i: number) => {
+              const selected = answers[currentQ] === i;
+              const isCorrect = i === q.respuesta_correcta;
+              let borderColor = '#e5e7eb';
+              let bg = 'white';
+              if (showFeedback && selected && isCorrect) { borderColor = '#1D9E75'; bg = '#f0fdf4'; }
+              if (showFeedback && selected && !isCorrect) { borderColor = '#ef4444'; bg = '#fef2f2'; }
+              if (showFeedback && !selected && isCorrect) { borderColor = '#1D9E75'; bg = '#f0fdf4'; }
               return (
-                <div key={pilar}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-gray-700">{pilar}</span>
-                    <span className="font-semibold" style={{ color: PILAR_COLORS[pilar] ?? '#1B7F4A' }}>{p}% ({v.correct}/{v.total})</span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${p}%`, background: PILAR_COLORS[pilar] ?? '#1B7F4A' }} />
-                  </div>
-                </div>
+                <button
+                  key={i}
+                  onClick={() => selectAnswer(currentQ, i)}
+                  disabled={showFeedback}
+                  className="w-full text-left p-3.5 rounded-xl text-sm transition-all"
+                  style={{ border: `1.5px solid ${borderColor}`, background: bg }}
+                >
+                  <span className="font-medium mr-2 text-gray-400">{String.fromCharCode(65 + i)}.</span>
+                  {opt}
+                </button>
               );
             })}
           </div>
-        </div>
-        <button onClick={resetExam} className="w-full py-3 rounded-xl text-white font-medium hover:opacity-90 transition-opacity" style={{ background: '#1B7F4A' }}>
-          Volver a intentar
-        </button>
-      </div>
-    );
-  }
-
-  // Pantalla de inicio
-  if (!started) {
-    return (
-      <div className="max-w-xl mx-auto">
-        <div className="rounded-2xl p-8 bg-white text-center" style={{ border: '0.5px solid #e5e7eb' }}>
-          <div className="text-5xl mb-4">📝</div>
-          <h1 className="text-xl font-bold mb-2">{exam.titulo}</h1>
-          <p className="text-gray-500 text-sm mb-6">
-            {exam.preguntas.length} preguntas · {exam.tiempo_limite} minutos
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center mb-8">
-            {exam.pilares.map(p => (
-              <span key={p} className="px-3 py-1 rounded-full text-xs font-medium text-white" style={{ background: PILAR_COLORS[p] ?? '#1B7F4A' }}>{p}</span>
-            ))}
-          </div>
-          <button onClick={() => setStarted(true)} className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity" style={{ background: '#1B7F4A' }}>
-            Iniciar examen
-          </button>
+          {showFeedback && q.explicacion && (
+            <div className="mt-4 p-3 rounded-xl bg-blue-50 text-sm text-blue-700" style={{ border: '0.5px solid #bfdbfe' }}>
+              💡 {q.explicacion}
+            </div>
+          )}
+          {showFeedback && (
+            <button onClick={nextQuestion} className="mt-4 w-full py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2" style={{ background: '#1D9E75' }}>
+              {currentQ < questions.length - 1 ? 'Siguiente' : 'Ver resultado'} <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // Examen activo
-  const q = exam.preguntas[currentQ];
-  const selected = answers[currentQ];
-  const isCorrect = selected === q.respuesta_correcta;
-
+  // Exam list
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-400 font-medium">{currentQ + 1} / {exam.preguntas.length}</span>
-        <div className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: timeLeft < 300 ? '#ef4444' : '#1B7F4A' }}>
-          <Clock className="w-4 h-4" />{formatTime(timeLeft)}
-        </div>
-        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium text-white" style={{ background: PILAR_COLORS[q.pilar] ?? '#1B7F4A' }}>{q.pilar}</span>
-      </div>
-
-      <div className="w-full h-1.5 bg-gray-100 rounded-full">
-        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${((currentQ + 1) / exam.preguntas.length) * 100}%`, background: '#1B7F4A' }} />
-      </div>
-
-      <div className="rounded-2xl p-6 bg-white" style={{ border: '0.5px solid #e5e7eb' }}>
-        <h2 className="text-base font-semibold leading-snug mb-5">{q.pregunta}</h2>
-        <div className="space-y-2.5">
-          {q.opciones.map((op, i) => {
-            let borderColor = '#e5e7eb';
-            if (showFeedback) {
-              if (i === q.respuesta_correcta) borderColor = '#1B7F4A';
-              else if (i === selected && !isCorrect) borderColor = '#ef4444';
-            }
-            return (
-              <button
-                key={i}
-                onClick={() => selectAnswer(i)}
-                disabled={showFeedback}
-                className="w-full text-left px-4 py-3 rounded-xl text-sm transition-all hover:bg-gray-50 disabled:hover:bg-white"
-                style={{ border: `1.5px solid ${borderColor}` }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-gray-100 text-gray-500">
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  <span className="flex-1">{op}</span>
-                  {showFeedback && i === q.respuesta_correcta && <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#1B7F4A' }} />}
-                  {showFeedback && i === selected && !isCorrect && <XCircle className="w-4 h-4 shrink-0 text-red-500" />}
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">Exámenes</h1>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {exams.map(exam => {
+          const status = getExamStatus(exam);
+          const moduleLvl = exam.academy_modules?.nivel_requerido || 1;
+          const li = getLevelInfo(moduleLvl);
+          return (
+            <div key={exam.id} className={`rounded-2xl p-5 bg-white ${status.locked ? 'opacity-50' : ''}`} style={{ border: status.passed ? '1.5px solid #1D9E75' : '0.5px solid #e5e7eb' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#534AB714' }}>
+                  <ClipboardCheck className="w-5 h-5" style={{ color: '#534AB7' }} />
                 </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {showFeedback && (
-          <div className="mt-4 p-3 rounded-xl text-sm leading-relaxed" style={{ background: isCorrect ? '#1B7F4A12' : '#ef444412', border: `1px solid ${isCorrect ? '#1B7F4A' : '#ef4444'}` }}>
-            <span className="font-semibold" style={{ color: isCorrect ? '#1B7F4A' : '#ef4444' }}>
-              {isCorrect ? '✓ Correcto' : '✗ Incorrecto'} —{' '}
-            </span>
-            {q.explicacion}
-          </div>
-        )}
+                {status.passed && <CheckCircle2 className="w-5 h-5 text-emerald-500 ml-auto" />}
+              </div>
+              <h3 className="text-sm font-semibold mb-1">{exam.titulo}</h3>
+              <p className="text-[11px] text-gray-400 mb-3">{exam.academy_modules?.titulo}</p>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 mb-3">
+                <span style={{ color: li.color }}>Nv.{moduleLvl}</span>
+                <span>Intentos: {status.attemptsUsed}/{exam.max_intentos}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] mb-4">
+                <span className="text-gray-400">Mín: {exam.calificacion_minima}%</span>
+                <span style={{ color: '#1D9E75' }}>+{exam.xp_primer_intento} XP</span>
+              </div>
+              {status.locked ? (
+                <div className="text-center text-xs text-gray-400 py-2">🔒 Nivel {moduleLvl} requerido</div>
+              ) : status.passed ? (
+                <div className="text-center text-xs text-emerald-600 font-medium py-2">✅ Aprobado</div>
+              ) : status.available ? (
+                <button onClick={() => startExam(exam)} className="w-full py-2 rounded-xl text-white text-sm font-medium" style={{ background: '#534AB7' }}>
+                  {status.attemptsUsed > 0 ? 'Reintentar' : 'Iniciar examen'}
+                </button>
+              ) : (
+                <div className="text-center text-xs text-red-500 py-2">Sin intentos restantes</div>
+              )}
+            </div>
+          );
+        })}
       </div>
-
-      {showFeedback && (
-        <button onClick={nextQuestion} className="w-full py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity" style={{ background: '#1B7F4A' }}>
-          {currentQ < exam.preguntas.length - 1 ? (<>Siguiente <ArrowRight className="w-4 h-4" /></>) : 'Ver resultados'}
-        </button>
-      )}
     </div>
   );
 }
