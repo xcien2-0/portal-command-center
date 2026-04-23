@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone,
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
-  ChevronDown, Activity, Settings, FileBarChart,
+  ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -23,7 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-type Item = { title: string; url: string; icon: any; gob?: boolean };
+type Item = { title: string; url: string; icon: any; gob?: boolean; external?: boolean };
 
 const topItems: Item[] = [
   { title: 'Inicio', url: '/', icon: Home },
@@ -57,9 +57,15 @@ const reportsGroup: { label: string; icon: any; children: Item[] } = {
   ],
 };
 
-const bottomItems: Item[] = [
-  { title: 'Academia', url: '/academia', icon: GraduationCap },
-];
+const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } = {
+  label: 'Academia XCIEN',
+  icon: GraduationCap,
+  main: { title: 'Dashboard', url: '/academia', icon: Home },
+  children: [
+    { title: 'Biblioteca & Exámenes', url: 'http://localhost:8000', icon: BookOpen, external: true },
+    { title: 'WFM Control Operativo', url: 'http://localhost:8000/wfm.html', icon: Users, external: true },
+  ],
+};
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -71,20 +77,30 @@ export function AppSidebar() {
   const opsActive = opsGroup.children.some(c => path.startsWith(c.url));
   const reportsActive = reportsGroup.children.some(c => path.startsWith(c.url));
 
+  const academiaActive = path.startsWith('/academia');
   const [nocOpen, setNocOpen] = useState(nocActive);
   const [opsOpen, setOpsOpen] = useState(opsActive);
   const [reportsOpen, setReportsOpen] = useState(reportsActive);
+  const [academiaOpen, setAcademiaOpen] = useState(academiaActive);
 
   const renderItem = (item: Item) => (
     <SidebarMenuItem key={item.title}>
       <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
-        <NavLink to={item.url} end className="hover:bg-accent/50" activeClassName="bg-accent text-primary font-medium">
-          <item.icon className="mr-2 h-4 w-4" />
-          {!collapsed && <span>{item.title}</span>}
-          {!collapsed && item.gob && (
-            <Badge className="ml-auto bg-gob-navy text-white text-[9px] px-1 py-0 h-4">GOB</Badge>
-          )}
-        </NavLink>
+        {item.external ? (
+          <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center hover:bg-accent/50 rounded-md px-2 py-1.5 w-full text-sm">
+            <item.icon className="mr-2 h-4 w-4" />
+            {!collapsed && <span>{item.title}</span>}
+            {!collapsed && <ExternalLink className="ml-auto h-3 w-3 opacity-40" />}
+          </a>
+        ) : (
+          <NavLink to={item.url} end className="hover:bg-accent/50" activeClassName="bg-accent text-primary font-medium">
+            <item.icon className="mr-2 h-4 w-4" />
+            {!collapsed && <span>{item.title}</span>}
+            {!collapsed && item.gob && (
+              <Badge className="ml-auto bg-gob-navy text-white text-[9px] px-1 py-0 h-4">GOB</Badge>
+            )}
+          </NavLink>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -130,13 +146,21 @@ export function AppSidebar() {
               {group.children.map(child => (
                 <SidebarMenuSubItem key={child.title}>
                   <SidebarMenuSubButton asChild>
-                    <NavLink to={child.url} className="hover:bg-accent/50" activeClassName="bg-accent text-primary font-medium">
-                      <child.icon className="mr-2 h-3.5 w-3.5" />
-                      <span>{child.title}</span>
-                      {child.gob && (
-                        <Badge className="ml-auto bg-gob-navy text-white text-[9px] px-1 py-0 h-4">GOB</Badge>
-                      )}
-                    </NavLink>
+                    {child.external ? (
+                      <a href={child.url} target="_blank" rel="noopener noreferrer" className="flex items-center hover:bg-accent/50 rounded-md w-full text-sm">
+                        <child.icon className="mr-2 h-3.5 w-3.5" />
+                        <span>{child.title}</span>
+                        <ExternalLink className="ml-auto h-3 w-3 opacity-40" />
+                      </a>
+                    ) : (
+                      <NavLink to={child.url} className="hover:bg-accent/50" activeClassName="bg-accent text-primary font-medium">
+                        <child.icon className="mr-2 h-3.5 w-3.5" />
+                        <span>{child.title}</span>
+                        {child.gob && (
+                          <Badge className="ml-auto bg-gob-navy text-white text-[9px] px-1 py-0 h-4">GOB</Badge>
+                        )}
+                      </NavLink>
+                    )}
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               ))}
@@ -167,7 +191,7 @@ export function AppSidebar() {
               {renderGroup(nocGroup, nocOpen, setNocOpen, nocActive)}
               {renderGroup(opsGroup, opsOpen, setOpsOpen, opsActive)}
               {renderGroup(reportsGroup, reportsOpen, setReportsOpen, reportsActive)}
-              {bottomItems.map(renderItem)}
+              {renderGroup(academiaGroup, academiaOpen, setAcademiaOpen, academiaActive)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
