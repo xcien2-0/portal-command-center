@@ -79,11 +79,11 @@ export const mockNOCData: Record<string, NOCTenantData> = {
 };
 
 export const TENANT_COLORS: Record<string, string> = {
-  xcien:  '#00B4D8',
-  wispi:  '#00C896',
-  luminet:'#FFB703',
-  huus:   '#A78BFA',
-  sandur: '#FF6B6B',
+  xcien:  '#1B7F4A',   // verde XCIEN
+  luminet:'#0E6B3A',   // verde Luminet
+  wispi:  '#0EA5E9',   // azul cielo Wispi
+  huus:   '#7C3AED',   // morado Huus
+  sandur: '#EA580C',   // naranja Sandur
 };
 
 // Alertas reales Abril 2026 — derivadas de tareas No Visitadas y backlog crítico

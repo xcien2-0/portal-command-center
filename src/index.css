@@ -6,50 +6,51 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Paleta XCIEN — Verde corporativo + Blanco */
+    --background: 160 20% 8%;
+    --foreground: 0 0% 96%;
 
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 160 18% 12%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 160 18% 12%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 162 68% 37%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 150 62% 28%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 160 18% 16%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 25% 62%;
+    --muted: 160 18% 14%;
+    --muted-foreground: 160 10% 55%;
 
-    --accent: 217 33% 22%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 150 55% 22%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 59%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 162 68% 37%;
+    --border: 160 18% 18%;
+    --input: 160 18% 16%;
+    --ring: 150 62% 35%;
 
-    --radius: 0.25rem;
+    --radius: 0.3rem;
 
-    --gob-navy: 210 53% 23%;
+    --gob-navy: 160 40% 18%;
 
-    --status-ok: 160 70% 37%;
-    --status-warning: 37 78% 41%;
-    --status-critical: 0 72% 59%;
+    --status-ok:       150 62% 35%;
+    --status-warning:   37 78% 41%;
+    --status-critical:   0 72% 55%;
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 162 68% 37%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 217 33% 15%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 162 68% 37%;
+    --sidebar-background: 160 22% 6%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 150 62% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 18% 12%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 160 18% 13%;
+    --sidebar-ring: 150 62% 35%;
   }
 }
 
