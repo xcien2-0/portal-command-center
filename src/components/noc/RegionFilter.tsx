@@ -8,7 +8,6 @@ export type NetworkType = 'all' | 'residencial' | 'empresarial' | 'rural';
 export const CITY_REGION: Record<string, Region> = {
   mty: 'norte', pnegras: 'norte', saltillo: 'norte',
   qro: 'centro', cdmx: 'centro', gdl: 'centro',
-  coco_slp: 'centro',
 };
 
 // Tenant → network type
@@ -16,8 +15,8 @@ export const TENANT_NET_TYPE: Record<string, NetworkType> = {
   xcien: 'empresarial',
   wispi: 'residencial',
   luminet: 'empresarial',
-  iblack: 'empresarial',
-  coco: 'rural',
+  huus: 'residencial',
+  sandur: 'residencial',
 };
 
 interface FilterBarProps {

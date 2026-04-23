@@ -182,7 +182,7 @@ export default function Gerencia() {
                       formatter={(v: number) => [`$${v.toLocaleString()}`, undefined]}
                     />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13, paddingTop: 12 }} />
-                    {(["xcien", "luminet", "iblack", "wispi", "coco"] as const).map(k => (
+                    {(["xcien", "luminet", "wispi", "huus", "sandur"] as const).map(k => (
                       <Line
                         key={k}
                         type="monotone"

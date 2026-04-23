@@ -1,22 +1,22 @@
 // Executive dashboard mock data for ISPilot /gerencia route
 
-export type IspId = "todos" | "xcien" | "wispi" | "luminet" | "iblack" | "coco";
+export type IspId = "todos" | "xcien" | "wispi" | "luminet" | "huus" | "sandur";
 
 export const ISP_FILTERS: { id: IspId; label: string }[] = [
-  { id: "todos", label: "Todos" },
-  { id: "xcien", label: "Xcien" },
-  { id: "wispi", label: "Wispi" },
-  { id: "luminet", label: "Luminet" },
-  { id: "iblack", label: "iBlack" },
-  { id: "coco", label: "Coco" },
+  { id: "todos",  label: "Todos" },
+  { id: "xcien",  label: "XCIEN" },
+  { id: "wispi",  label: "Wispi" },
+  { id: "luminet",label: "Luminet WAN" },
+  { id: "huus",   label: "Huus" },
+  { id: "sandur", label: "Sandur" },
 ];
 
 export const ISP_COLORS: Record<string, string> = {
-  xcien: "hsl(172 60% 45%)",   // teal
-  luminet: "hsl(220 55% 35%)", // navy
-  iblack: "hsl(28 85% 55%)",  // orange
-  wispi: "hsl(270 50% 55%)",   // purple
-  coco: "hsl(5 70% 60%)",     // coral
+  xcien:   "#1B7F4A",
+  luminet: "#0E6B3A",
+  wispi:   "#0EA5E9",
+  huus:    "#7C3AED",
+  sandur:  "#EA580C",
 };
 
 export interface RevenueMetric {
@@ -38,11 +38,11 @@ export const REVENUE_METRICS: RevenueMetric[] = [
 
 export interface IspUptime { name: string; uptime: number; }
 export const ISP_UPTIMES: IspUptime[] = [
-  { name: "Xcien", uptime: 99.2 },
-  { name: "Luminet", uptime: 99.8 },
-  { name: "iBlack", uptime: 99.9 },
-  { name: "Wispi", uptime: 97.1 },
-  { name: "Coco", uptime: 95.3 },
+  { name: "Xcien",       uptime: 99.2 },
+  { name: "Luminet WAN", uptime: 99.8 },
+  { name: "Wispi",       uptime: 97.1 },
+  { name: "Huus",        uptime: 99.1 },
+  { name: "Sandur",      uptime: 95.3 },
 ];
 
 export interface SupportPriority { label: string; color: string; count: number; }
@@ -59,23 +59,23 @@ export const INVENTORY_ITEMS: InventoryItem[] = [
   { name: "Cable cat6", current: 12, max: 20 },
 ];
 
-export interface MrrDataPoint { month: string; xcien: number; luminet: number; iblack: number; wispi: number; coco: number; }
+export interface MrrDataPoint { month: string; xcien: number; luminet: number; huus: number; wispi: number; sandur: number; }
 export const MRR_EVOLUTION: MrrDataPoint[] = [
-  { month: "Oct", xcien: 28000, luminet: 22000, iblack: 15000, wispi: 12000, coco: 8000 },
-  { month: "Nov", xcien: 29500, luminet: 23000, iblack: 15800, wispi: 12500, coco: 9200 },
-  { month: "Dic", xcien: 30200, luminet: 23500, iblack: 16200, wispi: 13000, coco: 10500 },
-  { month: "Ene", xcien: 31000, luminet: 24200, iblack: 17000, wispi: 13800, coco: 11000 },
-  { month: "Feb", xcien: 32500, luminet: 25000, iblack: 17500, wispi: 14200, coco: 11800 },
-  { month: "Mar", xcien: 34000, luminet: 26000, iblack: 18000, wispi: 14500, coco: 12500 },
+  { month: "Oct", xcien: 28000, luminet: 22000, huus: 15000, wispi: 12000, sandur: 8000 },
+  { month: "Nov", xcien: 29500, luminet: 23000, huus: 15800, wispi: 12500, sandur: 9200 },
+  { month: "Dic", xcien: 30200, luminet: 23500, huus: 16200, wispi: 13000, sandur: 10500 },
+  { month: "Ene", xcien: 31000, luminet: 24200, huus: 17000, wispi: 13800, sandur: 11000 },
+  { month: "Feb", xcien: 32500, luminet: 25000, huus: 17500, wispi: 14200, sandur: 11800 },
+  { month: "Mar", xcien: 34000, luminet: 26000, huus: 18000, wispi: 14500, sandur: 12500 },
 ];
 
 export interface IspPerformance { isp: string; mrr: string; clientes: number; uptime: number; churn: number; }
 export const ISP_PERFORMANCE: IspPerformance[] = [
-  { isp: "Xcien", mrr: "$34,000", clientes: 142, uptime: 99.2, churn: 1.2 },
-  { isp: "Luminet", mrr: "$26,000", clientes: 98, uptime: 99.8, churn: 0.8 },
-  { isp: "iBlack", mrr: "$18,000", clientes: 67, uptime: 99.9, churn: 1.5 },
-  { isp: "Wispi", mrr: "$14,500", clientes: 53, uptime: 97.1, churn: 2.8 },
-  { isp: "Coco", mrr: "$12,500", clientes: 45, uptime: 95.3, churn: 3.1 },
+  { isp: "Xcien",       mrr: "$34,000", clientes: 142, uptime: 99.2, churn: 1.2 },
+  { isp: "Luminet WAN", mrr: "$26,000", clientes: 98,  uptime: 99.8, churn: 0.8 },
+  { isp: "Wispi",       mrr: "$14,500", clientes: 53,  uptime: 97.1, churn: 2.8 },
+  { isp: "Huus",        mrr: "$18,000", clientes: 67,  uptime: 99.1, churn: 1.5 },
+  { isp: "Sandur",      mrr: "$12,500", clientes: 45,  uptime: 95.3, churn: 3.1 },
 ];
 
 export interface AgentData {

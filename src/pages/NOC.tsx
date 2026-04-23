@@ -14,11 +14,6 @@ import { CreateTicketModal } from '@/components/noc/CreateTicketModal';
 import { TenantGrid } from '@/components/noc/TenantGrid';
 import { RegionFilter, CITY_REGION, TENANT_NET_TYPE, type Region, type NetworkType } from '@/components/noc/RegionFilter';
 
-const TENANT_SUBNOC_ROUTE: Record<string, string> = {
-  iblack: '/iblack',
-  coco: '/coco-monitor',
-  xcien: '/noc-vip',
-};
 
 export default function NOC() {
   const navigate = useNavigate();
@@ -93,10 +88,7 @@ export default function NOC() {
   };
 
   const handleSelectTenantFromCard = (tenantId: string) => {
-    const sub = TENANT_SUBNOC_ROUTE[tenantId];
-    if (sub) {
-      navigate(sub);
-    } else {
+    {
       setActiveTenantId(tenantId);
       setSelectedCityId(null);
     }

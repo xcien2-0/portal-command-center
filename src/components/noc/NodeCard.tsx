@@ -1,11 +1,11 @@
 import { NetworkNode, NodeStatus } from '@/data/mockNetworkData';
 
 const ISP_COLORS: Record<string, string> = {
-  Xcien: 'bg-[#0ea5e9]/20 text-[#38bdf8]',
-  Luminet: 'bg-[#6366f1]/20 text-[#818cf8]',
-  iBlack: 'bg-[#F5F5F7]/15 text-[#F5F5F7]',
-  Wispi: 'bg-[#a855f7]/20 text-[#c084fc]',
-  Coco: 'bg-[#f97316]/20 text-[#fb923c]',
+  Xcien:      'bg-[#1B7F4A]/20 text-[#1D9E75]',
+  Luminet:    'bg-[#0E6B3A]/20 text-[#0EA472]',
+  Wispi:      'bg-[#0ea5e9]/20 text-[#38bdf8]',
+  Huus:       'bg-[#7C3AED]/20 text-[#a78bfa]',
+  Sandur:     'bg-[#EA580C]/20 text-[#fb923c]',
 };
 
 const borderColor: Record<NodeStatus, string> = {

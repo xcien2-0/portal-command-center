@@ -7,12 +7,6 @@ interface TenantGridProps {
   onSelectTenant: (tenantId: string) => void;
 }
 
-// Map tenant id to its specialized sub-NOC route (if any)
-const TENANT_SUBNOC_ROUTE: Record<string, string> = {
-  iblack: '/iblack',
-  coco: '/coco-monitor',
-  xcien: '/noc-vip',
-};
 
 export function TenantGrid({ onSelectTenant }: TenantGridProps) {
   const allData = getAllCasaData();
@@ -40,7 +34,6 @@ export function TenantGrid({ onSelectTenant }: TenantGridProps) {
             : 0;
           const color = TENANT_COLORS[t.id] || '#00B4D8';
           const scoreColor = avgScore >= 85 ? '#00C896' : avgScore >= 60 ? '#FFB703' : '#FF4D6D';
-          const subRoute = TENANT_SUBNOC_ROUTE[t.id];
 
           return (
             <button
@@ -93,14 +86,6 @@ export function TenantGrid({ onSelectTenant }: TenantGridProps) {
                 </div>
               </div>
 
-              {/* Sub-NOC link hint */}
-              {subRoute && (
-                <div className="mt-3 pt-2 border-t border-[#1E3A4A]/60">
-                  <span className="text-[9px] uppercase tracking-wider text-[#00B4D8]/70">
-                    Vista especializada disponible
-                  </span>
-                </div>
-              )}
             </button>
           );
         })}
