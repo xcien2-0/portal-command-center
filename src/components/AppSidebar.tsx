@@ -3,6 +3,7 @@ import {
   Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone,
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
   ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink,
+  Terminal,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -44,6 +45,7 @@ const opsGroup: { label: string; icon: any; children: Item[] } = {
     { title: 'Dispatch', url: '/dispatch', icon: Send },
     { title: 'Call Center', url: '/call-center', icon: Phone },
     { title: 'Scanner', url: '/scan', icon: ScanLine },
+    { title: 'Terminal', url: '/terminal', icon: Terminal },
   ],
 };
 
