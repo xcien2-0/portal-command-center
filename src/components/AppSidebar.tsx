@@ -57,6 +57,8 @@ const reportsGroup: { label: string; icon: any; children: Item[] } = {
   ],
 };
 
+const xcien2Item: Item = { title: 'XCIEN 2.0', url: '/xcien2', icon: ExternalLink };
+
 const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } = {
   label: 'Academia XCIEN',
   icon: GraduationCap,
@@ -188,6 +190,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {topItems.map(renderItem)}
+              {renderItem(xcien2Item)}
               {renderGroup(nocGroup, nocOpen, setNocOpen, nocActive)}
               {renderGroup(opsGroup, opsOpen, setOpsOpen, opsActive)}
               {renderGroup(reportsGroup, reportsOpen, setReportsOpen, reportsActive)}
