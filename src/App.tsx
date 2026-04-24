@@ -22,6 +22,7 @@ import AcademiaExamenes from "./pages/academia/AcademiaExamenes.tsx";
 import AcademiaPerfil from "./pages/academia/AcademiaPerfil.tsx";
 import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
 import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
+import Xcien2Page from "./pages/xcien2/index.tsx";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           {/* Full-screen route (no sidebar) */}
+          <Route path="/xcien2" element={<Xcien2Page />} />
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
