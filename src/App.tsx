@@ -14,6 +14,7 @@ import Gerencia from "./pages/Gerencia.tsx";
 import Scan from "./pages/Scan.tsx";
 import NOC from "./pages/NOC.tsx";
 import Dispatch from "./pages/Dispatch.tsx";
+import Terminal from "./pages/Terminal.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import AcademiaLayout from "./pages/academia/AcademiaLayout.tsx";
 import AcademiaDashboard from "./pages/academia/AcademiaDashboard.tsx";
@@ -33,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           {/* Full-screen route (no sidebar) */}
+          <Route path="/terminal" element={<Terminal />} />
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
