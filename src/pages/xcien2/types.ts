@@ -38,6 +38,132 @@ export const PRESET_ACCENTS = [
   { label: 'Rosa',        value: '#EC4899' },
 ];
 
+// ── Preset themes ─────────────────────────────────────────────────────────────
+export interface PresetTheme {
+  id:          string;
+  name:        string;
+  description: string;
+  emoji:       string;
+  preview:     { bg: string; accent: string; card: string; text: string };
+  config:      ThemeConfig;
+}
+
+export const PRESET_THEMES: PresetTheme[] = [
+  {
+    id: 'xcien',
+    name: 'XCIEN 2.0',
+    description: 'Verde corporativo sobre negro · tema por defecto',
+    emoji: '🟢',
+    preview: { bg: '#0A0A0A', accent: '#00A859', card: '#151515', text: '#F0F0F0' },
+    config: DEFAULT_THEME,
+  },
+  {
+    id: 'holo',
+    name: 'NOC Holográfico',
+    description: 'Neon verde · estilo sala de control sci-fi',
+    emoji: '⚡',
+    preview: { bg: '#000905', accent: '#00ff88', card: 'rgba(0,8,4,0.88)', text: '#d8f8e8' },
+    config: {
+      accent:       '#00ff88',
+      bg:           '#000905',
+      card:         '#050f07',
+      sidebar:      '#020a04',
+      border:       'rgba(0,255,136,0.12)',
+      text:         '#d8f8e8',
+      dim:          '#2a6040',
+      sidebarWidth: 260,
+      radius:       6,
+      baseFontSize: 13,
+      animations:   true,
+      compact:      false,
+    },
+  },
+  {
+    id: 'corporate',
+    name: 'Corporativo',
+    description: 'Tema claro · presentaciones y clientes',
+    emoji: '🏢',
+    preview: { bg: '#F5F5F7', accent: '#0066CC', card: '#FFFFFF', text: '#1D1D1F' },
+    config: {
+      accent:       '#0066CC',
+      bg:           '#F5F5F7',
+      card:         '#FFFFFF',
+      sidebar:      '#FAFAFA',
+      border:       'rgba(0,0,0,0.08)',
+      text:         '#1D1D1F',
+      dim:          '#6E6E73',
+      sidebarWidth: 260,
+      radius:       12,
+      baseFontSize: 14,
+      animations:   true,
+      compact:      false,
+    },
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    description: 'Morado profundo · modo nocturno',
+    emoji: '🌙',
+    preview: { bg: '#0D0A1A', accent: '#8B5CF6', card: '#141020', text: '#EDE9FE' },
+    config: {
+      accent:       '#8B5CF6',
+      bg:           '#0D0A1A',
+      card:         '#141020',
+      sidebar:      '#0F0C18',
+      border:       'rgba(139,92,246,0.15)',
+      text:         '#EDE9FE',
+      dim:          '#6D5E8A',
+      sidebarWidth: 260,
+      radius:       14,
+      baseFontSize: 14,
+      animations:   true,
+      compact:      false,
+    },
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Azul marino · vista de operaciones de red',
+    emoji: '🌊',
+    preview: { bg: '#0B1826', accent: '#00B4D8', card: '#0f2030', text: '#e2e8f0' },
+    config: {
+      accent:       '#00B4D8',
+      bg:           '#0B1826',
+      card:         '#0f2030',
+      sidebar:      '#091520',
+      border:       'rgba(0,180,216,0.12)',
+      text:         '#e2e8f0',
+      dim:          '#4a6a7a',
+      sidebarWidth: 260,
+      radius:       12,
+      baseFontSize: 14,
+      animations:   true,
+      compact:      false,
+    },
+  },
+  {
+    id: 'terminal',
+    name: 'Terminal',
+    description: 'Ámbar sobre negro · estilo consola clásica',
+    emoji: '🖥️',
+    preview: { bg: '#0A0800', accent: '#F59E0B', card: '#111000', text: '#FEF3C7' },
+    config: {
+      accent:       '#F59E0B',
+      bg:           '#0A0800',
+      card:         '#111000',
+      sidebar:      '#0D0B00',
+      border:       'rgba(245,158,11,0.12)',
+      text:         '#FEF3C7',
+      dim:          '#78600A',
+      sidebarWidth: 260,
+      radius:       4,
+      baseFontSize: 13,
+      animations:   false,
+      compact:      true,
+    },
+  },
+];
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'editor';
 

@@ -1,5 +1,5 @@
 import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
-import { ThemeConfig, DEFAULT_THEME, SectionId } from './types';
+import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import DirectorChat    from './sections/DirectorChat';
 import NocSection      from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
@@ -147,9 +147,16 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
 }
 
 // ── Main Content ──────────────────────────────────────────────────────────────
-interface ContentProps { section: SectionId; theme: ThemeConfig; onThemeChange: (p: Partial<ThemeConfig>) => void; onThemeReset: () => void }
+interface ContentProps {
+  section: SectionId;
+  theme: ThemeConfig;
+  activeThemeId: string;
+  onThemeChange: (p: Partial<ThemeConfig>) => void;
+  onThemeReset: () => void;
+  onApplyPreset: (preset: PresetTheme) => void;
+}
 
-function Content({ section, theme, onThemeChange, onThemeReset }: ContentProps) {
+function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset }: ContentProps) {
   const padding = theme.compact ? 20 : 32;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding, background: theme.bg, minWidth: 0 }}>
@@ -157,18 +164,31 @@ function Content({ section, theme, onThemeChange, onThemeReset }: ContentProps) 
       {section === 'noc'      && <NocSection      theme={theme} />}
       {section === 'academia' && <AcademiaSection theme={theme} />}
       {section === 'wfm'      && <WFMSection      theme={theme} />}
-      {section === 'editor'   && <DevPanel theme={theme} onChange={onThemeChange} onReset={onThemeReset} />}
+      {section === 'editor'   && (
+        <DevPanel
+          theme={theme}
+          activeThemeId={activeThemeId}
+          onChange={onThemeChange}
+          onApplyPreset={onApplyPreset}
+          onReset={onThemeReset}
+        />
+      )}
     </div>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Xcien2Page() {
-  const [section, setSection]   = useState<SectionId>('inicio');
-  const [theme, dispatch]       = useReducer(themeReducer, DEFAULT_THEME);
+  const [section, setSection]     = useState<SectionId>('inicio');
+  const [theme, dispatch]         = useReducer(themeReducer, DEFAULT_THEME);
+  const [activeThemeId, setActiveThemeId] = useState('xcien');
 
-  const patchTheme  = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
-  const resetTheme  = useCallback(() => dispatch({ type: 'reset' }), []);
+  const patchTheme   = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
+  const resetTheme   = useCallback(() => { dispatch({ type: 'reset' }); setActiveThemeId('xcien'); }, []);
+  const applyPreset  = useCallback((preset: PresetTheme) => {
+    dispatch({ type: 'patch', payload: preset.config });
+    setActiveThemeId(preset.id);
+  }, []);
 
   // Apply CSS variables to :root for native elements
   const cssVars = useMemo(() => ({
@@ -217,8 +237,10 @@ export default function Xcien2Page() {
         <Content
           section={section}
           theme={theme}
+          activeThemeId={activeThemeId}
           onThemeChange={patchTheme}
           onThemeReset={resetTheme}
+          onApplyPreset={applyPreset}
         />
       </div>
 
