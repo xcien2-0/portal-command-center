@@ -64,8 +64,8 @@ const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } 
   icon: GraduationCap,
   main: { title: 'Dashboard', url: '/academia', icon: Home },
   children: [
-    { title: 'Biblioteca & Exámenes', url: 'http://localhost:8000', icon: BookOpen, external: true },
-    { title: 'WFM Control Operativo', url: 'http://localhost:8000/wfm.html', icon: Users, external: true },
+    { title: 'Biblioteca & Exámenes', url: '/academia/modulos', icon: BookOpen },
+    { title: 'WFM Control Operativo', url: '/xcien2', icon: Users },
   ],
 };
 
