@@ -4,6 +4,7 @@ import DirectorChat    from './sections/DirectorChat';
 import NocSection      from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
 import WFMSection      from './sections/WFMSection';
+import TokensSection   from './sections/TokensSection';
 import DevPanel        from './DevPanel';
 
 // ── Theme reducer ─────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ const NAV: NavEntry[] = [
   { id: 'inicio',   label: 'Inicio',               icon: '🏠' },
   { id: 'noc',      label: 'Red en Vivo',           icon: '📡' },
   { id: 'wfm',      label: 'Control Operativo',     icon: '⚙️', group: 'Operaciones' },
+  { id: 'tokens',   label: 'Tokens & Certificados', icon: '🔖', group: 'Operaciones' },
   { id: 'academia', label: 'Dashboard',             icon: '🎓', group: 'Academia XCIEN' },
   { id: 'editor',   label: 'Editor en vivo',        icon: '🎨' },
 ];
@@ -32,6 +34,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   inicio:   'Director General',
   noc:      'Red en Vivo',
   wfm:      'Control Operativo — WFM',
+  tokens:   'Tokens & Certificados',
   academia: 'Academia XCIEN',
   editor:   'Editor en vivo',
 };
@@ -164,6 +167,7 @@ function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, o
       {section === 'noc'      && <NocSection      theme={theme} />}
       {section === 'academia' && <AcademiaSection theme={theme} />}
       {section === 'wfm'      && <WFMSection      theme={theme} />}
+      {section === 'tokens'   && <TokensSection   theme={theme} />}
       {section === 'editor'   && (
         <DevPanel
           theme={theme}
