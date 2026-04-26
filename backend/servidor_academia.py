@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, "agents"))
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
 from agents.director_general_v2 import DirectorGeneralV2
+from agents import token_service
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
@@ -66,6 +67,23 @@ class SkillResult(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+
+class TokenRequest(BaseModel):
+    empresa: str
+    oportunidad_id: str
+    cliente: str
+    vendedor: str
+    monto: float = 0.0
+    extra: dict = {}
+
+class OdooWebhookPayload(BaseModel):
+    id: int
+    name: str
+    partner_name: str = ""
+    user_id: list = []        # [id, nombre] — formato Odoo
+    expected_revenue: float = 0.0
+    company_id: list = []     # [id, nombre]
+    tag_ids: list = []
 
 # ─── Cliente Odoo ─────────────────────────────────────────────────────────────
 ODOO_URL = os.environ.get("ODOO_URL")
@@ -416,6 +434,64 @@ def get_noc_summary():
         "criticalAlerts": sum(1 for a in active if a.get("severity") == "critical"),
         "warningAlerts":  sum(1 for a in active if a.get("severity") == "warning"),
     }
+
+# ─── Tokens de Oportunidad Ganada ────────────────────────────────────────────
+
+@app.post("/api/tokens/emitir")
+def emitir_token(req: TokenRequest):
+    """Emite un token firmado para una oportunidad ganada."""
+    try:
+        token = token_service.emitir(
+            empresa=req.empresa,
+            oportunidad_id=req.oportunidad_id,
+            cliente=req.cliente,
+            vendedor=req.vendedor,
+            monto=req.monto,
+            extra=req.extra,
+        )
+        return token
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/tokens/verificar/{token_id}")
+def verificar_token(token_id: str):
+    """Verifica la autenticidad e integridad de un token."""
+    return token_service.verificar(token_id)
+
+@app.get("/api/tokens")
+def listar_tokens(empresa: str = None):
+    """Lista todos los tokens emitidos, opcionalmente filtrados por empresa."""
+    return token_service.listar(empresa=empresa)
+
+@app.post("/api/webhook/odoo/oportunidad-ganada")
+def webhook_odoo(payload: OdooWebhookPayload):
+    """
+    Webhook que Odoo llama al marcar una oportunidad como ganada.
+    Configurar en Odoo: Ajustes → Técnico → Automatizaciones → Acción webhook.
+    URL: http://<tu-servidor>:8000/api/webhook/odoo/oportunidad-ganada
+    """
+    empresa = "xcien"
+    if payload.company_id:
+        nombre_empresa = payload.company_id[1].lower() if len(payload.company_id) > 1 else ""
+        for e in token_service.EMPRESAS_VALIDAS:
+            if e in nombre_empresa:
+                empresa = e
+                break
+
+    vendedor = payload.user_id[1] if len(payload.user_id) > 1 else "Sin asignar"
+
+    try:
+        token = token_service.emitir(
+            empresa=empresa,
+            oportunidad_id=str(payload.id),
+            cliente=payload.partner_name or payload.name,
+            vendedor=vendedor,
+            monto=payload.expected_revenue,
+            extra={"nombre_oportunidad": payload.name},
+        )
+        return {"status": "token_emitido", "token_id": token["token_id"]}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ─── Inteligencia: Director General ──────────────────────────────────────────
 @app.post("/api/director/chat")
