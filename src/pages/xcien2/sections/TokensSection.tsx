@@ -21,6 +21,20 @@ interface Token {
   firma: string;
 }
 
+// ── Demo fallback ─────────────────────────────────────────────────────────────
+const DEMO_TOKENS: Token[] = [
+  { token_id: "a1b2c3d4-0001", tipo: "certificacion",    empresa: "xcien",   tecnico: "Carlos Mendoza",    nivel: "Técnico",      score: 88,    extra: { pilares: { Instalación: 92, Soporte: 85, Seguridad: 90 } },                      emitido_en: "2026-04-25T09:15:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0002", tipo: "certificacion",    empresa: "luminet", tecnico: "Ana Rodríguez",     nivel: "Especialista", score: 94,    extra: { pilares: { Instalación: 96, Soporte: 92, Seguridad: 95 } },                      emitido_en: "2026-04-24T14:30:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0003", tipo: "oportunidad_ganada", empresa: "xcien", cliente: "Grupo Industrial Noreste", vendedor: "Luis Herrera", monto: 48500, extra: { nombre_oportunidad: "Enlace dedicado 500MB" }, emitido_en: "2026-04-25T11:00:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0004", tipo: "promocion",        empresa: "xcien",   tecnico: "Miguel Ángel Torres", nivel: "Especialista",           extra: { nivel_anterior: "Técnico", xp_total: 1520 },                                     emitido_en: "2026-04-23T10:00:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0005", tipo: "bono",             empresa: "wispi",   tecnico: "Laura Garza",       monto: 3200,           extra: { motivo: "Racha 3 meses sin revisitas" },                                                      emitido_en: "2026-04-22T08:00:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0006", tipo: "agente_ia",        empresa: "xcien",   agente: "Director General IA",                       extra: { accion: "Auto-asignación ticket T-1042", tecnico_asignado: "Carlos Mendoza" },                emitido_en: "2026-04-25T12:45:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0007", tipo: "oportunidad_ganada", empresa: "huus",  cliente: "Residencial Las Palmas", vendedor: "María Fernández", monto: 12000, extra: { nombre_oportunidad: "Internet residencial 50 unidades" },            emitido_en: "2026-04-24T16:20:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0008", tipo: "certificacion",    empresa: "wispi",   tecnico: "Roberto Salinas",   nivel: "Aprendiz",     score: 62,    extra: { pilares: { Instalación: 65, Soporte: 60, Seguridad: 58 } },                      emitido_en: "2026-04-21T09:00:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0009", tipo: "agente_ia",        empresa: "luminet", agente: "Director General IA",                       extra: { accion: "Generación examen Fibra Óptica", modulo: "estandar_fibra_optica.md" },               emitido_en: "2026-04-25T08:30:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0010", tipo: "bono",             empresa: "luminet", tecnico: "Jorge Martínez",    monto: 1800,           extra: { motivo: "Mejor score del mes — Instalación" },                                               emitido_en: "2026-04-20T17:00:00+00:00", firma: "demo" },
+];
+
 // ── Config visual por tipo ─────────────────────────────────────────────────────
 const TIPO_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   oportunidad_ganada: { label: 'Oportunidad ganada',    icon: '💼', color: '#00C896' },
@@ -145,11 +159,8 @@ export default function TokensSection({ theme }: Props) {
   useEffect(() => {
     fetch(`${API_BASE}/api/tokens`)
       .then(r => r.json())
-      .then(data => {
-        setTokens(data);
-        setOnline(true);
-      })
-      .catch(() => setOnline(false))
+      .then(data => { setTokens(data); setOnline(true); })
+      .catch(() => { setTokens(DEMO_TOKENS); setOnline(false); })
       .finally(() => setLoading(false));
   }, []);
 
