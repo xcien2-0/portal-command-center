@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { CASA_TENANTS } from '@/types/tenant';
 import { NOCCity, NOCAlert } from '@/types/noc';
-import { getAllCasaData, getNOCData, getAllAlerts, getAlertsForTenant, getTotalAlertCount } from '@/services/nocboard';
+import { getAllCasaData, getNOCData, getAllAlerts, getAlertsForTenant, getTotalAlertCount, getRealCities, getRealAlerts, fetchNOCSummary } from '@/services/nocboard';
 import { TENANT_COLORS } from '@/data/noc-mock';
 import { GlobalMetrics } from '@/components/noc/GlobalMetrics';
 import { MexicoMap } from '@/components/noc/MexicoMap';
@@ -22,26 +22,61 @@ export default function NOC() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [ticketAlert, setTicketAlert] = useState<NOCAlert | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString('es-MX'));
+  const [realCities, setRealCities] = useState<NOCCity[] | null>(null);
+  const [realAlerts, setRealAlerts] = useState<NOCAlert[] | null>(null);
+  const [nocSummary, setNocSummary] = useState<any>(null);
+  const [backendOnline, setBackendOnline] = useState(false);
 
   // Cross-cutting filters (apply only in global view)
   const [selectedTenants, setSelectedTenants] = useState<Set<string>>(new Set());
   const [region, setRegion] = useState<Region>('all');
   const [netType, setNetType] = useState<NetworkType>('all');
 
+  // Cargar datos reales de NOCBoard
+  const loadRealData = async () => {
+    try {
+      const [cities, alerts, summary] = await Promise.all([
+        getRealCities(),
+        getRealAlerts(),
+        fetchNOCSummary(),
+      ]);
+      if (cities && cities.length > 0) {
+        setRealCities(cities);
+        setRealAlerts(alerts);
+        setNocSummary(summary);
+        setBackendOnline(true);
+      }
+    } catch { setBackendOnline(false); }
+    setLastUpdated(new Date().toLocaleTimeString('es-MX'));
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdated(new Date().toLocaleTimeString('es-MX'));
-    }, 30000);
+    loadRealData();
+    const interval = setInterval(loadRealData, 30_000);
     return () => clearInterval(interval);
   }, []);
 
   const isGlobal = activeTenantId === null;
   const activeTenant = CASA_TENANTS.find(t => t.id === activeTenantId);
 
-  // Build cities list with tenant info + apply filters
+  // Build cities list — real data (NOCBoard) con fallback a mock
   const cities = useMemo(() => {
     let result: Array<NOCCity & { tenantId: string }> = [];
-    if (isGlobal) {
+
+    if (realCities && realCities.length > 0 && isGlobal) {
+      // Datos reales de NOCBoard — asignar tenantId por ciudad
+      const cityTenant: Record<string, string> = {
+        'monterrey': 'xcien', 'saltillo': 'xcien', 'piedras-negras': 'xcien',
+        'san-luis-potosi': 'xcien', 'coco': 'xcien',
+        'guadalajara': 'wispi', 'querétaro': 'wispi',
+        'torreón': 'luminet', 'monclova': 'luminet',
+        'cdmx': 'huus', 'guanajuato': 'huus',
+      };
+      result = realCities.map(c => ({
+        ...c,
+        tenantId: cityTenant[c.id] ?? 'xcien',
+      }));
+    } else if (isGlobal) {
       const allData = getAllCasaData();
       Object.entries(allData).forEach(([tid, td]) => {
         td.cities.forEach(c => result.push({ ...c, tenantId: tid }));
@@ -52,25 +87,39 @@ export default function NOC() {
     }
 
     if (isGlobal) {
-      if (selectedTenants.size > 0) {
-        result = result.filter(c => selectedTenants.has(c.tenantId));
-      }
-      if (region !== 'all') {
-        result = result.filter(c => CITY_REGION[c.id] === region);
-      }
-      if (netType !== 'all') {
-        result = result.filter(c => TENANT_NET_TYPE[c.tenantId] === netType);
-      }
+      if (selectedTenants.size > 0) result = result.filter(c => selectedTenants.has(c.tenantId));
+      if (region !== 'all') result = result.filter(c => CITY_REGION[c.id] === region);
+      if (netType !== 'all') result = result.filter(c => TENANT_NET_TYPE[c.tenantId] === netType);
     }
     return result;
-  }, [activeTenantId, isGlobal, selectedTenants, region, netType]);
+  }, [activeTenantId, isGlobal, selectedTenants, region, netType, realCities]);
 
   const filteredCities = selectedCityId ? cities.filter(c => c.id === selectedCityId) : cities;
 
-  const alerts = isGlobal ? getAllAlerts() : getAlertsForTenant(activeTenantId!);
-  const totalAlertCount = getTotalAlertCount();
+  const alerts = realAlerts ?? (isGlobal ? getAllAlerts() : getAlertsForTenant(activeTenantId!));
+  const totalAlertCount = alerts.filter(a => !a.ticketCreated).length;
 
   const tenantScores = useMemo(() => {
+    // Usar datos reales si están disponibles
+    if (realCities && realCities.length > 0) {
+      const cityTenant: Record<string, string> = {
+        'monterrey': 'xcien', 'saltillo': 'xcien', 'piedras-negras': 'xcien',
+        'san-luis-potosi': 'xcien', 'coco': 'xcien',
+      };
+      const totals: Record<string, { sum: number; count: number }> = {};
+      realCities.forEach(c => {
+        const tid = cityTenant[c.id] ?? 'xcien';
+        if (!totals[tid]) totals[tid] = { sum: 0, count: 0 };
+        totals[tid].sum += c.score;
+        totals[tid].count++;
+      });
+      const scores: Record<string, number> = {};
+      Object.entries(totals).forEach(([tid, { sum, count }]) => {
+        scores[tid] = Math.round(sum / count);
+      });
+      return scores;
+    }
+    // Fallback mock
     const allData = getAllCasaData();
     const scores: Record<string, number> = {};
     CASA_TENANTS.forEach(t => {
@@ -80,7 +129,7 @@ export default function NOC() {
       }
     });
     return scores;
-  }, []);
+  }, [realCities]);
 
   const handleCreateTicket = (alert: NOCAlert) => {
     setTicketAlert(alert);
@@ -169,7 +218,7 @@ export default function NOC() {
         {/* Global view: KPIs + tenant grid + filters */}
         {isGlobal && (
           <>
-            <GlobalMetrics />
+            <GlobalMetrics summary={nocSummary} realCities={realCities} />
             <TenantGrid onSelectTenant={handleSelectTenantFromCard} />
             <RegionFilter
               selectedTenants={selectedTenants}

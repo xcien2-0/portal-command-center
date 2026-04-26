@@ -259,6 +259,164 @@ def update_tecnico_status(tecnico_id: str, nuevo_status: str):
             return {"status": "updated", "tecnico": tec["nombre"], "nuevo_status": nuevo_status}
     raise HTTPException(status_code=404, detail="Técnico no encontrado")
 
+# ─── NOC: Datos reales desde NOCBoard ────────────────────────────────────────
+
+NOCBOARD_DIR = os.path.expanduser("~/Library/Application Support/NOCBoard")
+NOCBOARD_HOSTS   = os.path.join(NOCBOARD_DIR, "hosts.json")
+NOCBOARD_ALERTS  = os.path.join(NOCBOARD_DIR, "alerts.json")
+
+def _load_nocboard_file(path: str):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ NOCBoard file error: {e}")
+        return []
+
+def _host_status(host: dict) -> str:
+    score = host.get("healthScore", 0)
+    ping  = host.get("lastPingResult", {})
+    if ping.get("reachable", False):
+        return "online"
+    if score > 30:
+        return "degraded"
+    return "offline"
+
+@app.get("/api/noc/hosts")
+def get_noc_hosts():
+    hosts = _load_nocboard_file(NOCBOARD_HOSTS)
+    return [
+        {
+            "id":       h.get("id"),
+            "ip":       h.get("ip"),
+            "name":     h.get("rawName") or f"{h.get('endpointA','')} → {h.get('endpointB','')}",
+            "score":    round(h.get("healthScore", 0), 1),
+            "status":   _host_status(h),
+            "city":     h.get("city"),
+            "site":     h.get("site"),
+            "lastSeen": h.get("lastPingResult", {}).get("timestamp", ""),
+            "metrics":  h.get("latestMetrics", {}),
+            "model":    h.get("model", ""),
+            "vendor":   h.get("vendor", ""),
+        }
+        for h in hosts
+    ]
+
+@app.get("/api/noc/cities")
+def get_noc_cities():
+    hosts   = _load_nocboard_file(NOCBOARD_HOSTS)
+    alerts  = _load_nocboard_file(NOCBOARD_ALERTS)
+
+    active_alerts = [a for a in alerts if a.get("state") == "active"]
+
+    # Coordenadas por ciudad
+    COORDS = {
+        "Monterrey":      {"lat": 25.6866, "lng": -100.3161},
+        "Saltillo":       {"lat": 25.4232, "lng": -100.9928},
+        "Piedras Negras": {"lat": 28.7000, "lng": -100.5231},
+        "San Luis Potosi":{"lat": 22.1565, "lng": -100.9855},
+        "Coco":           {"lat": 25.5000, "lng": -103.5000},
+    }
+
+    # Agrupar hosts por ciudad → sitio
+    from collections import defaultdict
+    city_sites: dict = defaultdict(lambda: defaultdict(list))
+    for h in hosts:
+        city = h.get("city", "Sin Ciudad")
+        site = h.get("site", "Site Principal")
+        city_sites[city][site].append(h)
+
+    cities = []
+    for city_name, sites_dict in city_sites.items():
+        city_hosts_all = [h for hs in sites_dict.values() for h in hs]
+        total   = len(city_hosts_all)
+        online  = sum(1 for h in city_hosts_all if _host_status(h) == "online")
+        offline = sum(1 for h in city_hosts_all if _host_status(h) == "offline")
+        scores  = [h.get("healthScore", 0) for h in city_hosts_all]
+        avg_score = round(sum(scores) / len(scores), 1) if scores else 0
+        city_alerts = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
+        coord = COORDS.get(city_name, {"lat": 23.0, "lng": -102.0})
+
+        sites_list = []
+        for site_name, site_hosts in sites_dict.items():
+            site_online  = sum(1 for h in site_hosts if _host_status(h) == "online")
+            site_offline = sum(1 for h in site_hosts if _host_status(h) == "offline")
+            sites_list.append({
+                "id":           f"{city_name}-{site_name}".lower().replace(" ", "-"),
+                "name":         site_name,
+                "hostsOnline":  site_online,
+                "hostsOffline": site_offline,
+                "hosts": [
+                    {
+                        "id":       h.get("id"),
+                        "ip":       h.get("ip"),
+                        "name":     h.get("rawName") or f"{h.get('endpointA','')}→{h.get('endpointB','')}",
+                        "score":    round(h.get("healthScore", 0), 1),
+                        "status":   _host_status(h),
+                        "lastSeen": h.get("lastPingResult", {}).get("timestamp", ""),
+                    }
+                    for h in site_hosts
+                ],
+            })
+
+        cities.append({
+            "id":          city_name.lower().replace(" ", "-"),
+            "name":        city_name,
+            "score":       avg_score,
+            "totalHosts":  total,
+            "online":      online,
+            "offline":     offline,
+            "alerts":      city_alerts,
+            "lat":         coord["lat"],
+            "lng":         coord["lng"],
+            "sites":       sites_list,
+        })
+
+    return sorted(cities, key=lambda c: c["offline"], reverse=True)
+
+@app.get("/api/noc/alerts")
+def get_noc_alerts(active_only: bool = True, limit: int = 200):
+    alerts = _load_nocboard_file(NOCBOARD_ALERTS)
+    if active_only:
+        alerts = [a for a in alerts if a.get("state") == "active"]
+    alerts = sorted(alerts, key=lambda a: a.get("triggeredAt", ""), reverse=True)[:limit]
+    sev_map = {"degraded": "warning", "info": "warning"}
+    return [
+        {
+            "id":           a.get("id"),
+            "cityId":       a.get("city", "").lower().replace(" ", "-"),
+            "cityName":     a.get("city", ""),
+            "siteName":     a.get("site", ""),
+            "hostIp":       a.get("hostIP", ""),
+            "hostName":     a.get("hostName", ""),
+            "type":         a.get("cause", ""),
+            "message":      a.get("message", ""),
+            "severity":     sev_map.get(a.get("severity"), a.get("severity", "warning")),
+            "timestamp":    a.get("triggeredAt", ""),
+            "ticketCreated": a.get("resolvedAt") is not None,
+            "state":        a.get("state"),
+        }
+        for a in alerts
+    ]
+
+@app.get("/api/noc/summary")
+def get_noc_summary():
+    hosts  = _load_nocboard_file(NOCBOARD_HOSTS)
+    alerts = _load_nocboard_file(NOCBOARD_ALERTS)
+    active = [a for a in alerts if a.get("state") == "active"]
+    total   = len(hosts)
+    online  = sum(1 for h in hosts if _host_status(h) == "online")
+    scores  = [h.get("healthScore", 0) for h in hosts]
+    return {
+        "totalHosts":     total,
+        "online":         online,
+        "offline":        total - online,
+        "avgHealthScore": round(sum(scores) / len(scores), 1) if scores else 0,
+        "activeAlerts":   len(active),
+        "criticalAlerts": sum(1 for a in active if a.get("severity") == "critical"),
+        "warningAlerts":  sum(1 for a in active if a.get("severity") == "warning"),
+    }
+
 # ─── Inteligencia: Director General ──────────────────────────────────────────
 @app.post("/api/director/chat")
 def director_chat(request: ChatRequest):
