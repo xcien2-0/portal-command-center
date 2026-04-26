@@ -184,11 +184,11 @@ function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, o
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Xcien2Page() {
   const [section, setSection]     = useState<SectionId>('inicio');
-  const [theme, dispatch]         = useReducer(themeReducer, () => {
+  const [theme, dispatch]         = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
       const saved = localStorage.getItem('xcien2_theme');
-      return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
-    } catch { return DEFAULT_THEME; }
+      return saved ? { ...initial, ...JSON.parse(saved) } : initial;
+    } catch { return initial; }
   });
   const [activeThemeId, setActiveThemeId] = useState('xcien');
 
