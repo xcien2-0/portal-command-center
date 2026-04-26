@@ -159,7 +159,10 @@ export default function TokensSection({ theme }: Props) {
   useEffect(() => {
     fetch(`${API_BASE}/api/tokens`)
       .then(r => r.json())
-      .then(data => { setTokens(data); setOnline(true); })
+      .then(data => {
+        if (Array.isArray(data)) { setTokens(data); setOnline(true); }
+        else { setTokens(DEMO_TOKENS); setOnline(false); }
+      })
       .catch(() => { setTokens(DEMO_TOKENS); setOnline(false); })
       .finally(() => setLoading(false));
   }, []);

@@ -95,8 +95,8 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto' }}>
-        {groups.map(({ label, items }) => (
-          <div key={label ?? '_top'} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {groups.map(({ label, items }, idx) => (
+          <div key={label ?? `_top_${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {label && (
               <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#444', padding: '0 12px 8px', letterSpacing: 1 }}>
                 {label.toUpperCase()}
