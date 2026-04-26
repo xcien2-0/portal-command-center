@@ -19,6 +19,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
 from agents.director_general_v2 import DirectorGeneralV2
 from agents import token_service
+from agents import asset_service
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
@@ -75,6 +76,26 @@ class TokenRequest(BaseModel):
     vendedor: str
     monto: float = 0.0
     extra: dict = {}
+
+class ActivoRequest(BaseModel):
+    nombre: str
+    categoria: str
+    empresa: str
+    regimen: str
+    site: str = ""
+    asignado_a: str = ""
+    numero_serie: str = ""
+    marca: str = ""
+    modelo: str = ""
+    costo_mensual: float = 0.0
+    vencimiento_contrato: str = ""
+    estado: str = "activo"
+    notas: str = ""
+
+class MoverActivoRequest(BaseModel):
+    nuevo_site: str
+    nuevo_asignado: str
+    motivo: str = ""
 
 class OdooWebhookPayload(BaseModel):
     id: int
@@ -434,6 +455,67 @@ def get_noc_summary():
         "criticalAlerts": sum(1 for a in active if a.get("severity") == "critical"),
         "warningAlerts":  sum(1 for a in active if a.get("severity") == "warning"),
     }
+
+# ─── Activos / Inventario ────────────────────────────────────────────────────
+from fastapi.responses import StreamingResponse, Response
+import io
+
+@app.post("/api/activos")
+def registrar_activo(req: ActivoRequest):
+    try:
+        return asset_service.registrar(**req.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/activos")
+def listar_activos(empresa: str = None, categoria: str = None, site: str = None):
+    return asset_service.listar(empresa=empresa, categoria=categoria, site=site)
+
+@app.get("/api/activos/{activo_id}")
+def obtener_activo(activo_id: str):
+    a = asset_service.obtener(activo_id)
+    if not a:
+        raise HTTPException(status_code=404, detail="Activo no encontrado")
+    return a
+
+@app.put("/api/activos/{activo_id}/mover")
+def mover_activo(activo_id: str, req: MoverActivoRequest):
+    try:
+        return asset_service.mover(activo_id, req.nuevo_site, req.nuevo_asignado, req.motivo)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/activos/{activo_id}/etiqueta")
+def etiqueta_activo(activo_id: str):
+    try:
+        img_bytes = asset_service.generar_etiqueta_bytes(activo_id)
+        return Response(content=img_bytes, media_type="image/png",
+                        headers={"Content-Disposition": f"inline; filename={activo_id}.png"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/activos/exportar/csv")
+def exportar_csv(empresa: str = None, site: str = None):
+    csv_str = asset_service.exportar_csv(empresa=empresa, site=site)
+    return Response(content=csv_str.encode("utf-8"), media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=inventario_xcien.csv"})
+
+@app.get("/api/activos/exportar/excel")
+def exportar_excel(empresa: str = None, site: str = None):
+    try:
+        xls = asset_service.exportar_excel(empresa=empresa, site=site)
+        return Response(content=xls, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": "attachment; filename=inventario_xcien.xlsx"})
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/activos/catalogos/categorias")
+def get_categorias():
+    return asset_service.CATEGORIAS
+
+@app.get("/api/activos/catalogos/regimenes")
+def get_regimenes():
+    return asset_service.REGIMENES
 
 # ─── Tokens de Oportunidad Ganada ────────────────────────────────────────────
 
