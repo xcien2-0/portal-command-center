@@ -20,6 +20,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 from agents.director_general_v2 import DirectorGeneralV2
 from agents import token_service
 from agents import asset_service
+from agents import transacciones_service
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
@@ -76,6 +77,18 @@ class TokenRequest(BaseModel):
     vendedor: str
     monto: float = 0.0
     extra: dict = {}
+
+class TransaccionRequest(BaseModel):
+    empresa_origen: str
+    empresa_destino: str
+    area_origen: str
+    area_destino: str
+    concepto: str
+    precio_mercado: float
+    precio_preferencial: float
+    responsable: str = ""
+    referencia: str = ""
+    notas: str = ""
 
 class ActivoRequest(BaseModel):
     nombre: str
@@ -455,6 +468,27 @@ def get_noc_summary():
         "criticalAlerts": sum(1 for a in active if a.get("severity") == "critical"),
         "warningAlerts":  sum(1 for a in active if a.get("severity") == "warning"),
     }
+
+# ─── Transacciones Intragrupo ─────────────────────────────────────────────────
+
+@app.post("/api/transacciones")
+def registrar_transaccion(req: TransaccionRequest):
+    try:
+        return transacciones_service.registrar(**req.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/transacciones")
+def listar_transacciones(empresa_origen: str = None, empresa_destino: str = None, area: str = None):
+    return transacciones_service.listar(empresa_origen=empresa_origen, empresa_destino=empresa_destino, area=area)
+
+@app.get("/api/transacciones/resumen")
+def resumen_transacciones():
+    return transacciones_service.resumen()
+
+@app.get("/api/transacciones/catalogos")
+def catalogos_transacciones():
+    return {"empresas": transacciones_service.EMPRESAS, "areas": transacciones_service.AREAS}
 
 # ─── Activos / Inventario ────────────────────────────────────────────────────
 from fastapi.responses import StreamingResponse, Response

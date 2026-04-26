@@ -165,7 +165,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'tokens' | 'editor';
+export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'tokens' | 'transacciones' | 'editor';
 
 export interface NavItem {
   id: SectionId;
