@@ -3,6 +3,7 @@ import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import DirectorChat    from './sections/DirectorChat';
 import NocSection      from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
+import AcademiaHoloSection from './sections/AcademiaHoloSection';
 import WFMSection      from './sections/WFMSection';
 import TokensSection        from './sections/TokensSection';
 import TransaccionesSection from './sections/TransaccionesSection';
@@ -31,6 +32,7 @@ const NAV: NavEntry[] = [
   { id: 'transacciones', label: 'Transacciones Grupo',   icon: '🔄', group: 'Operaciones' },
   { id: 'etiquetas',     label: 'Etiquetas & Comprobantes', icon: '🏷️', group: 'Operaciones' },
   { id: 'academia', label: 'Dashboard',             icon: '🎓', group: 'Academia XCIEN' },
+  { id: 'holo',     label: 'Certificación Holo',    icon: '🔮', group: 'Operaciones' },
   { id: 'editor',   label: 'Editor en vivo',        icon: '🎨' },
 ];
 
@@ -42,6 +44,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   transacciones: 'Transacciones Intragrupo',
   etiquetas:     'Etiquetas & Comprobantes',
   academia: 'Academia XCIEN',
+  holo:     'Certificación Holo',
   editor:   'Editor en vivo',
 };
 
@@ -172,6 +175,7 @@ function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, o
       {section === 'inicio'   && <DirectorChat    theme={theme} />}
       {section === 'noc'      && <NocSection      theme={theme} />}
       {section === 'academia' && <AcademiaSection theme={theme} />}
+      {section === 'holo'      && <AcademiaHoloSection theme={theme} />}
       {section === 'wfm'      && <WFMSection      theme={theme} />}
       {section === 'tokens'        && <TokensSection        theme={theme} />}
       {section === 'transacciones' && <TransaccionesSection  theme={theme} />}
