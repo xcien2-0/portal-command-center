@@ -21,6 +21,7 @@ from agents.director_general_v2 import DirectorGeneralV2
 from agents import token_service
 from agents import asset_service
 from agents import transacciones_service
+from agents import label_service
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
@@ -489,6 +490,34 @@ def resumen_transacciones():
 @app.get("/api/transacciones/catalogos")
 def catalogos_transacciones():
     return {"empresas": transacciones_service.EMPRESAS, "areas": transacciones_service.AREAS}
+
+# ─── Etiquetas & Comprobantes ─────────────────────────────────────────────────
+from fastapi.responses import HTMLResponse
+
+@app.get("/api/etiquetas/activo/{activo_id}")
+def etiqueta_activo(activo_id: str):
+    try:
+        img = label_service.etiqueta_activo_png(activo_id)
+        return Response(content=img, media_type="image/png",
+                        headers={"Content-Disposition": f"inline; filename={activo_id}.png"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/etiquetas/hoja", response_class=HTMLResponse)
+def hoja_etiquetas(empresa: str = None, site: str = None):
+    try:
+        return HTMLResponse(content=label_service.hoja_etiquetas_html(empresa=empresa, site=site))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/etiquetas/transaccion/{tx_id}")
+def comprobante_tx(tx_id: str):
+    try:
+        img = label_service.comprobante_tx_png(tx_id)
+        return Response(content=img, media_type="image/png",
+                        headers={"Content-Disposition": f"inline; filename={tx_id}.png"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ─── Activos / Inventario ────────────────────────────────────────────────────
 from fastapi.responses import StreamingResponse, Response
