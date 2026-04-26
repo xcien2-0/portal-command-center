@@ -3,11 +3,11 @@ import { ThemeConfig, ChatMessage } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
-async function callDirectorAPI(message: string): Promise<string> {
+async function callDirectorAPI(message: string, history: {role: string, content: string}[]): Promise<string> {
   const res = await fetch(`${API_BASE}/api/director/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, history }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -44,15 +44,21 @@ export default function DirectorChat({ theme }: Props) {
     const text = input.trim();
     if (!text || isTyping) return;
 
-    const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: text, ts };
+
+    // Compact history (last 4 msgs, ignore init)
+    const historyToSend = messages
+      .filter(m => m.id !== 'init')
+      .slice(-4)
+      .map(m => ({ role: m.role, content: m.content }));
 
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
 
     try {
-      const reply = await callDirectorAPI(text);
+      const reply = await callDirectorAPI(text, historyToSend);
       const botMsg: ChatMessage = { id: `b-${Date.now()}`, role: 'assistant', content: reply, ts };
       setMessages(prev => [...prev, botMsg]);
     } catch {

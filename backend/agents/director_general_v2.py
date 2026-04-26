@@ -39,7 +39,9 @@ class DirectorGeneralV2:
         except:
             return "No se encontró el manual maestro. Operando con conocimiento base."
 
-    def ejecutar_orden(self, instruccion_usuario):
+    def ejecutar_orden(self, instruccion_usuario, history=None):
+        if history is None:
+            history = []
         print(f"\n=========================================")
         print(f"👤 ALTA GERENCIA: {instruccion_usuario}")
         print(f"=========================================")
@@ -97,12 +99,18 @@ class DirectorGeneralV2:
             },
         ]
 
+        api_messages = []
+        for msg in history:
+            role = "user" if msg.get("role") == "user" else "assistant"
+            api_messages.append({"role": role, "content": msg.get("content", "")})
+        api_messages.append({"role": "user", "content": instruccion_usuario})
+        
         try:
             message = self.client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=1024,
                 system=system_blocks,
-                messages=[{"role": "user", "content": instruccion_usuario}],
+                messages=api_messages,
                 extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
             )
             response_text = message.content[0].text

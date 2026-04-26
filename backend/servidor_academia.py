@@ -70,6 +70,7 @@ class SkillResult(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    history: list = []
 
 class TokenRequest(BaseModel):
     empresa: str
@@ -642,7 +643,7 @@ def webhook_odoo(payload: OdooWebhookPayload):
 @app.post("/api/director/chat")
 def director_chat(request: ChatRequest):
     try:
-        respuesta = dg_agent.ejecutar_orden(request.message)
+        respuesta = dg_agent.ejecutar_orden(request.message, request.history)
         return {"status": "success", "response": respuesta}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
