@@ -1,39 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeConfig, ChatMessage } from '../types';
 
-// ── Simulated AI responses ────────────────────────────────────────────────────
-const RESPONSES: Array<{ keywords: string[]; reply: string }> = [
-  {
-    keywords: ['red', 'noc', 'latencia', 'nodo', 'alerta'],
-    reply: 'La red opera al **98.7% de salud global**. El nodo crítico activo es `COAH-SALTILLO-CORE` con 210ms de latencia y pérdida de paquetes del 5.2%. Tengo 2 alertas críticas sin ticket asignado. ¿Deseas que genere un ticket de emergencia?',
-  },
-  {
-    keywords: ['academia', 'técnico', 'capacitación', 'nivel', 'badge'],
-    reply: 'Academia XCIEN: **47 técnicos activos**, avance global del **62.3%**. El top técnico es Brian Quintero Choreño con 100% y 12 badges. Quedan 8 técnicos en nivel Aprendiz que requieren plan de acción. ¿Quieres el reporte completo?',
-  },
-  {
-    keywords: ['dispatch', 'campo', 'técnico', 'wfm', 'ticket'],
-    reply: 'Operaciones de campo — Abril 2026: **411 tareas**, **24% cumplimiento global**. SANDUR con 316 tareas es el ISP con mayor backlog. Tengo 3 técnicos disponibles en Nuevo León para asignación inmediata. ¿Asigno los tickets pendientes?',
-  },
-  {
-    keywords: ['ingreso', 'mrr', 'revenue', 'factura', 'cobranza'],
-    reply: 'MRR actual: **$102,500 MXN**. ARR proyectado **$1.23M**. Cuentas por cobrar vencidas: $47,200 (12 facturas). Tasa de cobranza en 94.2% — superior al mes anterior en 2.1pp. ¿Genero el reporte ejecutivo para Gerencia?',
-  },
-  {
-    keywords: ['hola', 'buenos', 'buenas', 'hey', 'hi'],
-    reply: 'Hola. Soy el **Director General IA** de XCIEN 2.0. Tengo acceso en tiempo real a Red, Operaciones de Campo, Academia y Finanzas. ¿En qué área necesitas apoyo hoy?',
-  },
-];
+const API_BASE = 'http://localhost:8000';
 
-const FALLBACK_REPLY =
-  'Entendido. Consultando datos del sistema... Con base en el estado actual de las operaciones, te recomiendo revisar el módulo de **NOC** para el estado de red y **WFM** para la asignación de campo. ¿Quieres que profundice en algún área específica?';
-
-function getReply(input: string): string {
-  const lower = input.toLowerCase();
-  for (const { keywords, reply } of RESPONSES) {
-    if (keywords.some(k => lower.includes(k))) return reply;
-  }
-  return FALLBACK_REPLY;
+async function callDirectorAPI(message: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/director/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data.response;
 }
 
 function formatMarkdown(text: string): string {
@@ -62,7 +40,7 @@ export default function DirectorChat({ theme }: Props) {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || isTyping) return;
 
@@ -73,12 +51,21 @@ export default function DirectorChat({ theme }: Props) {
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const reply = getReply(text);
+    try {
+      const reply = await callDirectorAPI(text);
       const botMsg: ChatMessage = { id: `b-${Date.now()}`, role: 'assistant', content: reply, ts };
       setMessages(prev => [...prev, botMsg]);
+    } catch {
+      const botMsg: ChatMessage = {
+        id: `b-${Date.now()}`,
+        role: 'assistant',
+        content: '⚠️ No se pudo conectar al backend. Verifica que el servidor esté corriendo en `localhost:8000`.',
+        ts,
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1200 + Math.random() * 600);
+    }
   }, [input, isTyping]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {

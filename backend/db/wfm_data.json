@@ -1,0 +1,17 @@
+{
+  "tecnicos": [
+    { "id": "t1", "nombre": "Carlos Mendoza",       "zona": "Nuevo León",  "specialization": "Instalación Fibra", "skillPct": 92, "status": "Disponible", "skills": { "Instalación": 92, "Fibra Óptica": 88, "RF": 60 } },
+    { "id": "t2", "nombre": "Ana Rodríguez",         "zona": "Coahuila",    "specialization": "RF & Wireless",     "skillPct": 87, "status": "En Sitio",   "skills": { "RF": 87, "Wireless": 84, "Instalación": 70 } },
+    { "id": "t3", "nombre": "Miguel Ángel Torres",   "zona": "San Luis P.", "specialization": "Soporte Nivel 2",   "skillPct": 78, "status": "Disponible", "skills": { "Soporte": 78, "Configuración": 75, "Instalación": 65 } },
+    { "id": "t4", "nombre": "Laura Garza",           "zona": "Nuevo León",  "specialization": "Splicing Óptico",   "skillPct": 95, "status": "En Oficina", "skills": { "Fibra Óptica": 95, "Splicing": 93, "Instalación": 80 } },
+    { "id": "t5", "nombre": "Roberto Salinas",       "zona": "CDMX",        "specialization": "Infraestructura",   "skillPct": 83, "status": "En Sitio",   "skills": { "Infraestructura": 83, "Configuración": 80, "RF": 72 } },
+    { "id": "t6", "nombre": "Jorge Martínez",        "zona": "Jalisco",     "specialization": "Instalación Fibra", "skillPct": 71, "status": "Disponible", "skills": { "Instalación": 71, "Fibra Óptica": 68, "Soporte": 60 } }
+  ],
+  "tickets": [
+    { "id": "T-1042", "client": "Xcien Monterrey", "description": "Latencia elevada en nodo core",   "location": "Apodaca, NL",      "tipo": "Infraestructura", "zona": "Nuevo León",  "priority": "critical", "status": "Abierto",  "asignado": null },
+    { "id": "T-1043", "client": "Luminet WAN",      "description": "Fibra cortada — restitución",     "location": "Torreón, COAH",    "tipo": "Fibra Óptica",    "zona": "Coahuila",    "priority": "critical", "status": "Agendado", "asignado": "t2" },
+    { "id": "T-1044", "client": "Sandur SLP",       "description": "Configuración de equipo nuevo",   "location": "Soledad G.S.",     "tipo": "Configuración",   "zona": "San Luis P.", "priority": "high",     "status": "Abierto",  "asignado": null },
+    { "id": "T-1045", "client": "Huus CDMX",        "description": "Revisión de nodo secundario",     "location": "CDMX Sur",         "tipo": "Infraestructura", "zona": "CDMX",        "priority": "medium",   "status": "Agendado", "asignado": "t5" },
+    { "id": "T-1046", "client": "Wispi Jalisco",     "description": "Instalación cliente corporativo", "location": "Guadalajara, JAL", "tipo": "Instalación",     "zona": "Jalisco",     "priority": "high",     "status": "Abierto",  "asignado": null }
+  ]
+}

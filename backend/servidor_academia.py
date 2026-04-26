@@ -1,41 +1,44 @@
 import os
+import sys
 import re
 import json
-import requests
+import anthropic
 import xmlrpc.client
 from datetime import date
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from director_general_v2 import DirectorGeneralV2
-load_dotenv()
+
+# Asegurar que el directorio del servidor sea el CWD y esté en el path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+sys.path.insert(0, os.path.join(BASE_DIR, "agents"))
+
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
+
+from agents.director_general_v2 import DirectorGeneralV2
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
 
-# ─── Configuración de IA (Ollama local, sin cuotas) ─────────────────────────
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.2:3b"
+# ─── Cliente Claude ───────────────────────────────────────────────────────────
+_claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-def ask_ollama(prompt: str) -> str:
-    """Envía un prompt a Ollama y devuelve el texto generado."""
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False
-    }
-    response = requests.post(OLLAMA_URL, json=payload, timeout=120)
-    response.raise_for_status()
-    return response.json()["response"]
+def ask_claude(prompt: str) -> str:
+    msg = _claude.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return msg.content[0].text
 
 # ─── Constantes ──────────────────────────────────────────────────────────────
-DOCS_DIR = "Xcien_Docs"
-QUIZ_CACHE_DIR = "Xcien_Docs/quizzes"
-SKILLS_DB = "db/skills_2026.json"
-BANCO_PREGUNTAS = "banco_preguntas.json"
-WFM_DB = "db/wfm_data.json"
+DOCS_DIR = os.path.join(BASE_DIR, "..", "docs", "estandares")
+QUIZ_CACHE_DIR = os.path.join(BASE_DIR, "..", "src", "data", "quizzes_cache")
+SKILLS_DB = os.path.join(BASE_DIR, "db", "skills_2026.json")
+BANCO_PREGUNTAS = os.path.join(BASE_DIR, "banco_preguntas.json")
+WFM_DB = os.path.join(BASE_DIR, "db", "wfm_data.json")
 
 # ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Portal Academia Xcien API")
@@ -78,12 +81,10 @@ def _get_odoo_employees():
         uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
         if not uid:
             return []
-        
         models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(ODOO_URL))
-        # Buscar empleados que tengan puesto asignado (técnicos, auxiliares, etc)
-        employees = models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 
-            'hr.employee', 'search_read', 
-            [[('job_title', '!=', False)]], 
+        employees = models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD,
+            'hr.employee', 'search_read',
+            [[('job_title', '!=', False)]],
             {'fields': ['name', 'job_title'], 'limit': 50})
         return employees
     except Exception as e:
@@ -92,14 +93,12 @@ def _get_odoo_employees():
 
 @app.get("/api/odoo/tecnicos")
 def api_odoo_tecnicos():
-    """Devuelve la lista real de técnicos desde el ERP Odoo"""
     return _get_odoo_employees()
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/api/docs")
 def list_docs():
-    """Lista todos los manuales .md de la biblioteca."""
     if not os.path.exists(DOCS_DIR):
         return []
     files = [f for f in os.listdir(DOCS_DIR) if f.endswith(".md")]
@@ -107,7 +106,6 @@ def list_docs():
 
 @app.get("/api/docs/{filename}")
 def get_doc(filename: str):
-    """Devuelve el contenido de un manual."""
     path = os.path.join(DOCS_DIR, filename)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Documento no encontrado")
@@ -116,7 +114,6 @@ def get_doc(filename: str):
 
 @app.get("/api/diagnostic_exam")
 def get_diagnostic_exam():
-    """Carga el banco de preguntas maestro del examen de diagnóstico 2026."""
     if not os.path.exists(BANCO_PREGUNTAS):
         raise HTTPException(status_code=404, detail="Banco de preguntas no encontrado")
     with open(BANCO_PREGUNTAS, "r", encoding="utf-8") as f:
@@ -124,7 +121,6 @@ def get_diagnostic_exam():
 
 @app.post("/api/save_skill_result")
 def save_skill_result(result: SkillResult):
-    """Guarda la matriz de habilidades de un técnico en el JSON de RRHH."""
     os.makedirs("db", exist_ok=True)
     data = {}
     if os.path.exists(SKILLS_DB):
@@ -146,7 +142,6 @@ def save_skill_result(result: SkillResult):
 
 @app.post("/api/generate_quiz")
 def generate_quiz(request: QuizRequest):
-    """Genera un examen basado en un manual, usando caché y Ollama como IA."""
     # 1. Verificar caché
     os.makedirs(QUIZ_CACHE_DIR, exist_ok=True)
     cache_path = os.path.join(QUIZ_CACHE_DIR, request.filename.replace(".md", ".json"))
@@ -182,21 +177,19 @@ Formato JSON requerido:
 }}
 
 Estándar a evaluar:
-{context[:4000]}
+{context[:6000]}
 """
 
     try:
-        print(f"🤖 Generando examen con Ollama para: {request.filename}")
-        text = ask_ollama(prompt)
+        print(f"🤖 Generando examen con Claude para: {request.filename}")
+        text = ask_claude(prompt)
 
-        # Extraer JSON con regex
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
             quiz_result = json.loads(match.group())
         else:
             quiz_result = json.loads(text.replace("```json", "").replace("```", "").strip())
 
-        # 3. Guardar en caché
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(quiz_result, f, indent=2, ensure_ascii=False)
 
@@ -205,13 +198,16 @@ Estándar a evaluar:
 
     except Exception as e:
         print(f"❌ Error generando examen: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al generar el examen con Ollama: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al generar el examen: {str(e)}")
 
 # ─── WFM: Workforce Management ────────────────────────────────────────────────
 
 def _load_wfm():
-    with open(WFM_DB, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(WFM_DB, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"tecnicos": [], "tickets": []}
 
 def _save_wfm(data):
     with open(WFM_DB, "w", encoding="utf-8") as f:
@@ -266,18 +262,18 @@ def update_tecnico_status(tecnico_id: str, nuevo_status: str):
 # ─── Inteligencia: Director General ──────────────────────────────────────────
 @app.post("/api/director/chat")
 def director_chat(request: ChatRequest):
-    """Procesa una orden del usuario usando la inteligencia del DG."""
     try:
         respuesta = dg_agent.ejecutar_orden(request.message)
         return {"status": "success", "response": respuesta}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ─── Servir frontend estático ────────────────────────────────────────────────
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 XCIEN 2.0 Iniciando en puerto 8000...")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    print("🚀 XCIEN 2.0 Backend iniciando en puerto 8000...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

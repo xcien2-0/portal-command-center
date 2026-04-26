@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ThemeConfig, WFMTechnician, WFMTicket, TechStatus, TicketPriority,
   WFM_TECHNICIANS, WFM_TICKETS } from '../types';
+
+const API_BASE = 'http://localhost:8000';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<TechStatus, { bg: string; color: string }> = {
@@ -47,20 +49,63 @@ interface Props { theme: ThemeConfig }
 export default function WFMSection({ theme }: Props) {
   const [technicians, setTechnicians] = useState<WFMTechnician[]>(WFM_TECHNICIANS);
   const [tickets, setTickets]         = useState<WFMTicket[]>(WFM_TICKETS);
+  const [backendOnline, setBackendOnline] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/api/wfm/tecnicos`).then(r => r.json()),
+      fetch(`${API_BASE}/api/wfm/tickets`).then(r => r.json()),
+    ]).then(([techs, ticks]) => {
+      setTechnicians(techs.map((t: any) => ({
+        id: t.id,
+        name: t.nombre,
+        zone: t.zona,
+        specialization: t.specialization || '—',
+        skillPct: t.skillPct ?? Math.max(...(Object.values(t.skills || { x: 0 }) as number[])),
+        status: t.status as TechStatus,
+      })));
+      setTickets(ticks.map((t: any) => ({
+        id: t.id,
+        client: t.client,
+        description: t.description,
+        location: t.location,
+        priority: t.priority as TicketPriority,
+        assignedTo: t.asignado ?? null,
+      })));
+      setBackendOnline(true);
+    }).catch(() => setBackendOnline(false));
+  }, []);
 
   const kpi = kpiCount(technicians, tickets);
   const accent = theme.accent;
 
-  const assignTicket = useCallback((ticketId: string) => {
+  const assignTicket = useCallback(async (ticketId: string) => {
+    if (backendOnline) {
+      try {
+        await fetch(`${API_BASE}/api/wfm/asignar/${ticketId}`, { method: 'POST' });
+        const [techs, ticks] = await Promise.all([
+          fetch(`${API_BASE}/api/wfm/tecnicos`).then(r => r.json()),
+          fetch(`${API_BASE}/api/wfm/tickets`).then(r => r.json()),
+        ]);
+        setTechnicians(techs.map((t: any) => ({ id: t.id, name: t.nombre, zone: t.zona, specialization: t.specialization || '—', skillPct: t.skillPct ?? 0, status: t.status as TechStatus })));
+        setTickets(ticks.map((t: any) => ({ id: t.id, client: t.client, description: t.description, location: t.location, priority: t.priority as TicketPriority, assignedTo: t.asignado ?? null })));
+        return;
+      } catch { /* fallback to local */ }
+    }
     const available = technicians.find(t => t.status === 'Disponible');
     if (!available) return;
     setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, assignedTo: available.id } : t));
     setTechnicians(prev => prev.map(t => t.id === available.id ? { ...t, status: 'En Sitio' } : t));
-  }, [technicians]);
+  }, [technicians, backendOnline]);
 
-  const releasetech = useCallback((techId: string) => {
+  const releasetech = useCallback(async (techId: string) => {
+    if (backendOnline) {
+      try {
+        await fetch(`${API_BASE}/api/wfm/tecnico/${techId}/status?nuevo_status=Disponible`, { method: 'PUT' });
+      } catch { /* fallback */ }
+    }
     setTechnicians(prev => prev.map(t => t.id === techId ? { ...t, status: 'Disponible' } : t));
-  }, []);
+  }, [backendOnline]);
 
   const getTechName = (id: string | null) =>
     id ? (technicians.find(t => t.id === id)?.name ?? '—') : null;
@@ -68,9 +113,14 @@ export default function WFMSection({ theme }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>Control Operativo — WFM</h2>
-        <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Gestión de técnicos y tickets de campo en tiempo real</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>Control Operativo — WFM</h2>
+          <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Gestión de técnicos y tickets de campo en tiempo real</p>
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: backendOnline ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: backendOnline ? '#00C896' : '#FF4757', border: `1px solid ${backendOnline ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
+          {backendOnline ? '● Backend conectado' : '● Modo local'}
+        </span>
       </div>
 
       {/* KPIs */}
