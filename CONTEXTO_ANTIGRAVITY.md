@@ -1,123 +1,58 @@
 # Contexto del Proyecto — Live Status Hub XCIEN
-> Briefing para Antigravity · Actualizado 2026-04-25
+> Briefing de Traspaso Operativo (Antigravity → Claude) · Actualizado 2026-04-26
 
 ---
 
-## ¿Qué es este proyecto?
+## 🚀 Estado de la Unificación Operativa
 
-**Live Status Hub** es la plataforma operativa unificada de XCIEN — una empresa ISP que opera 5 operadoras:
-XCIEN, Wispi, Luminet WAN, Huus y Sandur, con presencia en Nuevo León, CDMX, Jalisco, Coahuila y San Luis Potosí.
+Se ha completado la cirugía mayor de arquitectura para consolidar el portal bajo una experiencia única de "Fuente Única de Verdad".
 
-**Repositorio GitHub:** https://github.com/jmmcmx/live-status-hub  
-**Carpeta local:** `/Users/mesquite/Desktop/Live status Xcien/`
+### 1. Reestructuración de Rutas y Navegación
+- **Hub Principal (`/`)**: Se restauró como la landing page central con tarjetas interactivas, ya que es el flujo preferido del usuario.
+- **XCIEN 2.0 (`/xcien2`)**: Es ahora el **Dashboard Holo Unificado**. Se eliminó la fragmentación de rutas. 
+- **Deep Linking**: Se implementó soporte para parámetros de URL (`/xcien2?section=noc`). Esto permite que las tarjetas del Hub Principal abran directamente el módulo correspondiente en la interfaz Holo.
+- **Sidebar Inteligente**: Organizado por grupos: `Operaciones`, `Certificación & Academia`, `Administración` y `Configuración`.
 
----
+### 2. Módulos Preservados e Integrados
+Todos los módulos avanzados se mantienen funcionales y están mapeados en `src/pages/xcien2/index.tsx`:
+- **NOC (Red en Vivo)**: Unificado con selector de Tenants y vistas Operador/Gerencial.
+- **Academia & Holo**: El examen de certificación y el registro de tokens están integrados en el grupo de Certificación.
+- **WFM, Call Center, Scanner, Gerencia y Reportes**: Todos migrados al shell holográfico.
 
-## Arquitectura del sistema
+### 3. Sistema de Temas Globales (Uniformidad)
+Se implementó un motor de temas inyectado en el `:root` del documento para que toda la plataforma cambie de color simultáneamente.
+- **Temas Disponibles**: Matrix (Verde terminal), Cyberpunk (Neon Rosa/Cian), Gamer RGB, Medianoche, Ocean y Corporativo.
+- **Variables CSS**: Se usan `--xcien-accent`, `--xcien-bg`, `--xcien-card`, etc., en todos los componentes.
 
-```
-live-status-hub/             ← Fuente única de verdad
-├── src/                     ← Frontend React + TypeScript + Vite + Tailwind + Supabase
-├── backend/                 ← Agentes Python (FastAPI en puerto 8000)
-│   ├── agents/
-│   │   └── director_general_v2.py   ← Agente IA con Claude + prompt caching
-│   ├── servidor_academia.py         ← Servidor FastAPI principal
-│   ├── db/wfm_data.json             ← Técnicos y tickets (persistente)
-│   ├── db/skills_2026.json          ← Matriz de habilidades
-│   ├── banco_preguntas.json         ← Exámenes de Academia
-│   └── .env                         ← ANTHROPIC_API_KEY (no subir a git)
-└── docs/                    ← Archivo de auditoría operativa ene–abr 2026
-    ├── auditoria_2026/      ← Entrega-recepción, libro maestro, estado del sistema
-    ├── estandares/          ← Estándares técnicos (fuente para exámenes de Academia)
-    ├── capacitacion/        ← Manual de operaciones, bitácora
-    └── reportes/            ← Informes técnicos y reportes de campo
-```
+### 4. 🌉 Agente Puente (Antigravity Bridge)
+Se creó un "puente" de comunicación entre el proceso de desarrollo de la IA y el portal:
+- **Backend**: Nuevo endpoint `/api/bridge` (GET/POST) para reportar el estado de las tareas del agente.
+- **Frontend**: El `FloatingChat` ahora tiene una sección de "Feedback del Agente" que muestra lo que la IA está haciendo en tiempo real.
 
 ---
 
-## Stack tecnológico
+## 🛠️ Stack Tecnológico (Actualizado)
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui |
-| Estado | TanStack Query + React hooks |
-| Base de datos | Supabase (PostgreSQL) |
-| Backend | FastAPI (Python 3.9) en puerto 8000 |
-| IA | Claude (Anthropic) con prompt caching activo |
-| PDFs | jsPDF + jspdf-autotable |
+| Backend | FastAPI (Puerto 8000) - `/api/bridge` añadido. |
+| Temas | CSS Variables dinámicas en document.documentElement. |
+| Navegación | React Router 6 con soporte de SearchParams en Xcien2Page. |
 
 ---
 
-## Módulos del frontend (http://localhost:8080)
+## 📋 Pendientes para Claude (Próximos Pasos)
 
-| Página | Ruta | Descripción |
-|---|---|---|
-| NOC | `/` | Centro de control de red en tiempo real |
-| Red en Vivo | `/red-en-vivo` | Vista holográfica del estado de red |
-| Dispatch | `/dispatch` | Despacho de técnicos de campo |
-| Gerencia | `/gerencia` | Dashboard ejecutivo |
-| Academia | `/academia` | Capacitación, exámenes y leaderboard |
-| Reportes Gobierno | `/reportes-gobierno` | SLA y cumplimiento |
-| Reporte de Impacto | `/reporte-impacto` | Análisis de impacto operativo |
-| **XCIEN 2.0** | `/xcien2` | Centro de comando maestro con IA |
+1.  **Conexión Real con Odoo**: Ya se preparó el terreno (ver `servidor_academia.py` y `tokens_service.py`). Falta mapear los IDs de técnicos de Odoo con los resultados de los exámenes Holo.
+2.  **Lógica de Negocio en el Puente**: Utilizar el `/api/bridge` para que el Director General (Claude interno) pueda recibir notificaciones de cambios en el código hechos por nosotros.
+3.  **Auditoría de Datos**: El usuario enfatizó verificar que "los datos que tiene odoo son correctos".
 
 ---
 
-## Backend API (http://localhost:8000)
-
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/api/health` | GET | Estado del servidor |
-| `/api/director/chat` | POST | Chat con Director General IA (Claude) |
-| `/api/wfm/tecnicos` | GET | Lista de técnicos de campo |
-| `/api/wfm/tickets` | GET | Tickets activos |
-| `/api/wfm/asignar/{id}` | POST | Auto-asignar ticket a técnico |
-| `/api/wfm/tecnico/{id}/status` | PUT | Actualizar estado de técnico |
-| `/api/diagnostic_exam` | GET | Banco de preguntas de diagnóstico |
-| `/api/generate_quiz` | POST | Generar examen desde estándar .md con Ollama |
-| `/api/docs` | GET | Listar manuales disponibles |
-| `/api/odoo/tecnicos` | GET | Técnicos reales desde Odoo ERP |
+## 🛡️ Instrucciones para el Próximo Agente
+- **NO crear dashboards duplicados**. Toda nueva funcionalidad debe ir como una sección dentro de `Xcien2Page`.
+- **Respetar las variables CSS**. No uses colores hex hardcodeados; usa `var(--xcien-accent)`, etc.
+- **El Hub Principal (/) es sagrado**. No lo elimines; es la puerta de entrada.
 
 ---
-
-## Cómo levantar el sistema
-
-```bash
-# Terminal 1 — Frontend
-cd "/Users/mesquite/Desktop/Live status Xcien"
-npm run dev        # http://localhost:8080
-
-# Terminal 2 — Backend
-cd "/Users/mesquite/Desktop/Live status Xcien/backend"
-python3 servidor_academia.py   # http://localhost:8000
-```
-
----
-
-## Estado actual del sistema (2026-04-25)
-
-- ✅ Frontend corriendo en localhost:8080
-- ✅ Backend FastAPI corriendo en localhost:8000
-- ✅ Director General IA conectado a Claude con prompt caching (~80% ahorro)
-- ✅ WFM (técnicos + tickets) persistente en backend/db/wfm_data.json
-- ✅ Documentación de auditoría preservada en docs/ (solo lectura)
-- ✅ .env protegido — no sube a GitHub
-
----
-
-## Datos del sistema
-
-- **Técnicos activos:** 6 (Carlos Mendoza, Ana Rodríguez, Miguel Ángel Torres, Laura Garza, Roberto Salinas, Jorge Martínez)
-- **Plazas:** Nuevo León, Coahuila, San Luis Potosí, CDMX, Jalisco
-- **Tickets activos:** 5 (T-1042 a T-1046)
-- **Estándares técnicos:** 4 documentos en docs/estandares/ (fuente de exámenes Academia)
-
----
-
-## Lo que falta / próximos pasos sugeridos
-
-- [ ] Conectar módulo Academia a `/api/diagnostic_exam` y `/api/generate_quiz`
-- [ ] Instalar Ollama local para generación de exámenes sin costo
-- [ ] Conectar a Odoo ERP real con credenciales en `.env`
-- [ ] Integrar Supabase para datos en tiempo real del NOC
-- [ ] Desplegar en producción (Netlify para frontend, VPS para backend)
+*Documento generado por Antigravity para asegurar la continuidad del proyecto.*

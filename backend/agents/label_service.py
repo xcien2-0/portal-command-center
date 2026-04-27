@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Generador de etiquetas imprimibles para activos y comprobantes de transacciones.
 Produce HTML (para hoja multi-etiqueta) y PNG (para etiqueta individual).

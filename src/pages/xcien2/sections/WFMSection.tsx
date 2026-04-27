@@ -1,221 +1,270 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ThemeConfig, WFMTechnician, WFMTicket, TechStatus, TicketPriority,
-  WFM_TECHNICIANS, WFM_TICKETS } from '../types';
+import { useState, useEffect } from 'react';
+import { ThemeConfig, WFMOrder, WFMOrderState } from '../types';
 
 const API_BASE = 'http://localhost:8000';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const STATUS_STYLE: Record<TechStatus, { bg: string; color: string }> = {
-  'Disponible': { bg: 'rgba(0,200,150,0.12)', color: '#00C896' },
-  'En Sitio':   { bg: 'rgba(251,191,36,0.12)', color: '#FFB703' },
-  'En Oficina': { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8' },
+type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm';
+
+const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }> = {
+  comercial:        { label: 'Comercial',        icon: '🤝', color: '#00C896' },
+  preventa:         { label: 'Preventa',         icon: '🔍', color: '#4FC3F7' },
+  almacen:          { label: 'Almacén',          icon: '📦', color: '#FFB703' },
+  aprovisionamiento: { label: 'Aprovisionamiento',icon: '⚙️', color: '#A855F7' },
+  pm:               { label: 'PM / Operaciones', icon: '📋', color: '#FF4757' },
 };
 
-const PRIORITY_COLOR: Record<TicketPriority, string> = {
-  critical: '#FF4757',
-  high:     '#FFB703',
-  medium:   '#4FC3F7',
+const STATE_LABEL: Record<WFMOrderState, string> = {
+  SOLICITUD_PREVENTA:  'Solicitud Preventa',
+  ANTEPROYECTO:        'Anteproyecto Listo',
+  ORDEN_IMPLEMENTACION: 'Orden de Imp.',
+  ALMACEN_VALIDACION:  'Validando Almacén',
+  ESPERA_INVENTARIO:   'Espera Inventario',
+  APROVISIONAMIENTO:   'En Aprovisionamiento',
+  REVISION_PM:         'Revisión Final PM',
+  LISTO_INSTALACION:   'Listo p/ Instalación',
+  BACKLOG:             'Backlog / Incidencia',
 };
 
-const PRIORITY_LABEL: Record<TicketPriority, string> = {
-  critical: 'Crítico',
-  high:     'Alto',
-  medium:   'Medio',
-};
+// ── Components ───────────────────────────────────────────────────────────────
 
-function kpiCount(techs: WFMTechnician[], tickets: WFMTicket[]) {
-  return {
-    total:       techs.length,
-    disponible:  techs.filter(t => t.status === 'Disponible').length,
-    enSitio:     techs.filter(t => t.status === 'En Sitio').length,
-    pendientes:  tickets.filter(t => !t.assignedTo).length,
-    criticos:    tickets.filter(t => t.priority === 'critical' && !t.assignedTo).length,
-  };
-}
-
-// ── KPI Card ──────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, accent, theme }: { label: string; value: number; accent: string; theme: ThemeConfig }) {
+function Badge({ label, color }: { label: string; color: string }) {
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '16px 20px', textAlign: 'center' }}>
-      <div style={{ fontSize: 32, fontWeight: 700, color: accent, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: theme.dim, marginTop: 6 }}>{label}</div>
-    </div>
+    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${color}18`, color, border: `1px solid ${color}30`, textTransform: 'uppercase' }}>
+      {label}
+    </span>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main Section ─────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig }
 
 export default function WFMSection({ theme }: Props) {
-  const [technicians, setTechnicians] = useState<WFMTechnician[]>(WFM_TECHNICIANS);
-  const [tickets, setTickets]         = useState<WFMTicket[]>(WFM_TICKETS);
-  const [backendOnline, setBackendOnline] = useState(false);
+  const [role, setRole]           = useState<WFMRole>('comercial');
+  const [orders, setOrders]       = useState<WFMOrder[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [selectedId, setSelected] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      fetch(`${API_BASE}/api/wfm/tecnicos`).then(r => r.json()),
-      fetch(`${API_BASE}/api/wfm/tickets`).then(r => r.json()),
-    ]).then(([techs, ticks]) => {
-      setTechnicians(techs.map((t: any) => ({
-        id: t.id,
-        name: t.nombre,
-        zone: t.zona,
-        specialization: t.specialization || '—',
-        skillPct: t.skillPct ?? Math.max(...(Object.values(t.skills || { x: 0 }) as number[])),
-        status: t.status as TechStatus,
-      })));
-      setTickets(ticks.map((t: any) => ({
-        id: t.id,
-        client: t.client,
-        description: t.description,
-        location: t.location,
-        priority: t.priority as TicketPriority,
-        assignedTo: t.asignado ?? null,
-      })));
-      setBackendOnline(true);
-    }).catch(() => setBackendOnline(false));
-  }, []);
+  // Forms
+  const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
 
-  const kpi = kpiCount(technicians, tickets);
-  const accent = theme.accent;
-
-  const assignTicket = useCallback(async (ticketId: string) => {
-    if (backendOnline) {
-      try {
-        await fetch(`${API_BASE}/api/wfm/asignar/${ticketId}`, { method: 'POST' });
-        const [techs, ticks] = await Promise.all([
-          fetch(`${API_BASE}/api/wfm/tecnicos`).then(r => r.json()),
-          fetch(`${API_BASE}/api/wfm/tickets`).then(r => r.json()),
-        ]);
-        setTechnicians(techs.map((t: any) => ({ id: t.id, name: t.nombre, zone: t.zona, specialization: t.specialization || '—', skillPct: t.skillPct ?? 0, status: t.status as TechStatus })));
-        setTickets(ticks.map((t: any) => ({ id: t.id, client: t.client, description: t.description, location: t.location, priority: t.priority as TicketPriority, assignedTo: t.asignado ?? null })));
-        return;
-      } catch { /* fallback to local */ }
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/ordenes`);
+      const data = await res.json();
+      setOrders(data);
+    } catch (e) {
+      console.error("Error fetching orders", e);
+    } finally {
+      setLoading(false);
     }
-    const available = technicians.find(t => t.status === 'Disponible');
-    if (!available) return;
-    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, assignedTo: available.id } : t));
-    setTechnicians(prev => prev.map(t => t.id === available.id ? { ...t, status: 'En Sitio' } : t));
-  }, [technicians, backendOnline]);
+  };
 
-  const releasetech = useCallback(async (techId: string) => {
-    if (backendOnline) {
-      try {
-        await fetch(`${API_BASE}/api/wfm/tecnico/${techId}/status?nuevo_status=Disponible`, { method: 'PUT' });
-      } catch { /* fallback */ }
-    }
-    setTechnicians(prev => prev.map(t => t.id === techId ? { ...t, status: 'Disponible' } : t));
-  }, [backendOnline]);
+  useEffect(() => { fetchOrders(); }, []);
 
-  const getTechName = (id: string | null) =>
-    id ? (technicians.find(t => t.id === id)?.name ?? '—') : null;
+  const handleCreate = async () => {
+    if (!newOrder.cliente || !newOrder.servicio) return;
+    await fetch(`${API_BASE}/api/wfm/comercial/solicitar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newOrder, comercial: 'Usuario Demo' })
+    });
+    setNewOrder({ cliente: '', servicio: '' });
+    fetchOrders();
+  };
+
+  const handleAudit = async (ok: boolean) => {
+    if (!selectedId) return;
+    await fetch(`${API_BASE}/api/wfm/pm/auditar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        order_id: selectedId, 
+        ok, 
+        motivo: ok ? 'Auditoría aprobada satisfactoriamente' : 'Documentación incompleta / Errores técnicos',
+        usuario: 'Auditor PM'
+      })
+    });
+    fetchOrders();
+  };
+
+  const selectedOrder = orders.find(o => o.id === selectedId);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>Control Operativo — WFM</h2>
-          <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Gestión de técnicos y tickets de campo en tiempo real</p>
-        </div>
-        <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: backendOnline ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: backendOnline ? '#00C896' : '#FF4757', border: `1px solid ${backendOnline ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
-          {backendOnline ? '● Backend conectado' : '● Modo local'}
-        </span>
+    <div style={{ display: 'flex', height: '100%', gap: 20 }}>
+      
+      {/* Sidebar de Roles */}
+      <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Vistas por Rol</h3>
+        {(Object.keys(ROLE_DATA) as WFMRole[]).map(r => (
+          <button
+            key={r}
+            onClick={() => setRole(r)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
+              background: role === r ? `${ROLE_DATA[r].color}15` : 'transparent',
+              border: `1px solid ${role === r ? ROLE_DATA[r].color : 'transparent'}`,
+              color: role === r ? ROLE_DATA[r].color : theme.dim,
+              cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s'
+            }}
+          >
+            <span style={{ fontSize: 18 }}>{ROLE_DATA[r].icon}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{ROLE_DATA[r].label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
-        <KpiCard label="Total técnicos"  value={kpi.total}      accent={theme.text}  theme={theme} />
-        <KpiCard label="Disponibles"     value={kpi.disponible} accent="#00C896"     theme={theme} />
-        <KpiCard label="En sitio"        value={kpi.enSitio}    accent="#FFB703"     theme={theme} />
-        <KpiCard label="Tickets pend."   value={kpi.pendientes} accent="#4FC3F7"     theme={theme} />
-        <KpiCard label="Críticos s/asig" value={kpi.criticos}   accent="#FF4757"     theme={theme} />
-      </div>
-
-      {/* Two-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
-        {/* Technicians */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Técnicos de campo</span>
+      {/* Main Content Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        
+        {/* Header Dinámico */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Dashboard de {ROLE_DATA[role].label}</h2>
+            <p style={{ fontSize: 12, color: theme.dim }}>Gestión de órdenes de implementación y field services</p>
           </div>
-          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {technicians.map(tech => {
-              const st = STATUS_STYLE[tech.status];
-              return (
-                <div key={tech.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${theme.border}`, borderRadius: theme.radius - 4 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: accent, flexShrink: 0 }}>
-                    {tech.name.charAt(0)}
+          <button 
+            onClick={fetchOrders}
+            style={{ padding: '8px 16px', borderRadius: 8, background: theme.card, border: `1px solid ${theme.border}`, color: theme.text, cursor: 'pointer' }}
+          >
+            🔄 Sincronizar
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: 20, flex: 1, minHeight: 0 }}>
+          
+          {/* Listado de Órdenes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', paddingRight: 4 }}>
+            {role === 'comercial' && (
+              <div style={{ background: `${theme.accent}10`, border: `1px dashed ${theme.accent}40`, borderRadius: 12, padding: 16, marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>+ Nueva Solicitud</div>
+                <input 
+                  placeholder="Cliente" 
+                  value={newOrder.cliente}
+                  onChange={e => setNewOrder({...newOrder, cliente: e.target.value})}
+                  style={{ width: '100%', padding: 8, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 6, color: '#fff', marginBottom: 8 }}
+                />
+                <input 
+                  placeholder="Servicio (ej. Fibra 100MB)" 
+                  value={newOrder.servicio}
+                  onChange={e => setNewOrder({...newOrder, servicio: e.target.value})}
+                  style={{ width: '100%', padding: 8, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 6, color: '#fff', marginBottom: 10 }}
+                />
+                <button 
+                  onClick={handleCreate}
+                  style={{ width: '100%', padding: 8, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Crear Solicitud
+                </button>
+              </div>
+            )}
+
+            {orders.map(o => (
+              <div 
+                key={o.id}
+                onClick={() => setSelected(o.id)}
+                style={{
+                  background: theme.card, border: `1px solid ${selectedId === o.id ? theme.accent : theme.border}`,
+                  borderRadius: 12, padding: 14, cursor: 'pointer', transition: 'all 0.2s', position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: theme.dim }}>{o.id}</span>
+                    {o.id.startsWith('ODOO-') && <span style={{ fontSize: 9, color: '#00C896', background: '#00C89610', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>ODOO SYNC</span>}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tech.name}</div>
-                    <div style={{ fontSize: 11, color: theme.dim }}>{tech.zone} · {tech.specialization}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <div style={{ flex: 1, height: 2, background: theme.border, borderRadius: 1, overflow: 'hidden' }}>
-                        <div style={{ width: `${tech.skillPct}%`, height: '100%', background: accent }} />
+                  <Badge label={STATE_LABEL[o.estado]} color={o.estado === 'BACKLOG' ? '#FF4757' : theme.accent} />
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{o.cliente}</div>
+                <div style={{ fontSize: 12, color: theme.dim }}>{o.servicio}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Panel de Detalles y Acciones */}
+          <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {selectedOrder ? (
+              <>
+                <div style={{ padding: 20, borderBottom: `1px solid ${theme.border}`, background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{selectedOrder.cliente}</div>
+                  <div style={{ display: 'flex', gap: 15, marginTop: 8 }}>
+                    <span style={{ fontSize: 13, color: theme.dim }}>📦 Servicio: <b>{selectedOrder.servicio}</b></span>
+                    <span style={{ fontSize: 13, color: theme.dim }}>👤 Comercial: <b>{selectedOrder.comercial}</b></span>
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 15, textTransform: 'uppercase', color: ROLE_DATA[role].color }}>Acciones de {role.toUpperCase()}</h4>
+                  
+                  {/* Vista específica por ROL */}
+                  {role === 'preventa' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Evaluación de Factibilidad</div>
+                        <textarea placeholder="Detalle técnico de factibilidad..." style={{ width: '100%', height: 80, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 6, color: '#fff', padding: 10 }} />
+                        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                          <button style={{ flex: 1, padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600 }}>Generar Anteproyecto (US-009)</button>
+                        </div>
                       </div>
-                      <span style={{ fontSize: 10, color: theme.dim }}>{tech.skillPct}%</span>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color }}>
-                      {tech.status}
-                    </span>
-                    {tech.status !== 'Disponible' && (
-                      <button
-                        onClick={() => releasetech(tech.id)}
-                        style={{ fontSize: 9, padding: '2px 8px', borderRadius: 4, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, cursor: 'pointer' }}
-                      >
-                        Liberar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  )}
 
-        {/* Tickets */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Tickets activos</span>
-          </div>
-          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {tickets.map(ticket => {
-              const pc = PRIORITY_COLOR[ticket.priority];
-              const assignee = getTechName(ticket.assignedTo);
-              return (
-                <div key={ticket.id} style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${theme.border}`, borderLeft: `3px solid ${pc}`, borderRadius: theme.radius - 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{ticket.client}</span>
-                      <span style={{ fontSize: 10, color: theme.dim, marginLeft: 8 }}>{ticket.id}</span>
+                  {role === 'almacen' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Gestión de Inventario (US-015)</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Router Mikrotik CCR-2004</span>
+                            <span style={{ color: '#00C896' }}>S/N: 2026-X123</span>
+                          </div>
+                          <button style={{ padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600 }}>Asignar y Enviar a Apro (US-018)</button>
+                        </div>
+                      </div>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: pc, background: `${pc}18`, padding: '2px 8px', borderRadius: 20 }}>
-                      {PRIORITY_LABEL[ticket.priority]}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: 12, color: theme.dim, margin: '0 0 6px' }}>{ticket.description}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: theme.dim }}>📍 {ticket.location}</span>
-                    {assignee ? (
-                      <span style={{ fontSize: 11, color: '#00C896' }}>✓ {assignee}</span>
-                    ) : (
-                      <button
-                        onClick={() => assignTicket(ticket.id)}
-                        disabled={kpi.disponible === 0}
-                        style={{ fontSize: 10, padding: '3px 10px', borderRadius: 6, background: kpi.disponible > 0 ? accent : '#333', border: 'none', color: '#fff', cursor: kpi.disponible > 0 ? 'pointer' : 'not-allowed', fontWeight: 600 }}
-                      >
-                        Auto-asignar
-                      </button>
-                    )}
+                  )}
+
+                  {role === 'pm' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10, border: `1px solid ${selectedOrder.pm.bloqueada ? '#FF4757' : 'transparent'}` }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Auditoría de Documento Único (US-025)</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <button 
+                            onClick={() => handleAudit(true)}
+                            style={{ padding: 10, background: '#00C896', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Aprobar Instalación
+                          </button>
+                          <button 
+                            onClick={() => handleAudit(false)}
+                            style={{ padding: 10, background: '#FF4757', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Rechazar / Backlog
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 30 }}>
+                    <h5 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 10 }}>Historial de la Orden</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {selectedOrder.historial.map((h, i) => (
+                        <div key={i} style={{ fontSize: 11, color: theme.dim, padding: '4px 0', borderBottom: `1px solid ${theme.border}` }}>
+                          <b>{h.fecha.split('T')[1].substring(0,5)}</b> · {h.accion} (<i>{h.usuario}</i>)
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: theme.dim }}>
+                <span style={{ fontSize: 40, marginBottom: 20 }}>📁</span>
+                <p>Selecciona una orden de implementación para ver detalles</p>
+              </div>
+            )}
           </div>
+
         </div>
       </div>
     </div>

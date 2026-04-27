@@ -1,6 +1,7 @@
 import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
-import DirectorChat    from './sections/DirectorChat';
+import FloatingChat    from './sections/FloatingChat';
 import NocSection      from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
 import AcademiaHoloSection from './sections/AcademiaHoloSection';
@@ -9,6 +10,14 @@ import TokensSection        from './sections/TokensSection';
 import TransaccionesSection from './sections/TransaccionesSection';
 import EtiquetasSection     from './sections/EtiquetasSection';
 import DevPanel        from './DevPanel';
+import { getRealCities, getRealAlerts } from '@/services/nocboard';
+import { NOCCity, NOCAlert } from '@/types/noc';
+
+// Bridge imports for classic components
+import CallCenter from '../CallCenter';
+import Scan from '../Scan';
+import Gerencia from '../Gerencia';
+import ReportesGobierno from '../ReportesGobierno';
 
 // ── Theme reducer ─────────────────────────────────────────────────────────────
 type ThemeAction = { type: 'patch'; payload: Partial<ThemeConfig> } | { type: 'reset' };
@@ -25,27 +34,43 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 interface NavEntry { id: SectionId; label: string; icon: string; group?: string }
 
 const NAV: NavEntry[] = [
-  { id: 'inicio',   label: 'Inicio',               icon: '🏠' },
-  { id: 'noc',      label: 'Red en Vivo',           icon: '📡' },
+  { id: 'inicio',   label: 'Hub Principal',         icon: '🏠' },
+  
+  { id: 'noc',      label: 'Red en Vivo',           icon: '📡', group: 'Operaciones' },
   { id: 'wfm',      label: 'Control Operativo',     icon: '⚙️', group: 'Operaciones' },
-  { id: 'tokens',        label: 'Tokens & Certificados', icon: '🔖', group: 'Operaciones' },
-  { id: 'transacciones', label: 'Transacciones Grupo',   icon: '🔄', group: 'Operaciones' },
-  { id: 'etiquetas',     label: 'Etiquetas & Comprobantes', icon: '🏷️', group: 'Operaciones' },
-  { id: 'academia', label: 'Dashboard',             icon: '🎓', group: 'Academia XCIEN' },
-  { id: 'holo',     label: 'Certificación Holo',    icon: '🔮', group: 'Operaciones' },
-  { id: 'editor',   label: 'Editor en vivo',        icon: '🎨' },
+  { id: 'call',     label: 'Call Center',           icon: '📞', group: 'Operaciones' },
+  { id: 'scan',     label: 'Scanner de Red',        icon: '🔍', group: 'Operaciones' },
+  
+  { id: 'academia', label: 'Dashboard Academia',    icon: '🎓', group: 'Certificación & Academia' },
+  { id: 'tokens',   label: 'Registro de Tokens',    icon: '🔖', group: 'Certificación & Academia' },
+  
+  { id: 'transacciones', label: 'Transacciones Grupo',   icon: '🔄', group: 'Administración' },
+  { id: 'etiquetas',     label: 'Etiquetas & Comprobantes', icon: '🏷️', group: 'Administración' },
+  { id: 'gerencia', label: 'Dashboard Gerencial',   icon: '📊', group: 'Administración' },
+  { id: 'reports',  label: 'Reportes & Gobierno',   icon: '📋', group: 'Administración' },
+  
+  { id: 'bridge',   label: 'Puente IA (Antigravity)', icon: '⚡', group: 'Sistema' },
+  { id: 'war-room', label: 'Sala de Guerra (War Room)', icon: '⚔️', group: 'Sistema' },
+  { id: 'mobile',   label: 'Conectar Celular',        icon: '📱', group: 'Sistema' },
+  { id: 'editor',   label: 'Ajustes del Portal',    icon: '🎨', group: 'Configuración' },
 ];
 
 const SECTION_TITLE: Record<SectionId, string> = {
-  inicio:   'Director General',
+  inicio:   'Hub Principal',
   noc:      'Red en Vivo',
   wfm:      'Control Operativo — WFM',
+  call:     'Centro de Atención (Call Center)',
+  scan:     'Scanner de Inventario',
   tokens:        'Tokens & Certificados',
   transacciones: 'Transacciones Intragrupo',
   etiquetas:     'Etiquetas & Comprobantes',
   academia: 'Academia XCIEN',
-  holo:     'Certificación Holo',
-  editor:   'Editor en vivo',
+  gerencia: 'Dashboard Gerencial',
+  reports:  'Reportes & Gobierno',
+  bridge:   'Puente IA (Antigravity)',
+  'war-room': 'Sala de Guerra (Multi-Agente)',
+  mobile:   'Conexión Móvil — Acceso QR',
+  editor:   'Personalización del Portal',
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -55,13 +80,47 @@ interface SidebarProps {
   theme: ThemeConfig;
 }
 
+function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEntry, active: SectionId, onSelect: (id: SectionId) => void, theme: ThemeConfig, sub?: boolean }) {
+  const isActive = active === item.id;
+  const accent = theme.accent;
+  
+  return (
+    <button
+      onClick={() => onSelect(item.id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: sub ? '8px 12px' : (theme.compact ? '7px 12px' : '10px 12px'),
+        background: isActive ? `${accent}20` : 'transparent',
+        color: isActive ? accent : (sub ? theme.dim : theme.text),
+        border: 'none', borderRadius: 8, cursor: 'pointer',
+        transition: 'all 0.2s', fontSize: sub ? '0.85rem' : '0.9rem', 
+        fontWeight: isActive ? 600 : 500,
+        width: '100%', textAlign: 'left',
+      }}
+    >
+      <span style={{ fontSize: sub ? '1rem' : '1.1rem', opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {isActive && (
+        <div style={{ width: 4, height: 16, background: accent, borderRadius: 2 }} />
+      )}
+    </button>
+  );
+}
+
 function Sidebar({ active, onSelect, theme }: SidebarProps) {
   const [now, setNow] = useState(new Date());
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia']);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups(prev => 
+      prev.includes(label) ? prev.filter(g => g !== label) : [...prev, label]
+    );
+  };
 
   const groups = useMemo(() => {
     const grouped: { label: string | null; items: NavEntry[] }[] = [];
@@ -85,7 +144,9 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
   return (
     <div style={{
       width: theme.sidebarWidth, flexShrink: 0,
-      background: theme.sidebar, borderRight: `1px solid ${theme.border}`,
+      background: theme.id === 'holo' ? 'rgba(2, 10, 4, 0.85)' : theme.sidebar,
+      backdropFilter: theme.id === 'holo' ? 'blur(12px)' : 'none',
+      borderRight: `1px solid ${theme.border}`,
       display: 'flex', flexDirection: 'column', transition: 'width 0.2s',
     }}>
       {/* Logo */}
@@ -103,47 +164,63 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto' }}>
-        {groups.map(({ label, items }, idx) => (
-          <div key={label ?? `_top_${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {label && (
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#444', padding: '0 12px 8px', letterSpacing: 1 }}>
-                {label.toUpperCase()}
+      <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+        {groups.map(({ label, items }) => {
+          if (!label) {
+            return items.map(item => (
+              <NavButton key={item.id} item={item} active={active} onSelect={onSelect} theme={theme} />
+            ));
+          }
+
+          const isExpanded = expandedGroups.includes(label);
+          const hasActive = items.some(it => it.id === active);
+
+          return (
+            <div key={label} style={{ marginBottom: 4 }}>
+              <button
+                onClick={() => toggleGroup(label)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: 'none', background: 'transparent',
+                  color: hasActive ? theme.text : theme.dim, transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase' }}>{label}</span>
+                </div>
+                <span style={{ fontSize: 10, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none', opacity: 0.5 }}>▼</span>
+              </button>
+              
+              <div style={{ 
+                maxHeight: isExpanded ? 500 : 0, overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0, 1, 0, 1)',
+                paddingLeft: 8, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 2
+              }}>
+                {items.map(item => (
+                  <NavButton key={item.id} item={item} active={active} onSelect={onSelect} theme={theme} sub />
+                ))}
               </div>
-            )}
-            {items.map(item => {
-              const isActive = active === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: theme.compact ? '7px 12px' : '10px 12px',
-                    background: isActive ? `${accent}20` : 'transparent',
-                    border: isActive ? `1px solid ${accent}30` : '1px solid transparent',
-                    color: isActive ? theme.text : theme.dim,
-                    fontSize: theme.baseFontSize - 1,
-                    fontWeight: isActive ? 600 : 500,
-                    cursor: 'pointer', borderRadius: 8, textAlign: 'left', transition: 'all 0.15s', width: '100%',
-                  }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
-                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                >
-                  <span style={{ fontSize: '1rem', filter: isActive ? 'none' : 'grayscale(1)' }}>{item.icon}</span>
-                  <span>{item.label}</span>
-                  {item.id === 'editor' && (
-                    <span style={{ marginLeft: 'auto', fontSize: 9, background: '#FFB703', color: '#000', padding: '1px 6px', borderRadius: 20, fontWeight: 700 }}>LIVE</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </nav>
 
-      {/* Footer user pill */}
-      <div style={{ padding: 20, borderTop: `1px solid ${theme.border}` }}>
+      {/* Footer user pill & Settings */}
+      <div style={{ padding: 20, borderTop: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button
+          onClick={() => onSelect('editor')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px',
+            background: active === 'editor' ? `${theme.accent}20` : 'transparent',
+            border: active === 'editor' ? `1px solid ${theme.accent}30` : '1px solid transparent',
+            color: active === 'editor' ? theme.text : theme.dim,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', borderRadius: 8, transition: 'all 0.15s',
+          }}
+        >
+          <span>⚙️</span>
+          <span>Ajustes del Portal</span>
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: theme.card, padding: 10, borderRadius: theme.radius }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', color: '#fff', flexShrink: 0 }}>
             JM
@@ -166,17 +243,190 @@ interface ContentProps {
   onThemeChange: (p: Partial<ThemeConfig>) => void;
   onThemeReset: () => void;
   onApplyPreset: (preset: PresetTheme) => void;
+  cities: NOCCity[];
+  alerts: NOCAlert[];
+  activeTenantId: string | null;
+  onTenantChange: (id: string | null) => void;
+  bridgeData: any;
 }
 
-function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset }: ContentProps) {
+function Content({ 
+  section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
+  cities, alerts, activeTenantId, onTenantChange, bridgeData
+}: ContentProps) {
   const padding = theme.compact ? 20 : 32;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding, background: theme.bg, minWidth: 0 }}>
-      {section === 'inicio'   && <DirectorChat    theme={theme} />}
-      {section === 'noc'      && <NocSection      theme={theme} />}
+      {section === 'noc'      && (
+        <NocSection 
+          theme={theme} 
+          cities={cities} 
+          alerts={alerts} 
+          activeTenantId={activeTenantId} 
+          onTenantChange={onTenantChange} 
+        />
+      )}
       {section === 'academia' && <AcademiaSection theme={theme} />}
-      {section === 'holo'      && <AcademiaHoloSection theme={theme} />}
       {section === 'wfm'      && <WFMSection      theme={theme} />}
+      {section === 'call'     && <CallCenter />}
+      {section === 'scan'     && <Scan />}
+      {section === 'gerencia' && <Gerencia />}
+      {section === 'reports'  && <ReportesGobierno />}
+      
+      {section === 'bridge'   && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
+          <div style={{ padding: 20, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: theme.accent, marginBottom: 4 }}>⚡ ANTIGRAVITY BRIDGE</h2>
+            <p style={{ fontSize: 13, color: theme.dim }}>Terminal de ejecución en tiempo real y recepción de órdenes.</p>
+          </div>
+          
+          <div style={{ 
+            flex: 1, background: '#000', border: `1px solid ${theme.accent}40`, borderRadius: 12, 
+            padding: 20, fontFamily: 'monospace', fontSize: 13, overflowY: 'auto',
+            boxShadow: `0 0 30px ${theme.accent}10`, position: 'relative'
+          }}>
+            <div style={{ color: theme.accent, marginBottom: 10 }}>[SISTEMA] Puente establecido. Escuchando...</div>
+            <div style={{ color: theme.text, whiteSpace: 'pre-wrap' }}>
+              {`> Estado: trabajando en ${bridgeData.current_task}\n`}
+              {`> Ultima actualización: ${bridgeData.last_update}\n\n`}
+              {bridgeData.log.map((line: string, i: number) => (
+                <div key={i} style={{ color: i === bridgeData.log.length - 1 ? theme.accent : '#888', marginBottom: 4 }}>
+                  {`[${i}] ${line}`}
+                </div>
+              ))}
+              <div style={{ color: theme.accent, marginTop: 10, animation: 'pulse 1s infinite' }}>_</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#111', border: `2px solid ${theme.accent}`, borderRadius: 12, padding: '16px 20px', boxShadow: `0 0 20px ${theme.accent}20` }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: theme.accent, marginBottom: 8, letterSpacing: '0.1em' }}>TERMINAL DE COMANDOS (Escribe aquí)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: theme.accent, fontSize: 20, fontWeight: 900 }}>{'>'}</span>
+              <input 
+                id="bridge-input-main"
+                autoFocus
+                placeholder="Escribe tu orden para Antigravity..."
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    const el = e.currentTarget;
+                    const val = el.value;
+                    if (!val) return;
+                    el.value = 'Enviando...';
+                    el.disabled = true;
+                    try {
+                      await fetch('http://localhost:8000/api/bridge/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: val, context: 'bridge' })
+                      });
+                      el.value = '';
+                      alert('¡Orden recibida! Regresa al chat y di "EJECUTA".');
+                    } catch (err) { alert('Error de conexión.'); }
+                    el.disabled = false;
+                    el.focus();
+                  }
+                }}
+                style={{ 
+                  flex: 1, background: 'transparent', border: 'none', 
+                  color: '#fff', outline: 'none', fontSize: 16, fontWeight: 500,
+                  fontFamily: 'monospace'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {section === 'war-room' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
+          <div style={{ padding: 20, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#FFB703', marginBottom: 4 }}>⚔️ SALA DE GUERRA: ORQUESTACIÓN</h2>
+            <p style={{ fontSize: 13, color: theme.dim }}>Lluvia de ideas y resolución de procesos críticos.</p>
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingRight: 8 }}>
+            {[
+              { agent: 'Director General', text: 'Agentes, tenemos una degradación del 30% en el nodo "Saltillo-Sur". Odoo reporta 5 tickets de clientes VIP afectados. ¿Propuestas?', color: theme.accent },
+              { agent: 'NOC Agent', text: 'Confirmado. El switch principal del sitio reporta temperatura alta. Es propenso a falla total en 2 horas. Necesitamos reemplazo físico.', color: '#FF4D4D' },
+              { agent: 'WFM Agent', text: 'Tengo a Ana Rodríguez a 15km, pero su camioneta está en mantenimiento. Miguel Ángel está disponible pero a 60km. Sugiero enviar a Miguel con prioridad.', color: '#00B4D8' },
+              { agent: 'Academia Agent', text: '⚠️ Alerta: El equipo en Saltillo-Sur es un Carrier-Grade de nueva generación. Miguel Ángel no ha completado el módulo de certificación 2026 para este modelo. Ana sí lo tiene.', color: '#34D399' },
+              { agent: 'Director General', text: 'Decisión: WFM, coordina con Odoo la renta de un vehículo de emergencia para Ana Rodríguez. Academia, habilita un "Fast-Pass" de repaso para ella en el camino. NOC, mantén el balanceo de carga para minimizar impacto.', color: theme.accent },
+            ].map((m, i) => (
+              <div key={i} style={{ padding: 14, background: `${m.color}08`, border: `1px solid ${m.color}25`, borderRadius: 12, marginLeft: i % 2 === 0 ? 0 : 40, marginRight: i % 2 === 0 ? 40 : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: m.color }} />
+                  <span style={{ fontSize: 10, fontWeight: 800, color: m.color, letterSpacing: '0.05em' }}>{m.agent.toUpperCase()}</span>
+                </div>
+                <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.5 }}>{m.text}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ background: '#111', border: `2px solid #FFB703`, borderRadius: 12, padding: '16px 20px', boxShadow: `0 0 20px #FFB70320` }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#FFB703', marginBottom: 8, letterSpacing: '0.1em' }}>INTERVENIR EN LA ORQUESTACIÓN</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: '#FFB703', fontSize: 20, fontWeight: 900 }}>{'>'}</span>
+              <input 
+                id="war-room-input"
+                placeholder="Da una orden a los agentes (ej: 'Cancela el envío y prioriza Monterrey')"
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    const el = e.currentTarget;
+                    const val = el.value;
+                    if (!val) return;
+                    el.value = 'Procesando...';
+                    el.disabled = true;
+                    try {
+                      await fetch('http://localhost:8000/api/bridge/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: val, context: 'war_room' })
+                      });
+                      el.value = '';
+                      alert('¡Orden enviada a la Sala de Guerra! Antigravity la procesará ahora.');
+                    } catch (err) { alert('Error enviando orden.'); }
+                    el.disabled = false;
+                    el.focus();
+                  }
+                }}
+                style={{ 
+                  flex: 1, background: 'transparent', border: 'none', 
+                  color: '#fff', outline: 'none', fontSize: 16, fontFamily: 'monospace' 
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {section === 'mobile' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 32 }}>
+          <div style={{ textAlign: 'center', maxWidth: 400 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: theme.accent, marginBottom: 12 }}>📱 ACCESO MÓVIL</h2>
+            <p style={{ fontSize: 16, color: theme.dim }}>Escanea el código para llevar el centro de mando XCIEN 2.0 en tu celular.</p>
+          </div>
+
+          <div style={{ 
+            background: '#fff', padding: 24, borderRadius: 24, 
+            boxShadow: `0 20px 50px ${theme.accent}30`,
+            border: `4px solid ${theme.accent}`
+          }}>
+            <img 
+              src="/mobile_qr.png" 
+              alt="QR de Acceso" 
+              style={{ width: 250, height: 250, imageRendering: 'pixelated' }} 
+            />
+          </div>
+
+          <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '16px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, color: theme.dim, marginBottom: 4 }}>URL de Red Local:</div>
+            <code style={{ fontSize: 18, fontWeight: 700, color: theme.accent }}>http://192.168.1.75:8080/</code>
+          </div>
+
+          <p style={{ fontSize: 12, color: theme.dim, maxWidth: 300, textAlign: 'center' }}>
+            Asegúrate de que tu celular esté conectado a la misma red Wi-Fi que este equipo.
+          </p>
+        </div>
+      )}
       {section === 'tokens'        && <TokensSection        theme={theme} />}
       {section === 'transacciones' && <TransaccionesSection  theme={theme} />}
       {section === 'etiquetas'     && <EtiquetasSection      theme={theme} />}
@@ -195,7 +445,35 @@ function Content({ section, theme, activeThemeId, onThemeChange, onThemeReset, o
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Xcien2Page() {
-  const [section, setSection]     = useState<SectionId>('inicio');
+  const navigate = useNavigate();
+  const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
+  const [section, setSection] = useState<SectionId>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get('section') as SectionId;
+    return (s && SECTION_TITLE[s]) ? s : 'noc';
+  });
+
+  useEffect(() => {
+    const fetchBridge = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/bridge');
+        if (res.ok) setBridgeData(await res.json());
+      } catch (e) {}
+    };
+    const id = setInterval(fetchBridge, 3000);
+    fetchBridge();
+    return () => clearInterval(id);
+  }, []);
+
+  // Sync section with URL search params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('section') !== section) {
+      params.set('section', section);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [section]);
   const [theme, dispatch]         = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
       const saved = localStorage.getItem('xcien2_theme');
@@ -204,6 +482,25 @@ export default function Xcien2Page() {
   });
   const [activeThemeId, setActiveThemeId] = useState('xcien');
 
+  // NOC State
+  const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
+  const [realCities, setRealCities] = useState<NOCCity[]>([]);
+  const [realAlerts, setRealAlerts] = useState<NOCAlert[]>([]);
+
+  const loadRealData = async () => {
+    try {
+      const [cities, alerts] = await Promise.all([getRealCities(), getRealAlerts()]);
+      if (cities) setRealCities(cities);
+      if (alerts) setRealAlerts(alerts);
+    } catch (e) { console.error("Error loading NOC data in Holo:", e); }
+  };
+
+  useEffect(() => {
+    loadRealData();
+    const id = setInterval(loadRealData, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const patchTheme   = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
   const resetTheme   = useCallback(() => { dispatch({ type: 'reset' }); setActiveThemeId('xcien'); }, []);
   const applyPreset  = useCallback((preset: PresetTheme) => {
@@ -211,17 +508,29 @@ export default function Xcien2Page() {
     setActiveThemeId(preset.id);
   }, []);
 
-  // Apply CSS variables to :root for native elements
-  const cssVars = useMemo(() => ({
-    '--xcien-accent':  theme.accent,
-    '--xcien-bg':      theme.bg,
-    '--xcien-card':    theme.card,
-    '--xcien-border':  theme.border,
-    '--xcien-text':    theme.text,
-    '--xcien-dim':     theme.dim,
-    '--xcien-radius':  `${theme.radius}px`,
-    '--xcien-font':    `${theme.baseFontSize}px`,
-  } as React.CSSProperties), [theme]);
+  // Apply CSS variables globally for uniformity
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--xcien-accent', theme.accent);
+    root.style.setProperty('--xcien-bg', theme.bg);
+    root.style.setProperty('--xcien-card', theme.card);
+    root.style.setProperty('--xcien-border', theme.border);
+    root.style.setProperty('--xcien-text', theme.text);
+    root.style.setProperty('--xcien-dim', theme.dim);
+    root.style.setProperty('--xcien-radius', `${theme.radius}px`);
+    root.style.setProperty('--xcien-font', `${theme.baseFontSize}px`);
+    
+    // Update body background to match theme
+    document.body.style.background = theme.bg;
+  }, [theme]);
+
+  const onSelectSection = useCallback((id: SectionId) => {
+    if (id === 'inicio') {
+      navigate('/');
+    } else {
+      setSection(id);
+    }
+  }, [navigate]);
 
   return (
     <div
@@ -231,10 +540,9 @@ export default function Xcien2Page() {
         fontSize: theme.baseFontSize,
         color: theme.text,
         background: theme.bg,
-        ...cssVars,
       }}
     >
-      <Sidebar active={section} onSelect={setSection} theme={theme} />
+      <Sidebar active={section} onSelect={onSelectSection} theme={theme} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* Top header */}
@@ -262,6 +570,11 @@ export default function Xcien2Page() {
           onThemeChange={patchTheme}
           onThemeReset={resetTheme}
           onApplyPreset={applyPreset}
+          cities={realCities}
+          alerts={realAlerts}
+          activeTenantId={activeTenantId}
+          onTenantChange={setActiveTenantId}
+          bridgeData={bridgeData}
         />
       </div>
 
@@ -270,11 +583,24 @@ export default function Xcien2Page() {
           0%,100% { opacity:1; transform:scale(1) }
           50%      { opacity:.5; transform:scale(1.3) }
         }
+        @keyframes matrix-scroll {
+          0% { background-position: 0 0 }
+          100% { background-position: 0 100% }
+        }
+        .matrix-bg {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: linear-gradient(rgba(0,255,65,0.03) 50%, transparent 50%);
+          background-size: 100% 4px;
+          pointer-events: none; z-index: 100;
+          animation: matrix-scroll 20s linear infinite;
+        }
         input[type=range] { height: 4px }
         ::-webkit-scrollbar { width:4px }
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px }
         button:focus { outline:none }
       `}</style>
+      {activeThemeId === 'matrix' && <div className="matrix-bg" />}
+      <FloatingChat theme={theme} />
     </div>
   );
 }

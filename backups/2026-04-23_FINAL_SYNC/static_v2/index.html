@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XCIEN 2.0 | Master Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- React para Dashboard Academia -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="theme-dark">
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Xcien" class="logo-img">
+                    <span class="logo-text">XCIEN <span class="v-tag">2.0</span></span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <button class="nav-item active" data-section="inicio" onclick="switchSection('inicio')">
+                        <span class="nav-icon">🏠</span> Inicio
+                    </button>
+                    <button class="nav-item" data-section="noc" onclick="switchSection('noc')">
+                        <span class="nav-icon">📡</span> Red en Vivo
+                    </button>
+                    <button class="nav-item" data-section="operaciones" onclick="switchSection('operaciones')">
+                        <span class="nav-icon">🛠️</span> Operaciones
+                    </button>
+                </div>
+
+                <div class="nav-group">
+                    <div class="group-label">ACADEMIA XCIEN</div>
+                    <button class="nav-item" data-section="academia-dash" onclick="switchSection('academia-dash')">
+                        <span class="nav-icon">📈</span> Dashboard
+                    </button>
+                    <button class="nav-item" data-section="biblioteca" onclick="switchSection('biblioteca')">
+                        <span class="nav-icon">📖</span> Biblioteca & Exámenes
+                    </button>
+                    <button class="nav-item" data-section="wfm" onclick="switchSection('wfm')">
+                        <span class="nav-icon">🚚</span> WFM Control
+                    </button>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-pill">
+                    <div class="user-avatar">AD</div>
+                    <div class="user-info">
+                        <div class="user-name">Director General</div>
+                        <div class="user-role">Master Access</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main-container">
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="section-title">Red en Vivo</h2>
+                    <span class="live-clock" id="live-clock">--:--:--</span>
+                </div>
+                <div class="header-right">
+                    <div class="status-badge" id="global-status">
+                        <span class="status-pulse"></span>
+                        Red operando al <span id="status-pct">87</span>%
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-viewport">
+                <!-- INICIO / DIRECTOR GENERAL CHAT -->
+                <section id="section-inicio" class="content-section">
+                    <div class="welcome-card">
+                        <h1>Gabinete de Agentes XCIEN 2.0</h1>
+                        <p>Interactúa con el Director General para orquestar la red, el equipo de campo y la academia.</p>
+                        
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="msg bot">¡Buen día! Soy el Agente Director General. Tengo acceso a los datos de WFM y al Libro Maestro. ¿Qué orden deseas ejecutar hoy?</div>
+                            </div>
+                            <div class="chat-input-wrap">
+                                <input type="text" id="chat-input" placeholder="Escribe una instrucción ejecutiva..." onkeydown="if(event.key==='Enter') sendChat()">
+                                <button onclick="sendChat()" class="chat-send">⚡</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- NOC / RED EN VIVO -->
+                <section id="section-noc" class="content-section active">
+                    <div class="nodes-grid" id="nodes-grid"></div>
+                    <div class="alerts-container">
+                        <div class="table-header">
+                            <h3>ALERTAS ACTIVAS <span class="alert-count" id="alert-count">0</span></h3>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>NODO</th><th>TIPO</th><th>SEV.</th><th>TÉCNICO</th><th>ESTADO</th><th>ACCIÓN</th></tr>
+                                </thead>
+                                <tbody id="alerts-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BIBLIOTECA -->
+                <section id="section-biblioteca" class="content-section">
+                    <div class="search-wrap">
+                        <input type="text" id="lib-search" placeholder="Buscar manuales y estándares..." oninput="filterLibrary()">
+                    </div>
+                    <div class="docs-grid" id="lib-grid"></div>
+                </section>
+
+                <!-- DASHBOARD ACADEMIA (REACT) -->
+                <section id="section-academia-dash" class="content-section">
+                    <div id="root-dashboard"></div>
+                </section>
+
+                <!-- WFM CONTROL -->
+                <section id="section-wfm" class="content-section">
+                    <div id="wfm-content"></div>
+                </section>
+                
+                <!-- OTROS -->
+                <section id="section-operaciones" class="content-section">
+                    <div class="empty-state">Módulo de Auditoría de Campo en desarrollo.</div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="doc-modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="exam-overlay" class="overlay hidden">
+        <div class="exam-modal">
+            <button class="close-overlay" onclick="closeExam()">×</button>
+            <div id="exam-content"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script type="text/babel" src="dashboard_ui.jsx"></script>
+</body>
+</html>

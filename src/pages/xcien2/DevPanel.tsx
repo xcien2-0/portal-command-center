@@ -144,7 +144,7 @@ export default function DevPanel({ theme, activeThemeId, onChange, onApplyPreset
   const [savedThemes, setSaved]     = useState<{ name: string; config: ThemeConfig }[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_SAVED) || '[]'); } catch { return []; }
   });
-  const [saveName, setSaveName]     = useState('');
+  const [saveName, setSaveName]     = useState('Mi Tema Personalizado');
   const accent = theme.accent;
 
   // ── Persist on every change ──────────────────────────────────────────────────

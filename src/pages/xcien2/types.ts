@@ -162,10 +162,73 @@ export const PRESET_THEMES: PresetTheme[] = [
       compact:      true,
     },
   },
+  {
+    id: 'matrix',
+    name: 'Protocolo Matrix',
+    description: 'Código verde sobre negro profundo · estilo terminal pura',
+    emoji: '📟',
+    preview: { bg: '#000500', accent: '#00ff41', card: '#001500', text: '#00ff41' },
+    config: {
+      accent:       '#00ff41',
+      bg:           '#000500',
+      card:         '#001000',
+      sidebar:      '#000800',
+      border:       'rgba(0,255,65,0.15)',
+      text:         '#00ff41',
+      dim:          '#003b00',
+      sidebarWidth: 260,
+      radius:       0,
+      baseFontSize: 13,
+      animations:   true,
+      compact:      true,
+    },
+  },
+  {
+    id: 'cyberpunk',
+    name: 'Neon Cyberpunk',
+    description: 'Rosa y cian vibrante · estética nocturna urbana',
+    emoji: '🏮',
+    preview: { bg: '#0b001a', accent: '#ff0055', card: '#1a0033', text: '#00f2ff' },
+    config: {
+      accent:       '#ff0055',
+      bg:           '#0b001a',
+      card:         '#140026',
+      sidebar:      '#080014',
+      border:       'rgba(255,0,85,0.25)',
+      text:         '#00f2ff',
+      dim:          '#6600cc',
+      sidebarWidth: 260,
+      radius:       10,
+      baseFontSize: 14,
+      animations:   true,
+      compact:      false,
+    },
+  },
+  {
+    id: 'gamer',
+    name: 'Modo Gamer RGB',
+    description: 'Bordes RGB y contrastes agresivos · máximo rendimiento visual',
+    emoji: '🎮',
+    preview: { bg: '#050505', accent: '#a855f7', card: '#0f0f0f', text: '#ffffff' },
+    config: {
+      accent:       '#a855f7',
+      bg:           '#050505',
+      card:         '#0a0a0a',
+      sidebar:      '#080808',
+      border:       'rgba(168,85,247,0.3)',
+      text:         '#ffffff',
+      dim:          '#4b5563',
+      sidebarWidth: 260,
+      radius:       4,
+      baseFontSize: 14,
+      animations:   true,
+      compact:      false,
+    },
+  },
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo';
+export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo';
 
 export interface NavItem {
   id: SectionId;
@@ -202,6 +265,51 @@ export interface WFMTicket {
   location: string;
   priority: TicketPriority;
   assignedTo: string | null;
+}
+
+// ── WFM Implementation Order (Nuevo) ──────────────────────────────────────────
+export type WFMOrderState = 
+  | 'SOLICITUD_PREVENTA' 
+  | 'ANTEPROYECTO' 
+  | 'ORDEN_IMPLEMENTACION' 
+  | 'ALMACEN_VALIDACION' 
+  | 'ESPERA_INVENTARIO' 
+  | 'APROVISIONAMIENTO' 
+  | 'REVISION_PM' 
+  | 'LISTO_INSTALACION' 
+  | 'BACKLOG';
+
+export interface WFMOrder {
+  id: string;
+  cliente: string;
+  servicio: string;
+  comercial: string;
+  estado: WFMOrderState;
+  fecha_creacion: string;
+  preventa: {
+    analisis: string | null;
+    factibilidad: string | null;
+    tecnologia: string | null;
+    equipos_sugeridos: any[];
+    anteproyecto_url: string | null;
+  };
+  almacen: {
+    disponibilidad: boolean;
+    equipos_asignados: any[];
+    esperando_inventario: boolean;
+  };
+  aprovisionamiento: {
+    config_logica: string | null;
+    parametros_red: Record<string, any>;
+    listo: boolean;
+  };
+  pm: {
+    auditoria_ok: boolean;
+    bloqueada: boolean;
+    motivo_bloqueo: string | null;
+    backlogs: any[];
+  };
+  historial: Array<{ fecha: string; accion: string; usuario: string }>;
 }
 
 // ── WFM mock data ─────────────────────────────────────────────────────────────

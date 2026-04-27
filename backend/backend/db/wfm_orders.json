@@ -1,0 +1,156 @@
+[
+  {
+    "id": "OI-8E11B5",
+    "cliente": "Corporativo Cordillera",
+    "servicio": "Fibra Dedicada 1GB + Backup Satelital",
+    "comercial": "Andr\u00e9s Garc\u00eda",
+    "estado": "ANTEPROYECTO",
+    "fecha_creacion": "2026-04-26T18:54:09.156133",
+    "preventa": {
+      "analisis": "Factibilidad positiva v\u00eda FO a\u00e9rea. Requiere router CCR2004.",
+      "factibilidad": "OK",
+      "tecnologia": "Fibra \u00d3ptica",
+      "equipos_sugeridos": [
+        "Mikrotik CCR2004",
+        "Ubiquiti NanoBeam AC"
+      ],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-04-26T18:54:09.156564",
+        "accion": "Solicitud creada por Comercial",
+        "usuario": "Andr\u00e9s Garc\u00eda"
+      },
+      {
+        "fecha": "2026-04-26T18:57:51.364633",
+        "accion": "Preventa actualiz\u00f3 an\u00e1lisis",
+        "usuario": "Ing. Carlos Mendoza"
+      }
+    ]
+  },
+  {
+    "id": "OI-5FDD5D",
+    "cliente": "Hospital San Jos\u00e9",
+    "servicio": "Enlace de Microondas 50MB",
+    "comercial": "Luc\u00eda Pineda",
+    "estado": "ALMACEN_VALIDACION",
+    "fecha_creacion": "2026-04-26T18:58:06.448236",
+    "preventa": {
+      "analisis": null,
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-04-26T18:58:06.448263",
+        "accion": "Solicitud creada por Comercial",
+        "usuario": "Luc\u00eda Pineda"
+      },
+      {
+        "fecha": "2026-04-26T19:00:33.242469",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente de Ventas"
+      }
+    ]
+  },
+  {
+    "id": "OI-E5AF92",
+    "cliente": "cordilllera",
+    "servicio": "1gb",
+    "comercial": "Usuario Demo",
+    "estado": "LISTO_INSTALACION",
+    "fecha_creacion": "2026-04-26T18:59:29.212113",
+    "preventa": {
+      "analisis": null,
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": true,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": [
+        {
+          "id": "B-3BBB",
+          "fecha": "2026-04-26T19:05:09.946118",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        }
+      ]
+    },
+    "historial": [
+      {
+        "fecha": "2026-04-26T18:59:29.212145",
+        "accion": "Solicitud creada por Comercial",
+        "usuario": "Usuario Demo"
+      },
+      {
+        "fecha": "2026-04-26T19:05:02.219373",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-26T19:05:06.556715",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-26T19:05:09.946149",
+        "accion": "Auditor\u00eda PM: Rechazada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-26T19:05:14.770536",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      }
+    ]
+  }
+]

@@ -14,8 +14,13 @@ import { CreateTicketModal } from '@/components/noc/CreateTicketModal';
 import { TenantGrid } from '@/components/noc/TenantGrid';
 import { RegionFilter, CITY_REGION, TENANT_NET_TYPE, type Region, type NetworkType } from '@/components/noc/RegionFilter';
 
+import { useViewMode } from "../contexts/ViewModeContext.tsx";
+import NocSection from "./xcien2/sections/NocSection.tsx";
+import { DEFAULT_THEME } from "./xcien2/types.ts";
 
 export default function NOC() {
+  const { mode } = useViewMode();
+  const theme = DEFAULT_THEME;
   const navigate = useNavigate();
   const [activeTenantId, setActiveTenantId] = useState<string | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
@@ -157,131 +162,111 @@ export default function NOC() {
     setNetType('all');
   };
 
+
+  if (mode === 'holo') {
+    return (
+      <NocSection 
+        theme={theme} 
+        cities={filteredCities} 
+        alerts={alerts} 
+        activeTenantId={activeTenantId} 
+        onTenantChange={setActiveTenantId}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0D1B2A] text-[#e2e8f0]">
+    <div className="min-h-screen" style={{ background: 'var(--xcien-bg)', color: 'var(--xcien-text)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#1E3A4A]">
+      <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--xcien-border)' }}>
         <div className="flex items-center gap-3">
-          <h1 className="text-[16px] font-bold tracking-wide">NOC Monitor</h1>
-          <span className="text-[10px] text-[#64748b] font-mono">Actualizado: {lastUpdated}</span>
-          {isGlobal && (
-            <span className="text-[10px] uppercase tracking-wider text-[#00B4D8] bg-[#00B4D8]/10 px-2 py-0.5 rounded-full border border-[#00B4D8]/30">
-              Vista Global · {CASA_TENANTS.length} redes
-            </span>
-          )}
+          <Monitor className="h-5 w-5" style={{ color: 'var(--xcien-accent)' }} />
+          <h1 className="text-[18px] font-bold tracking-tight">NOC Dashboard</h1>
         </div>
-        <button
-          onClick={() => setAlertsOpen(true)}
-          className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#1E3A4A] hover:border-[#FFB703]/40 transition-colors"
-        >
-          <AlertTriangle className="h-4 w-4 text-[#FFB703]" />
-          <span className="text-[12px] text-[#e2e8f0]">Alertas</span>
-          {totalAlertCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-[#FF4D6D] text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-              {totalAlertCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-4 text-[13px] font-medium" style={{ color: 'var(--xcien-dim)' }}>
+          <span>{alerts.length} Alertas Activas</span>
+          <div className="h-4 w-[1px]" style={{ background: 'var(--xcien-border)' }} />
+          <span>Ultima actualización: {lastUpdated}</span>
+        </div>
       </div>
 
       {/* Tenant tabs */}
-      <div className="flex items-center gap-1 px-6 py-2 border-b border-[#1E3A4A] overflow-x-auto">
+      <div className="flex items-center gap-1 px-6 py-2 overflow-x-auto" style={{ borderBottom: '1px solid var(--xcien-border)' }}>
         <button
           onClick={() => { setActiveTenantId(null); setSelectedCityId(null); }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-medium transition-all duration-200 ${
-            isGlobal ? 'bg-[#00B4D8]/15 text-[#00B4D8] border border-[#00B4D8]/30' : 'text-[#64748b] hover:text-[#e2e8f0] hover:bg-[#1A2B3C]'
+          className={`px-4 py-1.5 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${
+            activeTenantId === null 
+              ? 'bg-[var(--xcien-accent)] text-white shadow-[0_0_15px_var(--xcien-accent)]' 
+              : 'text-[var(--xcien-dim)] hover:text-[var(--xcien-text)] hover:bg-[var(--xcien-border)]'
           }`}
         >
           Vista Global
         </button>
-        {CASA_TENANTS.map(t => {
-          const score = tenantScores[t.id] ?? 0;
-          const dotColor = score >= 85 ? '#00C896' : score >= 60 ? '#FFB703' : '#FF4D6D';
-          return (
-            <button
-              key={t.id}
-              onClick={() => { setActiveTenantId(t.id); setSelectedCityId(null); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-medium transition-all duration-200 ${
-                activeTenantId === t.id ? 'bg-[#1A2B3C] text-[#e2e8f0] border border-[#1E3A4A]' : 'text-[#64748b] hover:text-[#e2e8f0] hover:bg-[#1A2B3C]'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dotColor }} />
-              {t.name}
-              <span className="text-[10px] font-mono" style={{ color: dotColor }}>{score}</span>
-            </button>
-          );
-        })}
+        {CASA_TENANTS.map(tenant => (
+          <button
+            key={tenant.id}
+            onClick={() => { setActiveTenantId(tenant.id); setSelectedCityId(null); }}
+            className={`px-4 py-1.5 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${
+              activeTenantId === tenant.id 
+                ? 'bg-[var(--xcien-accent)] text-white shadow-[0_0_15px_var(--xcien-accent)]' 
+                : 'text-[var(--xcien-dim)] hover:text-[var(--xcien-text)] hover:bg-[var(--xcien-border)]'
+            }`}
+          >
+            {tenant.name}
+          </button>
+        ))}
       </div>
 
-      {/* Content */}
-      <div className="p-6 space-y-6">
-        {/* Global view: KPIs + tenant grid + filters */}
-        {isGlobal && (
-          <>
+      <div className="flex-1 p-6 overflow-auto">
+        {activeTenantId === null ? (
+          <div className="space-y-6">
             <GlobalMetrics summary={nocSummary} realCities={realCities} />
-            <TenantGrid onSelectTenant={handleSelectTenantFromCard} />
-            <RegionFilter
-              selectedTenants={selectedTenants}
-              region={region}
-              netType={netType}
-              onToggleTenant={toggleTenant}
-              onRegionChange={setRegion}
-              onNetTypeChange={setNetType}
-              onClear={clearFilters}
-            />
-          </>
-        )}
-
-        {/* Map + Cities split */}
-        <div className="grid grid-cols-1 lg:grid-cols-[45%_55%] gap-6">
-          <MexicoMap
-            cities={cities}
-            selectedCityId={selectedCityId}
-            onCityClick={id => setSelectedCityId(prev => prev === id ? null : id)}
-            isGlobal={isGlobal}
-          />
-
-          <div className="space-y-3">
-            {selectedCityId && (
-              <button onClick={() => setSelectedCityId(null)} className="text-[11px] text-[#00B4D8] hover:underline mb-1">
-                ← Ver todas las ciudades
-              </button>
-            )}
-            {filteredCities.map(city => (
-              <CityCard
-                key={city.id}
-                city={city}
-                tenantName={isGlobal ? CASA_TENANTS.find(t => t.id === city.tenantId)?.name : undefined}
-                tenantColor={city.tenantId ? TENANT_COLORS[city.tenantId] : undefined}
-              />
-            ))}
-            {filteredCities.length === 0 && (
-              <p className="text-center text-[#64748b] text-[12px] py-12">
-                {isGlobal && (selectedTenants.size > 0 || region !== 'all' || netType !== 'all')
-                  ? 'Sin ciudades que coincidan con los filtros'
-                  : 'Sin datos disponibles'}
-              </p>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MexicoMap cities={cities} onCitySelect={setSelectedCityId} />
+              <div className="space-y-6">
+                <BenchmarkTable />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl" style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--xcien-dim)' }}>SLA Cumplimiento</p>
+                    <p className="text-[24px] font-bold text-[#00C896]">99.8%</p>
+                  </div>
+                  <div className="p-4 rounded-xl" style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--xcien-dim)' }}>MTTR Global</p>
+                    <p className="text-[24px] font-bold text-[#FFB703]">42m</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <TenantGrid onSelectTenant={setActiveTenantId} />
           </div>
-        </div>
-
-        {isGlobal && <BenchmarkTable />}
+        ) : (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button 
+                onClick={() => setActiveTenantId(null)}
+                className="text-[13px] font-medium text-[#00B4D8] hover:underline"
+              >
+                ← Regresar a Vista Global
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {filteredCities.map(city => (
+                <CityCard key={city.id} city={city} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      <AlertsDrawer
-        open={alertsOpen}
-        onClose={() => setAlertsOpen(false)}
-        alerts={alerts}
-        isGlobal={isGlobal}
-        onCreateTicket={handleCreateTicket}
+      <AlertsDrawer 
+        open={alertsOpen} 
+        onClose={() => setAlertsOpen(false)} 
+        alerts={alerts} 
       />
-
-      <CreateTicketModal
-        open={ticketAlert !== null}
-        onClose={() => setTicketAlert(null)}
-        alert={ticketAlert}
-        tenantId={activeTenantId ?? 'global'}
-        tenantType="casa"
+      <CreateTicketModal 
+        open={ticketAlert !== null} 
+        onClose={() => setTicketAlert(null)} 
+        alert={ticketAlert} 
       />
     </div>
   );

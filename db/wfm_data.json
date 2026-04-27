@@ -1,0 +1,106 @@
+{
+  "tecnicos": [
+    {
+      "id": "TEC-001",
+      "nombre": "Erik Alberto",
+      "zona": "Nuevo León",
+      "especialidad": "Instalación / Ops",
+      "status": "Disponible",
+      "skills": {
+        "Instalación": 85,
+        "Soporte": 75,
+        "Seguridad": 95,
+        "Odoo/Admin": 90,
+        "Atención al Cliente": 85
+      }
+    },
+    {
+      "id": "TEC-002",
+      "nombre": "Jhony Collazo",
+      "zona": "Nuevo León",
+      "especialidad": "Senior / Infraestructura",
+      "status": "Disponible",
+      "skills": {
+        "Instalación": 95,
+        "Soporte": 90,
+        "Seguridad": 100,
+        "Odoo/Admin": 95,
+        "Atención al Cliente": 90
+      }
+    },
+    {
+      "id": "TEC-003",
+      "nombre": "Rogelio",
+      "zona": "Jalisco",
+      "especialidad": "Técnico de Campo",
+      "status": "Disponible",
+      "skills": {
+        "Instalación": 90,
+        "Soporte": 80,
+        "Seguridad": 90,
+        "Odoo/Admin": 20,
+        "Atención al Cliente": 60
+      }
+    },
+    {
+      "id": "TEC-004",
+      "nombre": "Jose macias",
+      "zona": "CDMX",
+      "especialidad": "Soporte Especializado",
+      "status": "Disponible",
+      "skills": {
+        "Instalación": 100,
+        "Soporte": 100,
+        "Seguridad": 50,
+        "Odoo/Admin": 100,
+        "Atención al Cliente": 100
+      }
+    },
+    {
+      "id": "TEC-005",
+      "nombre": "Pablo Capetillo",
+      "zona": "Querétaro",
+      "especialidad": "Instalación",
+      "status": "Disponible",
+      "skills": {
+        "Instalación": 100,
+        "Soporte": 100,
+        "Seguridad": 50,
+        "Odoo/Admin": 50,
+        "Atención al Cliente": 100
+      }
+    }
+  ],
+  "tickets": [
+    {
+      "id": "TKT-2026-001",
+      "cliente": "Xcien Corporativo NL",
+      "tipo": "Mantenimiento",
+      "prioridad": "Alta",
+      "zona": "Nuevo León",
+      "descripcion": "Revisión de torre principal - Estándar Higiénico",
+      "status": "En Progreso",
+      "asignado": "TEC-002"
+    },
+    {
+      "id": "TKT-2026-002",
+      "cliente": "Luminet Saltillo",
+      "tipo": "Soporte",
+      "prioridad": "Crítica",
+      "zona": "Coahuila",
+      "descripcion": "Falla en enlace troncal - NOC escalando",
+      "status": "Abierto",
+      "asignado": "TEC-001"
+    },
+    {
+      "id": "TKT-2026-003",
+      "cliente": "Huss CDMX",
+      "tipo": "Instalación",
+      "prioridad": "Alta",
+      "zona": "CDMX",
+      "descripcion": "Nueva instalación empresarial - Info OK",
+      "status": "Agendado",
+      "asignado": "TEC-004"
+    }
+  ]
+}

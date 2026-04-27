@@ -4,7 +4,7 @@ import {
   Monitor, Radio, Send, Phone, ScanLine, LayoutDashboard,
   FileBarChart, GraduationCap, AlertTriangle, CheckCircle2,
   Activity, Users, Wifi, WifiOff, TrendingUp, Clock,
-  ChevronRight, Circle,
+  ChevronRight, Circle, Zap
 } from 'lucide-react';
 import { getAllCasaData, getAllAlerts } from '@/services/nocboard';
 import { CASA_TENANTS } from '@/types/tenant';
@@ -15,27 +15,18 @@ import { ISP_UPTIMES, REVENUE_METRICS } from '@/data/mockGerenciaData';
 
 const MODULES = [
   {
-    title: 'Vista NOC',
-    description: 'Estado global de redes y tenants',
-    url: '/noc',
+    title: 'Centro de Operaciones (NOC)',
+    description: 'Monitoreo de red, nodos y alertas en tiempo real',
+    url: '/xcien2?section=noc',
     icon: Monitor,
     color: '#00B4D8',
     bg: 'rgba(0,180,216,0.08)',
     border: 'rgba(0,180,216,0.25)',
   },
   {
-    title: 'Red en Vivo',
-    description: 'Nodos, latencia y alertas en tiempo real',
-    url: '/red-en-vivo',
-    icon: Radio,
-    color: '#00C896',
-    bg: 'rgba(0,200,150,0.08)',
-    border: 'rgba(0,200,150,0.25)',
-  },
-  {
     title: 'Dispatch',
     description: 'Gestión de técnicos en campo',
-    url: '/dispatch',
+    url: '/xcien2?section=wfm',
     icon: Send,
     color: '#60A5FA',
     bg: 'rgba(96,165,250,0.08)',
@@ -44,7 +35,7 @@ const MODULES = [
   {
     title: 'Call Center',
     description: 'Atención y escalamiento de tickets',
-    url: '/call-center',
+    url: '/xcien2?section=call',
     icon: Phone,
     color: '#A78BFA',
     bg: 'rgba(167,139,250,0.08)',
@@ -53,7 +44,7 @@ const MODULES = [
   {
     title: 'Scanner',
     description: 'Escaneo de inventario y equipos',
-    url: '/scan',
+    url: '/xcien2?section=scan',
     icon: ScanLine,
     color: '#FB923C',
     bg: 'rgba(251,146,60,0.08)',
@@ -62,7 +53,7 @@ const MODULES = [
   {
     title: 'Gerencia',
     description: 'Revenue, SLAs y agentes IA',
-    url: '/gerencia',
+    url: '/xcien2?section=gerencia',
     icon: LayoutDashboard,
     color: '#FBBF24',
     bg: 'rgba(251,191,36,0.08)',
@@ -71,7 +62,7 @@ const MODULES = [
   {
     title: 'Reportes',
     description: 'Gobierno, impacto y cumplimiento',
-    url: '/reportes-gobierno',
+    url: '/xcien2?section=reports',
     icon: FileBarChart,
     color: '#F472B6',
     bg: 'rgba(244,114,182,0.08)',
@@ -80,11 +71,29 @@ const MODULES = [
   {
     title: 'Academia XCIEN',
     description: 'Capacitación, exámenes y WFM',
-    url: '/academia',
+    url: '/xcien2?section=academia',
     icon: GraduationCap,
     color: '#34D399',
     bg: 'rgba(52,211,153,0.08)',
     border: 'rgba(52,211,153,0.25)',
+  },
+  {
+    title: 'Puente IA (Antigravity)',
+    description: 'Terminal de ejecución y logs en tiempo real',
+    url: '/xcien2?section=bridge',
+    icon: Zap,
+    color: '#F472B6',
+    bg: 'rgba(244,114,182,0.08)',
+    border: 'rgba(244,114,182,0.25)',
+  },
+  {
+    title: 'Sala de Guerra (War Room)',
+    description: 'Orquestación multi-agente en vivo',
+    url: '/xcien2?section=war-room',
+    icon: Activity,
+    color: '#FFB703',
+    bg: 'rgba(255,183,3,0.08)',
+    border: 'rgba(255,183,3,0.25)',
   },
 ];
 
@@ -141,12 +150,12 @@ export default function Index() {
   const dateStr = now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen" style={{ background: '#0B1826', color: '#e2e8f0' }}>
+    <div className="min-h-screen" style={{ background: 'var(--xcien-bg)', color: 'var(--xcien-text)' }}>
 
       {/* ── Hero Header ──────────────────────────────────────────────────── */}
       <div
         className="px-8 pt-10 pb-8"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--xcien-border)' }}
       >
         <div className="max-w-[1300px] mx-auto flex items-end justify-between gap-4 flex-wrap">
           <div>
@@ -154,23 +163,23 @@ export default function Index() {
               <img src="/xcien.png" alt="XCIEN" className="h-8 w-auto object-contain" />
               <span
                 className="text-[28px] font-bold tracking-tight"
-                style={{ color: '#e2e8f0', letterSpacing: '-0.02em' }}
+                style={{ color: 'var(--xcien-text)', letterSpacing: '-0.02em' }}
               >
                 XCIEN 2.0
               </span>
               <span
                 className="text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                style={{ color: '#00B4D8', borderColor: 'rgba(0,180,216,0.4)', background: 'rgba(0,180,216,0.08)' }}
+                style={{ color: 'var(--xcien-accent)', borderColor: 'var(--xcien-accent)', background: 'var(--xcien-accent)15' }}
               >
                 Operations Hub
               </span>
             </div>
-            <p className="text-[13px] capitalize" style={{ color: '#64748b' }}>{dateStr}</p>
+            <p className="text-[13px] capitalize" style={{ color: 'var(--xcien-dim)' }}>{dateStr}</p>
           </div>
 
-          <div className="flex items-center gap-2" style={{ color: '#64748b' }}>
+          <div className="flex items-center gap-2" style={{ color: 'var(--xcien-dim)' }}>
             <Clock className="h-4 w-4" />
-            <span className="font-mono text-[20px] font-medium tabular-nums" style={{ color: '#e2e8f0' }}>
+            <span className="font-mono text-[20px] font-medium tabular-nums" style={{ color: 'var(--xcien-text)' }}>
               {timeStr}
             </span>
           </div>
@@ -229,13 +238,13 @@ export default function Index() {
                   to="/noc"
                   className="rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02]"
                   style={{
-                    background: '#0f2030',
+                    background: 'var(--xcien-card)',
                     border: `1px solid ${color}30`,
                     boxShadow: `0 0 0 1px ${color}10`,
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold" style={{ color: '#e2e8f0' }}>{t.name}</span>
+                    <span className="text-[13px] font-semibold" style={{ color: 'var(--xcien-text)' }}>{t.name}</span>
                     <span
                       className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                       style={{ background: `${sc_color}18`, color: sc_color }}
@@ -253,13 +262,13 @@ export default function Index() {
                       {sc}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <div className="h-1.5 rounded-full" style={{ background: '#1E3A4A' }}>
+                      <div className="h-1.5 rounded-full" style={{ background: 'var(--xcien-border)' }}>
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{ width: `${sc}%`, background: sc_color }}
                         />
                       </div>
-                      <div className="flex justify-between text-[10px]" style={{ color: '#64748b' }}>
+                      <div className="flex justify-between text-[10px]" style={{ color: 'var(--xcien-dim)' }}>
                         <span>{t.cities} ciudad{t.cities !== 1 ? 'es' : ''}</span>
                         <span>{t.cityAlerts > 0 ? `${t.cityAlerts} alertas` : 'sin alertas'}</span>
                       </div>
@@ -290,8 +299,8 @@ export default function Index() {
                 to={m.url}
                 className="group rounded-xl p-5 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02]"
                 style={{
-                  background: m.bg,
-                  border: `1px solid ${m.border}`,
+                  background: 'var(--xcien-card)',
+                  border: `1px solid var(--xcien-border)`,
                 }}
               >
                 <div className="flex items-center justify-between">
@@ -307,8 +316,8 @@ export default function Index() {
                   />
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold" style={{ color: '#e2e8f0' }}>{m.title}</p>
-                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#64748b' }}>{m.description}</p>
+                  <p className="text-[14px] font-semibold" style={{ color: 'var(--xcien-text)' }}>{m.title}</p>
+                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: 'var(--xcien-dim)' }}>{m.description}</p>
                 </div>
               </Link>
             ))}
@@ -326,11 +335,11 @@ export default function Index() {
                   {FSM_ABRIL_2026.cumplimiento}%
                 </span>
                 <div className="mb-1">
-                  <p className="text-[11px]" style={{ color: '#64748b' }}>cumplimiento global</p>
-                  <p className="text-[11px]" style={{ color: '#64748b' }}>{FSM_ABRIL_2026.total} tareas totales</p>
+                  <p className="text-[11px]" style={{ color: 'var(--xcien-dim)' }}>cumplimiento global</p>
+                  <p className="text-[11px]" style={{ color: 'var(--xcien-dim)' }}>{FSM_ABRIL_2026.total} tareas totales</p>
                 </div>
               </div>
-              <div className="h-1.5 rounded-full mb-5" style={{ background: '#1E3A4A' }}>
+              <div className="h-1.5 rounded-full mb-5" style={{ background: 'var(--xcien-border)' }}>
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${FSM_ABRIL_2026.cumplimiento}%`, background: '#FFB703' }}
@@ -363,8 +372,8 @@ export default function Index() {
                 {REVENUE_METRICS.slice(0, 4).map(m => (
                   <div key={m.label} className="flex items-center justify-between">
                     <div>
-                      <p className="text-[11px]" style={{ color: '#64748b' }}>{m.label}</p>
-                      <p className="text-[15px] font-semibold tabular-nums" style={{ color: '#e2e8f0' }}>{m.value}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--xcien-dim)' }}>{m.label}</p>
+                      <p className="text-[15px] font-semibold tabular-nums" style={{ color: 'var(--xcien-text)' }}>{m.value}</p>
                     </div>
                     <span
                       className="text-[11px] font-medium"
@@ -428,10 +437,10 @@ export default function Index() {
         {/* ── Top Technicians ─────────────────────────────────────────────── */}
         <section>
           <SectionLabel icon={<Users className="h-3.5 w-3.5" />}>Técnicos con más carga — {FSM_ABRIL_2026.periodo}</SectionLabel>
-          <div className="rounded-xl overflow-hidden" style={{ background: '#0f2030', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}>
             <table className="w-full text-[12px]">
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)', color: '#64748b' }}>
+                <tr style={{ background: 'var(--xcien-border)', color: 'var(--xcien-dim)' }}>
                   <th className="text-left px-5 py-3 font-medium">Técnico</th>
                   <th className="text-right px-5 py-3 font-medium">Empresa</th>
                   <th className="text-right px-5 py-3 font-medium">Tareas</th>
@@ -502,7 +511,7 @@ function KpiCard({
   return (
     <div
       className="rounded-xl p-5"
-      style={{ background: '#0f2030', border: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}
     >
       <div className="flex items-center justify-between mb-3">
         <span style={{ color: accent }}>{icon}</span>

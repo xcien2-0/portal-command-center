@@ -91,8 +91,8 @@ function Ring({ pct, size = 40, stroke = 3, color = '#FFB703' }: { pct: number; 
 function SectionTitle({ sub, main, dim }: { sub: string; main: string; dim: string }) {
   return (
     <>
-      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase', color: DIM, marginBottom: 8 }}>{sub}</div>
-      <div style={{ fontSize: 28, fontWeight: 500, lineHeight: 1.15, marginBottom: 20 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.15em', textTransform: 'uppercase', color: DIM, marginBottom: 8, fontFamily: 'Oswald, sans-serif' }}>{sub}</div>
+      <div style={{ fontSize: 32, fontWeight: 500, lineHeight: 1.1, marginBottom: 20, fontFamily: 'Oswald, sans-serif', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
         {main.split('|').map((part, i) => (
           i === 0 ? <span key={i}>{part}<br /></span> : <span key={i} style={{ color: DIM, fontWeight: 400 }}>{part}</span>
         ))}
@@ -109,17 +109,17 @@ function SlideIntro() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 32, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Chip>Field Services</Chip><Chip>47 técnicos</Chip><Chip>6 plazas · México</Chip>
       </div>
-      <div style={{ fontSize: 'clamp(36px,4vw,56px)', fontWeight: 500, lineHeight: 1, letterSpacing: -2, marginBottom: 16 }}>
+      <div style={{ fontSize: 'clamp(44px,6vw,64px)', fontWeight: 600, lineHeight: 0.9, letterSpacing: -1, marginBottom: 16, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
         Academia<br /><span style={{ fontWeight: 400, color: DIM }}>XCIEN</span>
       </div>
-      <p style={{ fontSize: 15, color: DIM, lineHeight: 1.7, marginBottom: 40 }}>
+      <p style={{ fontSize: 16, color: DIM, lineHeight: 1.7, marginBottom: 40, maxWidth: 600 }}>
         El sistema que convierte capacitación en carrera,<br />esfuerzo en reconocimiento, técnicos en leyendas.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 500 }}>
-        {[['47', '', 'Técnicos'], ['62.32', '%', 'Avance global'], ['48', '', 'Habilidades'], ['15', '', 'Badges']].map(([v, s, l], i) => (
-          <div key={i} style={{ ...card, textAlign: 'center', padding: '14px 10px' }}>
-            <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: -1 }}>{v}{s}</div>
-            <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>{l}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 540 }}>
+        {[['47', '', 'Técnicos'], ['62.3', '%', 'Avance global'], ['48', '', 'Habilidades'], ['15', '', 'Badges']].map(([v, s, l], i) => (
+          <div key={i} style={{ ...card, textAlign: 'center', padding: '16px 10px', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -1, fontFamily: 'Oswald, sans-serif', color: i === 1 ? '#00ff88' : 'inherit' }}>{v}{s}</div>
+            <div style={{ fontSize: 10, color: DIM, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{l}</div>
           </div>
         ))}
       </div>
@@ -313,7 +313,21 @@ function SlideRoadmap() {
   );
 }
 
-function SlideCTA() {
+function SlideExamen({ theme }: { theme: ThemeConfig }) {
+  return (
+    <div style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: 600, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: `1px solid ${theme.border}`, background: theme.bg }}>
+        <iframe 
+          src={`http://localhost:8000/static/examen_holo.html?accent=${encodeURIComponent(theme.accent)}&bg=${encodeURIComponent(theme.bg)}&card=${encodeURIComponent(theme.card)}&text=${encodeURIComponent(theme.text)}&dim=${encodeURIComponent(theme.dim)}`} 
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          title="Examen Holo"
+        />
+      </div>
+    </div>
+  );
+}
+
+function SlideCTA({ onStartExam }: { onStartExam: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}><Chip>Academia XCIEN</Chip><Chip>Q3 2025</Chip></div>
@@ -323,14 +337,18 @@ function SlideCTA() {
       <p style={{ fontSize: 15, color: DIM, lineHeight: 1.7, marginBottom: 36 }}>
         Tu progreso, tus badges, tu carrera — todo en un solo lugar.
       </p>
-      <button style={{ padding: '12px 32px', borderRadius: 40, background: 'white', color: '#0A0A0A', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
-        Únete a la Academia
-      </button>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button 
+          onClick={onStartExam}
+          style={{ padding: '12px 32px', borderRadius: 40, background: 'white', color: '#0A0A0A', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+          Realizar Examen de Colocación
+        </button>
+      </div>
     </div>
   );
 }
 
-const SLIDE_COMPONENTS: Record<SlideId, () => React.ReactElement> = {
+const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
   intro:       SlideIntro,
   problema:    SlideProblema,
   comparacion: SlideComparacion,
@@ -339,6 +357,7 @@ const SLIDE_COMPONENTS: Record<SlideId, () => React.ReactElement> = {
   badges:      SlideBadges,
   leaderboard: SlideLeaderboard,
   roadmap:     SlideRoadmap,
+  examen:      SlideExamen,
   cta:         SlideCTA,
 };
 
@@ -346,66 +365,97 @@ const SLIDE_COMPONENTS: Record<SlideId, () => React.ReactElement> = {
 interface Props { theme: ThemeConfig }
 
 export default function AcademiaSection({ theme }: Props) {
+  const [view, setView] = useState<'dashboard' | 'exam'>('dashboard');
   const [idx, setIdx] = useState(0);
   const total = SLIDES.length;
 
   const go = (i: number) => { if (i >= 0 && i < total) setIdx(i); };
 
   useEffect(() => {
+    if (view !== 'dashboard') return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') go(idx + 1);
       if (e.key === 'ArrowLeft')  go(idx - 1);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [idx]);
+  }, [idx, view]);
 
   const SlideComp = SLIDE_COMPONENTS[SLIDES[idx]];
 
   return (
-    <div style={{ background: '#0d1117', borderRadius: theme.radius, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-      {/* Header */}
+    <div style={{ background: '#0d1117', borderRadius: theme.radius, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header / Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', background: '#151515' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN }} />
-          <span style={{ fontSize: 13, fontWeight: 500 }}>XCIEN</span>
-          <span style={{ fontSize: 13, color: DIM }}>/ Academia</span>
-        </div>
-        {/* Pill navigation */}
-        <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 40, padding: '4px 6px' }}>
-          {SLIDES.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => go(i)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN }} />
+            <span style={{ fontSize: 13, fontWeight: 500 }}>XCIEN ACADEMIA</span>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button 
+              onClick={() => setView('dashboard')}
               style={{
-                height: 26, minWidth: i === idx ? 72 : 26, borderRadius: 40, padding: '0 8px',
-                border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 500,
-                background: i === idx ? '#151515' : 'transparent',
-                color: i === idx ? 'white' : DIM,
-                transition: 'all .25s', whiteSpace: 'nowrap',
-              }}
-            >
-              {i === idx ? LABELS[SLIDES[i]] : '·'}
+                background: view === 'dashboard' ? `${theme.accent}20` : 'transparent',
+                color: view === 'dashboard' ? theme.accent : DIM,
+                border: 'none', padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+              📊 Estrategia
+            </button>
+            <button 
+              onClick={() => setView('exam')}
+              style={{
+                background: view === 'exam' ? `${theme.accent}20` : 'transparent',
+                color: view === 'exam' ? theme.accent : DIM,
+                border: 'none', padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+              🔮 Evaluación de Colocación
+            </button>
+          </div>
+        </div>
+
+        {view === 'dashboard' && (
+          <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 40, padding: '4px 6px' }}>
+            {SLIDES.map((_, i) => (
+              <button key={i} onClick={() => go(i)}
+                style={{
+                  height: 24, minWidth: i === idx ? 70 : 24, borderRadius: 40, padding: '0 8px',
+                  border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 500,
+                  background: i === idx ? '#151515' : 'transparent',
+                  color: i === idx ? 'white' : DIM, transition: 'all .25s', whiteSpace: 'nowrap'
+                }}>
+                {i === idx ? LABELS[SLIDES[i]] : '·'}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '30px' }}>
+        {view === 'dashboard' ? (
+          <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
+            <SlideComp theme={theme} onStartExam={() => setView('exam')} />
+          </div>
+        ) : (
+          <div style={{ height: '100%', minHeight: 700 }}>
+             <SlideExamen theme={theme} />
+          </div>
+        )}
+      </div>
+
+      {/* Footer Nav for Dashboard */}
+      {view === 'dashboard' && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 0 16px' }}>
+          {([['←', idx === 0, () => go(idx - 1)], ['→', idx === total - 1, () => go(idx + 1)]] as [string, boolean, () => void][]).map(([label, disabled, fn], i) => (
+            <button key={i} onClick={fn} disabled={disabled}
+              style={{ width: 34, height: 34, borderRadius: '50%', fontSize: 14, background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', color: disabled ? '#555' : 'white', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .4 : 1, transition: 'all .2s' }}>
+              {label}
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 12, color: DIM }}>{idx + 1} / {total}</div>
-      </div>
-
-      {/* Slide content */}
-      <div key={idx} style={{ padding: '40px 48px', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
-        <SlideComp />
-      </div>
-
-      {/* Nav arrows */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 0 16px' }}>
-        {([['←', idx === 0, () => go(idx - 1)], ['→', idx === total - 1, () => go(idx + 1)]] as [string, boolean, () => void][]).map(([label, disabled, fn], i) => (
-          <button key={i} onClick={fn} disabled={disabled}
-            style={{ width: 34, height: 34, borderRadius: '50%', fontSize: 14, background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', color: disabled ? '#555' : 'white', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .4 : 1, transition: 'all .2s' }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      )}
 
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>

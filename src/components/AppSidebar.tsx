@@ -27,7 +27,6 @@ type Item = { title: string; url: string; icon: any; gob?: boolean; external?: b
 
 const topItems: Item[] = [
   { title: 'Inicio', url: '/', icon: Home },
-  { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
 ];
 
 const nocGroup: { label: string; icon: any; main: Item; children: Item[] } = {

@@ -60,13 +60,30 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, .font-scifi {
+    font-family: 'Oswald', sans-serif;
+    @apply tracking-wider uppercase;
   }
 }
 
 @layer utilities {
   .font-mono-data {
     font-family: 'JetBrains Mono', monospace;
+  }
+
+  .glass {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+
+  .neon-shadow {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+  }
+
+  .neon-text {
+    text-shadow: 0 0 10px currentColor;
   }
 
   @keyframes pulse-alert {

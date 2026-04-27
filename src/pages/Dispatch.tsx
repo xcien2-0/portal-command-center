@@ -129,7 +129,14 @@ const timeSince = (iso: string) => {
 /* ═══  MAIN COMPONENT  ════════════════════════════════════ */
 /* ═══════════════════════════════════════════════════════════ */
 
+import { useViewMode } from "../contexts/ViewModeContext.tsx";
+import WFMSection from "./xcien2/sections/WFMSection.tsx";
+import { DEFAULT_THEME } from "./xcien2/types.ts";
+
 export default function Dispatch() {
+  const { mode } = useViewMode();
+  const theme = DEFAULT_THEME;
+
   const [jobs, setJobs] = useState<DispatchJob[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +227,12 @@ export default function Dispatch() {
       setSelectedJob(prev => prev ? { ...prev, status: newStatus } : null);
     }
   };
+
+  if (mode === 'holo') return (
+    <div className="flex-1 h-[calc(100vh-2.5rem)] bg-[#0a0a0a] overflow-y-auto relative p-6">
+      <WFMSection theme={theme} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0B1120] text-slate-200">

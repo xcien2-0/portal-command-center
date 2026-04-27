@@ -1,0 +1,78 @@
+{
+  "NOC": {
+    "titulo": "Examen de Certificación NOC (Operaciones de Red)",
+    "preguntas": [
+      {
+        "id": 1,
+        "pilar": "Monitoreo",
+        "pregunta": "¿Cuál es la herramienta principal de monitoreo en XCIEN para visualizar latencia y pérdida de paquetes en tiempo real?",
+        "opciones": ["Excel", "Zabbix / Grafana", "WhatsApp", "Calculadora"],
+        "respuesta_correcta": 1,
+        "explicacion": "Zabbix y Grafana son los estándares para monitoreo de red en tiempo real."
+      },
+      {
+        "id": 2,
+        "pilar": "Protocolos",
+        "pregunta": "¿Qué protocolo se utiliza mayormente en XCIEN para la gestión remota segura de routers?",
+        "opciones": ["HTTP", "Telnet", "SSH", "FTP"],
+        "respuesta_correcta": 2,
+        "explicacion": "SSH es el estándar de seguridad para acceso remoto a equipos de red."
+      }
+    ]
+  },
+  "OPS": {
+    "titulo": "Examen de Certificación OPS (Instalaciones & Mantenimiento)",
+    "preguntas": [
+      {
+        "id": 1,
+        "pilar": "Instalación",
+        "pregunta": "¿Cuál es el nivel de señal (dBi) considerado como 'Excelente' en una alineación de antena?",
+        "opciones": ["65-75 dBi", "55-65 dBi", "35-45 dBi", "25-35 dBi"],
+        "respuesta_correcta": 2,
+        "explicacion": "El rango de 35 a 45 dBi es el óptimo de excelencia según nuestros estándares."
+      },
+      {
+        "id": 2,
+        "pilar": "Administración",
+        "pregunta": "Es obligatorio que el técnico se retire del sitio solo después de:",
+        "opciones": ["Terminar la instalación física", "Recoger su basura", "Documentar la tarea completa en Odoo", "Saludar al cliente"],
+        "respuesta_correcta": 2,
+        "explicacion": "La regla administrativa prohíbe salir del sitio sin haber documentado la tarea en el ERP."
+      }
+    ]
+  },
+  "INFRA": {
+    "titulo": "Examen de Certificación INFRA (Torres & Radioenlaces)",
+    "preguntas": [
+      {
+        "id": 1,
+        "pilar": "Seguridad",
+        "pregunta": "¿Qué tipo de arnés es obligatorio para trabajos en torres según el estándar Xcien?",
+        "opciones": ["Arnés de 3 puntos", "Arnés de 5 puntos de anclaje", "Cinturón básico", "Ninguno"],
+        "respuesta_correcta": 1,
+        "explicacion": "Xcien exige específicamente arnés de 5 puntos para máxima seguridad en alturas."
+      },
+      {
+        "id": 2,
+        "pilar": "Mecánica",
+        "pregunta": "¿Cada cuánto tiempo se debe encinchar el cableado en una bajada de mástil?",
+        "opciones": ["Cada metro", "Cada 30 cm", "Cada 50 cm", "Cada 2 metros"],
+        "respuesta_correcta": 2,
+        "explicacion": "El estándar de instalación segura exige encinchado cada 50 cm."
+      }
+    ]
+  },
+  "ING": {
+    "titulo": "Examen de Certificación ING (Diseño & Arquitectura)",
+    "preguntas": [
+      {
+        "id": 1,
+        "pilar": "Diseño",
+        "pregunta": "¿Qué software se utiliza en XCIEN para realizar simulaciones de línea de vista (LOS) y coberturas?",
+        "opciones": ["Google Maps", "LinkPlanner / AirLink", "Paint", "Excel"],
+        "respuesta_correcta": 1,
+        "explicacion": "LinkPlanner y AirLink son las herramientas estándar para diseño de radioenlaces."
+      }
+    ]
+  }
+}

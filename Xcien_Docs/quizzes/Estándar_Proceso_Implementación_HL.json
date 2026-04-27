@@ -1,0 +1,115 @@
+{
+  "titulo": "Certificación: Proceso de Implementación Xcien",
+  "preguntas": [
+    {
+      "id": 1,
+      "pregunta": "¿Qué es el objetivo principal del flujo de trabajo HL en la implementación de nuevos servicios?",
+      "opciones": [
+        "Garantizar la calidad del servicio",
+        "Proceder con la liberación técnica",
+        "Coordinar las áreas involucradas"
+      ],
+      "respuesta_correcta": 0,
+      "explicacion": "Garantizar la coordinación entre todas las áreas involucradas (PMO, Campo, Almacén, NOC, Ingeniería)"
+    },
+    {
+      "id": 2,
+      "pregunta": "¿Cuál es el paso clave en el que se envían los datos a PMO para validar si los datos son correctos?",
+      "opciones": [
+        "Validación de Información",
+        "Solicitud de Equipos",
+        "Documentación de Equipos"
+      ],
+      "respuesta_correcta": 1,
+      "explicacion": "Si NO: Se regresa a Comercial para corrección."
+    },
+    {
+      "id": 3,
+      "pregunta": "¿Qué sucede si la información validada por PMO es incorrecta?",
+      "opciones": [
+        "Se procede con la liberación técnica",
+        "Se detona el flujo de compra",
+        "Se regresa a Comercial para corrección"
+      ],
+      "respuesta_correcta": 2,
+      "explicacion": "Si NO: Se regresa a Comercial para corrección."
+    },
+    {
+      "id": 4,
+      "pregunta": "¿Qué departamento supervisa que los folios y requerimientos estén asignados?",
+      "opciones": [
+        "PMO",
+        "Almacén",
+        "Ops Campo"
+      ],
+      "respuesta_correcta": 2,
+      "explicacion": "Documentación de Equipos"
+    },
+    {
+      "id": 5,
+      "pregunta": "¿Qué es el paso clave en el que se detona la configuración lógica del servicio?",
+      "opciones": [
+        "Solicitud de Provisión",
+        "Revisión de Instalación",
+        "Validación Final"
+      ],
+      "respuesta_correcta": 2,
+      "explicacion": "Detona la configuración lógica del servicio."
+    },
+    {
+      "id": 6,
+      "pregunta": "¿Qué sucede si el equipo técnico no cumple con los requisitos de instalación?",
+      "opciones": [
+        "Se procede con la liberación de acceso",
+        "Se detona el flujo de compra",
+        "Se regresa a PMO"
+      ],
+      "respuesta_correcta": 3,
+      "explicacion": "Si NO: Se regresa a Comercial para re-agendar o Provisión para soporte."
+    },
+    {
+      "id": 7,
+      "pregunta": "¿Qué departamento realiza la validación técnica final?",
+      "opciones": [
+        "PMO",
+        "Ops Campo",
+        "Ingeniería"
+      ],
+      "respuesta_correcta": 3,
+      "explicacion": "Ingeniería"
+    },
+    {
+      "id": 8,
+      "pregunta": "¿Qué es el paso clave en el que se libera el flujo hacia el NOC?",
+      "opciones": [
+        "Liberación de Ingeniería",
+        "Validación Final",
+        "Solicitud de Equipos"
+      ],
+      "respuesta_correcta": 1,
+      "explicacion": "Una vez validado, se libera el flujo hacia el NOC."
+    },
+    {
+      "id": 9,
+      "pregunta": "¿Qué es el último filtro de seguridad antes de entregar el servicio al cliente?",
+      "opciones": [
+        "Validación Final",
+        "Revisión de Instalación",
+        "Liberación de Acceso"
+      ],
+      "respuesta_correcta": 3,
+      "explicacion": "Último filtro de seguridad"
+    },
+    {
+      "id": 10,
+      "pregunta": "¿Cuál es el objetivo principal del Documento de Procesos HL?",
+      "opciones": [
+        "Establecer un protocolo de trabajo",
+        "Garantizar la calidad del servicio",
+        "Proceder con la liberación técnica"
+      ],
+      "respuesta_correcta": 0,
+      "explicacion": "Establecer un protocolo de trabajo"
+    }
+  ]
+}

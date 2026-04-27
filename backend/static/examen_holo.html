@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent: #00ff88;
+    --bg: #000905;
+    --card: rgba(0,8,4,0.88);
+    --text: #d8f8e8;
+    --dim: #3a6050;
+    --glow: 0 0 10px var(--accent);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  <script>
+    // Theme Adapter
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('accent')) document.documentElement.style.setProperty('--accent', params.get('accent'));
+    if (params.get('bg'))     document.documentElement.style.setProperty('--bg',     params.get('bg'));
+    if (params.get('card'))   document.documentElement.style.setProperty('--card',   params.get('card'));
+    if (params.get('text'))   document.documentElement.style.setProperty('--text',   params.get('text'));
+    if (params.get('dim'))    document.documentElement.style.setProperty('--dim',    params.get('dim'));
+  </script>
+
+  /* ── HOLO BACKGROUND ── */
+  .holo-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+  .holo-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--accent) 1px, transparent 1px),
+      linear-gradient(90deg, var(--accent) 1px, transparent 1px);
+    background-size: 44px 44px;
+    opacity: 0.04;
+  }
+  .holo-glow-center {
+    position: absolute; top: 20%; left: 50%; transform: translate(-50%,-50%);
+    width: 900px; height: 900px; border-radius: 50%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 65%);
+    opacity: 0.06;
+  }
+  .holo-glow-right {
+    position: absolute; bottom: 10%; right: 5%;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    opacity: 0.04;
+  }
+  .holo-scanline {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.3;
+    animation: scanline 8s linear infinite;
+  }
+  .holo-corner {
+    position: absolute; width: 24px; height: 24px;
+  }
+  .holo-corner.tl { top: 12px; left: 12px; border-top: 1.5px solid rgba(0,255,136,0.5); border-left: 1.5px solid rgba(0,255,136,0.5); }
+  .holo-corner.tr { top: 12px; right: 12px; border-top: 1.5px solid rgba(0,255,136,0.5); border-right: 1.5px solid rgba(0,255,136,0.5); }
+  .holo-corner.bl { bottom: 12px; left: 12px; border-bottom: 1.5px solid rgba(0,255,136,0.5); border-left: 1.5px solid rgba(0,255,136,0.5); }
+  .holo-corner.br { bottom: 12px; right: 12px; border-bottom: 1.5px solid rgba(0,255,136,0.5); border-right: 1.5px solid rgba(0,255,136,0.5); }
+
+  /* ── LAYOUT ── */
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto;
+    padding: 32px 28px;
+  }
+
+  /* ── SECTION LABEL ── */
+  .sl {
+    display: flex; align-items: center; gap: 10px;
+    margin: 32px 0 16px;
+  }
+  .sl-bar {
+    width: 3px; height: 14px; border-radius: 2px;
+    background: #00ff88; box-shadow: 0 0 8px #00ff88;
+  }
+  .sl-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 3px; color: rgba(0,255,136,0.6);
+    text-transform: uppercase;
+  }
+  .sl-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(0,255,136,0.2), transparent);
+  }
+
+  /* ── HOLO CARD ── */
+  .hc {
+    position: relative;
+    background: rgba(0,8,4,0.88);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+  }
+  .hc::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--hc, #00ff88), transparent);
+    box-shadow: 0 0 8px var(--hc, #00ff88);
+  }
+  .hc::after {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(0,255,136,0.04), transparent 55%);
+  }
+
+  /* ── TOP HEADER ── */
+  .top-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: rgba(0,8,4,0.92);
+    border-bottom: 1px solid rgba(0,255,136,0.12);
+    backdrop-filter: blur(20px);
+    position: sticky; top: 0; z-index: 100;
+    margin: -32px -28px 32px;
+  }
+  .th-left { display: flex; align-items: center; gap: 16px; }
+  .th-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .th-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text);
+  }
+  .th-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 2px; text-shadow: 0 0 10px var(--accent);
+  }
+  .th-badge {
+    background: rgba(0,255,136,0.08);
+    border: 1px solid var(--accent);
+    border-radius: 6px; padding: 4px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--accent);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  /* ── FLUJO ── */
+  .flujo {
+    display: flex; align-items: stretch; gap: 0;
+    margin-bottom: 8px;
+  }
+  .flujo-step {
+    flex: 1;
+    background: rgba(0,8,4,0.88);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 8px;
+    padding: 20px 14px;
+    text-align: center;
+    position: relative; overflow: hidden;
+    transition: all 0.2s;
+  }
+  .flujo-step::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--c), transparent);
+    box-shadow: 0 0 8px var(--c);
+  }
+  .flujo-step::after {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(0,255,136,0.03), transparent 55%);
+  }
+  .flujo-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 2px;
+    color: rgba(0,255,136,0.3); margin-bottom: 12px;
+  }
+  .flujo-icon {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px; font-weight: 700;
+    text-shadow: 0 0 20px var(--c);
+    margin-bottom: 10px; line-height: 1;
+  }
+  .flujo-label {
+    font-size: 10px; color: var(--dim); line-height: 1.5;
+  }
+  .flujo-arrow {
+    display: flex; align-items: center;
+    padding: 0 10px;
+    color: rgba(0,255,136,0.25);
+    font-size: 18px;
+  }
+
+  /* ── POSICIONES ── */
+  .posiciones {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px; margin-bottom: 8px;
+  }
+  .pos {
+    background: rgba(0,8,4,0.88);
+    border: 1px solid rgba(0,255,136,0.12);
+    border-radius: 8px; padding: 16px 12px;
+    position: relative; overflow: hidden;
+    text-align: center;
+  }
+  .pos::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--c), transparent);
+    box-shadow: 0 0 8px var(--c);
+  }
+  .pos-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .pos-role { font-size: 9px; color: var(--dim); margin-bottom: 14px; }
+  .pos-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px; font-weight: 700;
+    text-shadow: 0 0 20px var(--c);
+    line-height: 1; margin-bottom: 2px;
+  }
+  .pos-min { font-size: 8px; color: #2a5040; margin-bottom: 12px; }
+  .pos-nivel {
+    display: inline-block;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    border-radius: 3px; padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+  .pos-comp { font-size: 8px; color: #2a5040; }
+  .pos-practico { font-size: 8px; color: var(--dim); margin-top: 6px; font-style: italic; }
+
+  /* ── PANTALLAS MOCK ── */
+  .pantallas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; margin-bottom: 8px;
+  }
+  .pantalla {
+    background: rgba(0,8,4,0.88);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 8px; overflow: hidden;
+    display: none;
+  }
+  .pantalla.active { display: block; }
+  .p-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: rgba(0,255,136,0.05);
+    border-bottom: 1px solid rgba(0,255,136,0.1);
+  }
+  .p-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .p-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .m-tag {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 1.5px; margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .p-body { padding: 14px; }
+
+  /* Mock elements */
+  .m-input {
+    background: rgba(0,255,136,0.04);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 4px; padding: 8px 10px;
+    font-size: 10px; color: var(--dim);
+    margin-bottom: 10px; width: 100%;
+  }
+  .m-pos-item {
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1px solid rgba(0,255,136,0.1);
+    border-radius: 5px; padding: 7px 10px;
+    margin-bottom: 5px; cursor: pointer;
+  }
+  .m-pos-item.active {
+    background: rgba(0,255,136,0.08);
+    border-color: rgba(0,255,136,0.35);
+  }
+  .m-btn {
+    display: inline-block; margin-top: 10px;
+    background: transparent;
+    border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 4px; padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: #00ff88;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    text-shadow: 0 0 8px #00ff88;
+  }
+  .m-progress { height: 3px; background: rgba(0,255,136,0.08); border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
+  .m-progress-fill { height: 100%; background: #00ff88; box-shadow: 0 0 6px #00ff88; border-radius: 2px; }
+  .m-q {
+    font-size: 10px; color: #d8f8e8; line-height: 1.55;
+    padding: 10px; margin-bottom: 10px;
+    background: rgba(0,255,136,0.03);
+    border: 1px solid rgba(0,255,136,0.1);
+    border-radius: 6px;
+  }
+  .m-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 4px;
+    border: 1px solid rgba(0,255,136,0.1);
+    margin-bottom: 5px; font-size: 9px; color: var(--dim);
+  }
+  .m-opt.sel {
+    background: rgba(0,255,136,0.08);
+    border-color: rgba(0,255,136,0.35);
+    color: #d8f8e8;
+  }
+  .m-letter {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid rgba(0,255,136,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; font-weight: 700; flex-shrink: 0;
+    color: var(--dim);
+  }
+  .m-letter.sel { background: #00ff88; border-color: #00ff88; color: #000; }
+  .m-check {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 0; border-bottom: 1px solid rgba(0,255,136,0.06);
+  }
+  .m-checkbox {
+    width: 14px; height: 14px; border-radius: 2px;
+    border: 1px solid rgba(0,255,136,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; flex-shrink: 0; margin-top: 1px;
+  }
+  .m-checkbox.on { background: #00ff88; border-color: #00ff88; color: #000; }
+  .m-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 1px; margin-bottom: 8px;
+    padding: 2px 0;
+  }
+  .m-score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid rgba(0,255,136,0.08);
+  }
+
+  /* ── CERTIFICADO ── */
+  .cert {
+    background: linear-gradient(135deg, rgba(0,8,4,0.96), rgba(0,18,10,0.92));
+    border: 1px solid rgba(0,255,136,0.25);
+    border-radius: 10px; padding: 28px 32px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,255,136,0.08);
+    max-width: 560px;
+    margin-bottom: 8px;
+  }
+  .cert::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #00ff88 30%, #00aaff 70%, transparent);
+    box-shadow: 0 0 12px #00ff88;
+  }
+  .cert::after {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(0,255,136,0.03), transparent 50%);
+  }
+  .cert-hdr {
+    text-align: center; margin-bottom: 20px;
+  }
+  .cert-brand {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 4px;
+    color: rgba(0,255,136,0.5); margin-bottom: 4px;
+  }
+  .cert-main-title {
+    font-size: 14px; font-weight: 700; letter-spacing: 2px;
+    color: #00ff88; text-shadow: 0 0 20px #00ff88;
+    text-transform: uppercase;
+  }
+  .cert-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; color: var(--dim); margin-top: 3px; letter-spacing: 1px;
+  }
+  .cert-intro { font-size: 9px; color: var(--dim); text-align: center; margin-bottom: 8px; }
+  .cert-name { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+  .cert-pos-label { font-size: 9px; color: var(--dim); text-align: center; margin-bottom: 4px; }
+  .cert-pos-val { font-size: 15px; font-weight: 700; text-align: center; color: #00aaff; text-shadow: 0 0 12px #00aaff; margin-bottom: 20px; }
+  .cert-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 20px;
+  }
+  .cert-cell {
+    background: rgba(0,255,136,0.05);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 5px; padding: 8px 6px; text-align: center;
+  }
+  .cert-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 700; margin-bottom: 3px;
+  }
+  .cert-lbl { font-size: 7px; color: #2a5040; }
+  .cert-competencias {
+    text-align: center; font-size: 9px; color: #3a6050;
+    margin-bottom: 16px; padding: 8px;
+    border: 1px solid rgba(0,255,136,0.08); border-radius: 5px;
+    background: rgba(0,255,136,0.02);
+  }
+  .cert-footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid rgba(0,255,136,0.12);
+    padding-top: 14px;
+  }
+  .cert-qr {
+    width: 44px; height: 44px;
+    border: 1px solid rgba(0,255,136,0.2); border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0,255,136,0.04);
+    gap: 2px;
+  }
+  .cert-qr-inner { display: grid; grid-template-columns: repeat(5,6px); gap: 1px; }
+  .cert-qr-px { width: 6px; height: 6px; border-radius: 1px; }
+
+  /* ── SISTEMA DE TOKENS ── */
+  .smart {
+    background: rgba(255,204,0,0.03);
+    border: 1px solid rgba(255,204,0,0.2);
+    border-radius: 10px; padding: 20px 24px;
+    display: flex; gap: 20px; align-items: flex-start;
+    position: relative; overflow: hidden;
+  }
+  .smart::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #ffcc00, transparent);
+  }
+  .smart-icon { font-size: 36px; flex-shrink: 0; padding-top: 4px; }
+  .smart-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: rgba(255,204,0,0.6); margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .smart-desc { font-size: 11px; color: var(--text); line-height: 1.6; margin-bottom: 12px; }
+  .smart-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+  .smart-step {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: #ffcc00;
+    background: rgba(255,204,0,0.06);
+    border: 1px solid rgba(255,204,0,0.2);
+    border-radius: 4px; padding: 4px 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── CURSOS PAC ── */
+  .cursos { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .curso {
+    background: rgba(0,8,4,0.88);
+    border: 1px solid rgba(0,255,136,0.12);
+    border-radius: 6px; padding: 8px 14px;
+    text-align: center; min-width: 90px;
+    position: relative; overflow: hidden;
+  }
+  .curso::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1.5px;
+    background: var(--c);
+    opacity: 0.6;
+  }
+  .curso-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; margin-bottom: 3px;
+  }
+  .curso-mes { font-size: 8px; color: #2a5040; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes pulse {
+    0%,100% { opacity:1; box-shadow:0 0 12px #00ff88; }
+    50%      { opacity:.4; box-shadow:0 0 4px #00ff88; }
+  }
+  @keyframes scanline {
+    0%   { top: -2px; }
+    100% { top: 100vh; }
+  }
+  @keyframes critpulse {
+    0%,100% { opacity:1; }
+    50%      { opacity:.2; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HOLO BACKGROUND -->
+<div class="holo-bg">
+  <div class="holo-grid"></div>
+  <div class="holo-glow-center"></div>
+  <div class="holo-glow-right"></div>
+  <div class="holo-scanline"></div>
+  <div class="holo-corner tl"></div>
+  <div class="holo-corner tr"></div>
+  <div class="holo-corner bl"></div>
+  <div class="holo-corner br"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- TOP HEADER -->
+  <div class="top-header">
+    <div class="th-left">
+      <div class="th-dot"></div>
+      <div class="th-title">Examen de Certificación</div>
+    </div>
+    <div class="th-sub">XCIEN 2026</div>
+    <div class="th-badge">Academia XCIEN · Propuesta</div>
+  </div>
+
+  <!-- FLUJO -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Flujo del examen</div><div class="sl-line"></div></div>
+  <div class="flujo">
+    <div class="flujo-step" style="--c:#00ff88">
+      <div class="flujo-num">PASO 01</div>
+      <div class="flujo-icon" style="color:#00ff88">SUP</div>
+      <div class="flujo-label">Supervisor convoca al técnico según su posición actual</div>
+    </div>
+    <div class="flujo-arrow">→</div>
+    <div class="flujo-step" style="--c:#00aaff">
+      <div class="flujo-num">PASO 02</div>
+      <div class="flujo-icon" style="color:#00aaff">TEO</div>
+      <div class="flujo-label">20 preguntas teóricas en el portal Academia XCIEN</div>
+    </div>
+    <div class="flujo-arrow">→</div>
+    <div class="flujo-step" style="--c:#aa66ff">
+      <div class="flujo-num">PASO 03</div>
+      <div class="flujo-icon" style="color:#aa66ff">PRC</div>
+      <div class="flujo-label">Checklist práctico validado por supervisor en campo</div>
+    </div>
+    <div class="flujo-arrow">→</div>
+    <div class="flujo-step" style="--c:#ff8800">
+      <div class="flujo-num">PASO 04</div>
+      <div class="flujo-icon" style="color:#ff8800">SCR</div>
+      <div class="flujo-label">Score final<br>60% teórico + 40% práctico</div>
+    </div>
+    <div class="flujo-arrow">→</div>
+    <div class="flujo-step" style="--c:#ffcc00">
+      <div class="flujo-num">PASO 05</div>
+      <div class="flujo-icon" style="color:#ffcc00">CRT</div>
+      <div class="flujo-label">Certificado XCIEN + Sistema de Tokens activa bono</div>
+    </div>
+  </div>
+
+  <!-- POSICIONES -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Umbrales por posición</div><div class="sl-line"></div></div>
+  <div class="posiciones">
+
+    <div class="pos" style="--c:#00ff88; border-color:rgba(0,255,136,0.2)">
+      <div class="pos-name" style="color:#00ff88">AUX CAE</div>
+      <div class="pos-role">Auxiliar de Campo</div>
+      <div class="pos-pct" style="color:#00ff88">65%</div>
+      <div class="pos-min">mínimo teórico</div>
+      <div class="pos-nivel" style="color:#00ff88; background:rgba(0,255,136,0.08); border:1px solid rgba(0,255,136,0.25)">Aprendiz</div>
+      <div class="pos-comp">12 competencias básicas</div>
+      <div class="pos-practico">Supervisor aprueba</div>
+    </div>
+
+    <div class="pos" style="--c:#00aaff; border-color:rgba(0,170,255,0.2)">
+      <div class="pos-name" style="color:#00aaff">AUX COR</div>
+      <div class="pos-role">Auxiliar Coordinación</div>
+      <div class="pos-pct" style="color:#00aaff">70%</div>
+      <div class="pos-min">mínimo teórico</div>
+      <div class="pos-nivel" style="color:#00aaff; background:rgba(0,170,255,0.08); border:1px solid rgba(0,170,255,0.25)">Técnico</div>
+      <div class="pos-comp">20 competencias</div>
+      <div class="pos-practico">Supervisor aprueba</div>
+    </div>
+
+    <div class="pos" style="--c:#aa66ff; border-color:rgba(170,102,255,0.2)">
+      <div class="pos-name" style="color:#aa66ff">CAE</div>
+      <div class="pos-role">Campo Avanzado</div>
+      <div class="pos-pct" style="color:#aa66ff">75%</div>
+      <div class="pos-min">mínimo teórico</div>
+      <div class="pos-nivel" style="color:#aa66ff; background:rgba(170,102,255,0.08); border:1px solid rgba(170,102,255,0.25)">Especialista</div>
+      <div class="pos-comp">32 competencias técnicas</div>
+      <div class="pos-practico">Sup. + foto evidencia</div>
+    </div>
+
+    <div class="pos" style="--c:#ff8800; border-color:rgba(255,136,0,0.2)">
+      <div class="pos-name" style="color:#ff8800">COR-FO</div>
+      <div class="pos-role">Coordinador FO</div>
+      <div class="pos-pct" style="color:#ff8800">80%</div>
+      <div class="pos-min">mínimo teórico</div>
+      <div class="pos-nivel" style="color:#ff8800; background:rgba(255,136,0,0.08); border:1px solid rgba(255,136,0,0.25)">Experto</div>
+      <div class="pos-comp">40 competencias + FO</div>
+      <div class="pos-practico">Sup. + video</div>
+    </div>
+
+    <div class="pos" style="--c:#ffcc00; border-color:rgba(255,204,0,0.2)">
+      <div class="pos-name" style="color:#ffcc00">COR</div>
+      <div class="pos-role">Coordinador Senior</div>
+      <div class="pos-pct" style="color:#ffcc00">85%</div>
+      <div class="pos-min">mínimo teórico</div>
+      <div class="pos-nivel" style="color:#ffcc00; background:rgba(255,204,0,0.08); border:1px solid rgba(255,204,0,0.25)">Leyenda</div>
+      <div class="pos-comp">48 competencias completas</div>
+      <div class="pos-practico">Sup. + evaluación par</div>
+    </div>
+
+  </div>
+
+  <!-- PANTALLAS MOCK -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Pantallas del módulo en Academia XCIEN</div><div class="sl-line"></div></div>
+  <div class="pantallas" id="holo-pantallas">
+
+    <!-- Selección -->
+    <div class="pantalla active" id="scr-seleccionar">
+      <div class="p-header">
+        <div class="p-dot" style="background:#00ff88; box-shadow:0 0 6px #00ff88"></div>
+        <div class="p-title" style="color:rgba(0,255,136,0.7)">1 — Selección de Área y Técnico</div>
+      </div>
+      <div class="p-body">
+        <div class="m-tag" style="color:var(--accent)">A. SELECCIONA EL ÁREA A EVALUAR:</div>
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:15px;">
+          <div class="m-opt sel" id="area-noc" onclick="setArea('NOC')" style="cursor:pointer; flex-direction:column; padding:8px; text-align:center;">
+            <div style="font-size:14px">📡</div>
+            <div style="font-size:9px; font-weight:700">NOC</div>
+          </div>
+          <div class="m-opt" id="area-ops" onclick="setArea('OPS')" style="cursor:pointer; flex-direction:column; padding:8px; text-align:center;">
+            <div style="font-size:14px">🔧</div>
+            <div style="font-size:9px; font-weight:700">OPS</div>
+          </div>
+          <div class="m-opt" id="area-infra" onclick="setArea('INFRA')" style="cursor:pointer; flex-direction:column; padding:8px; text-align:center;">
+            <div style="font-size:14px">🗼</div>
+            <div style="font-size:9px; font-weight:700">INFRA</div>
+          </div>
+          <div class="m-opt" id="area-ing" onclick="setArea('ING')" style="cursor:pointer; flex-direction:column; padding:8px; text-align:center;">
+            <div style="font-size:14px">📐</div>
+            <div style="font-size:9px; font-weight:700">ING</div>
+          </div>
+        </div>
+
+        <div class="m-tag" style="color:var(--accent)">B. BUSCAR TÉCNICO EN ODOO:</div>
+        <div class="m-input" id="search-tecnico" contenteditable="true" style="cursor:text;">Buscar técnico...</div>
+        <div id="tecnicos-container" style="max-height:160px; overflow-y:auto; margin-bottom:10px;">
+            <div style="font-size: 10px; color: var(--dim); text-align: center; padding: 10px;">Cargando técnicos desde Odoo...</div>
+        </div>
+        <div class="m-btn" id="btn-start" onclick="startHoloExam()" style="cursor:pointer; width:100%; text-align:center;">Iniciar Examen Especializado →</div>
+      </div>
+    </div>
+
+    <!-- Teórico -->
+    <div class="pantalla" id="scr-teorico">
+      <div class="p-header">
+        <div class="p-dot" style="background:#00aaff; box-shadow:0 0 6px #00aaff"></div>
+        <div class="p-title" style="color:rgba(0,170,255,0.7)">2 — Examen teórico</div>
+      </div>
+      <div class="p-body" id="teorico-body">
+        <!-- Renderizado dinámico -->
+      </div>
+    </div>
+
+    <!-- Checklist -->
+    <div class="pantalla" id="scr-checklist">
+      <div class="p-header">
+        <div class="p-dot" style="background:#aa66ff; box-shadow:0 0 6px #aa66ff"></div>
+        <div class="p-title" style="color:rgba(170,102,255,0.7)">3 — Calificando Examen</div>
+      </div>
+      <div class="p-body" id="checklist-body">
+          <div style="font-size:12px; color:#aa66ff; text-align:center; padding:20px;">Procesando resultados...</div>
+      </div>
+    </div>
+      <div class="p-body">
+        <div class="m-tag" style="color:rgba(170,102,255,0.7)">ALTURAS · Seguridad en campo</div>
+        <div class="m-check">
+          <div class="m-checkbox on">✓</div>
+          <div style="font-size:9px;color:#d8f8e8;line-height:1.4">Casco con barbiquejo correctamente puesto</div>
+        </div>
+        <div class="m-check">
+          <div class="m-checkbox on">✓</div>
+          <div style="font-size:9px;color:#d8f8e8;line-height:1.4">Arnés completo con doble cola de vida</div>
+        </div>
+        <div class="m-check">
+          <div class="m-checkbox"></div>
+          <div style="font-size:9px;color:#3a6050;line-height:1.4">Línea de vida anclada a punto certificado</div>
+        </div>
+        <div class="m-check">
+          <div class="m-checkbox"></div>
+          <div style="font-size:9px;color:#3a6050;line-height:1.4">Herramientas aseguradas contra caídas</div>
+        </div>
+        <div class="m-check" style="border:none">
+          <div class="m-checkbox"></div>
+          <div style="font-size:9px;color:#3a6050;line-height:1.4">Área perimetrada con señalización</div>
+        </div>
+        <div class="m-score-row">
+          <span style="font-size:8px;color:#3a6050;font-family:'JetBrains Mono',monospace">Aprobados</span>
+          <span style="font-size:16px;font-weight:700;color:#00aaff;font-family:'JetBrains Mono',monospace;text-shadow:0 0 10px #00aaff">2/5 · 40%</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CERTIFICADO -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Certificado emitido — vista previa</div><div class="sl-line"></div></div>
+  <div class="cert" id="cert-view" style="display:none; transition: all 0.5s;">
+    <div class="cert-hdr">
+      <div class="cert-brand">XCIEN FIELD SERVICES · MONTERREY, NL</div>
+      <div class="cert-main-title">Certificado de Competencia</div>
+      <div class="cert-subtitle">EXAMEN DE CERTIFICACIÓN TÉCNICA 2026</div>
+    </div>
+    <div class="cert-intro">Se certifica que</div>
+    <div class="cert-name">Juan Pérez González</div>
+    <div class="cert-pos-label">ha demostrado competencia en la posición de</div>
+    <div class="cert-pos-val">Especialista — Campo Avanzado (CAE)</div>
+    <div class="cert-grid">
+      <div class="cert-cell">
+        <div class="cert-val" style="color:#00aaff;text-shadow:0 0 10px #00aaff">78%</div>
+        <div class="cert-lbl">Teórico</div>
+      </div>
+      <div class="cert-cell">
+        <div class="cert-val" style="color:#aa66ff;text-shadow:0 0 10px #aa66ff">85%</div>
+        <div class="cert-lbl">Práctico</div>
+      </div>
+      <div class="cert-cell">
+        <div class="cert-val" id="cert-val-score" style="color:#00ff88;text-shadow:0 0 10px #00ff88">--%</div>
+        <div class="cert-lbl">Score final</div>
+      </div>
+      <div class="cert-cell">
+        <div class="cert-val" style="color:#ff8800;text-shadow:0 0 10px #ff8800">32/48</div>
+        <div class="cert-lbl">Competencias</div>
+      </div>
+    </div>
+    <div class="cert-competencias">
+      Competencias certificadas según <strong style="color:#00ff88">Matriz de Habilidades XCIEN 2025</strong> ·
+      Nivel Academia: <strong style="color:#aa66ff">Especialista</strong>
+    </div>
+    <div class="cert-footer">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:#2a5040;margin-bottom:3px;letter-spacing:1px">FECHA DE EMISIÓN</div>
+        <div style="font-size:10px;color:#d8f8e8">Abril 2026</div>
+        <div style="font-size:8px;color:#3a6050;margin-top:2px">Válido por 2 años</div>
+      </div>
+      <div class="cert-qr">
+        <div class="cert-qr-inner">
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:#00ff8660"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8660"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8660"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:#00ff8660"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+          <div class="cert-qr-px" style="background:transparent"></div>
+          <div class="cert-qr-px" style="background:#00ff8860"></div>
+        </div>
+        <div style="font-size:6px;color:rgba(0,255,136,0.4);font-family:'JetBrains Mono',monospace;margin-top:3px">Verificar</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:#2a5040;margin-bottom:3px;letter-spacing:1px">FIRMA DIGITAL</div>
+        <div style="font-size:10px;font-style:italic;color:#d8f8e8">XCIEN Field Services</div>
+        <div style="width:90px;height:1px;background:linear-gradient(90deg,transparent,#00ff88);margin-top:6px;margin-left:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURSOS PAC -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Cursos PAC 2026 → Módulos de examen</div><div class="sl-line"></div></div>
+  <div class="cursos">
+    <div class="curso" style="--c:#00aaff"><div class="curso-name" style="color:#00aaff">MTCNA</div><div class="curso-mes">Marzo · OPS/NOC</div></div>
+    <div class="curso" style="--c:#00aaff"><div class="curso-name" style="color:#00aaff">Mimosa</div><div class="curso-mes">Febrero · OPS</div></div>
+    <div class="curso" style="--c:#ff8800"><div class="curso-name" style="color:#ff8800">Alturas</div><div class="curso-mes">Marzo · INFRA</div></div>
+    <div class="curso" style="--c:#00ff88"><div class="curso-name" style="color:#00ff88">Odoo FSM</div><div class="curso-mes">Enero · OPS</div></div>
+    <div class="curso" style="--c:#aa66ff"><div class="curso-name" style="color:#aa66ff">Peplink</div><div class="curso-mes">Mayo · NOC</div></div>
+    <div class="curso" style="--c:#aa66ff"><div class="curso-name" style="color:#aa66ff">Raisecom</div><div class="curso-mes">Abril · ING</div></div>
+    <div class="curso" style="--c:#60cfff"><div class="curso-name" style="color:#60cfff">OTDR / FO</div><div class="curso-mes">Septiembre</div></div>
+    <div class="curso" style="--c:#ff3366"><div class="curso-name" style="color:#ff3366">Firewall</div><div class="curso-mes">Agosto · OPS</div></div>
+    <div class="curso" style="--c:#ff8800"><div class="curso-name" style="color:#ff8800">Electricidad</div><div class="curso-mes">Diciembre</div></div>
+    <div class="curso" style="--c:#aa66ff"><div class="curso-name" style="color:#aa66ff">Soft Skills</div><div class="curso-mes">Junio · Todos</div></div>
+  </div>
+
+  <!-- SMART CONTRACT -->
+  <div class="sl"><div class="sl-bar"></div><div class="sl-text">Conexión Sistema de Tokens → Bono automático</div><div class="sl-line"></div></div>
+  <div class="smart">
+    <div class="smart-icon">⚡</div>
+    <div>
+      <div class="smart-title">Ecosistema de Incentivos — Activación de bonos vía Sistema de Tokens XCIEN + Odoo</div>
+      <div class="smart-desc">Al emitirse el certificado, el Sistema de Tokens valida los KPIs en Odoo. Si el técnico cumple tickets resueltos a tiempo + instalaciones completadas del período, el bono se transacciona automáticamente.</div>
+      <div class="smart-steps">
+        <div class="smart-step">✓ Certificado emitido</div>
+        <div class="smart-step">✓ KPIs Odoo cumplidos</div>
+        <div class="smart-step">→ Emisión de Tokens</div>
+        <div class="smart-step">→ WhatsApp notifica</div>
+        <div class="smart-step">→ Bono registrado en Odoo</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  let holoQuizData = null;
+  let holoQIndex = 0;
+  let holoAnswers = [];
+  let selectedTecnico = null;
+  let selectedArea = 'NOC';
+
+  function setArea(area) {
+    selectedArea = area;
+    document.querySelectorAll('.m-opt').forEach(opt => opt.classList.remove('sel'));
+    document.getElementById(`area-${area.toLowerCase()}`).classList.add('sel');
+    
+    // Update button text for feedback
+    const btn = document.getElementById('btn-start');
+    if(btn) btn.innerHTML = `Iniciar Examen Especializado (${area}) →`;
+  }
+
+  async function loadOdooTecnicos() {
+    try {
+      const response = await fetch('/api/odoo/tecnicos');
+      const tecnicos = await response.json();
+      
+      const container = document.getElementById('tecnicos-container');
+      if(container && tecnicos.length > 0) {
+        container.innerHTML = ''; 
+        tecnicos.forEach((t, i) => {
+          const isActive = i === 0 ? 'active' : '';
+          const titleColor = i === 0 ? "color:#00ff88; font-weight:700; font-family:'JetBrains Mono',monospace" : "color:#9ca3af; font-family: 'Inter', sans-serif";
+          
+          let role = t.job_title || 'Técnico';
+          let roleSpan = i === 0 ? `<span style="color:#00ff88; font-size:8px; font-family:'JetBrains Mono',monospace">Odoo · ${role} ●</span>` : `<span style="color:#3a6050; font-size:8px; font-family: 'Inter', sans-serif">Odoo · ${role}</span>`;
+
+          const html = `
+            <div class="m-pos-item ${isActive}" onclick="selectTecnico(this, '${t.name.replace(/'/g, "\\'")}', '${role.replace(/'/g, "\\'")}')">
+              <span style="font-size:10px; ${titleColor}">${t.name}</span>
+              ${roleSpan}
+            </div>
+          `;
+          container.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Set initial certificate
+        if(tecnicos.length > 0) {
+            const firstRole = tecnicos[0].job_title || 'Técnico';
+            updateCert(tecnicos[0].name, firstRole);
+        }
+      } else {
+        if(container) container.innerHTML = '<div style="font-size: 10px; color: #ff3366; text-align: center; padding: 10px;">No se encontraron técnicos en Odoo</div>';
+      }
+    } catch(e) {
+      console.error("Error loading Odoo data", e);
+      const container = document.getElementById('tecnicos-container');
+      if(container) container.innerHTML = '<div style="font-size: 10px; color: #ff3366; text-align: center; padding: 10px;">Error conectando con API</div>';
+    }
+  }
+
+  function updateCert(name, role) {
+    const certName = document.querySelector('.cert-name');
+    const certRole = document.querySelector('.cert-pos-val');
+    if(certName) certName.textContent = name;
+    if(certRole) certRole.textContent = role;
+  }
+
+  function selectTecnico(el, name, role) {
+    selectedTecnico = { name, role };
+    document.querySelectorAll('.m-pos-item').forEach(item => {
+      item.classList.remove('active');
+      item.children[0].style.color = '#9ca3af';
+      item.children[0].style.fontWeight = 'normal';
+      item.children[0].style.fontFamily = 'Inter, sans-serif';
+      item.children[1].style.color = '#3a6050';
+      item.children[1].style.fontFamily = 'Inter, sans-serif';
+      item.children[1].innerHTML = item.children[1].innerHTML.replace(' ●', '');
+    });
+    
+    el.classList.add('active');
+    el.children[0].style.color = '#00ff88';
+    el.children[0].style.fontWeight = '700';
+    el.children[0].style.fontFamily = "'JetBrains Mono', monospace";
+    el.children[1].style.color = '#00ff88';
+    el.children[1].style.fontFamily = "'JetBrains Mono', monospace";
+    if (!el.children[1].innerHTML.includes('●')) {
+        el.children[1].innerHTML += ' ●';
+    }
+
+    updateCert(name, role);
+  }
+
+  async function startHoloExam() {
+    if (!selectedTecnico) { alert("Selecciona un técnico primero"); return; }
+    document.getElementById('scr-seleccionar').classList.remove('active');
+    document.getElementById('scr-teorico').classList.add('active');
+    
+    document.getElementById('teorico-body').innerHTML = '<div style="font-size:12px; color:#00aaff; text-align:center; padding:20px;">Cargando banco de preguntas...</div>';
+    
+    try {
+        const res = await fetch(`/api/diagnostic_exam?area=${selectedArea}`);
+        holoQuizData = await res.json();
+        holoQIndex = 0;
+        holoAnswers = [];
+        renderHoloQuestion();
+    } catch (e) {
+        document.getElementById('teorico-body').innerHTML = '<div style="color:#ff3366; font-size:12px;">Error cargando examen.</div>';
+    }
+  }
+
+  function renderHoloQuestion() {
+      const q = holoQuizData.preguntas[holoQIndex];
+      const total = holoQuizData.preguntas.length;
+      const pct = Math.round((holoQIndex / total) * 100);
+
+      document.getElementById('teorico-body').innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:8px;color:rgba(0,255,136,0.4);font-family:'JetBrains Mono',monospace;letter-spacing:1px">PREGUNTA ${holoQIndex + 1} DE ${total}</span>
+          <span style="font-size:8px;color:rgba(0,255,136,0.6);font-family:'JetBrains Mono',monospace">${pct}%</span>
+        </div>
+        <div class="m-progress"><div class="m-progress-fill" style="width:${pct}%"></div></div>
+        <div class="m-tag" style="color:rgba(0,170,255,0.7)">${q.pilar.toUpperCase()} · Evaluación Holo</div>
+        <div class="m-q">${q.pregunta}</div>
+        ${q.opciones.map((opt, i) => `
+            <div class="m-opt" id="hopt-${i}" onclick="selectHoloOpt(${i})" style="cursor:pointer; transition:0.2s;">
+                <div class="m-letter" id="hlet-${i}">${String.fromCharCode(65+i)}</div>${opt}
+            </div>
+        `).join('')}
+        <div class="m-btn" onclick="nextHoloQ()" style="color:#00aaff;border-color:rgba(0,170,255,0.4); cursor:pointer;">${holoQIndex < total - 1 ? 'Siguiente →' : 'Finalizar Examen'}</div>
+      `;
+  }
+
+  function selectHoloOpt(idx) {
+      holoAnswers[holoQIndex] = idx;
+      document.querySelectorAll('.m-opt').forEach((el, i) => {
+          if (i === idx) {
+              el.classList.add('sel');
+              document.getElementById('hlet-'+i).classList.add('sel');
+          } else {
+              el.classList.remove('sel');
+              document.getElementById('hlet-'+i).classList.remove('sel');
+          }
+      });
+  }
+
+  async function nextHoloQ() {
+      if (holoAnswers[holoQIndex] === undefined) return;
+      holoQIndex++;
+      if (holoQIndex < holoQuizData.preguntas.length) {
+          renderHoloQuestion();
+      } else {
+          finishHoloExam();
+      }
+  }
+
+  async function finishHoloExam() {
+      document.getElementById('scr-teorico').classList.remove('active');
+      document.getElementById('scr-checklist').classList.add('active');
+
+      let correctas = 0;
+      holoQuizData.preguntas.forEach((q, i) => {
+          if (holoAnswers[i] === q.respuesta_correcta) correctas++;
+      });
+      const total = holoQuizData.preguntas.length;
+      const pct = Math.round((correctas / total) * 100);
+      const isApproved = pct >= 70;
+
+      document.getElementById('checklist-body').innerHTML = `
+        <div class="m-tag" style="color:rgba(170,102,255,0.7)">RESULTADOS · ${selectedArea} · Odoo Sync</div>
+        <div class="m-score-row" style="margin-top:20px; border-top:none;">
+          <span style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace">Score ${selectedArea}</span>
+          <span style="font-size:24px;font-weight:700;color:${isApproved ? '#00ff88' : '#ff3366'};font-family:'JetBrains Mono',monospace;text-shadow:0 0 10px ${isApproved ? '#00ff88' : '#ff3366'}">${correctas}/${total} · ${pct}%</span>
+        </div>
+        <div style="font-size:10px; color:var(--text); margin-top:10px; text-align:center;">
+            ${isApproved ? '✅ Evaluación Aprobada. Emitiendo certificado...' : '❌ Evaluación Reprobada. Requiere re-capacitación.'}
+        </div>
+      `;
+
+      if (isApproved) {
+          document.getElementById('cert-view').style.display = 'block';
+          document.getElementById('cert-val-score').textContent = pct + '%';
+          document.getElementById('cert-val-score').style.color = '#00ff88';
+          document.getElementById('cert-val-score').style.textShadow = '0 0 10px #00ff88';
+      }
+
+      try {
+          await fetch('/api/save_skill_result', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ nombre_tecnico: selectedTecnico.name, resultados: { "Global": pct } })
+          });
+      } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadOdooTecnicos();
+  });
+</script>
+</body>
+</html>

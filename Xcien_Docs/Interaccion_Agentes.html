@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interacción de Agentes XCIEN</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 { color: #0056b3; }
+        .diagram-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+</head>
+<body>
+
+    <h1>Interacción de Agentes XCIEN 2.0</h1>
+    <p>Este documento detalla cómo los diferentes Agentes de la plataforma interactúan entre sí para lograr una operación automatizada.</p>
+
+    <h2>1. Flujo de Asignación Inteligente de Tickets</h2>
+    <p>Colaboración entre Odoo, Academia (RRHH) y Dispatch (WFM).</p>
+    <div class="diagram-container">
+        <div class="mermaid">
+        sequenceDiagram
+            participant Odoo as Odoo (ERP)
+            participant DG as Director General
+            participant RRHH as Agente RRHH
+            participant WFM as Agente WFM
+            
+            Odoo->>DG: Nuevo Ticket de Instalación
+            DG->>WFM: Iniciar asignación
+            WFM->>RRHH: Consultar Skills Técnicos
+            RRHH-->>WFM: Retorna % de Skill
+            WFM->>WFM: Filtra Zona + Skill > 80%
+            WFM->>Odoo: Actualiza Técnico Asignado
+            Odoo-->>DG: Confirmación de agenda
+        </div>
+    </div>
+
+    <h2>2. Flujo de Soporte en Campo</h2>
+    <p>Desde el monitoreo hasta la ejecución en sitio.</p>
+    <div class="diagram-container">
+        <div class="mermaid">
+        sequenceDiagram
+            participant NOC as Agente NOC
+            participant DG as Director General
+            participant FS as Operaciones (FS)
+            participant Odoo as Odoo (ERP)
+            
+            NOC->>DG: Alarma Detectada
+            DG->>FS: Solicitar inspección en sitio
+            FS->>FS: Validación de Niveles
+            FS->>Odoo: Evidencia y Materiales
+            Odoo->>Odoo: Validación "Cero Basura"
+            Odoo-->>DG: Ticket Cerrado
+        </div>
+    </div>
+
+    <h2>3. Flujo Comercial y Preventa</h2>
+    <p>Validación de factibilidad antes de la venta.</p>
+    <div class="diagram-container">
+        <div class="mermaid">
+        sequenceDiagram
+            participant CRM as Agente Comercial
+            participant DG as Director General
+            participant PRE as Agente Preventa
+            participant Odoo as Odoo (ERP)
+            
+            CRM->>DG: Solicitud Nuevo Servicio
+            DG->>PRE: Analizar Coordenadas/LV
+            PRE->>PRE: Simulación
+            alt Factibilidad OK
+                PRE-->>DG: Viabilidad Confirmada
+                DG->>Odoo: Convertir a Oportunidad
+            else Factibilidad NOK
+                PRE-->>DG: Sin Línea de Vista
+                DG->>CRM: Detener venta
+            end
+        </div>
+    </div>
+
+    <script>
+        // Trigger print window to easily save as PDF
+        window.onload = function() {
+            setTimeout(() => { window.print(); }, 1500);
+        }
+    </script>
+</body>
+</html>

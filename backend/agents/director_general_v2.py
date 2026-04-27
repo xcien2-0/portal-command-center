@@ -1,5 +1,7 @@
+from __future__ import annotations
 import os
 import json
+import google.generativeai as genai
 import anthropic
 from dotenv import load_dotenv
 
@@ -28,9 +30,20 @@ def _cargar_skills():
 class DirectorGeneralV2:
     def __init__(self):
         self.name = "Director General"
-        self.client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        self.gemini_key = os.environ.get("GEMINI_API_KEY")
+        self.anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        
+        if self.gemini_key:
+            genai.configure(api_key=self.gemini_key)
+            self.mode = "gemini"
+        elif self.anthropic_key:
+            self.client_anthropic = anthropic.Anthropic(api_key=self.anthropic_key)
+            self.mode = "claude"
+        else:
+            self.mode = "error"
+            
         self.contexto_maestro = self._cargar_contexto()
-        print(f"💎 [{self.name}] Sistema en línea. Claude conectado. Base de Conocimiento Xcien cargada.")
+        print(f"💎 [{self.name}] Sistema en línea. Modo: {self.mode}. Base de Conocimiento cargada.")
 
     def _cargar_contexto(self):
         try:
@@ -67,64 +80,52 @@ class DirectorGeneralV2:
         # Bloque 1 (CACHEADO): identidad + manual maestro — no cambia entre llamadas
         # Bloque 2 (NO cacheado): datos WFM en tiempo real — cambia con cada llamada
         # Ahorro: ~80% menos costo en el bloque 1 a partir del 2do mensaje
-        system_blocks = [
-            {
-                "type": "text",
-                "text": (
-                    "Eres el DIRECTOR GENERAL de XCIEN, empresa ISP que opera 5 operadoras: "
-                    "XCIEN, Wispi, Luminet WAN, Huus y Sandur.\n"
-                    "Tienes a tu cargo: Operaciones de Campo, RRHH, NOC y Dispatch.\n"
-                    "Tu personalidad es profesional, ejecutiva y orientada a resultados. "
-                    "Respondes siempre en español. Usas Markdown con bullets y secciones.\n\n"
-                    "═══ MANUAL MAESTRO DE OPERACIONES ═══\n"
-                    f"{self.contexto_maestro[:6000]}\n\n"
-                    "═══ INSTRUCCIONES ═══\n"
-                    "1. Analiza la instrucción con los datos REALES del bloque WFM.\n"
-                    "2. Si mencionan un técnico específico, usa sus datos reales.\n"
-                    "3. Si involucra campo, cita la regla del manual.\n"
-                    "4. Da una respuesta ejecutiva, clara y accionable.\n"
-                    "5. Sé conciso pero completo."
-                ),
-                "cache_control": {"type": "ephemeral"},   # ← CACHÉ AQUÍ
-            },
-            {
-                "type": "text",
-                "text": (
-                    "═══ DATOS EN TIEMPO REAL (WFM) ═══\n"
-                    f"TÉCNICOS DE CAMPO:\n{tecnicos_resumen or 'Sin datos WFM disponibles'}\n\n"
-                    f"TICKETS ACTIVOS:\n{tickets_resumen or 'Sin tickets activos'}\n\n"
-                    f"MATRIZ DE HABILIDADES:\n{skills_resumen}"
-                ),
-                # Sin cache_control — estos datos cambian frecuentemente
-            },
-        ]
+        system_instruction = (
+            "Eres el DIRECTOR GENERAL de XCIEN, empresa ISP que opera 5 operadoras: "
+            "XCIEN, Wispi, Luminet WAN, Huus y Sandur.\n"
+            "Tienes a tu cargo: Operaciones de Campo, RRHH, NOC y Dispatch.\n"
+            "Tu personalidad es profesional, ejecutiva y orientada a resultados. "
+            "Respondes siempre en español. Usas Markdown con bullets y secciones.\n\n"
+            "═══ MANUAL MAESTRO DE OPERACIONES ═══\n"
+            f"{self.contexto_maestro[:6000]}\n\n"
+            "═══ DATOS EN TIEMPO REAL (WFM) ═══\n"
+            f"TÉCNICOS DE CAMPO:\n{tecnicos_resumen or 'Sin datos WFM disponibles'}\n\n"
+            f"TICKETS ACTIVOS:\n{tickets_resumen or 'Sin tickets activos'}\n\n"
+            f"MATRIZ DE HABILIDADES:\n{skills_resumen}\n\n"
+            "═══ INSTRUCCIONES ═══\n"
+            "1. Analiza la instrucción con los datos REALES del bloque WFM.\n"
+            "2. Si mencionan un técnico específico, usa sus datos reales.\n"
+            "3. Si involucra campo, cita la regla del manual.\n"
+            "4. Da una respuesta ejecutiva, clara y accionable.\n"
+            "5. Sé conciso pero completo."
+        )
 
-        api_messages = []
-        for msg in history:
-            role = "user" if msg.get("role") == "user" else "assistant"
-            api_messages.append({"role": role, "content": msg.get("content", "")})
-        api_messages.append({"role": "user", "content": instruccion_usuario})
-        
         try:
-            message = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=1024,
-                system=system_blocks,
-                messages=api_messages,
-                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
-            )
-            response_text = message.content[0].text
+            if self.mode == "gemini":
+                model = genai.GenerativeModel("gemini-1.5-flash", system_instruction=system_instruction)
+                gemini_history = []
+                for msg in history:
+                    role = "user" if msg.get("role") == "user" else "model"
+                    gemini_history.append({"role": role, "parts": [msg.get("content", "")]})
+                chat = model.start_chat(history=gemini_history)
+                response = chat.send_message(instruccion_usuario)
+                response_text = response.text
+            elif self.mode == "claude":
+                prompt_claude = f"{system_instruction}\n\nHistorial:\n{json.dumps(history)}\n\nUsuario: {instruccion_usuario}"
+                message = self.client_anthropic.messages.create(
+                    model="claude-3-5-sonnet-20240620",
+                    max_tokens=2048,
+                    messages=[{"role": "user", "content": prompt_claude}]
+                )
+                response_text = message.content[0].text
+            else:
+                return "⚠️ [Director General] No se encontró clave de API (Gemini o Anthropic). Por favor configura el archivo .env"
 
-            # Log de uso de caché
-            usage = message.usage
-            cache_hit   = getattr(usage, 'cache_read_input_tokens', 0)
-            cache_write = getattr(usage, 'cache_creation_input_tokens', 0)
-            input_tokens = getattr(usage, 'input_tokens', 0)
-            print(f"\n💎 [Director General] | tokens_entrada={input_tokens} | cache_escrito={cache_write} | cache_leído={cache_hit}")
+            print(f"\n💎 [Director General - {self.mode.upper()}]")
             print(response_text)
             return response_text
         except Exception as e:
-            return f"⚠️ [Director General] Error en el centro de mando: {e}"
+            return f"⚠️ [Director General] Error en el centro de mando ({self.mode}): {e}"
 
 if __name__ == "__main__":
     dg = DirectorGeneralV2()

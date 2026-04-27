@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Xcien | Portal de Profesionalización</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- React y Babel para el Dashboard -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div class="glass-bg"></div>
+    
+    <nav class="navbar">
+        <div class="logo">
+            <img src="assets/logo.png" alt="Xcien Logo" class="logo-img">
+            <span>XCIEN <span class="tag">ACADEMIA</span></span>
+        </div>
+        <div class="nav-links">
+            <button onclick="showSection('biblioteca')" class="nav-btn active" id="btn-biblioteca">Biblioteca</button>
+            <button onclick="showSection('academia')" class="nav-btn" id="btn-academia">Academia</button>
+            <button onclick="showSection('dashboard')" class="nav-btn" id="btn-dashboard">📊 Dashboard</button>
+            <a href="dispatch.html" class="nav-btn" id="btn-dispatch" style="color: #a855f7;">🚚 Dispatch</a>
+            <button onclick="startDiagnostic()" class="nav-btn diagnostic-highlight" id="btn-diagnostico">🚀 Examen 2026</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- BUSCADOR GLOBAL -->
+        <div class="search-container">
+            <input type="text" id="global-search" placeholder="Buscar manuales, estándares o procesos..." onkeyup="filterDocs()">
+            <span class="search-icon">🔍</span>
+        </div>
+
+        <!-- SECCIÓN BIBLIOTECA -->
+        <section id="section-biblioteca" class="content-section">
+            <header class="section-header">
+                <h1>Biblioteca Digital</h1>
+                <p>Tu portal central de estandarización operativa.</p>
+            </header>
+            
+            <div class="docs-grid" id="docs-list">
+                <!-- Los documentos se cargarán aquí -->
+                <div class="loader">Cargando biblioteca...</div>
+            </div>
+
+            <div id="doc-viewer" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal()">&times;</span>
+                    <div id="doc-content-rendered"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN ACADEMIA -->
+        <section id="section-academia" class="content-section hidden">
+            <header class="section-header">
+                <h1>Academia Digital</h1>
+                <p>Evalúa tus conocimientos y certifícate en los procesos de Xcien.</p>
+            </header>
+
+            <div class="academia-container">
+                <div id="quiz-selection">
+                    <h3>Selecciona un tema para iniciar el examen:</h3>
+                    <div class="quiz-grid" id="quiz-docs-list"></div>
+                </div>
+
+                <div id="quiz-container" class="hidden">
+                    <div class="quiz-header">
+                        <h2 id="quiz-title">Examen</h2>
+                        <div id="quiz-timer" class="timer-display hidden">⏱️ <span id="timer-count">45:00</span></div>
+                        <div class="progress-bar"><div id="progress" style="width: 0%"></div></div>
+                    </div>
+                    <div id="quiz-body">
+                        <!-- Preguntas aquí -->
+                    </div>
+                    <div class="quiz-footer">
+                        <button id="next-btn" class="primary-btn" onclick="nextQuestion()">Siguiente</button>
+                    </div>
+                </div>
+
+                <div id="quiz-result" class="hidden result-card">
+                    <h2>Resultado del Examen</h2>
+                    <div class="score-circle">
+                        <span id="score-text">0/10</span>
+                    </div>
+                    <p id="result-message"></p>
+                    <button class="primary-btn" onclick="resetAcademia()">Volver al Inicio</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DASHBOARD (REACT) -->
+        <section id="section-dashboard" class="content-section hidden" style="padding: 0; max-width: 100%;">
+            <div id="root-dashboard"></div>
+        </section>
+
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js"></script>
+    <script type="text/babel" src="dashboard_ui.jsx"></script>
+</body>
+</html>

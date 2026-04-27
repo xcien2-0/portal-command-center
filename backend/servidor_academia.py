@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import sys
 import re
@@ -5,9 +6,11 @@ import json
 import anthropic
 import xmlrpc.client
 from datetime import date
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 
 # Asegurar que el directorio del servidor sea el CWD y esté en el path
@@ -22,9 +25,11 @@ from agents import token_service
 from agents import asset_service
 from agents import transacciones_service
 from agents import label_service
+from agents.wfm_workflow_service import WFMWorkflowService
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
+wfm_service = WFMWorkflowService()
 
 # ─── Cliente Claude ───────────────────────────────────────────────────────────
 _claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -41,7 +46,7 @@ def ask_claude(prompt: str) -> str:
 DOCS_DIR = os.path.join(BASE_DIR, "..", "docs", "estandares")
 QUIZ_CACHE_DIR = os.path.join(BASE_DIR, "..", "src", "data", "quizzes_cache")
 SKILLS_DB = os.path.join(BASE_DIR, "db", "skills_2026.json")
-BANCO_PREGUNTAS = os.path.join(BASE_DIR, "banco_preguntas.json")
+BANCO_PREGUNTAS = os.path.join(BASE_DIR, "db", "banco_preguntas_multi.json")
 WFM_DB = os.path.join(BASE_DIR, "db", "wfm_data.json")
 
 # ─── App ─────────────────────────────────────────────────────────────────────
@@ -60,9 +65,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Montar estáticos (Examen Holo, etc.)
+os.makedirs("static", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # ─── Modelos Pydantic ─────────────────────────────────────────────────────────
 class QuizRequest(BaseModel):
     filename: str
+
+class WFMCreateRequest(BaseModel):
+    cliente: str
+    servicio: str
+    comercial: str
+
+class WFMUpdatePreventaRequest(BaseModel):
+    order_id: str
+    data: Dict
+    usuario: str
+
+class WFMBasicActionRequest(BaseModel):
+    order_id: str
+    usuario: str
+
+class WFMAlmacenRequest(BaseModel):
+    order_id: str
+    equipos: List[Dict]
+    usuario: str
+
+class WFMAproRequest(BaseModel):
+    order_id: str
+    config: Dict
+    usuario: str
+
+class WFMAuditoriaRequest(BaseModel):
+    order_id: str
+    ok: bool
+    motivo: str
+    usuario: str
 
 class SkillResult(BaseModel):
     nombre_tecnico: str
@@ -121,6 +160,24 @@ class OdooWebhookPayload(BaseModel):
     company_id: list = []     # [id, nombre]
     tag_ids: list = []
 
+# ─── Agente Puente (Antigravity) ─────────────────────────────────────────────
+AGENT_BRIDGE = {
+    "current_task": "Inactivo",
+    "status": "idle",
+    "log": [],
+    "last_update": "",
+    "command_queue": []
+}
+
+class CommandRequest(BaseModel):
+    command: str
+    context: str = ""
+
+class BridgeRequest(BaseModel):
+    task: str
+    status: str = "working"
+    log_entry: str = ""
+
 # ─── Cliente Odoo ─────────────────────────────────────────────────────────────
 ODOO_URL = os.environ.get("ODOO_URL")
 ODOO_DB = os.environ.get("ODOO_DB")
@@ -129,20 +186,37 @@ ODOO_PASSWORD = os.environ.get("ODOO_PASSWORD")
 
 def _get_odoo_employees():
     try:
-        if not all([ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD]):
-            return []
-        common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(ODOO_URL))
-        uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
-        if not uid:
-            return []
-        models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(ODOO_URL))
-        employees = models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD,
-            'hr.employee', 'search_read',
-            [[('job_title', '!=', False)]],
-            {'fields': ['name', 'job_title'], 'limit': 50})
-        return employees
+        if all([ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD]):
+            common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(ODOO_URL))
+            uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
+            if uid:
+                models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(ODOO_URL))
+                employees = models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD,
+                    'hr.employee', 'search_read',
+                    [[('job_title', '!=', False)]],
+                    {'fields': ['name', 'job_title'], 'limit': 50})
+                if employees:
+                    return employees
+        
+        # Fallback a Matriz de Habilidades (skills_2026.json)
+        print("⚠️ Usando matriz de habilidades como fallback para técnicos.")
+        if os.path.exists(SKILLS_DB):
+            with open(SKILLS_DB, "r") as f:
+                skills_data = json.load(f)
+                fallback_list = []
+                for name, info in skills_data.items():
+                    fallback_list.append({
+                        "name": name,
+                        "job_title": "Técnico Certificado (Matriz)"
+                    })
+                return fallback_list
+        return []
     except Exception as e:
-        print(f"Error conectando a Odoo: {e}")
+        print(f"Error conectando a Odoo: {e}. Usando fallback...")
+        if os.path.exists(SKILLS_DB):
+            with open(SKILLS_DB, "r") as f:
+                skills_data = json.load(f)
+                return [{"name": name, "job_title": "Técnico Certificado (Matriz)"} for name in skills_data.keys()]
         return []
 
 @app.get("/api/odoo/tecnicos")
@@ -167,11 +241,20 @@ def get_doc(filename: str):
         return {"content": f.read()}
 
 @app.get("/api/diagnostic_exam")
-def get_diagnostic_exam():
+def get_diagnostic_exam(area: str = "NOC"):
     if not os.path.exists(BANCO_PREGUNTAS):
         raise HTTPException(status_code=404, detail="Banco de preguntas no encontrado")
+    
     with open(BANCO_PREGUNTAS, "r", encoding="utf-8") as f:
-        return json.load(f)
+        full_bank = json.load(f)
+    
+    # Normalizar area
+    area = area.upper()
+    if area not in full_bank:
+        # Fallback a NOC si el área no existe
+        area = "NOC"
+        
+    return full_bank[area]
 
 @app.post("/api/save_skill_result")
 def save_skill_result(result: SkillResult):
@@ -648,10 +731,66 @@ def director_chat(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/bridge")
+def get_bridge_status():
+    return AGENT_BRIDGE
+
+@app.post("/api/bridge")
+def update_bridge_status(req: BridgeRequest):
+    AGENT_BRIDGE["current_task"] = req.task
+    AGENT_BRIDGE["status"] = req.status
+    if req.log_entry:
+        AGENT_BRIDGE["log"].append(req.log_entry)
+        if len(AGENT_BRIDGE["log"]) > 10:
+            AGENT_BRIDGE["log"].pop(0)
+    import datetime
+    AGENT_BRIDGE["last_update"] = datetime.datetime.now().strftime("%H:%M:%S")
+    return {"status": "ok"}
+
+@app.post("/api/bridge/command")
+def push_command(req: CommandRequest):
+    AGENT_BRIDGE["command_queue"].append({
+        "command": req.command,
+        "context": req.context,
+        "ts": datetime.datetime.now().strftime("%H:%M:%S"),
+        "status": "pending"
+    })
+    return {"status": "queued", "pos": len(AGENT_BRIDGE["command_queue"])}
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
 
+
+# ─── Endpoints WFM ───────────────────────────────────────────────────────────
+
+@app.get("/api/wfm/ordenes")
+async def get_wfm_orders(estado: str = None):
+    return wfm_service.obtener_ordenes(estado)
+
+@app.post("/api/wfm/comercial/solicitar")
+async def wfm_solicitar(req: WFMCreateRequest):
+    return wfm_service.crear_solicitud_comercial(req.cliente, req.servicio, req.comercial)
+
+@app.post("/api/wfm/preventa/actualizar")
+async def wfm_preventa(req: WFMUpdatePreventaRequest):
+    return wfm_service.actualizar_preventa(req.order_id, req.data, req.usuario)
+
+@app.post("/api/wfm/ventas/contratar")
+async def wfm_contratar(req: WFMBasicActionRequest):
+    return wfm_service.contratar_orden(req.order_id, req.usuario)
+
+@app.post("/api/wfm/almacen/asignar")
+async def wfm_almacen(req: WFMAlmacenRequest):
+    return wfm_service.asignar_equipos_almacen(req.order_id, req.equipos, req.usuario)
+
+@app.post("/api/wfm/aprovisionar")
+async def wfm_aprovisionar(req: WFMAproRequest):
+    return wfm_service.aprovisionar_servicio(req.order_id, req.config, req.usuario)
+
+@app.post("/api/wfm/pm/auditar")
+async def wfm_auditar(req: WFMAuditoriaRequest):
+    return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
 
 if __name__ == "__main__":
     import uvicorn

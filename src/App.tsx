@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index.tsx";
-import RedEnVivo from "./pages/RedEnVivo.tsx";
 import ReportesGobierno from "./pages/ReportesGobierno.tsx";
 import CallCenter from "./pages/CallCenter.tsx";
 import ReporteImpacto from "./pages/ReporteImpacto.tsx";
@@ -23,18 +22,51 @@ import AcademiaPerfil from "./pages/academia/AcademiaPerfil.tsx";
 import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
 import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
+import { useViewMode } from "./contexts/ViewModeContext.tsx";
+
+function HeaderActions() {
+  const { mode, toggleMode } = useViewMode();
+  return (
+    <button
+      onClick={toggleMode}
+      className="ml-auto flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium border transition-colors"
+      style={{
+        backgroundColor: mode === 'holo' ? 'rgba(0,180,216,0.1)' : 'transparent',
+        borderColor: mode === 'holo' ? 'rgba(0,180,216,0.4)' : 'rgba(255,255,255,0.1)',
+        color: mode === 'holo' ? '#00B4D8' : '#94a3b8'
+      }}
+    >
+      {mode === 'holo' ? '✨ Vista Holo Activa' : 'Vista Clásica'}
+    </button>
+  );
+}
+
+import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
+import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
+import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
 
 const queryClient = new QueryClient();
 
+const getGlobalTheme = () => {
+  try {
+    const saved = localStorage.getItem('xcien2_theme');
+    return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
+  } catch { return DEFAULT_THEME; }
+};
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <ViewModeProvider>
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Full-screen route (no sidebar) */}
+          {/* Main Hub (Classic Entry) */}
+          <Route path="/" element={<Index />} />
           <Route path="/xcien2" element={<Xcien2Page />} />
+
+          {/* Legacy/Classic routes can stay for now but without double sidebar */}
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
@@ -47,7 +79,8 @@ const App = () => (
             <Route path="leaderboard" element={<AcademiaLeaderboard />} />
             <Route path="admin" element={<AcademiaAdmin />} />
           </Route>
-          {/* Main app with sidebar */}
+
+          {/* Fallback for classic shell modules */}
           <Route path="*" element={
             <SidebarProvider>
               <div className="min-h-screen flex w-full">
@@ -55,11 +88,10 @@ const App = () => (
                 <div className="flex-1 flex flex-col min-w-0">
                   <header className="h-10 flex items-center border-b border-border bg-background px-2">
                     <SidebarTrigger />
+                    <HeaderActions />
                   </header>
                   <main className="flex-1">
                     <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/red-en-vivo" element={<RedEnVivo />} />
                       <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="/reporte-impacto" element={<ReporteImpacto />} />
@@ -72,8 +104,10 @@ const App = () => (
           } />
         </Routes>
       </BrowserRouter>
+      <FloatingChat theme={getGlobalTheme()} />
     </TooltipProvider>
   </QueryClientProvider>
+  </ViewModeProvider>
 );
 
 export default App;

@@ -1,0 +1,730 @@
+{
+  "fecha": "2026-04-23",
+  "plaza": "Monterrey",
+  "tickets": [
+    {
+      "id": 154767,
+      "name": "Expereo Reference: CSE-02400329 | Hershey | MX | General Escobedo | Service Down",
+      "partner_id": [
+        6611,
+        "[VIP 1] EXPEREO DE MEXICO"
+      ],
+      "stage_id": [
+        54,
+        "CAST Nvl:1-Resuelto"
+      ],
+      "user_id": [
+        857,
+        "CARLOS MARQUEZ LUCIO"
+      ],
+      "create_date": "2026-04-23 16:30:09",
+      "team_id": [
+        6,
+        "CAST"
+      ],
+      "priority": "3"
+    },
+    {
+      "id": 154779,
+      "name": "SOP-00024, RB CARDENAL//PROACTIVO-AIRE ACONDICIONADO",
+      "partner_id": [
+        1,
+        "CREATIVIDAD INTERNET ENLACES"
+      ],
+      "stage_id": [
+        119,
+        "Nuevo"
+      ],
+      "user_id": [
+        74,
+        "HILARIO CORONADO RICO"
+      ],
+      "create_date": "2026-04-23 19:24:50",
+      "team_id": [
+        6,
+        "CAST"
+      ],
+      "priority": "1"
+    },
+    {
+      "id": 154768,
+      "name": "SIN SERVICIO  // RIO BRAVO 3",
+      "partner_id": [
+        1,
+        "CREATIVIDAD INTERNET ENLACES"
+      ],
+      "stage_id": [
+        54,
+        "CAST Nvl:1-Resuelto"
+      ],
+      "user_id": [
+        928,
+        "DAVID AXEL GONZALEZ MARRUFO"
+      ],
+      "create_date": "2026-04-23 16:41:17",
+      "team_id": [
+        6,
+        "CAST"
+      ],
+      "priority": "1"
+    },
+    {
+      "id": 154760,
+      "name": "Enlace desconectado - Huus Vas, Airexs (#63908)",
+      "partner_id": [
+        109994,
+        "Noé Gabriel Durán Arias"
+      ],
+      "stage_id": [
+        24,
+        "CAST Nvl:1"
+      ],
+      "user_id": [
+        347,
+        "JAIME QUIROZ LEIJA"
+      ],
+      "create_date": "2026-04-23 14:50:43",
+      "team_id": [
+        6,
+        "CAST"
+      ],
+      "priority": "0"
+    },
+    {
+      "id": 154756,
+      "name": "Falla : Destination host unreachable (error ICMP # 11003) // SOP-13050, SITIO:TLE PATIO GUADALUPE",
+      "partner_id": [
+        90963,
+        "[VIP 1] TRANSPORTES LOGISTICOS ESPECIALIZADOS"
+      ],
+      "stage_id": [
+        24,
+        "CAST Nvl:1"
+      ],
+      "user_id": [
+        908,
+        "HAROL ANTONY TEMBLADERA ALAMO"
+      ],
+      "create_date": "2026-04-23 12:24:41",
+      "team_id": [
+        6,
+        "CAST"
+      ],
+      "priority": "0"
+    }
+  ],
+  "tareas": [
+    {
+      "id": 301980,
+      "name": "[S. E.] SOP-11463, SITIO TALLER CD APODACA",
+      "project_id": [
+        239,
+        "Field Service"
+      ],
+      "stage_id": [
+        272,
+        "New"
+      ],
+      "user_ids": [
+        371
+      ],
+      "date_deadline": "2026-04-24 23:00:00",
+      "priority": "0",
+      "create_date": "2026-04-23 23:11:32"
+    },
+    {
+      "id": 301913,
+      "name": "Sandur, SIDP-50, TECNOLOGIA EN SISTEMAS Y ENLACES, SOLUM",
+      "project_id": [
+        218,
+        "Ingenieria Pre-Venta"
+      ],
+      "stage_id": [
+        134,
+        "Resultado"
+      ],
+      "user_ids": [
+        253
+      ],
+      "date_deadline": "2026-04-25 00:00:00",
+      "priority": "0",
+      "create_date": "2026-04-23 18:50:54"
+    },
+    {
+      "id": 301901,
+      "name": "Sandur, SIDP-200 + AD, TRANSPORTES URGENTES NUEVO LEON, SITIO ESCOBEDO",
+      "project_id": [
+        218,
+        "Ingenieria Pre-Venta"
+      ],
+      "stage_id": [
+        134,
+        "Resultado"
+      ],
+      "user_ids": [
+        253
+      ],
+      "date_deadline": "2026-04-25 00:00:00",
+      "priority": "0",
+      "create_date": "2026-04-23 18:16:17"
+    },
+    {
+      "id": 301860,
+      "name": "[SUB-Equipo en Radio Base ] Sandur, SIDP-500, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES",
+      "project_id": [
+        146,
+        "COR-INFRAESTRUCTURA INGENIERIA"
+      ],
+      "stage_id": [
+        320,
+        "RFQ Preventa"
+      ],
+      "user_ids": [],
+      "date_deadline": "2026-04-30 00:00:00",
+      "priority": "0",
+      "create_date": "2026-04-23 16:47:52"
+    },
+    {
+      "id": 301786,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 13:30:12"
+    },
+    {
+      "id": 301784,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/23/2026 7:24:37 AM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 13:30:10"
+    },
+    {
+      "id": 301776,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 10:05:14"
+    },
+    {
+      "id": 301773,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/23/2026 3:57:43 AM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 10:00:54"
+    },
+    {
+      "id": 301767,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 08:50:18"
+    },
+    {
+      "id": 301765,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/23/2026 2:44:50 AM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 08:50:15"
+    },
+    {
+      "id": 301762,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 08:25:10"
+    },
+    {
+      "id": 301760,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/23/2026 2:17:41 AM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 08:20:21"
+    },
+    {
+      "id": 301747,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 06:07:05"
+    },
+    {
+      "id": 301744,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/22/2026 11:58:40 PM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 06:02:55"
+    },
+    {
+      "id": 301738,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 03:45:41"
+    },
+    {
+      "id": 301736,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/22/2026 9:39:43 PM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 03:45:32"
+    },
+    {
+      "id": 301733,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla  : Destination host unreachable (error ICMP # 11003)",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 03:30:58"
+    },
+    {
+      "id": 301731,
+      "name": "[PRTG Network Monitor 1] WRT TLE Patio Guadalupe (SOP-13050) Ping 572 (Ping) Falla finalizada (ahora: Desconocido)  : No hay datos desde 4/22/2026 9:25:37 PM",
+      "project_id": [
+        230,
+        "COR-INFRA OTDS"
+      ],
+      "stage_id": [
+        308,
+        "PENDIENTE"
+      ],
+      "user_ids": [],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 03:30:54"
+    },
+    {
+      "id": 301713,
+      "name": "SOP-11463, SITIO TALLER CD APODACA",
+      "project_id": [
+        236,
+        "CAE - Operaciones"
+      ],
+      "stage_id": [
+        145,
+        "Programado"
+      ],
+      "user_ids": [
+        638,
+        836
+      ],
+      "date_deadline": false,
+      "priority": "0",
+      "create_date": "2026-04-23 00:49:22"
+    }
+  ],
+  "ventas": [
+    {
+      "id": 70949,
+      "name": "SO58394",
+      "partner_id": [
+        1988,
+        "[VIP 1] RED ESTATAL DE AUTOPISTAS DE NUEVO LEON"
+      ],
+      "state": "sale",
+      "amount_total": 116161.54,
+      "date_order": "2026-04-23 19:12:31",
+      "user_id": [
+        177,
+        "JOSE GERARDO DE LA GARZA MARTINEZ"
+      ]
+    },
+    {
+      "id": 70948,
+      "name": "SO58393",
+      "partner_id": [
+        1988,
+        "[VIP 1] RED ESTATAL DE AUTOPISTAS DE NUEVO LEON"
+      ],
+      "state": "sale",
+      "amount_total": 164046.51,
+      "date_order": "2026-04-23 19:08:15",
+      "user_id": [
+        177,
+        "JOSE GERARDO DE LA GARZA MARTINEZ"
+      ]
+    },
+    {
+      "id": 70947,
+      "name": "SO58392",
+      "partner_id": [
+        1988,
+        "[VIP 1] RED ESTATAL DE AUTOPISTAS DE NUEVO LEON"
+      ],
+      "state": "sale",
+      "amount_total": 147573.5,
+      "date_order": "2026-04-23 19:05:50",
+      "user_id": [
+        177,
+        "JOSE GERARDO DE LA GARZA MARTINEZ"
+      ]
+    },
+    {
+      "id": 70955,
+      "name": "SO58400",
+      "partner_id": [
+        94334,
+        "TECNOLOGIA EN SISTEMAS Y ENLACES"
+      ],
+      "state": "draft",
+      "amount_total": 5382.41,
+      "date_order": "2026-04-23 18:49:47",
+      "user_id": [
+        323,
+        "BEATRIZ ALEJANDRA TELLEZ CASTILLO."
+      ]
+    },
+    {
+      "id": 70950,
+      "name": "SO58395",
+      "partner_id": [
+        63745,
+        "[VIP 1] TRANSPORTES URGENTES NUEVO LEON"
+      ],
+      "state": "draft",
+      "amount_total": 11600.0,
+      "date_order": "2026-04-23 18:15:52",
+      "user_id": [
+        539,
+        "DANIEL GONZALEZ CRUZ"
+      ]
+    }
+  ],
+  "leads": [
+    {
+      "id": 79541,
+      "name": "Sandur, SIDP-20, MAXIMO VEDOYA, Rancho Montemorelos",
+      "partner_id": [
+        43895,
+        "MAXIMO VEDOYA"
+      ],
+      "stage_id": [
+        63,
+        "> Ing. Pre-Venta"
+      ],
+      "user_id": [
+        198,
+        "JUAN MANUEL ESCAMILLA FRANCO"
+      ],
+      "expected_revenue": 500.0,
+      "create_date": "2026-04-23 22:35:59",
+      "city": "San Pedro Garza García",
+      "type": "opportunity"
+    },
+    {
+      "id": 79547,
+      "name": "Luminet, SST-S, FILOSOFIA EN PROYECTOS, Hospital La Conchita Saltillo",
+      "partner_id": [
+        128568,
+        "FILOSOFIA EN PROYECTOS."
+      ],
+      "stage_id": [
+        63,
+        "> Ing. Pre-Venta"
+      ],
+      "user_id": [
+        276,
+        "JULIO CESAR PUENTE ALDAY"
+      ],
+      "expected_revenue": 90500.0,
+      "create_date": "2026-04-23 23:32:14",
+      "city": "San Pedro Garza García",
+      "type": "opportunity"
+    },
+    {
+      "id": 79545,
+      "name": "Sandur, BDL-A200-IN36, CEDINOR , CEDINOR SA DE CV / Sitio: San Catarina",
+      "partner_id": [
+        87439,
+        "CEDINOR "
+      ],
+      "stage_id": [
+        67,
+        "Borrador"
+      ],
+      "user_id": [
+        932,
+        "EDUARDO MAURICIO TUEME RESÉNDEZ"
+      ],
+      "expected_revenue": 2500.0,
+      "create_date": "2026-04-23 23:10:18",
+      "city": "Santa Catarina",
+      "type": "opportunity"
+    },
+    {
+      "id": 79543,
+      "name": "Sandur, SIDP-150, CEDINOR , CEDINOR SA DE CV / Sitio: San Catarina",
+      "partner_id": [
+        87439,
+        "CEDINOR "
+      ],
+      "stage_id": [
+        63,
+        "> Ing. Pre-Venta"
+      ],
+      "user_id": [
+        932,
+        "EDUARDO MAURICIO TUEME RESÉNDEZ"
+      ],
+      "expected_revenue": 10000.0,
+      "create_date": "2026-04-23 22:59:32",
+      "city": "Santa Catarina",
+      "type": "opportunity"
+    },
+    {
+      "id": 79538,
+      "name": "Sandur, SIS-100-10-ilimitado, CARNICERIA RAMOS, SITIO: CR RANCHO EL EBANAL",
+      "partner_id": [
+        70972,
+        "CARNICERIA RAMOS"
+      ],
+      "stage_id": [
+        7,
+        "Negociacion"
+      ],
+      "user_id": [
+        837,
+        "TIRSO ROMERO CASTILLO"
+      ],
+      "expected_revenue": 4200.0,
+      "create_date": "2026-04-23 19:11:31",
+      "city": "MONTERREY",
+      "type": "opportunity"
+    },
+    {
+      "id": 79537,
+      "name": "Sandur, SIDP-50, TECNOLOGIA EN SISTEMAS Y ENLACES, SOLUM",
+      "partner_id": [
+        94334,
+        "TECNOLOGIA EN SISTEMAS Y ENLACES"
+      ],
+      "stage_id": [
+        4,
+        "> Contratacion"
+      ],
+      "user_id": [
+        323,
+        "BEATRIZ ALEJANDRA TELLEZ CASTILLO."
+      ],
+      "expected_revenue": 4640.0,
+      "create_date": "2026-04-23 18:46:19",
+      "city": "Ciudad General Escobedo",
+      "type": "opportunity"
+    },
+    {
+      "id": 79534,
+      "name": "Sandur, SIDP-200 + AD, TRANSPORTES URGENTES NUEVO LEON, SITIO ESCOBEDO",
+      "partner_id": [
+        63745,
+        "[VIP 1] TRANSPORTES URGENTES NUEVO LEON"
+      ],
+      "stage_id": [
+        4,
+        "> Contratacion"
+      ],
+      "user_id": [
+        539,
+        "DANIEL GONZALEZ CRUZ"
+      ],
+      "expected_revenue": 0.0,
+      "create_date": "2026-04-23 18:12:09",
+      "city": "San Nicolás de los Garza",
+      "type": "opportunity"
+    }
+  ],
+  "empleados": [
+    {
+      "id": 1465,
+      "name": "ALEJANDRA GUADALUPE MORA RAMIREZ",
+      "job_title": "Asistente de entregas",
+      "department_id": [
+        230,
+        "Presidencia / Dirección General / Operaciones / CAST / CAE / ENTREGAS"
+      ],
+      "work_email": "alejandra.mora@wispi.mx",
+      "work_phone": false
+    },
+    {
+      "id": 105,
+      "name": "ANDRES GUADALUPE GUARDADO MALDONADO",
+      "job_title": "Tecnico Planta Externa",
+      "department_id": [
+        235,
+        "Presidencia / Dirección General / Operaciones / NOC / COR / COR / Planta externa"
+      ],
+      "work_email": "andres.guardado@xcien.com",
+      "work_phone": "8115118007"
+    },
+    {
+      "id": 1378,
+      "name": "ANGEL GUADALUPE DAVILA TORRES",
+      "job_title": "Técnico Fibra Optica",
+      "department_id": [
+        236,
+        "Presidencia / Dirección General / Operaciones / NOC / COR / COR / C-4"
+      ],
+      "work_email": "angel.davila@xcien.com",
+      "work_phone": "8115118007"
+    },
+    {
+      "id": 1717,
+      "name": "DANYELLY GUADALUPE SANCHEZ VALDES",
+      "job_title": "Ejecutivo de Cobranza",
+      "department_id": [
+        222,
+        "Presidencia / Dirección General / Comercial / Comercial General / Ventas Luminet"
+      ],
+      "work_email": false,
+      "work_phone": false
+    },
+    {
+      "id": 371,
+      "name": "JOSE GUADALUPE BALDERAS MENDOZA",
+      "job_title": "Tecnico Planta Externa",
+      "department_id": [
+        235,
+        "Presidencia / Dirección General / Operaciones / NOC / COR / COR / Planta externa"
+      ],
+      "work_email": "jose.balderas@xcien.com",
+      "work_phone": "8115118007"
+    },
+    {
+      "id": 1496,
+      "name": "ORLANDO JOSUE ESCOBEDO RUIZ",
+      "job_title": "Auxiliar CAE",
+      "department_id": [
+        223,
+        "Presidencia / Dirección General / Comercial / Comercial General / Senel"
+      ],
+      "work_email": false,
+      "work_phone": "800 520 0050"
+    },
+    {
+      "id": 1217,
+      "name": "VICTOR EDUARDO ESCOBEDO GARCIA",
+      "job_title": "Especialista en Operaciones de Red",
+      "department_id": [
+        226,
+        "Presidencia / Dirección General / Operaciones / NOC / COR / NOC"
+      ],
+      "work_email": "victor.escobedo@xcien.com",
+      "work_phone": "8115118007"
+    }
+  ],
+  "totales_odoo": {}
+}
