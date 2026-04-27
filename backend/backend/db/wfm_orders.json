@@ -50,7 +50,7 @@
     "cliente": "Hospital San Jos\u00e9",
     "servicio": "Enlace de Microondas 50MB",
     "comercial": "Luc\u00eda Pineda",
-    "estado": "ALMACEN_VALIDACION",
+    "estado": "LISTO_INSTALACION",
     "fecha_creacion": "2026-04-26T18:58:06.448236",
     "preventa": {
       "analisis": null,
@@ -70,7 +70,7 @@
       "listo": false
     },
     "pm": {
-      "auditoria_ok": false,
+      "auditoria_ok": true,
       "bloqueada": false,
       "motivo_bloqueo": null,
       "backlogs": []
@@ -85,6 +85,11 @@
         "fecha": "2026-04-26T19:00:33.242469",
         "accion": "Contrato firmado. Enviado a Almac\u00e9n",
         "usuario": "Gerente de Ventas"
+      },
+      {
+        "fecha": "2026-04-26T22:20:41.231860",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
       }
     ]
   },

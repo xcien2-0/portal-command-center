@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ThemeConfig, WFMOrder, WFMOrderState } from '../types';
 
 const API_BASE = 'http://localhost:8000';
+const G = '#00ff88';
 
 type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm';
 
@@ -219,6 +220,38 @@ export default function WFMSection({ theme }: Props) {
                           </div>
                           <button style={{ padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600 }}>Asignar y Enviar a Apro (US-018)</button>
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {role === 'aprovisionamiento' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                       <div style={{ background: '#000c08', padding: 20, borderRadius: 12, border: `1px solid ${G}30`, fontFamily: 'monospace' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: G, boxShadow: `0 0 10px ${G}` }} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: G, fontFamily: 'Oswald, sans-serif', letterSpacing: 1 }}>NETWORK_PROVISIONING_CONSOLE</span>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 15 }}>
+                          <div style={{ background: 'rgba(0,255,136,0.05)', padding: 10, borderRadius: 6, border: `1px solid ${G}15` }}>
+                            <div style={{ fontSize: 9, color: `${G}60`, marginBottom: 4 }}>ASSIGNED_VLAN</div>
+                            <div style={{ fontSize: 16, color: G, fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>VLAN_4022</div>
+                          </div>
+                          <div style={{ background: 'rgba(0,255,136,0.05)', padding: 10, borderRadius: 6, border: `1px solid ${G}15` }}>
+                            <div style={{ fontSize: 9, color: `${G}60`, marginBottom: 4 }}>BANDWIDTH_LIMIT</div>
+                            <div style={{ fontSize: 16, color: G, fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>1024 Mbps</div>
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(0,0,0,0.4)', padding: 12, borderRadius: 6, border: `1px solid ${G}10`, fontSize: 11, color: '#90d8b0', lineHeight: 1.6, marginBottom: 15 }}>
+                          <div>&gt; initialazing logical bridge... [OK]</div>
+                          <div>&gt; applying QoS profile: GOLD_SERVICE... [OK]</div>
+                          <div>&gt; mapping IP segment: 187.216.XX.XX... [WAIT]</div>
+                        </div>
+
+                        <button style={{ width: '100%', padding: 12, background: G, border: 'none', borderRadius: 6, color: '#000', fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: 1, cursor: 'pointer', boxShadow: `0 0 15px ${G}40` }}>
+                          EJECUTAR PROVISIONAMIENTO LÓGICO
+                        </button>
                       </div>
                     </div>
                   )}
