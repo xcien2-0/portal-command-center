@@ -1,14 +1,28 @@
 {
   "Brian Quintero Choreño": {
     "last_update": "2026-04-20",
-    "skills": { "Instalación": 100, "Fibra Óptica": 100, "RF": 100, "Configuración": 100, "Soporte": 100 }
+    "skills": {
+      "Instalación": 100,
+      "Fibra Óptica": 100,
+      "RF": 100,
+      "Configuración": 100,
+      "Soporte": 100
+    }
   },
   "Jose Guadalupe Balderas": {
-    "last_update": "2026-04-18",
-    "skills": { "Instalación": 96, "Fibra Óptica": 94, "RF": 95, "Configuración": 97, "Soporte": 97 }
+    "last_update": "2026-04-26",
+    "skills": {
+      "Global": 100
+    }
   },
   "Erik Alberto Silva Olivares": {
     "last_update": "2026-04-15",
-    "skills": { "Instalación": 92, "Fibra Óptica": 90, "RF": 91, "Configuración": 93, "Soporte": 92 }
+    "skills": {
+      "Instalación": 92,
+      "Fibra Óptica": 90,
+      "RF": 91,
+      "Configuración": 93,
+      "Soporte": 92
+    }
   }
 }

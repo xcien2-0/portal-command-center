@@ -114,21 +114,21 @@ export default function AcademiaHoloSection({ theme }: Props) {
     .m-name { font-size: 13px; color: #9ca3af; }
     .m-role { font-size: 11px; color: #3a6050; }
     
-    .m-btn { margin-top: 24px; text-align: center; padding: 14px; border: 1px solid rgba(0,255,136,0.4); border-radius: 6px; color: #00ff88; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; font-weight: 600; }
-    .m-btn:hover { background: rgba(0,255,136,0.1); box-shadow: 0 0 15px rgba(0,255,136,0.2); }
-    .m-btn.disabled { opacity: 0.5; cursor: not-allowed; border-color: rgba(255,255,255,0.2); color: #888; }
+    .m-btn { margin-top: 24px; text-align: center; padding: 16px; border: 1px solid rgba(0,255,136,0.5); border-radius: 8px; color: #00ff88; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+    .m-btn:hover { background: rgba(0,255,136,0.1); box-shadow: 0 0 20px rgba(0,255,136,0.3); transform: translateY(-2px); }
+    .m-btn.disabled { opacity: 0.3; cursor: not-allowed; border-color: rgba(255,255,255,0.1); color: #555; text-shadow: none; }
     
-    .m-progress { height: 2px; background: rgba(0,255,136,0.1); margin: 8px 0 24px; }
-    .m-progress-fill { height: 100%; background: #00ff88; box-shadow: 0 0 8px #00ff88; transition: width 0.3s; }
+    .m-progress { height: 4px; background: rgba(0,255,136,0.1); margin: 12px 0 32px; border-radius: 2px; }
+    .m-progress-fill { height: 100%; background: #00ff88; box-shadow: 0 0 10px #00ff88; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 2px; }
     
-    .m-tag { font-size: 10px; font-weight: 600; letter-spacing: 1px; margin-bottom: 12px; }
-    .m-q { font-size: 15px; color: #fff; line-height: 1.5; margin-bottom: 24px; font-weight: 500; }
+    .m-tag { font-size: 11px; font-weight: 700; letter-spacing: 2px; margin-bottom: 16px; color: rgba(0,255,136,0.6); }
+    .m-q { font-size: 20px; color: #fff; line-height: 1.45; margin-bottom: 32px; font-weight: 600; text-shadow: 0 0 15px rgba(0,255,136,0.2); }
     
-    .m-opt { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; font-size: 13px; color: #ccc; }
-    .m-opt:hover { border-color: rgba(0,170,255,0.3); background: rgba(0,170,255,0.05); }
-    .m-opt.sel { border-color: #00aaff; background: rgba(0,170,255,0.1); color: #fff; }
-    .m-letter { width: 24px; height: 24px; border-radius: 4px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #888; }
-    .m-letter.sel { background: rgba(0,170,255,0.2); color: #00aaff; }
+    .m-opt { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 12px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); font-size: 16px; color: #d8f8e8; }
+    .m-opt:hover { border-color: rgba(0,170,255,0.4); background: rgba(0,170,255,0.08); transform: translateX(8px); color: #fff; }
+    .m-opt.sel { border-color: #00aaff; background: rgba(0,170,255,0.15); color: #fff; box-shadow: 0 0 20px rgba(0,170,255,0.1); }
+    .m-letter { width: 32px; height: 32px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #888; transition: all 0.2s; }
+    .m-letter.sel { background: rgba(0,170,255,0.25); color: #00aaff; border-color: #00aaff; box-shadow: 0 0 10px rgba(0,170,255,0.3); }
     
     .cert-view { margin-top: 32px; border: 1px solid rgba(0,255,136,0.2); padding: 32px; border-radius: 8px; text-align: center; background: linear-gradient(180deg, rgba(0,255,136,0.05) 0%, transparent 100%); position: relative; overflow: hidden; }
     .cert-view::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #00ff88, transparent); }

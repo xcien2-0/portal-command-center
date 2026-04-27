@@ -60,6 +60,36 @@ const DIM = '#888';
 const GREEN = '#00C896';
 const RED   = '#FF4757';
 
+function MatrixBackground() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.1, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
+        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        whiteSpace: 'nowrap', userSelect: 'none'
+      }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} style={{ 
+            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
+            animationDelay: `${-Math.random() * 25}s`,
+            writingMode: 'vertical-rl',
+            textAlign: 'center'
+          }}>
+            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes matrixFall {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 const card: React.CSSProperties = {
   background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)',
   borderRadius: 12, padding: 20,
@@ -91,12 +121,12 @@ function Ring({ pct, size = 40, stroke = 3, color = '#FFB703' }: { pct: number; 
 function SectionTitle({ sub, main, dim }: { sub: string; main: string; dim: string }) {
   return (
     <>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.15em', textTransform: 'uppercase', color: DIM, marginBottom: 8, fontFamily: 'Oswald, sans-serif' }}>{sub}</div>
-      <div style={{ fontSize: 32, fontWeight: 500, lineHeight: 1.1, marginBottom: 20, fontFamily: 'Oswald, sans-serif', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.2em', textTransform: 'uppercase', color: GREEN, marginBottom: 12, fontFamily: 'Oswald, sans-serif', textShadow: `0 0 10px ${GREEN}40` }}>{sub}</div>
+      <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 1, marginBottom: 24, fontFamily: 'Oswald, sans-serif', letterSpacing: '-0.03em', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 30px rgba(255,255,255,0.2)' }}>
         {main.split('|').map((part, i) => (
           i === 0 ? <span key={i}>{part}<br /></span> : <span key={i} style={{ color: DIM, fontWeight: 400 }}>{part}</span>
         ))}
-        {dim && <><br /><span style={{ color: DIM, fontWeight: 400 }}>{dim}</span></>}
+        {dim && <><span style={{ color: DIM, fontWeight: 400, fontSize: 40 }}>{dim}</span></>}
       </div>
     </>
   );
@@ -109,8 +139,8 @@ function SlideIntro() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 32, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Chip>Field Services</Chip><Chip>47 técnicos</Chip><Chip>6 plazas · México</Chip>
       </div>
-      <div style={{ fontSize: 'clamp(44px,6vw,64px)', fontWeight: 600, lineHeight: 0.9, letterSpacing: -1, marginBottom: 16, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase' }}>
-        Academia<br /><span style={{ fontWeight: 400, color: DIM }}>XCIEN</span>
+      <div style={{ fontSize: 'clamp(80px,10vw,120px)', fontWeight: 800, lineHeight: 0.8, letterSpacing: -3, marginBottom: 24, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 50px rgba(0,255,136,0.3)' }}>
+        Academia<br /><span style={{ fontWeight: 400, color: GREEN, textShadow: `0 0 30px ${GREEN}60` }}>XCIEN</span>
       </div>
       <p style={{ fontSize: 16, color: DIM, lineHeight: 1.7, marginBottom: 40, maxWidth: 600 }}>
         El sistema que convierte capacitación en carrera,<br />esfuerzo en reconocimiento, técnicos en leyendas.
@@ -433,7 +463,8 @@ export default function AcademiaSection({ theme }: Props) {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '30px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '30px', position: 'relative' }}>
+        <MatrixBackground />
         {view === 'dashboard' ? (
           <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
             <SlideComp theme={theme} onStartExam={() => setView('exam')} />

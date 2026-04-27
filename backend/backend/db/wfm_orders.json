@@ -4,12 +4,12 @@
     "cliente": "Corporativo Cordillera",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
-    "estado": "ANTEPROYECTO",
+    "estado": "LISTO_INSTALACION",
     "fecha_creacion": "2026-04-26T18:54:09.156133",
     "preventa": {
-      "analisis": "Factibilidad positiva v\u00eda FO a\u00e9rea. Requiere router CCR2004.",
+      "analisis": "Factible v\u00eda FO",
       "factibilidad": "OK",
-      "tecnologia": "Fibra \u00d3ptica",
+      "tecnologia": "Fibra",
       "equipos_sugeridos": [
         "Mikrotik CCR2004",
         "Ubiquiti NanoBeam AC"
@@ -17,17 +17,24 @@
       "anteproyecto_url": null
     },
     "almacen": {
-      "disponibilidad": false,
-      "equipos_asignados": [],
+      "disponibilidad": true,
+      "equipos_asignados": [
+        {
+          "modelo": "CCR2004",
+          "sn": "SN-2NMVD"
+        }
+      ],
       "esperando_inventario": false
     },
     "aprovisionamiento": {
       "config_logica": null,
       "parametros_red": {},
-      "listo": false
+      "listo": true,
+      "vlan": 4000,
+      "bw": "1GB"
     },
     "pm": {
-      "auditoria_ok": false,
+      "auditoria_ok": true,
       "bloqueada": false,
       "motivo_bloqueo": null,
       "backlogs": []
@@ -42,6 +49,36 @@
         "fecha": "2026-04-26T18:57:51.364633",
         "accion": "Preventa actualiz\u00f3 an\u00e1lisis",
         "usuario": "Ing. Carlos Mendoza"
+      },
+      {
+        "fecha": "2026-04-26T22:23:57.183818",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-26T22:30:49.856944",
+        "accion": "Preventa actualiz\u00f3 an\u00e1lisis",
+        "usuario": "Ing. Preventa"
+      },
+      {
+        "fecha": "2026-04-26T22:30:54.845968",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente Ventas"
+      },
+      {
+        "fecha": "2026-04-26T22:31:04.641875",
+        "accion": "Equipos asignados en Almac\u00e9n",
+        "usuario": "Jefe Almac\u00e9n"
+      },
+      {
+        "fecha": "2026-04-26T22:31:15.780696",
+        "accion": "Servicio aprovisionado",
+        "usuario": "Ing. NOC"
+      },
+      {
+        "fecha": "2026-04-26T22:31:31.299748",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
       }
     ]
   },

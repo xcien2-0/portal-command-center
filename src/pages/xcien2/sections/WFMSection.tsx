@@ -88,6 +88,58 @@ export default function WFMSection({ theme }: Props) {
     fetchOrders();
   };
 
+  const handlePreventaUpdate = async () => {
+    if (!selectedId) return;
+    await fetch(`${API_BASE}/api/wfm/preventa/actualizar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        order_id: selectedId, 
+        data: { factibilidad: 'OK', tecnologia: 'Fibra', analisis: 'Factible vía FO' },
+        usuario: 'Ing. Preventa'
+      })
+    });
+    fetchOrders();
+  };
+
+  const handleVentasContratar = async () => {
+    if (!selectedId) return;
+    await fetch(`${API_BASE}/api/wfm/ventas/contratar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: selectedId, usuario: 'Gerente Ventas' })
+    });
+    fetchOrders();
+  };
+
+  const handleAlmacenAsignar = async () => {
+    if (!selectedId) return;
+    await fetch(`${API_BASE}/api/wfm/almacen/asignar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        order_id: selectedId, 
+        equipos: [{ modelo: 'CCR2004', sn: 'SN-' + Math.random().toString(36).substring(7).toUpperCase() }],
+        usuario: 'Jefe Almacén'
+      })
+    });
+    fetchOrders();
+  };
+
+  const handleAprovisionar = async () => {
+    if (!selectedId) return;
+    await fetch(`${API_BASE}/api/wfm/aprovisionar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        order_id: selectedId, 
+        config: { vlan: 4000, bw: '1GB' },
+        usuario: 'Ing. NOC'
+      })
+    });
+    fetchOrders();
+  };
+
   const selectedOrder = orders.find(o => o.id === selectedId);
 
   return (
@@ -203,8 +255,22 @@ export default function WFMSection({ theme }: Props) {
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Evaluación de Factibilidad</div>
                         <textarea placeholder="Detalle técnico de factibilidad..." style={{ width: '100%', height: 80, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 6, color: '#fff', padding: 10 }} />
                         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                          <button style={{ flex: 1, padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600 }}>Generar Anteproyecto (US-009)</button>
+                          <button 
+                            onClick={handlePreventaUpdate}
+                            style={{ flex: 1, padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Generar Anteproyecto (US-009)
+                          </button>
                         </div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Cierre de Venta (Oportunidad Ganada)</div>
+                        <button 
+                          onClick={handleVentasContratar}
+                          style={{ width: '100%', padding: 10, background: '#00C896', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Marcar como Ganada y Emitir Token
+                        </button>
                       </div>
                     </div>
                   )}
@@ -218,7 +284,12 @@ export default function WFMSection({ theme }: Props) {
                             <span>Router Mikrotik CCR-2004</span>
                             <span style={{ color: '#00C896' }}>S/N: 2026-X123</span>
                           </div>
-                          <button style={{ padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600 }}>Asignar y Enviar a Apro (US-018)</button>
+                          <button 
+                            onClick={handleAlmacenAsignar}
+                            style={{ padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Asignar y Enviar a Apro (US-018)
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -226,31 +297,23 @@ export default function WFMSection({ theme }: Props) {
 
                   {role === 'aprovisionamiento' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                       <div style={{ background: '#000c08', padding: 20, borderRadius: 12, border: `1px solid ${G}30`, fontFamily: 'monospace' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: G, boxShadow: `0 0 10px ${G}` }} />
-                          <span style={{ fontSize: 12, fontWeight: 700, color: G, fontFamily: 'Oswald, sans-serif', letterSpacing: 1 }}>NETWORK_PROVISIONING_CONSOLE</span>
-                        </div>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 15 }}>
-                          <div style={{ background: 'rgba(0,255,136,0.05)', padding: 10, borderRadius: 6, border: `1px solid ${G}15` }}>
-                            <div style={{ fontSize: 9, color: `${G}60`, marginBottom: 4 }}>ASSIGNED_VLAN</div>
-                            <div style={{ fontSize: 16, color: G, fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>VLAN_4022</div>
+                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Aprovisionamiento Lógico de Red</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, border: `1px solid ${theme.border}` }}>
+                            <div style={{ fontSize: 10, color: theme.dim }}>VLAN</div>
+                            <div style={{ fontWeight: 700 }}>4022</div>
                           </div>
-                          <div style={{ background: 'rgba(0,255,136,0.05)', padding: 10, borderRadius: 6, border: `1px solid ${G}15` }}>
-                            <div style={{ fontSize: 9, color: `${G}60`, marginBottom: 4 }}>BANDWIDTH_LIMIT</div>
-                            <div style={{ fontSize: 16, color: G, fontWeight: 700, fontFamily: 'Oswald, sans-serif' }}>1024 Mbps</div>
+                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, border: `1px solid ${theme.border}` }}>
+                            <div style={{ fontSize: 10, color: theme.dim }}>BW</div>
+                            <div style={{ fontWeight: 700 }}>1024 Mbps</div>
                           </div>
                         </div>
-
-                        <div style={{ background: 'rgba(0,0,0,0.4)', padding: 12, borderRadius: 6, border: `1px solid ${G}10`, fontSize: 11, color: '#90d8b0', lineHeight: 1.6, marginBottom: 15 }}>
-                          <div>&gt; initialazing logical bridge... [OK]</div>
-                          <div>&gt; applying QoS profile: GOLD_SERVICE... [OK]</div>
-                          <div>&gt; mapping IP segment: 187.216.XX.XX... [WAIT]</div>
-                        </div>
-
-                        <button style={{ width: '100%', padding: 12, background: G, border: 'none', borderRadius: 6, color: '#000', fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: 1, cursor: 'pointer', boxShadow: `0 0 15px ${G}40` }}>
-                          EJECUTAR PROVISIONAMIENTO LÓGICO
+                        <button 
+                          onClick={handleAprovisionar}
+                          style={{ width: '100%', padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Ejecutar Aprovisionamiento (US-022)
                         </button>
                       </div>
                     </div>

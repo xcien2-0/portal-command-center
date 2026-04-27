@@ -4,6 +4,7 @@ import uuid
 import xmlrpc.client
 from datetime import datetime
 from typing import List, Dict, Optional
+import token_service
 
 DB_PATH = "backend/db/wfm_orders.json"
 
@@ -158,6 +159,20 @@ class WFMWorkflowService:
             if o["id"] == order_id:
                 o["estado"] = "ALMACEN_VALIDACION"
                 o["historial"].append({"fecha": datetime.now().isoformat(), "accion": "Contrato firmado. Enviado a Almacén", "usuario": usuario})
+                
+                # Emitir Token de Oportunidad Ganada (Bono Comercial)
+                try:
+                    token_service.emitir(
+                        empresa="xcien",
+                        oportunidad_id=order_id,
+                        cliente=o["cliente"],
+                        vendedor=o["comercial"],
+                        monto=1000.0, # Ejemplo de meta
+                        extra={"servicio": o["servicio"], "fase": "contratacion"}
+                    )
+                except Exception as e:
+                    print(f"⚠️ Error emitiendo token: {e}")
+
                 self._save_orders(orders)
                 return o
         return None
@@ -198,6 +213,18 @@ class WFMWorkflowService:
                 o["pm"]["motivo_bloqueo"] = motivo if not ok else None
                 if ok:
                     o["estado"] = "LISTO_INSTALACION"
+                    # Emitir Token de Instalación Exitosa (Bono Técnico)
+                    try:
+                        token_service.emitir(
+                            empresa="xcien",
+                            oportunidad_id=order_id,
+                            cliente=o["cliente"],
+                            vendedor=usuario, # Auditor/Ingeniero
+                            monto=500.0,
+                            extra={"servicio": o["servicio"], "fase": "auditoria_pm"}
+                        )
+                    except Exception as e:
+                        print(f"⚠️ Error emitiendo token en auditoría: {e}")
                 else:
                     # US-027: Generar backlog
                     o["pm"]["backlogs"].append({
