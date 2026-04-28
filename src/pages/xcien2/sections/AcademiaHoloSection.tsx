@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
+import { API_BASE } from '../../../config';
 
 interface Props { theme: ThemeConfig }
 
@@ -37,7 +38,7 @@ export default function AcademiaHoloSection({ theme }: Props) {
   const [score, setScore] = useState<{ correct: number; total: number; pct: number; approved: boolean } | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/odoo/tecnicos')
+    fetch(`${API_BASE}/api/odoo/tecnicos`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -54,7 +55,7 @@ export default function AcademiaHoloSection({ theme }: Props) {
     setStep(2);
     setLoadingQuiz(true);
     try {
-      const res = await fetch('http://localhost:8000/api/diagnostic_exam');
+      const res = await fetch(`${API_BASE}/api/diagnostic_exam`);
       const data = await res.json();
       setQuizData(data);
     } catch (e) {
@@ -87,7 +88,7 @@ export default function AcademiaHoloSection({ theme }: Props) {
     setStep(3);
 
     try {
-      await fetch('http://localhost:8000/api/save_skill_result', {
+      await fetch(`${API_BASE}/api/save_skill_result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre_tecnico: selectedTecnico?.name, resultados: { "Global": pct } })

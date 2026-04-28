@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
+import { API_BASE } from '../../../config';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const SLIDES = ['intro','problema','comparacion','solucion','niveles','badges','leaderboard','roadmap','cta'] as const;
@@ -348,7 +349,7 @@ function SlideExamen({ theme }: { theme: ThemeConfig }) {
     <div style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: 600, display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: `1px solid ${theme.border}`, background: theme.bg }}>
         <iframe 
-          src={`http://localhost:8000/static/examen_holo.html?accent=${encodeURIComponent(theme.accent)}&bg=${encodeURIComponent(theme.bg)}&card=${encodeURIComponent(theme.card)}&text=${encodeURIComponent(theme.text)}&dim=${encodeURIComponent(theme.dim)}`} 
+          src={`${API_BASE}/static/examen_holo.html?accent=${encodeURIComponent(theme.accent)}&bg=${encodeURIComponent(theme.bg)}&card=${encodeURIComponent(theme.card)}&text=${encodeURIComponent(theme.text)}&dim=${encodeURIComponent(theme.dim)}`} 
           style={{ width: '100%', height: '100%', border: 'none' }}
           title="Examen Holo"
         />
@@ -392,9 +393,8 @@ const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
-interface Props { theme: ThemeConfig }
-
-export default function AcademiaSection({ theme }: Props) {
+interface Props { theme: ThemeConfig; activeThemeId?: string }
+export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const [view, setView] = useState<'dashboard' | 'exam'>('dashboard');
   const [idx, setIdx] = useState(0);
   const total = SLIDES.length;
@@ -464,7 +464,7 @@ export default function AcademiaSection({ theme }: Props) {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '30px', position: 'relative' }}>
-        <MatrixBackground />
+        {activeThemeId === 'matrix' && <MatrixBackground />}
         {view === 'dashboard' ? (
           <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
             <SlideComp theme={theme} onStartExam={() => setView('exam')} />

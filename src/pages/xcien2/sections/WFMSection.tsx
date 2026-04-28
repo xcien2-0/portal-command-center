@@ -1,8 +1,39 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig, WFMOrder, WFMOrderState } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '../../../config';
 const G = '#00ff88';
+
+// ── Matrix Background ─────────────────────────────────────────────────────────
+function MatrixBackground() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.1, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
+        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        whiteSpace: 'nowrap', userSelect: 'none'
+      }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} style={{ 
+            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
+            animationDelay: `${-Math.random() * 25}s`,
+            writingMode: 'vertical-rl',
+            textAlign: 'center'
+          }}>
+            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes matrixFall {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm';
 
@@ -37,9 +68,9 @@ function Badge({ label, color }: { label: string; color: string }) {
 }
 
 // ── Main Section ─────────────────────────────────────────────────────────────
-interface Props { theme: ThemeConfig }
+interface Props { theme: ThemeConfig; activeThemeId?: string }
 
-export default function WFMSection({ theme }: Props) {
+export default function WFMSection({ theme, activeThemeId }: Props) {
   const [role, setRole]           = useState<WFMRole>('comercial');
   const [orders, setOrders]       = useState<WFMOrder[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -143,7 +174,8 @@ export default function WFMSection({ theme }: Props) {
   const selectedOrder = orders.find(o => o.id === selectedId);
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: 20 }}>
+    <div style={{ display: 'flex', height: '100%', gap: 20, position: 'relative' }}>
+      {activeThemeId === 'matrix' && <MatrixBackground />}
       
       {/* Sidebar de Roles */}
       <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>

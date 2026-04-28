@@ -4,6 +4,37 @@ import { ThemeConfig, DEFAULT_THEME, PRESET_ACCENTS, PRESET_THEMES, PresetTheme 
 const LS_KEY   = 'xcien2_theme';
 const LS_SAVED = 'xcien2_saved_themes';
 
+// ── Matrix Background ─────────────────────────────────────────────────────────
+function MatrixBackground() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.15, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
+        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        whiteSpace: 'nowrap', userSelect: 'none'
+      }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} style={{ 
+            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
+            animationDelay: `${-Math.random() * 25}s`,
+            writingMode: 'vertical-rl',
+            textAlign: 'center'
+          }}>
+            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes matrixFall {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 interface Props {
   theme: ThemeConfig;
   activeThemeId: string;
@@ -197,13 +228,19 @@ export default function DevPanel({ theme, activeThemeId, onChange, onApplyPreset
   );
 
   return (
-    <div style={{ maxWidth: 700 }}>
+    <div style={{ maxWidth: 800, position: 'relative' }}>
+      {activeThemeId === 'matrix' && <MatrixBackground />}
+      
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: theme.text }}>Editor en vivo</h2>
-          <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Cambios instantáneos · auto-guardado en navegador</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, borderBottom: `1px solid ${accent}40`, paddingBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 12, height: 12, borderRadius: '50%', background: accent, boxShadow: `0 0 15px ${accent}` }} />
+          <div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', color: '#fff', textShadow: `0 0 20px ${accent}`, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: 2 }}>Protocolo Matriz</h2>
+            <p style={{ fontSize: 13, color: accent, margin: 0, fontWeight: 500 }}>Configuración de Núcleo · XCIEN 2.0</p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {btnSm(handleImport, '⬇ Importar JSON', '#4FC3F7')}
@@ -314,6 +351,7 @@ export default function DevPanel({ theme, activeThemeId, onChange, onApplyPreset
         </button>
       </div>
 
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 [
   {
     "id": "OI-8E11B5",
-    "cliente": "Corporativo Cordillera",
+    "cliente": "Corporativo Xcien",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
     "estado": "LISTO_INSTALACION",
@@ -79,6 +79,11 @@
         "fecha": "2026-04-26T22:31:31.299748",
         "accion": "Auditor\u00eda PM: Aprobada",
         "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-27T18:24:30.527496",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
       }
     ]
   },
@@ -97,14 +102,21 @@
       "anteproyecto_url": null
     },
     "almacen": {
-      "disponibilidad": false,
-      "equipos_asignados": [],
+      "disponibilidad": true,
+      "equipos_asignados": [
+        {
+          "modelo": "CCR2004",
+          "sn": "SN-1SN1W"
+        }
+      ],
       "esperando_inventario": false
     },
     "aprovisionamiento": {
       "config_logica": null,
       "parametros_red": {},
-      "listo": false
+      "listo": true,
+      "vlan": 4000,
+      "bw": "1GB"
     },
     "pm": {
       "auditoria_ok": true,
@@ -125,6 +137,46 @@
       },
       {
         "fecha": "2026-04-26T22:20:41.231860",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-27T07:00:34.213894",
+        "accion": "Servicio aprovisionado",
+        "usuario": "Ing. NOC"
+      },
+      {
+        "fecha": "2026-04-27T07:00:42.101372",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-27T07:22:18.721380",
+        "accion": "Equipos asignados en Almac\u00e9n",
+        "usuario": "Jefe Almac\u00e9n"
+      },
+      {
+        "fecha": "2026-04-27T09:49:06.899375",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente Ventas"
+      },
+      {
+        "fecha": "2026-04-27T09:49:14.707113",
+        "accion": "Equipos asignados en Almac\u00e9n",
+        "usuario": "Jefe Almac\u00e9n"
+      },
+      {
+        "fecha": "2026-04-27T09:49:19.861272",
+        "accion": "Servicio aprovisionado",
+        "usuario": "Ing. NOC"
+      },
+      {
+        "fecha": "2026-04-27T09:49:24.838921",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-27T09:49:28.201938",
         "accion": "Auditor\u00eda PM: Aprobada",
         "usuario": "Auditor PM"
       }

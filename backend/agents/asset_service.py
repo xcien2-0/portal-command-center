@@ -68,6 +68,8 @@ def registrar(
     vencimiento_contrato: str = "",
     estado: str = "activo",
     notas: str = "",
+    ip: str = "",
+    network_code: str = "",
 ) -> dict:
     activo_id = f"ACT-{str(uuid.uuid4())[:8].upper()}"
     activo = {
@@ -86,14 +88,53 @@ def registrar(
         "vencimiento_contrato": vencimiento_contrato,
         "estado":               estado,
         "notas":                notas,
+        "ip":                   ip,
+        "network_code":         network_code,
         "registrado_en":        datetime.now(timezone.utc).isoformat(),
         "historial":            [],
     }
     activos = _cargar()
     activos.append(activo)
     _guardar(activos)
+    
+    if ip and categoria == "equipo_red":
+        _sync_to_nocboard(activo)
+
     print(f"✅ Activo registrado: {activo_id} — {nombre} ({empresa.upper()})")
     return activo
+
+def _sync_to_nocboard(activo: dict):
+    """Sincroniza un activo de red con el archivo de configuración de NOCBoard"""
+    NOC_HOSTS_PATH = "/Users/mesquite/Library/Application Support/NOCBoard/hosts.json"
+    if not os.path.exists(NOC_HOSTS_PATH):
+        return
+
+    try:
+        with open(NOC_HOSTS_PATH, "r", encoding="utf-8") as f:
+            hosts = json.load(f)
+        
+        # Evitar duplicados por IP
+        if any(h.get("ip") == activo["ip"] for h in hosts):
+            return
+
+        new_host = {
+            "city" : activo.get("site", "Monterrey"),
+            "id" : str(uuid.uuid4()).upper(),
+            "ip" : activo["ip"],
+            "model" : activo.get("modelo", "Desconocido"),
+            "networkCode" : activo.get("network_code", "X100"),
+            "rawName" : f"{activo.get('network_code','X100')}_{activo['nombre'].replace(' ','_').upper()}",
+            "site" : activo.get("site", "Principal"),
+            "status" : "offline",
+            "vendor" : activo.get("marca", "Generic")
+        }
+        hosts.append(new_host)
+        
+        with open(NOC_HOSTS_PATH, "w", encoding="utf-8") as f:
+            json.dump(hosts, f, indent=2, ensure_ascii=False)
+        print(f"📡 NOCBoard: Host sincronizado automáticamente ({activo['ip']})")
+    except Exception as e:
+        print(f"❌ Error sincronizando con NOCBoard: {e}")
 
 
 def listar(empresa: str = None, categoria: str = None, site: str = None) -> list:

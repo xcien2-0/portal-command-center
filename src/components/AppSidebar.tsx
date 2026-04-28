@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone,
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
-  ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink,
+  ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink, Tag
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -42,17 +42,19 @@ const opsGroup: { label: string; icon: any; children: Item[] } = {
   children: [
     { title: 'Dispatch', url: '/dispatch', icon: Send },
     { title: 'Call Center', url: '/call-center', icon: Phone },
-    { title: 'Scanner', url: '/scan', icon: ScanLine },
+    { title: 'Inventario & Scanner', url: '/scan', icon: ScanLine },
+    { title: 'Creación de Etiquetas', url: '/xcien2?section=etiquetas', icon: Tag, external: true },
   ],
 };
 
 const reportsGroup: { label: string; icon: any; children: Item[] } = {
-  label: 'Reportes',
+  label: 'Reportes & Documentos',
   icon: FileBarChart,
   children: [
     { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
     { title: 'Gobierno', url: '/reportes-gobierno', icon: FileText, gob: true },
     { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
+    { title: 'Biblioteca Documental', url: '/docs', icon: BookOpen },
   ],
 };
 

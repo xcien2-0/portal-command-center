@@ -64,6 +64,47 @@ function HoloGrid() {
   );
 }
 
+function HoloMap({ cities }: { cities: any[] }) {
+  return (
+    <div style={{ position: 'relative', width: '100%', height: 400, background: 'rgba(0,255,136,0.02)', border: `1px solid ${G}15`, borderRadius: 20, marginBottom: 40, overflow: 'hidden' }}>
+      <MatrixBackground />
+      <svg width="100%" height="100%" viewBox="0 0 1000 400" style={{ position: 'relative', zIndex: 2 }}>
+        {/* Connection Lines to Core (Monterrey is around 500,200) */}
+        {cities.map(city => {
+          const isCore = city.name === 'Monterrey';
+          if (isCore) return null;
+          // Simple projected coords based on real lat/lng (Monterrey 25.6, -100.3)
+          const x = 500 + (city.lng + 100.31) * 3000;
+          const y = 200 - (city.lat - 25.68) * 3000;
+          return (
+            <line key={`l-${city.id}`} x1="500" y1="200" x2={x} y2={y} stroke={city.score < 80 ? R : G} strokeWidth="1" strokeDasharray="5,5" opacity="0.4">
+              <animate attributeName="stroke-dashoffset" from="50" to="0" dur="3s" repeatCount="indefinite" />
+            </line>
+          );
+        })}
+
+        {/* Nodes */}
+        {cities.map(city => {
+          const x = 500 + (city.lng + 100.31) * 3000;
+          const y = 200 - (city.lat - 25.68) * 3000;
+          const c = city.score < 80 ? R : G;
+          return (
+            <g key={`n-${city.id}`}>
+              <circle cx={x} cy={y} r="6" fill="#000" stroke={c} strokeWidth="2" />
+              <circle cx={x} cy={y} r="12" fill="transparent" stroke={c} strokeWidth="1" opacity="0.3">
+                <animate attributeName="r" from="6" to="20" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
+              </circle>
+              <text x={x + 15} y={y + 5} fill={c} style={{ fontSize: 12, fontWeight: 700, fontFamily: 'Oswald, sans-serif', textShadow: `0 0 8px ${c}` }}>{city.name}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ position: 'absolute', bottom: 20, left: 20, color: `${G}60`, fontSize: 10, fontFamily: 'monospace' }}>[ MODO: MAPA_HOLOGRAFICO_ACTIVO ]</div>
+    </div>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -77,6 +118,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ── Main component ────────────────────────────────────────────────────────────
 interface Props { 
   theme: ThemeConfig;
+  activeThemeId?: string;
   cities?: NOCCity[];
   alerts?: NOCAlert[];
   activeTenantId?: string | null;
@@ -85,6 +127,7 @@ interface Props {
 
 export default function NocSection({ 
   theme, 
+  activeThemeId,
   cities = [], 
   alerts = [], 
   activeTenantId = null,
@@ -93,9 +136,22 @@ export default function NocSection({
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString('es-MX'));
   const [view, setView] = useState<'Operador' | 'Gerencial'>('Operador');
   const [alertFilter, setAlertFilter] = useState<'Todos' | 'Crítico' | 'Alto'>('Todos');
+  const [selectedSop, setSelectedSop] = useState<{ id: string, content: string } | null>(null);
+
+  const openSop = async (id: string) => {
+    try {
+      const path = id === 'SOP-NOC-001' ? 'estandares/Estándar_Proceso_Soporte_HL.md' : 'estandares/Estándar_Corporativo_de_Instalación_Xcien_estándar_de_instalación.md';
+      const res = await fetch(`${window.location.origin.replace('8080', '8000')}/api/docs/content?path=${path}`);
+      const data = await res.json();
+      setSelectedSop({ id, content: data.content });
+    } catch (e) {
+      console.error(e);
+      setSelectedSop({ id, content: "# Error\nNo se pudo cargar el manual." });
+    }
+  };
 
   useEffect(() => {
-    const id = setInterval(() => setLastUpdated(new Date().toLocaleTimeString('es-MX')), 30_000);
+    const id = setInterval(() => setLastUpdated(new Date().toLocaleTimeString('es-MX')), 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -108,7 +164,7 @@ export default function NocSection({
 
   return (
     <div style={{ position: 'relative', background: '#000c08', borderRadius: theme.radius, border: `1px solid ${G}30`, overflow: 'hidden', padding: 32 }}>
-      <MatrixBackground />
+      {activeThemeId === 'matrix' && <MatrixBackground />}
       <HoloGrid />
       <div style={{ position: 'relative', zIndex: 1 }}>
 
@@ -182,6 +238,9 @@ export default function NocSection({
           </div>
         </div>
 
+        {/* Map visualization */}
+        {view === 'Gerencial' && <HoloMap cities={cities} />}
+
         {/* Node cards */}
         {view === 'Operador' && (
           <div style={{ marginBottom: 40 }}>
@@ -207,7 +266,7 @@ export default function NocSection({
                       <span style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: 18, color: '#fff', textShadow: `0 0 10px ${G}50` }}>{city.name}</span>
                       <span style={{ background: `${isc}20`, color: isc, border: `1px solid ${isc}50`, borderRadius: 4, padding: '2px 10px', fontSize: 10, fontWeight: 800, fontFamily: 'Oswald, sans-serif' }}>{tenant?.name || 'Xcien'}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: `${G}40`, marginBottom: 18, fontFamily: 'monospace' }}>IP: {city.id.slice(0,14)}</div>
+                    <div style={{ fontSize: 11, color: `${G}40`, marginBottom: 18, fontFamily: 'monospace' }}>IP: {(city as any).primary_ip || '0.0.0.0'}</div>
                     <div style={{ display: 'flex', gap: 24 }}>
                       <div>
                         <div style={{ fontSize: 9, color: `${G}25`, marginBottom: 2 }}>LATENCIA</div>
@@ -243,7 +302,7 @@ export default function NocSection({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${G}20`, background: 'rgba(255,255,255,0.03)' }}>
-                {['ID', 'Nodo Principal', 'Tipo de Incidencia', 'Gravedad', 'Workflow'].map(h => (
+                {['ID', 'Nodo Principal', 'Incidencia', 'ID=SOP', 'Gravedad', 'Workflow'].map(h => (
                   <th key={h} style={{ padding: '18px 24px', fontSize: 11, fontWeight: 600, color: `${G}60`, letterSpacing: 2, textAlign: 'left', textTransform: 'uppercase', fontFamily: 'Oswald, sans-serif' }}>{h}</th>
                 ))}
               </tr>
@@ -258,15 +317,30 @@ export default function NocSection({
                     <td style={{ padding: '20px 24px', fontSize: 16, color: '#fff', fontWeight: 600, fontFamily: 'Oswald, sans-serif' }}>{a.cityName}</td>
                     <td style={{ padding: '20px 24px', fontSize: 14, color: '#d8f8e8', fontWeight: 500 }}>{a.type}</td>
                     <td style={{ padding: '20px 24px' }}>
+                      <span 
+                        onClick={() => openSop((a as any).sopId || 'SOP-GEN-001')}
+                        style={{ color: G, fontSize: 12, fontWeight: 800, fontFamily: 'monospace', background: `${G}15`, padding: '4px 10px', borderRadius: 4, border: `1px solid ${G}30`, cursor: 'pointer', transition: 'all 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.background = `${G}30`}
+                        onMouseOut={(e) => e.currentTarget.style.background = `${G}15`}
+                      >
+                        {(a as any).sopId || 'SOP-GEN-001'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: `0 0 15px ${c}`, animation: isCrit ? 'critpulse 1s ease-in-out infinite' : undefined }} />
                         <span style={{ color: c, fontSize: 12, fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: 1 }}>{isCrit ? 'CRITICAL' : 'WARNING'}</span>
                       </div>
                     </td>
                     <td style={{ padding: '20px 24px' }}>
-                      <span style={{ background: a.ticketCreated ? `${G}20` : `${R}20`, color: a.ticketCreated ? G : R, border: `1px solid ${a.ticketCreated ? G : R}`, borderRadius: 6, padding: '5px 14px', fontSize: 11, fontWeight: 800, fontFamily: 'Oswald, sans-serif' }}>
-                        {a.ticketCreated ? 'TICKET OPEN' : 'PENDING'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ background: a.ticketCreated ? `${G}20` : `${R}20`, color: a.ticketCreated ? G : R, border: `1px solid ${a.ticketCreated ? G : R}`, borderRadius: 6, padding: '5px 14px', fontSize: 11, fontWeight: 800, fontFamily: 'Oswald, sans-serif', textAlign: 'center' }}>
+                          {a.ticketCreated ? 'TICKET OPEN' : 'PENDING'}
+                        </span>
+                        {(a as any).odooTicketId && (
+                          <span style={{ fontSize: 9, color: `${G}60`, fontFamily: 'monospace', textAlign: 'center' }}>ODOO: {(a as any).odooTicketId}</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -285,6 +359,21 @@ export default function NocSection({
           ))}
         </div>
       </div>
+
+      {/* SOP Modal */}
+      {selectedSop && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', padding: 40 }}>
+          <div style={{ width: '100%', maxWidth: 800, height: '80%', background: '#000c08', border: `1px solid ${G}`, borderRadius: 24, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: `0 0 50px ${G}40` }}>
+            <div style={{ padding: '20px 32px', borderBottom: `1px solid ${G}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: G, fontWeight: 800, fontSize: 18, fontFamily: 'Oswald, sans-serif' }}>MANUAL DE PROCEDIMIENTO — {selectedSop.id}</span>
+              <button onClick={() => setSelectedSop(null)} style={{ background: 'transparent', border: 'none', color: G, fontSize: 24, cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ flex: 1, padding: 32, overflowY: 'auto', color: '#d8f8e8', fontFamily: 'monospace', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {selectedSop.content}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes nocpulse  { 0%,100%{opacity:1;box-shadow:0 0 25px #00ff88}50%{opacity:.4;box-shadow:0 0 10px #00ff88} }

@@ -66,6 +66,7 @@
   h1, h2, h3, .font-scifi {
     font-family: 'Oswald', sans-serif;
     @apply tracking-wider uppercase;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
   }
 }
 

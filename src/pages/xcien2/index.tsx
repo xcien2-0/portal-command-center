@@ -1,15 +1,19 @@
 import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../../config';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
-import FloatingChat    from './sections/FloatingChat';
-import NocSection      from './sections/NocSection';
+import FloatingChat from './sections/FloatingChat';
+import NocSection from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
 import AcademiaHoloSection from './sections/AcademiaHoloSection';
-import WFMSection      from './sections/WFMSection';
-import TokensSection        from './sections/TokensSection';
+import WFMSection from './sections/WFMSection';
+import TokensSection from './sections/TokensSection';
 import TransaccionesSection from './sections/TransaccionesSection';
-import EtiquetasSection     from './sections/EtiquetasSection';
-import DevPanel        from './DevPanel';
+import EtiquetasSection from './sections/EtiquetasSection';
+import DevPanel from './DevPanel';
+import FodaSection from './sections/FodaSection';
+import TelegramBotSection from './sections/TelegramBotSection';
+import DocsSection from './sections/DocsSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -26,7 +30,7 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
   switch (action.type) {
     case 'patch': return { ...state, ...action.payload };
     case 'reset': return DEFAULT_THEME;
-    default:      return state;
+    default: return state;
   }
 }
 
@@ -34,43 +38,49 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 interface NavEntry { id: SectionId; label: string; icon: string; group?: string }
 
 const NAV: NavEntry[] = [
-  { id: 'inicio',   label: 'Hub Principal',         icon: '🏠' },
-  
-  { id: 'noc',      label: 'Red en Vivo',           icon: '📡', group: 'Operaciones' },
-  { id: 'wfm',      label: 'Control Operativo',     icon: '⚙️', group: 'Operaciones' },
-  { id: 'call',     label: 'Call Center',           icon: '📞', group: 'Operaciones' },
-  { id: 'scan',     label: 'Scanner de Red',        icon: '🔍', group: 'Operaciones' },
-  
-  { id: 'academia', label: 'Dashboard Academia',    icon: '🎓', group: 'Certificación & Academia' },
-  { id: 'tokens',   label: 'Registro de Tokens',    icon: '🔖', group: 'Certificación & Academia' },
-  
-  { id: 'transacciones', label: 'Transacciones Grupo',   icon: '🔄', group: 'Administración' },
-  { id: 'etiquetas',     label: 'Etiquetas & Comprobantes', icon: '🏷️', group: 'Administración' },
-  { id: 'gerencia', label: 'Dashboard Gerencial',   icon: '📊', group: 'Administración' },
-  { id: 'reports',  label: 'Reportes & Gobierno',   icon: '📋', group: 'Administración' },
-  
-  { id: 'bridge',   label: 'Puente IA (Antigravity)', icon: '⚡', group: 'Sistema' },
+  { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
+
+  { id: 'noc', label: 'Red en Vivo', icon: '📡', group: 'Operaciones' },
+  { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
+  { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
+  { id: 'scan', label: 'Inventario & Scanner', icon: '🔍', group: 'Operaciones' },
+  { id: 'etiquetas', label: 'Creación de Etiquetas', icon: '🏷️', group: 'Operaciones' },
+
+  { id: 'academia', label: 'Dashboard Academia', icon: '🎓', group: 'Certificación & Academia' },
+  { id: 'tokens', label: 'Registro de Tokens', icon: '🔖', group: 'Certificación & Academia' },
+
+  { id: 'transacciones', label: 'Transacciones Grupo', icon: '🔄', group: 'Administración' },
+  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Administración' },
+  { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
+  { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
+
+  { id: 'bridge', label: 'Puente IA (Antigravity)', icon: '⚡', group: 'Sistema' },
   { id: 'war-room', label: 'Sala de Guerra (War Room)', icon: '⚔️', group: 'Sistema' },
-  { id: 'mobile',   label: 'Conectar Celular',        icon: '📱', group: 'Sistema' },
-  { id: 'editor',   label: 'Ajustes del Portal',    icon: '🎨', group: 'Configuración' },
+  { id: 'mobile', label: 'Conectar Celular', icon: '📱', group: 'Sistema' },
+  { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Sistema' },
+  { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
+  { id: 'editor', label: 'Ajustes del Portal', icon: '🎨', group: 'Configuración' },
 ];
 
 const SECTION_TITLE: Record<SectionId, string> = {
-  inicio:   'Hub Principal',
-  noc:      'Red en Vivo',
-  wfm:      'Control Operativo — WFM',
-  call:     'Centro de Atención (Call Center)',
-  scan:     'Scanner de Inventario',
-  tokens:        'Tokens & Certificados',
+  inicio: 'Hub Principal',
+  noc: 'Red en Vivo',
+  wfm: 'Control Operativo — WFM',
+  call: 'Centro de Atención (Call Center)',
+  scan: 'Inventario & Scanner QR',
+  tokens: 'Tokens & Certificados',
   transacciones: 'Transacciones Intragrupo',
-  etiquetas:     'Etiquetas & Comprobantes',
+  etiquetas: 'Creación de Etiquetas & Comprobantes',
+  foda: 'Estrategia FODA (War Room)',
   academia: 'Academia XCIEN',
   gerencia: 'Dashboard Gerencial',
-  reports:  'Reportes & Gobierno',
-  bridge:   'Puente IA (Antigravity)',
+  reports: 'Reportes & Gobierno',
+  bridge: 'Puente IA (Antigravity)',
   'war-room': 'Sala de Guerra (Multi-Agente)',
-  mobile:   'Conexión Móvil — Acceso QR',
-  editor:   'Personalización del Portal',
+  mobile: 'Conexión Móvil — Acceso QR',
+  telegram: 'Telegram Bot Alarms',
+  docs: 'Biblioteca Documental',
+  editor: 'Protocolo Matriz — Configuración',
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -83,7 +93,7 @@ interface SidebarProps {
 function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEntry, active: SectionId, onSelect: (id: SectionId) => void, theme: ThemeConfig, sub?: boolean }) {
   const isActive = active === item.id;
   const accent = theme.accent;
-  
+
   return (
     <button
       onClick={() => onSelect(item.id)}
@@ -93,7 +103,7 @@ function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEn
         background: isActive ? `${accent}20` : 'transparent',
         color: isActive ? accent : (sub ? theme.dim : theme.text),
         border: 'none', borderRadius: 8, cursor: 'pointer',
-        transition: 'all 0.2s', fontSize: sub ? '0.85rem' : '0.9rem', 
+        transition: 'all 0.2s', fontSize: sub ? '0.85rem' : '0.9rem',
         fontWeight: isActive ? 600 : 500,
         width: '100%', textAlign: 'left',
       }}
@@ -117,7 +127,7 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
   }, []);
 
   const toggleGroup = (label: string) => {
-    setExpandedGroups(prev => 
+    setExpandedGroups(prev =>
       prev.includes(label) ? prev.filter(g => g !== label) : [...prev, label]
     );
   };
@@ -190,8 +200,8 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
                 </div>
                 <span style={{ fontSize: 10, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none', opacity: 0.5 }}>▼</span>
               </button>
-              
-              <div style={{ 
+
+              <div style={{
                 maxHeight: isExpanded ? 500 : 0, overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0, 1, 0, 1)',
                 paddingLeft: 8, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 2
               }}>
@@ -250,38 +260,40 @@ interface ContentProps {
   bridgeData: any;
 }
 
-function Content({ 
+function Content({
   section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
   cities, alerts, activeTenantId, onTenantChange, bridgeData
 }: ContentProps) {
   const padding = theme.compact ? 20 : 32;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding, background: theme.bg, minWidth: 0 }}>
-      {section === 'noc'      && (
+      {section === 'noc' && (
         <NocSection 
           theme={theme} 
+          activeThemeId={activeThemeId}
           cities={cities} 
           alerts={alerts} 
           activeTenantId={activeTenantId} 
           onTenantChange={onTenantChange} 
         />
       )}
-      {section === 'academia' && <AcademiaSection theme={theme} />}
-      {section === 'wfm'      && <WFMSection      theme={theme} />}
-      {section === 'call'     && <CallCenter />}
-      {section === 'scan'     && <Scan />}
+      {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'foda'     && <FodaSection     theme={theme} />}
+      {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'scan' && <Scan />}
       {section === 'gerencia' && <Gerencia />}
-      {section === 'reports'  && <ReportesGobierno />}
-      
-      {section === 'bridge'   && (
+      {section === 'reports' && <ReportesGobierno />}
+
+      {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
           <div style={{ padding: 20, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: theme.accent, marginBottom: 4 }}>⚡ ANTIGRAVITY BRIDGE</h2>
             <p style={{ fontSize: 13, color: theme.dim }}>Terminal de ejecución en tiempo real y recepción de órdenes.</p>
           </div>
-          
-          <div style={{ 
-            flex: 1, background: '#000', border: `1px solid ${theme.accent}40`, borderRadius: 12, 
+
+          <div style={{
+            flex: 1, background: '#000', border: `1px solid ${theme.accent}40`, borderRadius: 12,
             padding: 20, fontFamily: 'monospace', fontSize: 13, overflowY: 'auto',
             boxShadow: `0 0 30px ${theme.accent}10`, position: 'relative'
           }}>
@@ -302,7 +314,7 @@ function Content({
             <div style={{ fontSize: 10, fontWeight: 800, color: theme.accent, marginBottom: 8, letterSpacing: '0.1em' }}>TERMINAL DE COMANDOS (Escribe aquí)</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ color: theme.accent, fontSize: 20, fontWeight: 900 }}>{'>'}</span>
-              <input 
+              <input
                 id="bridge-input-main"
                 autoFocus
                 placeholder="Escribe tu orden para Antigravity..."
@@ -314,7 +326,7 @@ function Content({
                     el.value = 'Enviando...';
                     el.disabled = true;
                     try {
-                      await fetch('http://localhost:8000/api/bridge/command', {
+                      await fetch(`${API_BASE}/api/bridge/command`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ command: val, context: 'bridge' })
@@ -326,8 +338,8 @@ function Content({
                     el.focus();
                   }
                 }}
-                style={{ 
-                  flex: 1, background: 'transparent', border: 'none', 
+                style={{
+                  flex: 1, background: 'transparent', border: 'none',
                   color: '#fff', outline: 'none', fontSize: 16, fontWeight: 500,
                   fontFamily: 'monospace'
                 }}
@@ -366,7 +378,7 @@ function Content({
             <div style={{ fontSize: 10, fontWeight: 800, color: '#FFB703', marginBottom: 8, letterSpacing: '0.1em' }}>INTERVENIR EN LA ORQUESTACIÓN</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ color: '#FFB703', fontSize: 20, fontWeight: 900 }}>{'>'}</span>
-              <input 
+              <input
                 id="war-room-input"
                 placeholder="Da una orden a los agentes (ej: 'Cancela el envío y prioriza Monterrey')"
                 onKeyDown={async (e) => {
@@ -377,7 +389,7 @@ function Content({
                     el.value = 'Procesando...';
                     el.disabled = true;
                     try {
-                      await fetch('http://localhost:8000/api/bridge/command', {
+                      await fetch(`${API_BASE}/api/bridge/command`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ command: val, context: 'war_room' })
@@ -389,9 +401,9 @@ function Content({
                     el.focus();
                   }
                 }}
-                style={{ 
-                  flex: 1, background: 'transparent', border: 'none', 
-                  color: '#fff', outline: 'none', fontSize: 16, fontFamily: 'monospace' 
+                style={{
+                  flex: 1, background: 'transparent', border: 'none',
+                  color: '#fff', outline: 'none', fontSize: 16, fontFamily: 'monospace'
                 }}
               />
             </div>
@@ -405,15 +417,15 @@ function Content({
             <p style={{ fontSize: 16, color: theme.dim }}>Escanea el código para llevar el centro de mando XCIEN 2.0 en tu celular.</p>
           </div>
 
-          <div style={{ 
-            background: '#fff', padding: 24, borderRadius: 24, 
+          <div style={{
+            background: '#fff', padding: 24, borderRadius: 24,
             boxShadow: `0 20px 50px ${theme.accent}30`,
             border: `4px solid ${theme.accent}`
           }}>
-            <img 
-              src="/mobile_qr.png" 
-              alt="QR de Acceso" 
-              style={{ width: 250, height: 250, imageRendering: 'pixelated' }} 
+            <img
+              src="/mobile_qr.png"
+              alt="QR de Acceso"
+              style={{ width: 250, height: 250, imageRendering: 'pixelated' }}
             />
           </div>
 
@@ -427,10 +439,12 @@ function Content({
           </p>
         </div>
       )}
-      {section === 'tokens'        && <TokensSection        theme={theme} />}
-      {section === 'transacciones' && <TransaccionesSection  theme={theme} />}
-      {section === 'etiquetas'     && <EtiquetasSection      theme={theme} />}
-      {section === 'editor'   && (
+      {section === 'telegram' && <TelegramBotSection theme={theme} />}
+      {section === 'docs' && <DocsSection theme={theme} />}
+      {section === 'tokens'        && <TokensSection        theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'transacciones' && <TransaccionesSection  theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'etiquetas'     && <EtiquetasSection      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'editor' && (
         <DevPanel
           theme={theme}
           activeThemeId={activeThemeId}
@@ -456,9 +470,9 @@ export default function Xcien2Page() {
   useEffect(() => {
     const fetchBridge = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/bridge');
+        const res = await fetch(`${API_BASE}/api/bridge`);
         if (res.ok) setBridgeData(await res.json());
-      } catch (e) {}
+      } catch (e) { }
     };
     const id = setInterval(fetchBridge, 3000);
     fetchBridge();
@@ -474,7 +488,7 @@ export default function Xcien2Page() {
       window.history.replaceState({}, '', newUrl);
     }
   }, [section]);
-  const [theme, dispatch]         = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
+  const [theme, dispatch] = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
       const saved = localStorage.getItem('xcien2_theme');
       return saved ? { ...initial, ...JSON.parse(saved) } : initial;
@@ -501,9 +515,9 @@ export default function Xcien2Page() {
     return () => clearInterval(id);
   }, []);
 
-  const patchTheme   = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
-  const resetTheme   = useCallback(() => { dispatch({ type: 'reset' }); setActiveThemeId('xcien'); }, []);
-  const applyPreset  = useCallback((preset: PresetTheme) => {
+  const patchTheme = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
+  const resetTheme = useCallback(() => { dispatch({ type: 'reset' }); setActiveThemeId('xcien'); }, []);
+  const applyPreset = useCallback((preset: PresetTheme) => {
     dispatch({ type: 'patch', payload: preset.config });
     setActiveThemeId(preset.id);
   }, []);
@@ -519,7 +533,7 @@ export default function Xcien2Page() {
     root.style.setProperty('--xcien-dim', theme.dim);
     root.style.setProperty('--xcien-radius', `${theme.radius}px`);
     root.style.setProperty('--xcien-font', `${theme.baseFontSize}px`);
-    
+
     // Update body background to match theme
     document.body.style.background = theme.bg;
   }, [theme]);

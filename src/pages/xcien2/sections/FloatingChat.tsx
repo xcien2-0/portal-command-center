@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeConfig, ChatMessage } from '../types';
-
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '../../../config';
 
 async function callDirectorAPI(message: string, history: {role: string, content: string}[]): Promise<string> {
   const res = await fetch(`${API_BASE}/api/director/chat`, {
@@ -197,9 +196,11 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
               border: `1px solid ${theme.border}`,
               padding: '10px 16px',
               borderRadius: theme.radius,
-              color: theme.text,
-              fontSize: 13,
+              color: '#00FF65',
+              fontWeight: '700',
+              fontSize: '14px',
               outline: 'none',
+              caretColor: '#00FF65'
             }}
           />
           <button

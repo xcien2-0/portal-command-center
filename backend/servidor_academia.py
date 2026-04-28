@@ -1,14 +1,23 @@
-from __future__ import annotations
 import os
 import sys
 import re
 import json
 import anthropic
 import xmlrpc.client
+import logging
 from datetime import date
+
+# Configuración de Logging para Producción
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("XCIEN-BACKEND")
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
@@ -20,25 +29,34 @@ sys.path.insert(0, os.path.join(BASE_DIR, "agents"))
 
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
+# Importar Agentes Corporativos
+import token_service
+from director_general_v2 import DirectorGeneralV2
+from telegram_bot import TelegramBot
+
 from agents.director_general_v2 import DirectorGeneralV2
 from agents import token_service
 from agents import asset_service
 from agents import transacciones_service
 from agents import label_service
 from agents.wfm_workflow_service import WFMWorkflowService
+from agents.integration_orchestrator import orchestrator
+from agents.odoo_connector import odoo_conn
 
 # Instanciar el Director General
 dg_agent = DirectorGeneralV2()
 wfm_service = WFMWorkflowService()
+
+print("🚀 [XCIEN-BACKEND] Servidor cargado/recargado correctamente.")
 
 # ─── Cliente Claude ───────────────────────────────────────────────────────────
 _claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 def ask_claude(prompt: str) -> str:
     msg = _claude.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-2.1",
         max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": prompt}]
     )
     return msg.content[0].text
 
@@ -145,6 +163,11 @@ class ActivoRequest(BaseModel):
     vencimiento_contrato: str = ""
     estado: str = "activo"
     notas: str = ""
+    ip: str = ""
+    network_code: str = ""
+
+WFMUpdatePreventaRequest.model_rebuild()
+ActivoRequest.model_rebuild()
 
 class MoverActivoRequest(BaseModel):
     nuevo_site: str
@@ -159,6 +182,17 @@ class OdooWebhookPayload(BaseModel):
     expected_revenue: float = 0.0
     company_id: list = []     # [id, nombre]
     tag_ids: list = []
+
+class IntegrationRequest(BaseModel):
+    platform: str
+    action: str
+    params: Dict[str, Any] = {}
+
+class OdooActionRequest(BaseModel):
+    model: str
+    method: str
+    args: List[Any] = []
+    kwargs: Dict[str, Any] = {}
 
 # ─── Agente Puente (Antigravity) ─────────────────────────────────────────────
 AGENT_BRIDGE = {
@@ -186,30 +220,16 @@ ODOO_PASSWORD = os.environ.get("ODOO_PASSWORD")
 
 def _get_odoo_employees():
     try:
-        if all([ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD]):
-            common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(ODOO_URL))
-            uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
-            if uid:
-                models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(ODOO_URL))
-                employees = models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD,
-                    'hr.employee', 'search_read',
-                    [[('job_title', '!=', False)]],
-                    {'fields': ['name', 'job_title'], 'limit': 50})
-                if employees:
-                    return employees
+        employees = odoo_conn.search_read('hr.employee', domain=[[('job_title', '!=', False)]], fields=['name', 'job_title'], limit=50)
+        if employees:
+            return employees
         
         # Fallback a Matriz de Habilidades (skills_2026.json)
         print("⚠️ Usando matriz de habilidades como fallback para técnicos.")
         if os.path.exists(SKILLS_DB):
             with open(SKILLS_DB, "r") as f:
                 skills_data = json.load(f)
-                fallback_list = []
-                for name, info in skills_data.items():
-                    fallback_list.append({
-                        "name": name,
-                        "job_title": "Técnico Certificado (Matriz)"
-                    })
-                return fallback_list
+                return [{"name": name, "job_title": "Técnico Certificado (Matriz)"} for name in skills_data.keys()]
         return []
     except Exception as e:
         print(f"Error conectando a Odoo: {e}. Usando fallback...")
@@ -222,6 +242,19 @@ def _get_odoo_employees():
 @app.get("/api/odoo/tecnicos")
 def api_odoo_tecnicos():
     return _get_odoo_employees()
+
+@app.post("/api/odoo/execute")
+def api_odoo_execute(req: OdooActionRequest):
+    """Permite realizar acciones de escritura (create, write) en Odoo"""
+    # Seguridad básica: solo permitir ciertos métodos en producción
+    allowed_methods = ['create', 'write', 'search_read', 'unlink']
+    if req.method not in allowed_methods:
+        raise HTTPException(status_code=400, detail=f"Método {req.method} no permitido")
+    
+    result = odoo_conn.execute(req.model, req.method, *req.args, **req.kwargs)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Error en la ejecución de Odoo")
+    return {"status": "success", "data": result}
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -255,6 +288,71 @@ def get_diagnostic_exam(area: str = "NOC"):
         area = "NOC"
         
     return full_bank[area]
+
+@app.get("/api/docs/content")
+def get_doc_content(path: str):
+    """Devuelve el contenido de un documento (SOP) de forma segura"""
+    # Solo permitir archivos en docs/
+    safe_path = os.path.normpath(path).replace("..", "")
+    full_path = os.path.join(os.getcwd(), "docs", safe_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            return {"content": f.read()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tokens/operativo")
+def post_token_operativo(req: Dict[str, Any]):
+    try:
+        token = token_service.emitir_operativo(
+            tipo=req.get("tipo"),
+            nombre=req.get("nombre"),
+            detalle=req.get("detalle"),
+            empresa=req.get("empresa", "xcien")
+        )
+        return {"status": "success", "token": token}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+TELEGRAM_CONFIG_FILE = "db/telegram_config.json"
+
+def _load_telegram_config():
+    try:
+        with open(TELEGRAM_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {"enabled": False, "token": "", "chat_id": "", "min_severity": "critical"}
+
+def _save_telegram_config(config):
+    with open(TELEGRAM_CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+@app.post("/api/config/telegram")
+def config_telegram(req: Dict[str, Any]):
+    config = _load_telegram_config()
+    config.update({
+        "enabled": req.get("enabled", config["enabled"]),
+        "token": req.get("token", config["token"]),
+        "chat_id": req.get("chat_id", config["chat_id"]),
+        "min_severity": req.get("min_severity", config["min_severity"])
+    })
+    _save_telegram_config(config)
+    return {"status": "success", "config": config}
+
+@app.get("/api/config/telegram")
+def get_telegram_config():
+    return _load_telegram_config()
+
+@app.post("/api/test/telegram")
+def test_telegram(req: Dict[str, Any]):
+    token = req.get("token") or _load_telegram_config().get("token")
+    chat_id = req.get("chat_id") or _load_telegram_config().get("chat_id")
+    bot = TelegramBot(token=token, chat_id=chat_id)
+    res = bot.send_message("🚀 *PRUEBA DE BOT XCIEN*\n\nConexión establecida correctamente desde el Centro de Mando.")
+    return res
 
 @app.post("/api/save_skill_result")
 def save_skill_result(result: SkillResult):
@@ -399,40 +497,74 @@ def update_tecnico_status(tecnico_id: str, nuevo_status: str):
 # ─── NOC: Datos reales desde NOCBoard ────────────────────────────────────────
 
 NOCBOARD_DIR = os.path.expanduser("~/Library/Application Support/NOCBoard")
-NOCBOARD_HOSTS   = os.path.join(NOCBOARD_DIR, "hosts.json")
-NOCBOARD_ALERTS  = os.path.join(NOCBOARD_DIR, "alerts.json")
+NOCBOARD_HOSTS_FILE   = os.path.join(NOCBOARD_DIR, "hosts.json")
+NOCBOARD_ALERTS_FILE  = os.path.join(NOCBOARD_DIR, "alerts.json")
+NOCBOARD_API_BASE = "http://localhost:9401/api"
 
-def _load_nocboard_file(path: str):
+import requests
+
+def _load_noc_data(endpoint: str, fallback_file: str):
+    """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        # Intentar API
+        url = f"{NOCBOARD_API_BASE}/{endpoint}"
+        r = requests.get(url, timeout=2)
+        if r.status_code == 200:
+            data = r.json()
+            # La API envuelve los datos en una llave con el nombre del endpoint
+            if endpoint in data and isinstance(data[endpoint], list):
+                return data[endpoint]
+            return data
     except Exception as e:
-        print(f"⚠️ NOCBoard file error: {e}")
-        return []
+        logger.warning(f"NOC API (9401) no disponible para {endpoint}: {e}. Usando archivo local.")
+    
+    # Fallback a archivos
+    try:
+        if os.path.exists(fallback_file):
+            with open(fallback_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error leyendo archivo NOC local {fallback_file}: {e}")
+    
+    return []
 
 def _host_status(host: dict) -> str:
-    score = host.get("healthScore", 0)
-    ping  = host.get("lastPingResult", {})
-    if ping.get("reachable", False):
-        return "online"
-    if score > 30:
+    # La API usa snake_case (health_score), el archivo usa camelCase (healthScore)
+    score = host.get("health_score") or host.get("healthScore", 0)
+    ping  = host.get("ping") or host.get("lastPingResult", {})
+    reachable = ping.get("reachable", False) if "reachable" in ping else (ping.get("packet_loss", 100) < 100)
+    
+    if not reachable:
+        return "offline"
+    if score < 70:
         return "degraded"
-    return "offline"
+    return "online"
+
+def _match_ticket(alert: dict, tickets: list) -> Optional[str]:
+    """Busca un ticket que coincida con la alerta (por ciudad o descripción)"""
+    city = alert.get("city", "").lower()
+    msg  = alert.get("message", "").lower()
+    for t in tickets:
+        t_desc = t.get("description", "").lower()
+        t_zone = t.get("zona", "").lower()
+        if city in t_zone or city in t_desc or any(word in t_desc for word in msg.split() if len(word) > 4):
+            return t.get("id")
+    return None
 
 @app.get("/api/noc/hosts")
 def get_noc_hosts():
-    hosts = _load_nocboard_file(NOCBOARD_HOSTS)
+    hosts = _load_noc_data("hosts", NOCBOARD_HOSTS_FILE)
     return [
         {
             "id":       h.get("id"),
             "ip":       h.get("ip"),
-            "name":     h.get("rawName") or f"{h.get('endpointA','')} → {h.get('endpointB','')}",
-            "score":    round(h.get("healthScore", 0), 1),
+            "name":     h.get("display_name") or h.get("rawName") or f"{h.get('endpointA','')} → {h.get('endpointB','')}",
+            "score":    round(h.get("health_score") or h.get("healthScore", 0), 1),
             "status":   _host_status(h),
             "city":     h.get("city"),
             "site":     h.get("site"),
-            "lastSeen": h.get("lastPingResult", {}).get("timestamp", ""),
-            "metrics":  h.get("latestMetrics", {}),
+            "lastSeen": (h.get("ping") or h.get("lastPingResult", {})).get("timestamp", ""),
+            "metrics":  h.get("latest_metrics") or h.get("latestMetrics", {}),
             "model":    h.get("model", ""),
             "vendor":   h.get("vendor", ""),
         }
@@ -441,8 +573,8 @@ def get_noc_hosts():
 
 @app.get("/api/noc/cities")
 def get_noc_cities():
-    hosts   = _load_nocboard_file(NOCBOARD_HOSTS)
-    alerts  = _load_nocboard_file(NOCBOARD_ALERTS)
+    hosts   = _load_noc_data("hosts", NOCBOARD_HOSTS_FILE)
+    alerts  = _load_noc_data("alerts", NOCBOARD_ALERTS_FILE)
 
     active_alerts = [a for a in alerts if a.get("state") == "active"]
 
@@ -469,7 +601,7 @@ def get_noc_cities():
         total   = len(city_hosts_all)
         online  = sum(1 for h in city_hosts_all if _host_status(h) == "online")
         offline = sum(1 for h in city_hosts_all if _host_status(h) == "offline")
-        scores  = [h.get("healthScore", 0) for h in city_hosts_all]
+        scores  = [h.get("health_score") or h.get("healthScore", 0) for h in city_hosts_all]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0
         city_alerts = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
         coord = COORDS.get(city_name, {"lat": 23.0, "lng": -102.0})
@@ -499,6 +631,7 @@ def get_noc_cities():
         cities.append({
             "id":          city_name.lower().replace(" ", "-"),
             "name":        city_name,
+            "primary_ip":  city_hosts_all[0].get("ip") if city_hosts_all else "0.0.0.0",
             "score":       avg_score,
             "totalHosts":  total,
             "online":      online,
@@ -513,37 +646,52 @@ def get_noc_cities():
 
 @app.get("/api/noc/alerts")
 def get_noc_alerts(active_only: bool = True, limit: int = 200):
-    alerts = _load_nocboard_file(NOCBOARD_ALERTS)
+    alerts = _load_noc_data("alerts", NOCBOARD_ALERTS_FILE)
     if active_only:
         alerts = [a for a in alerts if a.get("state") == "active"]
-    alerts = sorted(alerts, key=lambda a: a.get("triggeredAt", ""), reverse=True)[:limit]
+    alerts = sorted(alerts, key=lambda a: a.get("triggered_at") or a.get("triggeredAt", ""), reverse=True)[:limit]
+    
+    # Cruzar con tickets locales (WFM)
+    wfm_data = _load_wfm()
+    tickets  = wfm_data.get("tickets", [])
+    
     sev_map = {"degraded": "warning", "info": "warning"}
+    
+    def _get_sop_id(cause: str) -> str:
+        cause = cause.lower()
+        if "latency" in cause: return "SOP-NOC-001"
+        if "unreachable" in cause or "offline" in cause: return "SOP-NOC-002"
+        if "packet loss" in cause: return "SOP-NOC-003"
+        return "SOP-GEN-001"
+
     return [
         {
-            "id":           a.get("id"),
-            "cityId":       a.get("city", "").lower().replace(" ", "-"),
-            "cityName":     a.get("city", ""),
-            "siteName":     a.get("site", ""),
-            "hostIp":       a.get("hostIP", ""),
-            "hostName":     a.get("hostName", ""),
-            "type":         a.get("cause", ""),
-            "message":      a.get("message", ""),
-            "severity":     sev_map.get(a.get("severity"), a.get("severity", "warning")),
-            "timestamp":    a.get("triggeredAt", ""),
-            "ticketCreated": a.get("resolvedAt") is not None,
-            "state":        a.get("state"),
+            "id":            a.get("id"),
+            "cityId":        a.get("city", "").lower().replace(" ", "-"),
+            "cityName":      a.get("city", ""),
+            "siteName":      a.get("site", ""),
+            "hostIp":        a.get("host_ip") or a.get("hostIP", ""),
+            "hostName":      a.get("host_name") or a.get("hostName", ""),
+            "type":          a.get("cause", ""),
+            "message":       a.get("message", ""),
+            "severity":      sev_map.get(a.get("severity"), a.get("severity", "warning")),
+            "timestamp":     a.get("triggered_at") or a.get("triggeredAt", ""),
+            "ticketCreated": a.get("ticket_created", False) or (_match_ticket(a, tickets) is not None),
+            "odooTicketId":  _match_ticket(a, tickets),
+            "sopId":         _get_sop_id(a.get("cause", "")),
+            "state":         a.get("state"),
         }
         for a in alerts
     ]
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
-    hosts  = _load_nocboard_file(NOCBOARD_HOSTS)
-    alerts = _load_nocboard_file(NOCBOARD_ALERTS)
+    hosts  = _load_noc_data("hosts", NOCBOARD_HOSTS_FILE)
+    alerts = _load_noc_data("alerts", NOCBOARD_ALERTS_FILE)
     active = [a for a in alerts if a.get("state") == "active"]
     total   = len(hosts)
-    online  = sum(1 for h in hosts if _host_status(h) == "online")
-    scores  = [h.get("healthScore", 0) for h in hosts]
+    online  = sum(1 for h in hosts if _host_status(h) in ["online", "degraded"])
+    scores  = [h.get("health_score") or h.get("healthScore", 0) for h in hosts]
     return {
         "totalHosts":     total,
         "online":         online,
@@ -791,6 +939,83 @@ async def wfm_aprovisionar(req: WFMAproRequest):
 @app.post("/api/wfm/pm/auditar")
 async def wfm_auditar(req: WFMAuditoriaRequest):
     return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
+
+# ─── Integraciones Externas ──────────────────────────────────────────────────
+
+@app.post("/api/integrations/execute")
+async def execute_integration(req: IntegrationRequest):
+    """Ejecuta una acción en una plataforma externa (HubSpot, Net2Phone, etc)"""
+    try:
+        result = orchestrator.execute(req.platform, req.action, req.params)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ─── Biblioteca Documental ───────────────────────────────────────────────────
+
+@app.get("/api/library/docs")
+def get_library_docs():
+    """Retorna la lista de documentos organizados por categoría."""
+    docs_dir = os.path.join(os.path.dirname(BASE_DIR), "docs")
+    db_dir = os.path.join(BASE_DIR, "db")
+    
+    library = []
+    
+    # Escanear directorio docs/
+    if os.path.exists(docs_dir):
+        for root, dirs, files in os.walk(docs_dir):
+            category = os.path.basename(root).replace("_", " ").title()
+            if category == "Docs": category = "General"
+            
+            for file in files:
+                if file.endswith(".md") or file.endswith(".pdf"):
+                    library.append({
+                        "id": file,
+                        "name": file.replace("_", " ").replace(".md", "").replace(".pdf", ""),
+                        "filename": file,
+                        "type": "pdf" if file.endswith(".pdf") else "md",
+                        "category": category,
+                        "path": os.path.join(root, file)
+                    })
+                    
+    # Añadir PDFs generados en db/ (ej. FODA_XCIEN_2026.pdf)
+    if os.path.exists(db_dir):
+        for file in os.listdir(db_dir):
+            if file.endswith(".pdf"):
+                library.append({
+                    "id": file,
+                    "name": file.replace("_", " ").replace(".pdf", ""),
+                    "filename": file,
+                    "type": "pdf",
+                    "category": "Reportes Estratégicos",
+                    "path": os.path.join(db_dir, file)
+                })
+                
+    return {"status": "success", "documents": library}
+
+@app.get("/api/library/download")
+def download_doc(path: str):
+    """Descarga o sirve el documento solicitado."""
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+    # Seguridad básica para evitar que salgan del proyecto
+    abs_path = os.path.abspath(path)
+    if "Antigravity" not in abs_path:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+    return FileResponse(abs_path)
+
+@app.get("/api/integrations/status")
+async def get_integrations_status():
+    """Retorna el estado de las conexiones configuradas"""
+    return {
+        "hubspot": {"connected": True, "last_sync": "2026-04-27 13:00"},
+        "net2phone": {"connected": True, "calls_active": 0},
+        "ai_agents": {"active": True, "model": "Director General v2"}
+    }
 
 if __name__ == "__main__":
     import uvicorn

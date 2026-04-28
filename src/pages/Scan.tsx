@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, ChevronRight, Check, X, Search, ScanLine, Package } from 'lucide-react';
-
-const API = 'http://localhost:8000';
+import { API_BASE as API } from '../config';
 
 /* ── tokens ── */
 const dk = {

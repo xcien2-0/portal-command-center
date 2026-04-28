@@ -1,7 +1,36 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
-
-const API = 'http://localhost:8000';
+import { API_BASE as API } from '../../../config';
+// ── Matrix Background ─────────────────────────────────────────────────────────
+function MatrixBackground() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.1, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
+        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        whiteSpace: 'nowrap', userSelect: 'none'
+      }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} style={{ 
+            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
+            animationDelay: `${-Math.random() * 25}s`,
+            writingMode: 'vertical-rl',
+            textAlign: 'center'
+          }}>
+            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes matrixFall {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 interface Activo {
   activo_id: string;
@@ -11,6 +40,8 @@ interface Activo {
   regimen: string;
   site: string;
   numero_serie: string;
+  ip?: string;
+  categoria: string;
 }
 
 interface Tx {
@@ -35,15 +66,20 @@ function fmt(n: number) {
   return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 0 })}`;
 }
 
-interface Props { theme: ThemeConfig }
+interface Props { theme: ThemeConfig; activeThemeId?: string }
 
-export default function EtiquetasSection({ theme }: Props) {
+export default function EtiquetasSection({ theme, activeThemeId }: Props) {
   const [activos, setActivos]   = useState<Activo[]>([]);
   const [txs, setTxs]           = useState<Tx[]>([]);
   const [tab, setTab]           = useState<'activos' | 'transacciones'>('activos');
   const [filtroSite, setFiltroSite] = useState('');
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [online, setOnline]     = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: '', categoria: 'equipo_red', empresa: 'xcien', regimen: 'PROPIO',
+    site: '', numero_serie: '', marca: '', modelo: '', ip: '', network_code: 'X100'
+  });
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +91,34 @@ export default function EtiquetasSection({ theme }: Props) {
       setOnline(true);
     }).catch(() => setOnline(false));
   }, []);
+
+  const fetchAll = () => {
+    Promise.all([
+      fetch(`${API}/api/activos`).then(r => r.json()),
+      fetch(`${API}/api/transacciones`).then(r => r.json()),
+    ]).then(([a, t]) => {
+      if (Array.isArray(a)) setActivos(a);
+      if (Array.isArray(t)) setTxs(t);
+      setOnline(true);
+    }).catch(() => setOnline(false));
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API}/api/activos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert("✅ Activo registrado y sincronizado con NOCBoard");
+        setShowForm(false);
+        setFormData({ ...formData, nombre: '', ip: '', numero_serie: '' });
+        fetchAll();
+      }
+    } catch (err) { alert("Error registrando activo"); }
+  };
 
   const sites   = [...new Set(activos.map(a => a.site).filter(Boolean))];
   const empresas = [...new Set(activos.map(a => a.empresa))];
@@ -82,7 +146,8 @@ export default function EtiquetasSection({ theme }: Props) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
+      {activeThemeId === 'matrix' && <MatrixBackground />}
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -96,10 +161,46 @@ export default function EtiquetasSection({ theme }: Props) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <button style={btnStyle(tab === 'activos')}       onClick={() => setTab('activos')}>📦 Activos ({activos.length})</button>
         <button style={btnStyle(tab === 'transacciones')} onClick={() => setTab('transacciones')}>🔄 Transacciones ({txs.length})</button>
+        <button 
+          style={{ ...btnStyle(showForm, '#00C896'), marginLeft: 'auto' }} 
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? '✖ Cancelar' : '➕ Nuevo Activo de Red'}
+        </button>
       </div>
+
+      {showForm && (
+        <form onSubmit={handleRegister} style={{ background: 'rgba(0,200,150,0.05)', border: `1px solid #00C89640`, borderRadius: theme.radius, padding: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, color: theme.dim }}>Nombre del Equipo</label>
+            <input required style={{ background: '#000', border: `1px solid ${theme.border}`, color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }} value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} placeholder="PTP-Santa-Rosa" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, color: theme.dim }}>Dirección IP</label>
+            <input required style={{ background: '#000', border: `1px solid #00C896`, color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }} value={formData.ip} onChange={e => setFormData({...formData, ip: e.target.value})} placeholder="172.31.x.x" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, color: theme.dim }}>Código de Red</label>
+            <input style={{ background: '#000', border: `1px solid ${theme.border}`, color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }} value={formData.network_code} onChange={e => setFormData({...formData, network_code: e.target.value})} placeholder="X100" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, color: theme.dim }}>Site / Ciudad</label>
+            <input style={{ background: '#000', border: `1px solid ${theme.border}`, color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }} value={formData.site} onChange={e => setFormData({...formData, site: e.target.value})} placeholder="Monterrey" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, color: theme.dim }}>Marca / Modelo</label>
+            <input style={{ background: '#000', border: `1px solid ${theme.border}`, color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }} value={formData.marca} onChange={e => setFormData({...formData, marca: e.target.value})} placeholder="MikroTik / Mimosa" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button type="submit" style={{ width: '100%', background: '#00C896', color: '#000', fontWeight: 800, fontSize: 11, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
+              REGISTRAR Y SINCRONIZAR A NOCBOARD
+            </button>
+          </div>
+        </form>
+      )}
 
       {tab === 'activos' ? (
         <>
@@ -156,6 +257,12 @@ export default function EtiquetasSection({ theme }: Props) {
                         <span style={{ fontSize: 11, color: theme.dim }}>Site: {a.site || '—'}</span>
                         <span style={{ fontSize: 10, fontFamily: 'monospace', color: theme.dim }}>{a.activo_id}</span>
                       </div>
+                      {a.ip && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, padding: '2px 6px', background: 'rgba(0,255,136,0.05)', borderRadius: 4, border: '1px solid rgba(0,255,136,0.1)' }}>
+                          <span style={{ fontSize: 9, fontWeight: 600, color: '#00ff88', textTransform: 'uppercase' }}>Dirección IP</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'monospace', color: '#00ff88' }}>{a.ip}</span>
+                        </div>
+                      )}
                     </div>
                     {/* Actions */}
                     <div style={{ padding: '8px 14px', borderTop: `1px solid ${theme.border}`, display: 'flex', gap: 8 }}>

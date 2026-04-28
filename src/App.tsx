@@ -21,6 +21,7 @@ import AcademiaExamenes from "./pages/academia/AcademiaExamenes.tsx";
 import AcademiaPerfil from "./pages/academia/AcademiaPerfil.tsx";
 import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
 import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
+import Docs from "./pages/Docs.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
 
@@ -95,6 +96,7 @@ const App = () => (
                       <Route path="/call-center" element={<CallCenter />} />
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="/reporte-impacto" element={<ReporteImpacto />} />
+                      <Route path="/docs" element={<Docs />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>

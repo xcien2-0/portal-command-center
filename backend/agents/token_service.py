@@ -56,6 +56,29 @@ def emitir(empresa: str, oportunidad_id: str, cliente: str, vendedor: str, monto
     return payload
 
 
+def emitir_operativo(tipo: str, nombre: str, detalle: str, empresa: str = "xcien", extra: dict = None) -> dict:
+    """Emite tokens para procesos de RH: alta, baja, movimiento, promocion, cambio_area"""
+    tipos_validos = {"alta", "baja", "movimiento", "promocion", "cambio_area"}
+    if tipo not in tipos_validos:
+        raise ValueError(f"Tipo operativo inválido. Debe ser uno de: {tipos_validos}")
+
+    payload = {
+        "token_id": str(uuid.uuid4()),
+        "tipo": tipo,
+        "empresa": empresa.lower(),
+        "nombre": nombre,
+        "detalle": detalle,
+        "extra": extra or {},
+        "emitido_en": datetime.now(timezone.utc).isoformat(),
+    }
+    payload["firma"] = _firmar({k: v for k, v in payload.items() if k != "firma"})
+
+    tokens = _cargar()
+    tokens.append(payload)
+    _guardar(tokens)
+    return payload
+
+
 def verificar(token_id: str) -> dict:
     tokens = _cargar()
     token = next((t for t in tokens if t["token_id"] == token_id), None)

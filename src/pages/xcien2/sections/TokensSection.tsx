@@ -1,13 +1,45 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
+import { API_BASE } from '../../../config';
 
-const API_BASE = 'http://localhost:8000';
+// ── Matrix Background ─────────────────────────────────────────────────────────
+function MatrixBackground() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.1, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
+        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
+        whiteSpace: 'nowrap', userSelect: 'none'
+      }}>
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div key={i} style={{ 
+            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
+            animationDelay: `${-Math.random() * 25}s`,
+            writingMode: 'vertical-rl',
+            textAlign: 'center'
+          }}>
+            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes matrixFall {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Token {
   token_id: string;
   tipo: string;
   empresa: string;
+  nombre?: string;
+  detalle?: string;
   oportunidad_id?: string;
   cliente?: string;
   vendedor?: string;
@@ -21,28 +53,21 @@ interface Token {
   firma: string;
 }
 
-// ── Demo fallback ─────────────────────────────────────────────────────────────
 const DEMO_TOKENS: Token[] = [
-  { token_id: "a1b2c3d4-0001", tipo: "certificacion",    empresa: "xcien",   tecnico: "Carlos Mendoza",    nivel: "Técnico",      score: 88,    extra: { pilares: { Instalación: 92, Soporte: 85, Seguridad: 90 } },                      emitido_en: "2026-04-25T09:15:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0002", tipo: "certificacion",    empresa: "luminet", tecnico: "Ana Rodríguez",     nivel: "Especialista", score: 94,    extra: { pilares: { Instalación: 96, Soporte: 92, Seguridad: 95 } },                      emitido_en: "2026-04-24T14:30:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0003", tipo: "oportunidad_ganada", empresa: "xcien", cliente: "Grupo Industrial Noreste", vendedor: "Luis Herrera", monto: 48500, extra: { nombre_oportunidad: "Enlace dedicado 500MB" }, emitido_en: "2026-04-25T11:00:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0004", tipo: "promocion",        empresa: "xcien",   tecnico: "Miguel Ángel Torres", nivel: "Especialista",           extra: { nivel_anterior: "Técnico", xp_total: 1520 },                                     emitido_en: "2026-04-23T10:00:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0005", tipo: "bono",             empresa: "wispi",   tecnico: "Laura Garza",       monto: 3200,           extra: { motivo: "Racha 3 meses sin revisitas" },                                                      emitido_en: "2026-04-22T08:00:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0006", tipo: "agente_ia",        empresa: "xcien",   agente: "Director General IA",                       extra: { accion: "Auto-asignación ticket T-1042", tecnico_asignado: "Carlos Mendoza" },                emitido_en: "2026-04-25T12:45:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0007", tipo: "oportunidad_ganada", empresa: "huus",  cliente: "Residencial Las Palmas", vendedor: "María Fernández", monto: 12000, extra: { nombre_oportunidad: "Internet residencial 50 unidades" },            emitido_en: "2026-04-24T16:20:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0008", tipo: "certificacion",    empresa: "wispi",   tecnico: "Roberto Salinas",   nivel: "Aprendiz",     score: 62,    extra: { pilares: { Instalación: 65, Soporte: 60, Seguridad: 58 } },                      emitido_en: "2026-04-21T09:00:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0009", tipo: "agente_ia",        empresa: "luminet", agente: "Director General IA",                       extra: { accion: "Generación examen Fibra Óptica", modulo: "estandar_fibra_optica.md" },               emitido_en: "2026-04-25T08:30:00+00:00", firma: "demo" },
-  { token_id: "a1b2c3d4-0010", tipo: "bono",             empresa: "luminet", tecnico: "Jorge Martínez",    monto: 1800,           extra: { motivo: "Mejor score del mes — Instalación" },                                               emitido_en: "2026-04-20T17:00:00+00:00", firma: "demo" },
+  { token_id: "a1b2c3d4-0001", tipo: "alta", empresa: "xcien", nombre: "Juan Pérez", detalle: "Ingreso como Especialista de Red", emitido_en: "2026-04-26T10:00:00Z", firma: "demo" },
+  { token_id: "a1b2c3d4-0002", tipo: "promocion", empresa: "luminet", nombre: "Ana Rodríguez", detalle: "Ascenso a Gerencia de Operaciones", emitido_en: "2026-04-25T14:30:00Z", firma: "demo" },
 ];
 
-// ── Config visual por tipo ─────────────────────────────────────────────────────
 const TIPO_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   oportunidad_ganada: { label: 'Oportunidad ganada',    icon: '💼', color: '#00C896' },
   certificacion:      { label: 'Certificación',         icon: '🎓', color: '#534AB7' },
-  promocion:          { label: 'Promoción de nivel',    icon: '⬆️', color: '#FFB703' },
+  promocion:          { label: 'Promoción',             icon: '⬆️', color: '#FFB703' },
   bono:               { label: 'Bono de desempeño',     icon: '🏆', color: '#FF6B35' },
   agente_ia:          { label: 'Acción agente IA',      icon: '🤖', color: '#4FC3F7' },
-  despido:            { label: 'Baja',                  icon: '📋', color: '#FF4757' },
+  alta:               { label: 'Alta de personal',      icon: '👤', color: '#00C896' },
+  baja:               { label: 'Baja de personal',      icon: '📋', color: '#FF4757' },
+  movimiento:         { label: 'Movimiento lateral',    icon: '↔️', color: '#60A5FA' },
+  cambio_area:        { label: 'Cambio de área',        icon: '🏢', color: '#A78BFA' },
 };
 
 const EMPRESA_COLOR: Record<string, string> = {
@@ -55,7 +80,6 @@ const EMPRESA_COLOR: Record<string, string> = {
 const EMPRESAS = ['todas', 'xcien', 'luminet', 'wispi', 'huus'];
 const TIPOS    = ['todos', ...Object.keys(TIPO_CONFIG)];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('es-MX', {
     day: '2-digit', month: 'short', year: 'numeric',
@@ -64,14 +88,13 @@ function formatDate(iso: string) {
 }
 
 function getTitular(t: Token): string {
-  return t.tecnico || t.vendedor || t.agente || t.cliente || '—';
+  return t.nombre || t.tecnico || t.vendedor || t.agente || t.cliente || '—';
 }
 
 function shortId(id: string) {
   return id.slice(0, 8).toUpperCase();
 }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, color, theme }: { label: string; value: number | string; color: string; theme: ThemeConfig }) {
   return (
     <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '16px 20px', textAlign: 'center' }}>
@@ -81,7 +104,6 @@ function KpiCard({ label, value, color, theme }: { label: string; value: number 
   );
 }
 
-// ── Token Card ───────────────────────────────────���────────────────────────────
 function TokenCard({ token, theme }: { token: Token; theme: ThemeConfig }) {
   const cfg = TIPO_CONFIG[token.tipo] || { label: token.tipo, icon: '🔖', color: '#94a3b8' };
   const empColor = EMPRESA_COLOR[token.empresa] || '#94a3b8';
@@ -97,7 +119,6 @@ function TokenCard({ token, theme }: { token: Token; theme: ThemeConfig }) {
       flexDirection: 'column',
       gap: 8,
     }}>
-      {/* Row 1: tipo + empresa */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 16 }}>{cfg.icon}</span>
@@ -111,31 +132,12 @@ function TokenCard({ token, theme }: { token: Token; theme: ThemeConfig }) {
           {token.empresa}
         </span>
       </div>
-
-      {/* Row 2: titular */}
       <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>
         {getTitular(token)}
       </div>
-
-      {/* Row 3: detalles */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        {token.nivel && (
-          <span style={{ fontSize: 11, color: theme.dim }}>Nivel: <strong style={{ color: theme.text }}>{token.nivel}</strong></span>
-        )}
-        {token.score !== undefined && (
-          <span style={{ fontSize: 11, color: theme.dim }}>Score: <strong style={{ color: theme.text }}>{token.score}%</strong></span>
-        )}
-        {token.monto !== undefined && token.monto > 0 && (
-          <span style={{ fontSize: 11, color: theme.dim }}>Monto: <strong style={{ color: theme.text }}>${token.monto.toLocaleString('es-MX')}</strong></span>
-        )}
-        {token.extra?.nombre_oportunidad && (
-          <span style={{ fontSize: 11, color: theme.dim, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {token.extra.nombre_oportunidad}
-          </span>
-        )}
+      <div style={{ fontSize: 11, color: theme.dim }}>
+        {token.detalle || token.extra?.motivo || token.extra?.accion || '—'}
       </div>
-
-      {/* Row 4: id + fecha */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
         <span style={{ fontSize: 10, fontFamily: 'monospace', color: theme.dim, background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
           #{shortId(token.token_id)}
@@ -146,17 +148,16 @@ function TokenCard({ token, theme }: { token: Token; theme: ThemeConfig }) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-interface Props { theme: ThemeConfig }
-
-export default function TokensSection({ theme }: Props) {
+export default function TokensSection({ theme, activeThemeId }: { theme: ThemeConfig, activeThemeId?: string }) {
   const [tokens, setTokens]           = useState<Token[]>([]);
   const [loading, setLoading]         = useState(true);
   const [empresaFiltro, setEmpresa]   = useState('todas');
   const [tipoFiltro, setTipo]         = useState('todos');
   const [backendOnline, setOnline]    = useState(false);
+  const [showForm, setShowForm]       = useState(false);
+  const [formData, setFormData]       = useState({ tipo: 'alta', nombre: '', detalle: '', empresa: 'xcien' });
 
-  useEffect(() => {
+  const loadTokens = () => {
     fetch(`${API_BASE}/api/tokens`)
       .then(r => r.json())
       .then(data => {
@@ -165,7 +166,25 @@ export default function TokensSection({ theme }: Props) {
       })
       .catch(() => { setTokens(DEMO_TOKENS); setOnline(false); })
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadTokens(); }, []);
+
+  const handleGenerate = async () => {
+    if (!formData.nombre) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/tokens/operativo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        setShowForm(false);
+        setFormData({ tipo: 'alta', nombre: '', detalle: '', empresa: 'xcien' });
+        loadTokens();
+      }
+    } catch (e) { alert("Error al generar token"); }
+  };
 
   const filtrados = tokens.filter(t => {
     const okEmpresa = empresaFiltro === 'todas' || t.empresa === empresaFiltro;
@@ -175,97 +194,78 @@ export default function TokensSection({ theme }: Props) {
 
   const accent = theme.accent;
 
-  // KPIs
-  const kpi = {
-    total:      tokens.length,
-    humanos:    tokens.filter(t => t.tipo !== 'agente_ia').length,
-    ia:         tokens.filter(t => t.tipo === 'agente_ia').length,
-    hoy:        tokens.filter(t => new Date(t.emitido_en).toDateString() === new Date().toDateString()).length,
-    empresas:   [...new Set(tokens.map(t => t.empresa))].length,
-  };
-
-  const filterStyle = (active: boolean) => ({
-    fontSize: 11, padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
-    border: `1px solid ${active ? accent : theme.border}`,
-    background: active ? `${accent}18` : 'transparent',
-    color: active ? accent : theme.dim,
-    fontWeight: active ? 600 : 400,
-    transition: 'all 0.15s',
-  });
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
+      {activeThemeId === 'matrix' && <MatrixBackground />}
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>Registro de Tokens</h2>
-          <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Certificaciones, logros y eventos de agentes humanos e IA</p>
+          <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Cripto-validación de procesos operativos y RH</p>
         </div>
-        <span style={{
-          fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-          background: backendOnline ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)',
-          color: backendOnline ? '#00C896' : '#FF4757',
-          border: `1px solid ${backendOnline ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}`,
-        }}>
-          {backendOnline ? '● Conectado' : '● Sin conexión'}
-        </span>
+        <button 
+          onClick={() => setShowForm(!showForm)}
+          style={{
+            background: accent, color: '#000', border: 'none', borderRadius: 8,
+            padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+          }}
+        >
+          {showForm ? '✕ Cancelar' : '+ Generar Token Operativo'}
+        </button>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
-        <KpiCard label="Total tokens"   value={kpi.total}    color={accent}     theme={theme} />
-        <KpiCard label="Agentes humanos" value={kpi.humanos}  color="#00C896"    theme={theme} />
-        <KpiCard label="Agentes IA"      value={kpi.ia}       color="#4FC3F7"    theme={theme} />
-        <KpiCard label="Emitidos hoy"    value={kpi.hoy}      color="#FFB703"    theme={theme} />
-        <KpiCard label="Empresas activas" value={kpi.empresas} color="#534AB7"   theme={theme} />
-      </div>
-
-      {/* Filtros */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: theme.dim, marginRight: 4 }}>Empresa:</span>
-          {EMPRESAS.map(e => (
-            <button key={e} onClick={() => setEmpresa(e)} style={filterStyle(empresaFiltro === e)}>
-              {e === 'todas' ? 'Todas' : e.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: theme.dim, marginRight: 4 }}>Tipo:</span>
-          {TIPOS.map(t => (
-            <button key={t} onClick={() => setTipo(t)} style={filterStyle(tipoFiltro === t)}>
-              {t === 'todos' ? 'Todos' : (TIPO_CONFIG[t]?.icon + ' ' + TIPO_CONFIG[t]?.label)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Grid de tokens */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: theme.dim, fontSize: 13 }}>Cargando tokens...</div>
-      ) : filtrados.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🔖</div>
-          <div style={{ fontSize: 13 }}>
-            {tokens.length === 0
-              ? 'No hay tokens emitidos aún. Se generarán automáticamente con cada evento.'
-              : 'No hay tokens con ese filtro.'}
+      {showForm && (
+        <div style={{ background: theme.card, border: `2px solid ${accent}`, borderRadius: 12, padding: 20, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ display: 'block', fontSize: 11, color: theme.dim, marginBottom: 4 }}>Nombre del Colaborador</label>
+            <input 
+              value={formData.nombre} 
+              onChange={e => setFormData({...formData, nombre: e.target.value})}
+              style={{ width: '100%', background: '#000', border: `1px solid ${theme.border}`, padding: 8, borderRadius: 6, color: '#fff' }}
+            />
           </div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-          {filtrados.slice().reverse().map(t => (
-            <TokenCard key={t.token_id} token={t} theme={theme} />
-          ))}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ display: 'block', fontSize: 11, color: theme.dim, marginBottom: 4 }}>Tipo de Movimiento</label>
+            <select 
+              value={formData.tipo}
+              onChange={e => setFormData({...formData, tipo: e.target.value})}
+              style={{ width: '100%', background: '#000', border: `1px solid ${theme.border}`, padding: 8, borderRadius: 6, color: '#fff' }}
+            >
+              <option value="alta">Alta de personal</option>
+              <option value="baja">Baja de personal</option>
+              <option value="movimiento">Movimiento lateral</option>
+              <option value="promocion">Promoción</option>
+              <option value="cambio_area">Cambio de área</option>
+            </select>
+          </div>
+          <div style={{ flex: 2, minWidth: 300 }}>
+            <label style={{ display: 'block', fontSize: 11, color: theme.dim, marginBottom: 4 }}>Detalle / Motivo</label>
+            <input 
+              value={formData.detalle} 
+              onChange={e => setFormData({...formData, detalle: e.target.value})}
+              style={{ width: '100%', background: '#000', border: `1px solid ${theme.border}`, padding: 8, borderRadius: 6, color: '#fff' }}
+              placeholder="Ej: Ascenso a Senior, Cambio a zona Monterrey, etc."
+            />
+          </div>
+          <button 
+            onClick={handleGenerate}
+            style={{ alignSelf: 'flex-end', background: '#00C896', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Emitir Token Criptográfico
+          </button>
         </div>
       )}
 
-      {filtrados.length > 0 && (
-        <div style={{ fontSize: 11, color: theme.dim, textAlign: 'right' }}>
-          {filtrados.length} token{filtrados.length !== 1 ? 's' : ''} mostrados
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <KpiCard label="Total" value={tokens.length} color={accent} theme={theme} />
+        <KpiCard label="Operativos" value={tokens.filter(t => ['alta','baja','movimiento','promocion','cambio_area'].includes(t.tipo)).length} color="#00C896" theme={theme} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+        {filtrados.slice().reverse().map(t => (
+          <TokenCard key={t.token_id} token={t} theme={theme} />
+        ))}
+      </div>
     </div>
   );
 }

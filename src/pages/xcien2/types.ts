@@ -171,13 +171,13 @@ export const PRESET_THEMES: PresetTheme[] = [
     config: {
       accent:       '#00ff41',
       bg:           '#000500',
-      card:         '#001000',
+      card:         '#001505',
       sidebar:      '#000800',
-      border:       'rgba(0,255,65,0.15)',
-      text:         '#00ff41',
-      dim:          '#003b00',
+      border:       'rgba(0,255,65,0.25)',
+      text:         '#00ff88',
+      dim:          '#004d00',
       sidebarWidth: 260,
-      radius:       0,
+      radius:       2,
       baseFontSize: 13,
       animations:   true,
       compact:      true,
@@ -228,7 +228,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo';
+export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs';
 
 export interface NavItem {
   id: SectionId;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE } from '../config';
 import { supabase } from '@/integrations/supabase/client';
 import { MessageSquare, Phone, Ticket, Bot, AlertTriangle, CheckCircle2, Clock, Send, User, Building2, ChevronRight, PanelRightOpen, PanelRightClose, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -88,7 +89,12 @@ const STATUS_FILTERS: { key: Status | 'all'; label: string; icon: React.ReactNod
   { key: 'resolved', label: 'Resueltas', icon: <span>✅</span> },
 ];
 
-export default function CallCenter() {
+interface Props {
+  theme?: any;
+  activeThemeId?: string;
+}
+
+export default function CallCenter({ theme, activeThemeId }: Props) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -183,12 +189,28 @@ export default function CallCenter() {
     await supabase.from('conversations').update({ status: 'resolved' as any } as any).eq('id', selectedId);
   };
 
+  const handleIntegrationAction = async (platform: string, label: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/integrations/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, action: 'test_connection' })
+      });
+      const data = await res.json();
+      alert(`Integración ${label}: ${data.message || data.status}`);
+    } catch (e) {
+      alert(`Error conectando con ${label}`);
+    }
+  };
+
   const contactConvCount = selectedId && selected?.contact_id
     ? conversations.filter(c => c.contact_id === selected.contact_id).length
     : 0;
 
   return (
-    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden" style={{ background: '#0f1117', color: '#e2e8f0' }}>
+    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden relative" style={{ background: theme?.bg || '#0f1117', color: '#e2e8f0' }}>
+      {activeThemeId === 'matrix' && MatrixBackground && <MatrixBackground />}
+      
       {/* Left Panel */}
       <div className="flex flex-col border-r" style={{ width: '30%', minWidth: 320, borderColor: '#1e2535', background: '#161b27' }}>
         {/* Company tabs */}
@@ -276,6 +298,57 @@ export default function CallCenter() {
             )}
           </div>
         </ScrollArea>
+        {/* Integrations Area - Enhanced Visibility */}
+        <div className="p-4 border-t mt-auto" style={{ 
+          borderColor: 'rgba(0,255,136,0.3)', 
+          background: 'rgba(0,20,40,0.6)',
+          boxShadow: '0 -10px 20px rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">🔌 CONECTORES EXTERNOS</span>
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Sincronización Activa" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={() => handleIntegrationAction('net2phone', 'Net2Phone')}
+              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
+              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(0,255,136,0.1)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📞</span>
+                <span className="text-[11px] font-bold text-white">Net2Phone</span>
+              </div>
+              <span className="text-[9px] text-emerald-400/70 font-mono">LINKED</span>
+            </button>
+
+            <button 
+              onClick={() => handleIntegrationAction('hubspot', 'HubSpot')}
+              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
+              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(255,167,0,0.1)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🧡</span>
+                <span className="text-[11px] font-bold text-white">HubSpot CRM</span>
+              </div>
+              <span className="text-[9px] text-orange-400/70 font-mono">LINKED</span>
+            </button>
+
+            <button 
+              onClick={() => handleIntegrationAction('ai_agents', 'Agentes IA')}
+              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
+              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(167,139,250,0.1)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🤖</span>
+                <span className="text-[11px] font-bold text-white">Agentes IA</span>
+              </div>
+              <span className="text-[9px] text-purple-400/70 font-mono">READY</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Right Panel */}
@@ -438,6 +511,19 @@ function MessageBubble({ msg }: { msg: Message }) {
         </div>
         <p className="text-[13px] leading-relaxed whitespace-pre-line" style={{ color: '#e2e8f0' }}>{msg.content}</p>
       </div>
+    </div>
+  );
+}
+
+function IntegrationBadge({ icon, label, active, onClick }: { icon: string; label: string; active?: boolean; onClick?: () => void }) {
+  return (
+    <div 
+      title={active ? `Conectado a ${label}` : `Conectar ${label}`}
+      onClick={onClick}
+      className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded border transition-colors ${active ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-slate-700 bg-slate-800'}`}
+    >
+      <span className="text-lg mb-1">{icon}</span>
+      <span className="text-[9px] font-medium text-slate-300">{label}</span>
     </div>
   );
 }
