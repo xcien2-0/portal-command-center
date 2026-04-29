@@ -4,7 +4,7 @@
     "cliente": "Corporativo Xcien",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
-    "estado": "LISTO_INSTALACION",
+    "estado": "REVISION_PM",
     "fecha_creacion": "2026-04-26T18:54:09.156133",
     "preventa": {
       "analisis": "Factible v\u00eda FO",
@@ -21,7 +21,7 @@
       "equipos_asignados": [
         {
           "modelo": "CCR2004",
-          "sn": "SN-2NMVD"
+          "sn": "SN-5ZGIBP"
         }
       ],
       "esperando_inventario": false
@@ -34,10 +34,17 @@
       "bw": "1GB"
     },
     "pm": {
-      "auditoria_ok": true,
-      "bloqueada": false,
-      "motivo_bloqueo": null,
-      "backlogs": []
+      "auditoria_ok": false,
+      "bloqueada": true,
+      "motivo_bloqueo": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+      "backlogs": [
+        {
+          "id": "B-8E00",
+          "fecha": "2026-04-28T12:29:25.745388",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        }
+      ]
     },
     "historial": [
       {
@@ -84,6 +91,36 @@
         "fecha": "2026-04-27T18:24:30.527496",
         "accion": "Auditor\u00eda PM: Aprobada",
         "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-28T12:29:07.233700",
+        "accion": "Equipos asignados en Almac\u00e9n",
+        "usuario": "Jefe Almac\u00e9n"
+      },
+      {
+        "fecha": "2026-04-28T12:29:15.122385",
+        "accion": "Servicio aprovisionado",
+        "usuario": "Ing. NOC"
+      },
+      {
+        "fecha": "2026-04-28T12:29:25.745430",
+        "accion": "Auditor\u00eda PM: Rechazada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-28T13:02:16.236066",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente Ventas"
+      },
+      {
+        "fecha": "2026-04-28T13:02:17.207322",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente Ventas"
+      },
+      {
+        "fecha": "2026-04-28T13:02:33.950572",
+        "accion": "Servicio aprovisionado",
+        "usuario": "Ing. NOC"
       }
     ]
   },
@@ -187,7 +224,7 @@
     "cliente": "cordilllera",
     "servicio": "1gb",
     "comercial": "Usuario Demo",
-    "estado": "LISTO_INSTALACION",
+    "estado": "BACKLOG",
     "fecha_creacion": "2026-04-26T18:59:29.212113",
     "preventa": {
       "analisis": null,
@@ -207,13 +244,19 @@
       "listo": false
     },
     "pm": {
-      "auditoria_ok": true,
-      "bloqueada": false,
-      "motivo_bloqueo": null,
+      "auditoria_ok": false,
+      "bloqueada": true,
+      "motivo_bloqueo": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
       "backlogs": [
         {
           "id": "B-3BBB",
           "fecha": "2026-04-26T19:05:09.946118",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        },
+        {
+          "id": "B-FDD4",
+          "fecha": "2026-04-28T13:03:10.140238",
           "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
           "area_responsable": "POR_DEFINIR"
         }
@@ -243,6 +286,16 @@
       {
         "fecha": "2026-04-26T19:05:14.770536",
         "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-28T13:03:05.850428",
+        "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-04-28T13:03:10.140248",
+        "accion": "Auditor\u00eda PM: Rechazada",
         "usuario": "Auditor PM"
       }
     ]
