@@ -228,7 +228,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs';
+export type SectionId = 'inicio' | 'noc' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs' | 'adopcion';
 
 export interface NavItem {
   id: SectionId;

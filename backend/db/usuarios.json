@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1",
+    "name": "Jes\u00fas Morales",
+    "email": "j.morales@xcien.com",
+    "role": "Director General",
+    "department": "Direcci\u00f3n",
+    "status": "active"
+  },
+  {
+    "id": "2",
+    "name": "Ana Rodr\u00edguez",
+    "email": "a.rodriguez@xcien.com",
+    "role": "L\u00edder T\u00e9cnico",
+    "department": "Operaciones",
+    "status": "active"
+  },
+  {
+    "id": "3",
+    "name": "Carlos Mendoza",
+    "email": "c.mendoza@xcien.com",
+    "role": "T\u00e9cnico Especialista",
+    "department": "Operaciones",
+    "status": "active"
+  },
+  {
+    "name": "Test User",
+    "email": "test@xcien.com",
+    "department": "Planeaci\u00f3n",
+    "role": "Analista",
+    "id": "4",
+    "status": "pending"
+  },
+  {
+    "name": "jose m macias ",
+    "email": "miguel.macias@xcien.com",
+    "department": "Planeaci\u00f3n",
+    "role": "Analista",
+    "id": "5",
+    "status": "pending"
+  },
+  {
+    "name": "Juan H Medina",
+    "email": "jh@xcien.com",
+    "department": "Gerencia",
+    "role": "Auditor",
+    "id": "6",
+    "status": "pending"
+  }
+]

@@ -23,6 +23,7 @@ import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
 import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
 import Docs from "./pages/Docs.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
+import InvitePage from "./pages/InvitePage.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
 
 function HeaderActions() {
@@ -66,6 +67,7 @@ const App = () => (
           {/* Main Hub (Classic Entry) */}
           <Route path="/" element={<Index />} />
           <Route path="/xcien2" element={<Xcien2Page />} />
+          <Route path="/invite" element={<InvitePage />} />
 
           {/* Legacy/Classic routes can stay for now but without double sidebar */}
           <Route path="/gerencia" element={<Gerencia />} />

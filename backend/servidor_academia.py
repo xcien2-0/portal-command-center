@@ -1008,6 +1008,56 @@ def download_doc(path: str):
         
     return FileResponse(abs_path)
 
+
+USUARIOS_DB = os.path.join(BASE_DIR, "db", "usuarios.json")
+
+@app.get("/api/users")
+def get_users():
+    if not os.path.exists(USUARIOS_DB):
+        return []
+    with open(USUARIOS_DB, "r") as f:
+        return json.load(f)
+
+@app.post("/api/users")
+def create_user(user: Dict[str, Any]):
+    users = get_users()
+    user["id"] = str(len(users) + 1)
+    user["status"] = "pending"
+    user["invited_at"] = str(date.today())
+    users.append(user)
+    with open(USUARIOS_DB, "w") as f:
+        json.dump(users, f, indent=2)
+    
+    # Intento de envío de notificación real (Telegram)
+    try:
+        config = _load_telegram_config()
+        if config.get("enabled") and config.get("token"):
+            bot = TelegramBot(token=config["token"], chat_id=config["chat_id"])
+            msg = (
+                f"👤 *NUEVA INVITACIÓN XCIEN 2.0*\n\n"
+                f"Se ha invitado a *{user['name']}* a la plataforma.\n"
+                f"🏢 *Depto:* {user['department']}\n"
+                f"🔑 *Rol:* {user['role']}\n\n"
+                f"Acceso pendiente de activación."
+            )
+            bot.send_message(msg)
+    except Exception as e:
+        logger.error(f"Error enviando notificación de invitación: {e}")
+
+    return user
+
+@app.post("/api/users/activate/{user_id}")
+def activate_user(user_id: str):
+    users = get_users()
+    for u in users:
+      if u["id"] == user_id:
+        u["status"] = "active"
+        u["lastSeen"] = str(date.today())
+        with open(USUARIOS_DB, "w") as f:
+            json.dump(users, f, indent=2)
+        return {"status": "success", "user": u}
+    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
 @app.get("/api/integrations/status")
 async def get_integrations_status():
     """Retorna el estado de las conexiones configuradas"""

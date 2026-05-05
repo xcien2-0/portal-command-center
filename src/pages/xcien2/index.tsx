@@ -12,6 +12,7 @@ import TransaccionesSection from './sections/TransaccionesSection';
 import EtiquetasSection from './sections/EtiquetasSection';
 import DevPanel from './DevPanel';
 import FodaSection from './sections/FodaSection';
+import AdopcionSection from './sections/AdopcionSection';
 import TelegramBotSection from './sections/TelegramBotSection';
 import DocsSection from './sections/DocsSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
@@ -50,7 +51,9 @@ const NAV: NavEntry[] = [
   { id: 'tokens', label: 'Registro de Tokens', icon: '🔖', group: 'Certificación & Academia' },
 
   { id: 'transacciones', label: 'Transacciones Grupo', icon: '🔄', group: 'Administración' },
-  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Administración' },
+  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Planeación Estratégica' },
+  { id: 'adopcion', label: 'Adopción & Usuarios', icon: '👥', group: 'Planeación Estratégica' },
+
   { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
 
@@ -72,6 +75,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   transacciones: 'Transacciones Intragrupo',
   etiquetas: 'Creación de Etiquetas & Comprobantes',
   foda: 'Estrategia FODA (War Room)',
+  adopcion: 'Adopción & Gestión de Usuarios',
   academia: 'Academia XCIEN',
   gerencia: 'Dashboard Gerencial',
   reports: 'Reportes & Gobierno',
@@ -280,6 +284,7 @@ function Content({
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
+      {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'scan' && <Scan />}
       {section === 'gerencia' && <Gerencia />}
