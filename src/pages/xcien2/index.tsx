@@ -1,5 +1,5 @@
 import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE } from '../../config';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import FloatingChat from './sections/FloatingChat';
@@ -51,17 +51,17 @@ const NAV: NavEntry[] = [
   { id: 'tokens', label: 'Registro de Tokens', icon: '🔖', group: 'Certificación & Academia' },
 
   { id: 'transacciones', label: 'Transacciones Grupo', icon: '🔄', group: 'Administración' },
-  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Planeación Estratégica' },
-  { id: 'adopcion', label: 'Adopción & Usuarios', icon: '👥', group: 'Planeación Estratégica' },
-
   { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
+  { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
+
+  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Planeación Estratégica' },
+  { id: 'adopcion', label: 'Adopción & Usuarios', icon: '👥', group: 'Planeación Estratégica' },
 
   { id: 'bridge', label: 'Puente IA (Antigravity)', icon: '⚡', group: 'Sistema' },
   { id: 'war-room', label: 'Sala de Guerra (War Room)', icon: '⚔️', group: 'Sistema' },
   { id: 'mobile', label: 'Conectar Celular', icon: '📱', group: 'Sistema' },
   { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Sistema' },
-  { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
   { id: 'editor', label: 'Ajustes del Portal', icon: '🎨', group: 'Configuración' },
 ];
 
@@ -543,6 +543,15 @@ export default function Xcien2Page() {
     document.body.style.background = theme.bg;
   }, [theme]);
 
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('section') as SectionId;
+    if (id && id !== section) {
+      setSection(id);
+    }
+  }, [location.search, section]);
+
   const onSelectSection = useCallback((id: SectionId) => {
     if (id === 'inicio') {
       navigate('/');
@@ -566,19 +575,78 @@ export default function Xcien2Page() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* Top header */}
         <header style={{
-          height: 56, padding: '0 24px',
+          height: 64, padding: '0 24px',
           borderBottom: `1px solid ${theme.border}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: `${theme.bg}cc`, backdropFilter: 'blur(10px)',
-          position: 'sticky', top: 0, zIndex: 50,
+          position: 'sticky', top: 0, zIndex: 100,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{SECTION_TITLE[section]}</h2>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accent, boxShadow: `0 0 8px ${theme.accent}`, animation: theme.animations ? 'pulse-dot 2s ease-in-out infinite' : 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>{SECTION_TITLE[section]}</h2>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accent, boxShadow: `0 0 12px ${theme.accent}`, animation: theme.animations ? 'pulse-dot 2s infinite' : 'none' }} />
+            </div>
+
+            {/* Quick Access Desktop */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 20, padding: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+              {[
+                { id: 'noc', label: 'NOC', icon: '📡' },
+                { id: 'wfm', label: 'Dispatch', icon: '⚙️' },
+                { id: 'war-room', label: 'War Room', icon: '⚔️' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectSection(item.id as any)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, border: 'none',
+                    background: section === item.id ? `${theme.accent}20` : 'transparent',
+                    color: section === item.id ? theme.accent : theme.dim,
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: 6
+                  }}
+                >
+                  <span>{item.icon}</span>
+                  <span className="hidden md:inline">{item.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: `${theme.accent}10`, border: `1px solid ${theme.accent}30`, borderRadius: 20, padding: '5px 14px' }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: theme.accent, animation: theme.animations ? 'pulse-dot 1.5s infinite' : 'none' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: theme.accent }}>Sistema operacional</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* City Filter */}
+            <div style={{ position: 'relative', display: section === 'noc' || section === 'wfm' ? 'block' : 'none' }}>
+              <select 
+                style={{
+                  background: 'rgba(255,255,255,0.05)', border: `1px solid ${theme.border}`,
+                  color: theme.text, borderRadius: 8, padding: '6px 32px 6px 12px',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer', appearance: 'none', outline: 'none'
+                }}
+              >
+                <option value="">Monterrey ▼</option>
+                <option value="mty">Monterrey</option>
+                <option value="sal">Saltillo</option>
+                <option value="pn">Piedras Negras</option>
+              </select>
+              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 8, opacity: 0.5 }}>▼</span>
+            </div>
+
+            {/* Notifications */}
+            <button style={{ position: 'relative', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}>
+              <span style={{ fontSize: 20 }}>🔔</span>
+              <div style={{
+                position: 'absolute', top: 0, right: 0,
+                background: '#FF4D6D', color: '#fff', fontSize: 9, fontWeight: 900,
+                padding: '2px 5px', borderRadius: 10, border: `2px solid ${theme.bg}`,
+                boxShadow: '0 2px 10px rgba(255,77,109,0.4)'
+              }}>
+                235
+              </div>
+            </button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: `${theme.accent}10`, border: `1px solid ${theme.accent}30`, borderRadius: 20, padding: '6px 16px' }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: theme.accent, animation: theme.animations ? 'pulse-dot 1.5s infinite' : 'none' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: theme.accent, letterSpacing: 0.5 }}>LIVE MONITOR</span>
+            </div>
           </div>
         </header>
 
@@ -619,7 +687,7 @@ export default function Xcien2Page() {
         button:focus { outline:none }
       `}</style>
       {activeThemeId === 'matrix' && <div className="matrix-bg" />}
-      <FloatingChat theme={theme} />
+      <FloatingChat theme={theme} section={section} />
     </div>
   );
 }

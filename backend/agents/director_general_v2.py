@@ -40,19 +40,27 @@ class DirectorGeneralV2:
                 return f.read()
         except: return "No se encontró el manual maestro."
 
-    def ejecutar_orden(self, instruccion_usuario, history=None):
+    def ejecutar_orden(self, instruccion_usuario, history=None, context=""):
         if history is None: history = []
         print(f"\n=========================================")
-        print(f"👤 ALTA GERENCIA: {instruccion_usuario}")
+        print(f"👤 ALTA GERENCIA (Contexto: {context}): {instruccion_usuario}")
         print(f"=========================================")
 
         # 1. Cargar datos frescos
         wfm = _cargar_wfm()
         noc = _get_noc_summary()
         inst = instruccion_usuario.lower()
+        ctx = context.lower()
         
         # 2. Lógica de Inteligencia Local (Antigravity)
         response = ""
+        
+        # Atajos contextuales
+        if ctx == 'noc' and any(k in inst for k in ["ayuda", "qué hago", "resumen"]):
+            return f"**[Asistente NOC]** Estás en la vista de Red en Vivo. Actualmente tenemos {noc.get('activeAlerts', 0)} alertas. ¿Quieres que analice el nodo más crítico en Monterrey?"
+        
+        if ctx == 'wfm' and any(k in inst for k in ["ayuda", "qué hago", "técnicos"]):
+            return f"**[Asistente WFM]** Estás en Control Operativo. Veo {len(wfm.get('tecnicos', []))} técnicos activos. ¿Necesitas optimizar la ruta de alguno?"
         
         if any(k in inst for k in ["red", "estado", "noc", "caída", "alerta"]):
             response = f"**[Antigravity Engine]** Reporte de Red en Vivo:\n\n"

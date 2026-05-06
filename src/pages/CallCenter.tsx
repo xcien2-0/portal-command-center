@@ -109,14 +109,41 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
   // Load data
   useEffect(() => {
     const load = async () => {
-      const [cRes, aRes, convRes] = await Promise.all([
-        supabase.from('companies').select('*'),
-        supabase.from('agents').select('*'),
-        supabase.from('conversations').select('*, contacts(*), companies(*), agents(*)').order('updated_at', { ascending: false }),
-      ]);
-      if (cRes.data) setCompanies(cRes.data);
-      if (aRes.data) setAgents(aRes.data as Agent[]);
-      if (convRes.data) setConversations(convRes.data as any);
+      try {
+        const [cRes, aRes, convRes] = await Promise.all([
+          supabase.from('companies').select('*'),
+          supabase.from('agents').select('*'),
+          supabase.from('conversations').select('*, contacts(*), companies(*), agents(*)').order('updated_at', { ascending: false }),
+        ]);
+        if (cRes.data && cRes.data.length > 0) setCompanies(cRes.data);
+        else setCompanies([
+          { id: '1', name: 'Xcien', color: '#00ff88' },
+          { id: '2', name: 'Wispi', color: '#0ea5e9' }
+        ]);
+
+        if (aRes.data && aRes.data.length > 0) setAgents(aRes.data as Agent[]);
+        else setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
+
+        if (convRes.data && convRes.data.length > 0) setConversations(convRes.data as any);
+        else setConversations([
+          { 
+            id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated', 
+            subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+            contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
+            companies: { id: '1', name: 'Xcien', color: '#00ff88' }
+          }
+        ]);
+      } catch (e) {
+        console.error("Supabase load failed, using mocks", e);
+        setCompanies([{ id: '1', name: 'Xcien', color: '#00ff88' }]);
+        setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
+        setConversations([{ 
+          id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated', 
+          subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
+          companies: { id: '1', name: 'Xcien', color: '#00ff88' }
+        }]);
+      }
     };
     load();
   }, []);

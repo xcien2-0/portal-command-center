@@ -2,11 +2,11 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeConfig, ChatMessage } from '../types';
 import { API_BASE } from '../../../config';
 
-async function callDirectorAPI(message: string, history: {role: string, content: string}[]): Promise<string> {
+async function callDirectorAPI(message: string, history: {role: string, content: string}[], context: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/director/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, context }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -20,9 +20,9 @@ function formatMarkdown(text: string): string {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-interface Props { theme: ThemeConfig }
+interface Props { theme: ThemeConfig, section: string }
 
-export default function FloatingChat({ theme }: Props) {
+export default function FloatingChat({ theme, section }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init',
@@ -74,7 +74,7 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
     setIsTyping(true);
 
     try {
-      const reply = await callDirectorAPI(text, historyToSend);
+      const reply = await callDirectorAPI(text, historyToSend, section);
       const botMsg: ChatMessage = { id: `b-${Date.now()}`, role: 'assistant', content: reply, ts };
       setMessages(prev => [...prev, botMsg]);
     } catch {

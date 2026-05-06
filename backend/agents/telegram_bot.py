@@ -39,3 +39,20 @@ class TelegramBot:
             f"🔗 [Ver en el Portal](http://localhost:8080/xcien2?section=noc)"
         )
         return self.send_message(message)
+
+    def send_document(self, file_path, caption=None):
+        if not self.token or not self.chat_id:
+            return {"status": "error", "message": "Falta configuración de Telegram"}
+        
+        url = f"https://api.telegram.org/bot{self.token}/sendDocument"
+        try:
+            with open(file_path, 'rb') as f:
+                files = {'document': f}
+                data = {'chat_id': self.chat_id, 'caption': caption, 'parse_mode': 'Markdown'}
+                response = requests.post(url, files=files, data=data, timeout=30)
+                if response.ok:
+                    return {"status": "success", "data": response.json()}
+                else:
+                    return {"status": "error", "message": response.text}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}

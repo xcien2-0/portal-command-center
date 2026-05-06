@@ -195,10 +195,10 @@ export default function Index() {
     });
   }, [allData, realData]);
 
-  const globalOnline = summary?.online ?? 0;
-  const globalTotal  = summary?.totalHosts ?? 0;
-  const healthPct    = summary?.avgHealthScore ?? 0;
-  const activeAlertsCount = summary?.activeAlerts ?? 0;
+  const globalOnline = summary?.online || tenantStats.reduce((s, t) => s + t.totalOnline, 0);
+  const globalTotal  = summary?.totalHosts || tenantStats.reduce((s, t) => s + (t.totalOnline || 0) + (t.totalOffline || 0), 0);
+  const healthPct    = summary?.avgHealthScore || (tenantStats.length ? Math.round(tenantStats.reduce((s, t) => s + t.avgScore, 0) / tenantStats.length) : 0);
+  const activeAlertsCount = summary?.activeAlerts || tenantStats.reduce((s, t) => s + t.cityAlerts, 0);
 
   const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateStr = now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -242,6 +242,42 @@ export default function Index() {
 
       <div className="max-w-[1300px] mx-auto px-8 pb-16 space-y-10 mt-8">
 
+        {/* ── Quick Actions ─────────────────────────────────────────────────── */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            className="flex items-center justify-center gap-3 p-4 rounded-xl font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, #FF4D6D 0%, #C9184A 100%)', boxShadow: '0 8px 20px rgba(255,77,109,0.25)' }}
+          >
+            <AlertTriangle className="h-5 w-5" />
+            ABRIR INCIDENTE MAYOR
+          </button>
+          <button 
+            className="flex items-center justify-center gap-3 p-4 rounded-xl font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0077B6 100%)', boxShadow: '0 8px 20px rgba(0,180,216,0.25)' }}
+          >
+            <Send className="h-5 w-5" />
+            DESPACHAR TÉCNICO
+          </button>
+          <div 
+            className="flex items-center justify-between p-4 rounded-xl border"
+            style={{ background: 'var(--xcien-card)', borderColor: 'var(--xcien-border)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                <CheckCircle2 className="h-5 w-5 text-[#34D399]" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-dim">SLA Global</p>
+                <p className="text-[18px] font-black text-white">99.82%</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-[#34D399] font-bold">↑ 0.05%</p>
+              <p className="text-[9px] text-dim">vs mes anterior</p>
+            </div>
+          </div>
+        </section>
+
         {/* ── Global KPIs ─────────────────────────────────────────────────── */}
         <section>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -253,6 +289,7 @@ export default function Index() {
               accent="#00C896"
               badge={`${Math.round((globalOnline/globalTotal)*100 || 0)}%`}
               badgeGood={(globalOnline/globalTotal) >= 0.8}
+              delta={{ val: "↑ +12", color: "#00C896" }}
             />
             <KpiCard
               label="Hosts caídos"
@@ -260,6 +297,7 @@ export default function Index() {
               sub="requieren atención"
               icon={<WifiOff className="h-4 w-4" />}
               accent={(globalTotal - globalOnline) > 10 ? '#FF4D6D' : '#FFB703'}
+              delta={{ val: "↓ -2", color: "#00C896" }}
             />
             <KpiCard
               label="Alertas activas"
@@ -267,6 +305,7 @@ export default function Index() {
               sub="en tiempo real"
               icon={<AlertTriangle className="h-4 w-4" />}
               accent={activeAlertsCount > 5 ? '#FF4D6D' : '#FFB703'}
+              delta={{ val: "↑ +8", color: "#FF4D6D" }}
             />
             <KpiCard
               label="Salud de Red"
@@ -274,6 +313,7 @@ export default function Index() {
               sub={scoreLabel(healthPct)}
               icon={<Activity className="h-4 w-4" />}
               accent={scoreColor(healthPct)}
+              delta={{ val: "↓ -0.4%", color: "#FF4D6D" }}
             />
           </div>
         </section>
@@ -388,7 +428,7 @@ function SectionLabel({ children, icon }: { children: React.ReactNode, icon: Rea
 }
 
 function KpiCard({
-  label, value, sub, icon, accent, badge, badgeGood,
+  label, value, sub, icon, accent, badge, badgeGood, delta
 }: {
   label: string;
   value: string;
@@ -397,25 +437,31 @@ function KpiCard({
   accent: string;
   badge?: string;
   badgeGood?: boolean;
+  delta?: { val: string; color: string };
 }) {
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-5 relative overflow-hidden"
       style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 relative z-10">
         <span style={{ color: accent }}>{icon}</span>
-        {badge && (
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{
-              background: badgeGood ? 'rgba(0,200,150,0.12)' : 'rgba(255,77,109,0.12)',
-              color: badgeGood ? '#00C896' : '#FF4D6D',
-            }}
-          >
-            {badge}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {delta && (
+            <span className="text-[10px] font-bold" style={{ color: delta.color }}>{delta.val}</span>
+          )}
+          {badge && (
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{
+                background: badgeGood ? 'rgba(0,200,150,0.12)' : 'rgba(255,77,109,0.12)',
+                color: badgeGood ? '#00C896' : '#FF4D6D',
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
       </div>
       <p className="text-[28px] font-bold tabular-nums leading-none" style={{ color: '#e2e8f0' }}>{value}</p>
       <p className="text-[11px] mt-1" style={{ color: '#64748b' }}>{label}</p>

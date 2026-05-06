@@ -1,0 +1,588 @@
+
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        
+    <style>
+        @page { margin: 2cm; }
+        body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; 
+            line-height: 1.6; 
+            color: #1a1a1a; 
+            max-width: 800px; 
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        h1 { 
+            color: #000000; 
+            border-bottom: 4px solid #00A859; 
+            padding-bottom: 10px; 
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        h2 { 
+            color: #00A859; 
+            border-bottom: 1px solid #eeeeee; 
+            padding-top: 20px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        h3 { 
+            color: #333333; 
+            font-size: 18px; 
+            font-weight: 700;
+            margin-top: 25px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            font-size: 14px;
+        }
+        th { 
+            background-color: #00A859; 
+            color: white; 
+            padding: 12px; 
+            text-align: left;
+            border: 1px solid #008f4c;
+        }
+        td { 
+            padding: 10px; 
+            border: 1px solid #dddddd; 
+        }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        blockquote { 
+            border-left: 5px solid #00A859; 
+            background: #f0fff4; 
+            margin: 20px 0; 
+            padding: 15px; 
+            font-style: italic;
+            color: #2d5a27;
+        }
+        hr { border: 0; border-top: 1px solid #eeeeee; margin: 30px 0; }
+        .footer { 
+            margin-top: 50px; 
+            font-size: 10px; 
+            color: #999999; 
+            text-align: center; 
+            border-top: 1px solid #eeeeee;
+            padding-top: 20px;
+        }
+        .header-logo { text-align: right; margin-bottom: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+    </style>
+    
+    </head>
+    <body>
+        <div class="header-logo">
+            <span style="font-weight: 900; font-size: 24px; color: #000;">XCIEN</span>
+            <span style="color: #00A859; font-weight: 900; font-size: 24px;">2.0</span>
+        </div>
+        <h1>👷 Proyecto Bidrillas XCIEN 2026</h1>
+<h2>Equipos Profesionales de Campo — Proyectos Propios y de Terceros</h2>
+<blockquote>
+<p><strong>Versión:</strong> 1.0 · <strong>Fecha:</strong> Abril 2026 · <strong>Autor:</strong> Dirección General XCIEN<br />
+<em>Operadoras: XCIEN · Wispi · Luminet · Huss · Senel</em></p>
+</blockquote>
+<hr />
+<h2>🎯 Introducción</h2>
+<p>Una <strong>Bidrilla</strong> es la unidad operativa mínima de campo de XCIEN: un equipo de <strong>2 personas certificadas</strong> capaces de ejecutar instalaciones, mantenimientos y proyectos técnicos con los más altos estándares de calidad y seguridad, tanto para operaciones internas como para clientes de terceros.</p>
+<p>El modelo de Bidrilla permite:
+- <strong>Agilidad:</strong> 2 personas se movilizan más rápido que cuadrillas grandes
+- <strong>Rentabilidad:</strong> Menor costo operativo por servicio
+- <strong>Escalabilidad:</strong> Múltiples bidrillas en paralelo para proyectos grandes
+- <strong>Trazabilidad:</strong> Responsabilidad individual clara y registrada en Odoo</p>
+<hr />
+<h2>👥 Composición de una Bidrilla</h2>
+<table>
+<thead>
+<tr>
+<th>Rol</th>
+<th>Perfil</th>
+<th>Responsabilidad Principal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Técnico Líder (TL)</strong></td>
+<td>Técnico certificado · Mínimo 15 instalaciones</td>
+<td>Decisiones técnicas, RF, seguridad, Odoo</td>
+</tr>
+<tr>
+<td><strong>Auxiliar Técnico (AT)</strong></td>
+<td>En formación · Mínimo 0 instalaciones asistidas</td>
+<td>Apoyo en instalación, materiales, evidencia</td>
+</tr>
+</tbody>
+</table>
+<h3>Dinámica del equipo</h3>
+<ul>
+<li>El <strong>Técnico Líder</strong> es el responsable legal y técnico de cada servicio</li>
+<li>El <strong>Auxiliar</strong> aprende en campo y acumula instalaciones para su certificación</li>
+<li>Ambos son <strong>corresponsables</strong> del estándar "Cero Basura" en el sitio</li>
+</ul>
+<hr />
+<h2>📋 Certificaciones Requeridas por Rol</h2>
+<h3>Técnico Líder — Requisitos mínimos</h3>
+<table>
+<thead>
+<tr>
+<th>Área</th>
+<th>Requisito</th>
+<th>Verificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seguridad</td>
+<td>Arnés 5 puntos + ganchos dobles</td>
+<td>Evidencia fotográfica en Odoo</td>
+</tr>
+<tr>
+<td>RF Básico</td>
+<td>Nivel -35 a -45 dBi = Excelente</td>
+<td>Checklist de instalación</td>
+</tr>
+<tr>
+<td>Academia</td>
+<td>Examen aprobado ≥ 90%</td>
+<td>Registro en sistema Academia</td>
+</tr>
+<tr>
+<td>ERP</td>
+<td>Registro completo de tickets en Odoo wispi17</td>
+<td>Cierre con evidencia fotográfica</td>
+</tr>
+<tr>
+<td>Instalaciones</td>
+<td>Mínimo 15 servicios asistidos previos</td>
+<td>Bitácora de campo</td>
+</tr>
+</tbody>
+</table>
+<h3>Auxiliar Técnico — Requisitos mínimos</h3>
+<table>
+<thead>
+<tr>
+<th>Área</th>
+<th>Requisito</th>
+<th>Verificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seguridad</td>
+<td>EPP básico: casco, guantes, botas</td>
+<td>Check antes de salir a campo</td>
+</tr>
+<tr>
+<td>Actitud</td>
+<td>Disposición de aprendizaje</td>
+<td>Evaluación del TL</td>
+</tr>
+<tr>
+<td>Documentación</td>
+<td>Sabe tomar evidencia fotográfica</td>
+<td>Foto estándar por servicio</td>
+</tr>
+<tr>
+<td>Odoo</td>
+<td>Conocimiento básico de consulta de tickets</td>
+<td>Capacitación inicial</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>🧰 Equipamiento por Bidrilla</h2>
+<h3>EPP — Equipo de Protección Personal (obligatorio para ambos)</h3>
+<ul>
+<li>✅ Arnés de 5 puntos con ganchos dobles certificados</li>
+<li>✅ Casco con barbuquejo</li>
+<li>✅ Guantes dieléctricos</li>
+<li>✅ Botas con casquillo de acero y suela antideslizante</li>
+<li>✅ Gafas de seguridad</li>
+<li>✅ Uniforme XCIEN (camisa y pantalón identificado)</li>
+</ul>
+<h3>Herramientas de instalación</h3>
+<ul>
+<li>Llave inglesa y llaves de impacto</li>
+<li>Destornilladores de precisión (plano y Phillips)</li>
+<li>Llaves hexagonales (juego completo)</li>
+<li>Cinta métrica y nivel de burbuja</li>
+<li>Taladro con brocas para mampostería</li>
+<li>Pinzas y pelacables</li>
+<li>Bridas y herrajes (según tipo de mástil)</li>
+</ul>
+<h3>Instrumentos de medición</h3>
+<ul>
+<li><strong>Medidor de señal RF</strong> (para validar 35-45 dBi)</li>
+<li>Multímetro</li>
+<li>Probador de red (ping/tracert en tablet o smartphone)</li>
+</ul>
+<h3>Mástiles por tipo de proyecto</h3>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Altura</th>
+<th>Herrajes requeridos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Empotrado</td>
+<td>Hasta 3m</td>
+<td>2 herrajes V, separación 30cm, pija broca</td>
+</tr>
+<tr>
+<td>Tensado</td>
+<td>3m – 6m</td>
+<td>Ángulo 45°, anclajes a 120°, retenidas arriba y abajo</td>
+</tr>
+<tr>
+<td>Telescópico</td>
+<td>Hasta 12m</td>
+<td>4 niveles de retenidas, anclajes a 5m de base</td>
+</tr>
+</tbody>
+</table>
+<h3>Vehículo y logística</h3>
+<ul>
+<li>Camioneta o pick-up identificada con logotipo XCIEN</li>
+<li>Caja organizadora de herramientas</li>
+<li>Kit de limpieza (escoba, bolsas de basura — "Cero Basura")</li>
+<li>Tablet o smartphone con app Odoo configurada</li>
+<li>Botiquín de primeros auxilios</li>
+</ul>
+<hr />
+<h2>🏗️ Tipos de Proyecto</h2>
+<h3>A. Proyectos Propios (Operaciones XCIEN internas)</h3>
+<p><strong>Objetivo:</strong> Instalar, mantener y dar soporte a la red de las 5 operadoras XCIEN con los más altos estándares de calidad.</p>
+<p><strong>Flujo operativo:</strong></p>
+<pre><code>Odoo wispi17 genera ticket
+        ↓
+Dispatch asigna Bidrilla disponible por zona
+        ↓
+TL recibe orden en Odoo (tipo, dirección, materiales)
+        ↓
+Bidrilla ejecuta instalación con checklist
+        ↓
+Evidencia fotográfica: antes, durante, después
+        ↓
+Validación RF (35-45 dBi)
+        ↓
+&quot;Cero Basura&quot; verificado
+        ↓
+Cierre de ticket en Odoo + firma del cliente
+</code></pre>
+<p><strong>Estándares de calidad internos:</strong>
+- RF mínimo aceptable: -65 dBi
+- RF óptimo: -35 a -45 dBi
+- Tiempo máximo de instalación estándar: 4 horas
+- Documentación obligatoria: 4 fotografías mínimo por servicio
+- Cierre en Odoo: mismo día del servicio</p>
+<hr />
+<h3>B. Proyectos de Terceros (Clientes externos y empresas contratantes)</h3>
+<p><strong>Objetivo:</strong> Ofrecer servicios profesionales de instalación, mantenimiento y consultoría técnica a empresas externas bajo los estándares XCIEN.</p>
+<p><strong>Diferencias clave vs. proyectos internos:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Proyectos Propios</th>
+<th>Proyectos de Terceros</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cliente</td>
+<td>Operadora XCIEN</td>
+<td>Empresa externa</td>
+</tr>
+<tr>
+<td>Contrato</td>
+<td>Orden de servicio interna</td>
+<td>Contrato formal firmado</td>
+</tr>
+<tr>
+<td>Materiales</td>
+<td>Almacén XCIEN</td>
+<td>Definido por contrato (cliente o XCIEN)</td>
+</tr>
+<tr>
+<td>Uniformidad</td>
+<td>XCIEN identificado</td>
+<td>XCIEN + credencial de acceso del tercero</td>
+</tr>
+<tr>
+<td>Reporte</td>
+<td>Odoo interno</td>
+<td>Reporte adicional en formato del cliente</td>
+</tr>
+<tr>
+<td>SLA</td>
+<td>Política interna</td>
+<td>SLA pactado con penalización</td>
+</tr>
+<tr>
+<td>Facturación</td>
+<td>Centro de costos</td>
+<td>Factura fiscal al cliente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Proceso para proyectos de terceros:</strong>
+1. Levantamiento técnico previo (factibilidad y cotización)
+2. Firma de contrato con SLA y penalizaciones definidas
+3. Asignación de bidrilla certificada para el tipo de proyecto
+4. Ejecución con doble registro: Odoo interno + reporte del cliente
+5. Entrega formal con acta de recepción firmada
+6. Facturación y cierre</p>
+<hr />
+<h2>📊 KPIs de Desempeño por Bidrilla</h2>
+<h3>Proyectos Propios</h3>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Objetivo</th>
+<th>Medición</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servicios por día</td>
+<td>3 – 5</td>
+<td>Tickets cerrados en Odoo</td>
+</tr>
+<tr>
+<td>Calidad RF</td>
+<td>100% en rango -35 a -45 dBi</td>
+<td>Registro de medición</td>
+</tr>
+<tr>
+<td>Cero Basura</td>
+<td>100%</td>
+<td>Foto de sitio al cierre</td>
+</tr>
+<tr>
+<td>Cierre en Odoo mismo día</td>
+<td>100%</td>
+<td>Timestamp del cierre</td>
+</tr>
+<tr>
+<td>Re-trabajos</td>
+<td>&lt; 2%</td>
+<td>Tickets de corrección</td>
+</tr>
+</tbody>
+</table>
+<h3>Proyectos de Terceros</h3>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Objetivo</th>
+<th>Medición</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cumplimiento de SLA</td>
+<td>98%+</td>
+<td>Fecha entrega vs. fecha pactada</td>
+</tr>
+<tr>
+<td>Satisfacción del cliente</td>
+<td>≥ 4.5 / 5</td>
+<td>Evaluación firmada por cliente</td>
+</tr>
+<tr>
+<td>Defectos post-instalación</td>
+<td>0% en primeros 30 días</td>
+<td>Reportes de falla</td>
+</tr>
+<tr>
+<td>Documentación completa</td>
+<td>100%</td>
+<td>Acta entregada + fotos</td>
+</tr>
+<tr>
+<td>Seguridad (incidentes)</td>
+<td>0</td>
+<td>Reportes de seguridad</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>🚀 Escalafón y Crecimiento dentro del Modelo Bidrilla</h2>
+<pre><code>AUXILIAR TÉCNICO
+    · 0 instalaciones
+    · Aprende en campo con TL
+    · Certificación básica EPP
+          ↓ (15 instalaciones + examen ≥ 90%)
+TÉCNICO LÍDER DE BIDRILLA
+    · Puede liderar su propia bidrilla
+    · Registra tickets en Odoo
+    · Valida RF y seguridad
+          ↓ (Experiencia + liderazgo de múltiples bidrillas)
+LÍDER DE OPERACIONES
+    · Supervisa 2 o más bidrillas simultáneas
+    · Dictamina factibilidad de sitios
+    · Gestión ERP completa (viáticos, materiales, escalaciones)
+</code></pre>
+<hr />
+<h2>🤖 Soporte de IA al Modelo Bidrilla</h2>
+<p>El sistema de agentes XCIEN 2.0 apoya el ciclo de vida completo de cada bidrilla:</p>
+<table>
+<thead>
+<tr>
+<th>Agente</th>
+<th>Soporte a la Bidrilla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Director General</strong></td>
+<td>Asigna prioridades y recursos entre bidrillas según demanda</td>
+</tr>
+<tr>
+<td><strong>Agente Dispatch</strong></td>
+<td>Asigna la bidrilla correcta al ticket por zona y nivel de skill</td>
+</tr>
+<tr>
+<td><strong>Agente Operaciones</strong></td>
+<td>Verifica checklists de calidad y seguridad antes de salir a campo</td>
+</tr>
+<tr>
+<td><strong>Agente RRHH/Academia</strong></td>
+<td>Genera exámenes y certifica al Auxiliar para ascender a TL</td>
+</tr>
+<tr>
+<td><strong>Agente Odoo</strong></td>
+<td>Registra consumibles, materiales y cierra tickets automáticamente</td>
+</tr>
+<tr>
+<td><strong>Agente NOC</strong></td>
+<td>Alerta a la bidrilla si hay problemas de red en el sitio antes de llegar</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>📄 Documentos de Soporte</h2>
+<table>
+<thead>
+<tr>
+<th>Documento</th>
+<th>Uso</th>
+<th>Ubicación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Checklist de instalación</td>
+<td>Antes y después de cada servicio</td>
+<td>App Odoo / impreso</td>
+</tr>
+<tr>
+<td>Acta de entrega-recepción</td>
+<td>Proyectos de terceros</td>
+<td>Odoo + firma cliente</td>
+</tr>
+<tr>
+<td>Reporte de supervisor diario</td>
+<td>Auditoría de calidad</td>
+<td>Xcien_Docs/reporte_supervisor</td>
+</tr>
+<tr>
+<td>Protocolo de promoción técnica</td>
+<td>Escalafón Auxiliar → TL</td>
+<td>PROTOCOLO_PROMOCION_TECNICA.md</td>
+</tr>
+<tr>
+<td>Manual de operaciones</td>
+<td>Estándares técnicos</td>
+<td>LIBRO_MAESTRO_OPERACIONES_XCIEN_2026.md</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>✅ Checklist de Salida a Campo (por Bidrilla)</h2>
+<p>Antes de cada servicio el Técnico Líder verifica:</p>
+<p><strong>Seguridad</strong>
+- [ ] Arnés inspeccionado y certificado
+- [ ] EPP completo para ambos integrantes
+- [ ] Botiquín de primeros auxilios en vehículo</p>
+<p><strong>Herramientas</strong>
+- [ ] Inventario de herramientas completo
+- [ ] Medidor de señal RF cargado y calibrado
+- [ ] Tablet/smartphone con Odoo activo y ticket cargado</p>
+<p><strong>Materiales</strong>
+- [ ] Materiales solicitados en almacén conforme a la orden
+- [ ] Herrajes según tipo de mástil del proyecto
+- [ ] Kit de limpieza en vehículo</p>
+<p><strong>Documentación</strong>
+- [ ] Ticket de Odoo abierto y revisado
+- [ ] Dirección y contacto del cliente confirmados
+- [ ] Contrato firmado (proyectos de terceros)</p>
+<hr />
+<h2>🏆 Estándar "Cero Basura" — Regla de Oro</h2>
+<blockquote>
+<p><em>"Ninguna bidrilla XCIEN abandona un sitio con residuos. El cliente debe ver el lugar igual o mejor que cuando llegamos."</em></p>
+</blockquote>
+<p><strong>Protocolo:</strong>
+1. Al llegar: fotografía del sitio en estado inicial
+2. Durante: residuos en bolsa identificada
+3. Al terminar: fotografía del sitio en estado final
+4. Evidencia sube a Odoo antes de cerrar el ticket</p>
+<p><strong>Consecuencia de incumplimiento:</strong> Reporte al Líder de Operaciones + nota en bitácora personal + plan de mejora.</p>
+<hr />
+<h2>📅 Implementación 2026</h2>
+<table>
+<thead>
+<tr>
+<th>Fase</th>
+<th>Actividad</th>
+<th>Fecha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q2 2026</strong></td>
+<td>Certificación de todas las bidrillas activas en EPP</td>
+<td>Mayo 2026</td>
+</tr>
+<tr>
+<td><strong>Q2 2026</strong></td>
+<td>100% de técnicos con acceso a Odoo móvil</td>
+<td>Mayo 2026</td>
+</tr>
+<tr>
+<td><strong>Q3 2026</strong></td>
+<td>Primer proyecto de terceros con modelo bidrilla</td>
+<td>Julio 2026</td>
+</tr>
+<tr>
+<td><strong>Q3 2026</strong></td>
+<td>Academia: 100% de auxiliares con examen aprobado</td>
+<td>Agosto 2026</td>
+</tr>
+<tr>
+<td><strong>Q4 2026</strong></td>
+<td>KPIs automatizados vía agente Director General</td>
+<td>Oct 2026</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Documento generado con apoyo del sistema de agentes XCIEN 2.0 · Director General IA · Qwen3.5 via LiteLLM Gateway</em><br />
+<em>Propiedad Intelectual XCIEN · Prohibida reproducción sin autorización</em></p>
+        <div class="footer">
+            © 2026 XCIEN · Documento Estratégico de Operaciones · Generado por Director General AI
+        </div>
+    </body>
+    </html>
+    
