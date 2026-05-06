@@ -6,7 +6,10 @@ from datetime import datetime
 from typing import List, Dict, Optional
 import token_service
 
-DB_PATH = "backend/db/wfm_orders.json"
+import sys
+
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(_BASE_DIR, "db", "wfm_orders.json")
 
 class WFMWorkflowService:
     def __init__(self):

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
+import { API_BASE } from '../../../config';
 import { NOCCity, NOCAlert } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
 
@@ -141,7 +142,7 @@ export default function NocSection({
   const openSop = async (id: string) => {
     try {
       const path = id === 'SOP-NOC-001' ? 'estandares/Estándar_Proceso_Soporte_HL.md' : 'estandares/Estándar_Corporativo_de_Instalación_Xcien_estándar_de_instalación.md';
-      const res = await fetch(`${window.location.origin.replace('8080', '8000')}/api/docs/content?path=${path}`);
+      const res = await fetch(`${API_BASE}/api/docs/content?path=${path}`);
       const data = await res.json();
       setSelectedSop({ id, content: data.content });
     } catch (e) {

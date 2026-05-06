@@ -15,6 +15,8 @@ import FodaSection from './sections/FodaSection';
 import AdopcionSection from './sections/AdopcionSection';
 import TelegramBotSection from './sections/TelegramBotSection';
 import DocsSection from './sections/DocsSection';
+import BackupSection from './sections/BackupSection';
+import InicioHoloSection from './sections/InicioHoloSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -55,14 +57,15 @@ const NAV: NavEntry[] = [
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
   { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
 
-  { id: 'foda', label: 'Estrategia FODA', icon: '🛡️', group: 'Planeación Estratégica' },
-  { id: 'adopcion', label: 'Adopción & Usuarios', icon: '👥', group: 'Planeación Estratégica' },
+  { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
+  { id: 'adopcion', label: 'Gestión de Usuarios', icon: '👥', group: 'Planeación' },
 
-  { id: 'bridge', label: 'Puente IA (Antigravity)', icon: '⚡', group: 'Sistema' },
-  { id: 'war-room', label: 'Sala de Guerra (War Room)', icon: '⚔️', group: 'Sistema' },
-  { id: 'mobile', label: 'Conectar Celular', icon: '📱', group: 'Sistema' },
-  { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Sistema' },
-  { id: 'editor', label: 'Ajustes del Portal', icon: '🎨', group: 'Configuración' },
+  { id: 'bridge', label: 'Puente de Datos (IA)', icon: '⚡', group: 'Infraestructura' },
+  { id: 'war-room', label: 'Comando Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
+  { id: 'mobile', label: 'Terminal Móvil (QR)', icon: '📱', group: 'Infraestructura' },
+  { id: 'telegram', label: 'Monitor de Alarmas Bot', icon: '🤖', group: 'Infraestructura' },
+  { id: 'backup', label: 'Migración & Redundancia', icon: '💾', group: 'Sistema' },
+  { id: 'editor', label: 'Configuración Matriz', icon: '🎨', group: 'Sistema' },
 ];
 
 const SECTION_TITLE: Record<SectionId, string> = {
@@ -74,17 +77,18 @@ const SECTION_TITLE: Record<SectionId, string> = {
   tokens: 'Tokens & Certificados',
   transacciones: 'Transacciones Intragrupo',
   etiquetas: 'Creación de Etiquetas & Comprobantes',
-  foda: 'Estrategia FODA (War Room)',
-  adopcion: 'Adopción & Gestión de Usuarios',
-  academia: 'Academia XCIEN',
-  gerencia: 'Dashboard Gerencial',
-  reports: 'Reportes & Gobierno',
-  bridge: 'Puente IA (Antigravity)',
-  'war-room': 'Sala de Guerra (Multi-Agente)',
-  mobile: 'Conexión Móvil — Acceso QR',
-  telegram: 'Telegram Bot Alarms',
-  docs: 'Biblioteca Documental',
-  editor: 'Protocolo Matriz — Configuración',
+  foda: 'Análisis de Riesgos y Oportunidades',
+  adopcion: 'Adopción y Gestión de Usuarios',
+  academia: 'XCIEN Academia',
+  gerencia: 'Control Gerencial',
+  reports: 'Gobierno de Datos',
+  bridge: 'Antigravity Data Bridge',
+  'war-room': 'Centro de Comando Multi-Agente',
+  mobile: 'Acceso Remoto Móvil',
+  telegram: 'Monitor de Alarmas (Telegram)',
+  docs: 'Repositorio Documental',
+  backup: 'Gestión de Migración y Redundancia',
+  editor: 'Ajustes de Infraestructura',
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -121,13 +125,13 @@ function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEn
   );
 }
 
-function Sidebar({ active, onSelect, theme }: SidebarProps) {
+function Sidebar({ active, onSelect, theme, backendStatus }: SidebarProps) {
   const [now, setNow] = useState(new Date());
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia', 'Administración', 'Planeación Estratégica']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia', 'Administración', 'Planeación', 'Infraestructura', 'Sistema']);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const timeId = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timeId);
   }, []);
 
   const toggleGroup = (label: string) => {
@@ -172,8 +176,14 @@ function Sidebar({ active, onSelect, theme }: SidebarProps) {
             <span style={{ color: accent, fontSize: '0.7rem', background: `${accent}20`, padding: '2px 6px', borderRadius: 4, marginLeft: 6 }}>2.0</span>
           </div>
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: 10, color: theme.dim, marginTop: 8 }}>
-          {now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+          <div style={{ fontFamily: 'monospace', fontSize: 10, color: theme.dim }}>
+            {now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: backendStatus === 'online' ? '#00ff88' : '#ff3366' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: backendStatus === 'online' ? '#00ff88' : '#ff3366', boxShadow: backendStatus === 'online' ? '0 0 8px #00ff88' : 'none' }} />
+            {backendStatus.toUpperCase()}
+          </div>
         </div>
       </div>
 
@@ -266,11 +276,12 @@ interface ContentProps {
 
 function Content({
   section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
-  cities, alerts, activeTenantId, onTenantChange, bridgeData
-}: ContentProps) {
+  cities, alerts, activeTenantId, onTenantChange, bridgeData, backendStatus, onSelect
+}: ContentProps & { backendStatus: 'online' | 'offline', onSelect: (id: SectionId) => void }) {
   const padding = theme.compact ? 20 : 32;
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding, background: theme.bg, minWidth: 0 }}>
+      {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} onSelect={onSelect} />}
       {section === 'noc' && (
         <NocSection 
           theme={theme} 
@@ -446,6 +457,7 @@ function Content({
       )}
       {section === 'telegram' && <TelegramBotSection theme={theme} />}
       {section === 'docs' && <DocsSection theme={theme} />}
+      {section === 'backup' && <BackupSection theme={theme} />}
       {section === 'tokens'        && <TokensSection        theme={theme} activeThemeId={activeThemeId} />}
       {section === 'transacciones' && <TransaccionesSection  theme={theme} activeThemeId={activeThemeId} />}
       {section === 'etiquetas'     && <EtiquetasSection      theme={theme} activeThemeId={activeThemeId} />}
@@ -466,11 +478,25 @@ function Content({
 export default function Xcien2Page() {
   const navigate = useNavigate();
   const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
   const [section, setSection] = useState<SectionId>(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('section') as SectionId;
     return (s && SECTION_TITLE[s]) ? s : 'noc';
   });
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        if (res.ok) setBackendStatus('online');
+        else setBackendStatus('offline');
+      } catch { setBackendStatus('offline'); }
+    };
+    checkBackend();
+    const id = setInterval(checkBackend, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const fetchBridge = async () => {
@@ -557,12 +583,8 @@ export default function Xcien2Page() {
   }, [location.search, section]);
 
   const onSelectSection = useCallback((id: SectionId) => {
-    if (id === 'inicio') {
-      navigate('/');
-    } else {
-      setSection(id);
-    }
-  }, [navigate]);
+    setSection(id);
+  }, []);
 
   return (
     <div
@@ -574,7 +596,7 @@ export default function Xcien2Page() {
         background: theme.bg,
       }}
     >
-      <Sidebar active={section} onSelect={onSelectSection} theme={theme} />
+      <Sidebar active={section} onSelect={onSelectSection} theme={theme} backendStatus={backendStatus} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* Top header */}
@@ -588,7 +610,12 @@ export default function Xcien2Page() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>{SECTION_TITLE[section]}</h2>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accent, boxShadow: `0 0 12px ${theme.accent}`, animation: theme.animations ? 'pulse-dot 2s infinite' : 'none' }} />
+              <div style={{ 
+                width: 8, height: 8, borderRadius: '50%', 
+                background: backendStatus === 'online' ? theme.accent : '#ff3366', 
+                boxShadow: `0 0 12px ${backendStatus === 'online' ? theme.accent : '#ff3366'}`, 
+                animation: theme.animations ? 'pulse-dot 2s infinite' : 'none' 
+              }} />
             </div>
 
             {/* Quick Access Desktop */}
@@ -666,6 +693,8 @@ export default function Xcien2Page() {
           activeTenantId={activeTenantId}
           onTenantChange={setActiveTenantId}
           bridgeData={bridgeData}
+          backendStatus={backendStatus}
+          onSelect={onSelectSection}
         />
       </div>
 
