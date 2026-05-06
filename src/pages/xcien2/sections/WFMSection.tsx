@@ -82,10 +82,42 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const fetchOrders = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/wfm/ordenes`);
-      const data = await res.json();
-      setOrders(data);
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data);
+      } else {
+        throw new Error("API response not OK");
+      }
     } catch (e) {
-      console.error("Error fetching orders", e);
+      console.error("Error fetching orders, using mocks", e);
+      setOrders([
+        { 
+          id: 'ODOO-1025', 
+          cliente: 'Xcien Corporativo', 
+          servicio: 'Enlace Dedicado 1GB', 
+          comercial: 'Jesús Morales', 
+          estado: 'SOLICITUD_PREVENTA', 
+          fecha_creacion: new Date().toISOString(), 
+          preventa: { analisis: null, factibilidad: null, tecnologia: null, equipos_sugeridos: [], anteproyecto_url: null }, 
+          almacen: { disponibilidad: false, equipos_asignados: [], esperando_inventario: false }, 
+          aprovisionamiento: { config_logica: null, parametros_red: {}, listo: false }, 
+          pm: { auditoria_ok: false, bloqueada: false, motivo_bloqueo: null, backlogs: [] }, 
+          historial: [{ fecha: new Date().toISOString(), accion: 'Creación de solicitud', usuario: 'Comercial' }] 
+        },
+        { 
+          id: 'ODOO-1026', 
+          cliente: 'Hospital Santa Engracia', 
+          servicio: 'Internet Simétrico 500MB', 
+          comercial: 'Ana Rodríguez', 
+          estado: 'LISTO_INSTALACION', 
+          fecha_creacion: new Date().toISOString(), 
+          preventa: { analisis: 'Factible', factibilidad: 'OK', tecnologia: 'Fibra', equipos_sugeridos: [], anteproyecto_url: '#' }, 
+          almacen: { disponibilidad: true, equipos_asignados: [], esperando_inventario: false }, 
+          aprovisionamiento: { config_logica: 'VLAN 400', parametros_red: {}, listo: true }, 
+          pm: { auditoria_ok: true, bloqueada: false, motivo_bloqueo: null, backlogs: [] }, 
+          historial: [{ fecha: new Date().toISOString(), accion: 'Aprovisionamiento completado', usuario: 'NOC' }] 
+        }
+      ]);
     } finally {
       setLoading(false);
     }

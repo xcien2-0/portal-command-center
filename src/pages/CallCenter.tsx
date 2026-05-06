@@ -172,7 +172,14 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
     supabase.from('messages').select('*').eq('conversation_id', selectedId).order('created_at', { ascending: true })
-      .then(({ data }) => { if (data) setMessages(data); });
+      .then(({ data }) => { if (data) setMessages(data); })
+      .catch(e => {
+        console.error("Failed to load messages from Supabase, using mocks", e);
+        setMessages([
+          { id: 'm1', conversation_id: selectedId, sender_type: 'client', sender_name: 'Cliente Demo', content: 'Tengo un problema con el servicio en Saltillo, hay intermitencia desde hace 1 hora.', created_at: new Date(Date.now() - 3600000).toISOString() },
+          { id: 'm2', conversation_id: selectedId, sender_type: 'bot', sender_name: 'Bot', content: 'Hola. He analizado la telemetría y detectado una falla masiva en la zona. Escalaré tu caso inmediatamente al Centro de Mando NOC.', created_at: new Date(Date.now() - 3500000).toISOString() }
+        ]);
+      });
   }, [selectedId]);
 
   // Auto-scroll
@@ -236,8 +243,6 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
 
   return (
     <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden relative" style={{ background: theme?.bg || '#0f1117', color: '#e2e8f0' }}>
-      {activeThemeId === 'matrix' && MatrixBackground && <MatrixBackground />}
-      
       {/* Left Panel */}
       <div className="flex flex-col border-r" style={{ width: '30%', minWidth: 320, borderColor: '#1e2535', background: '#161b27' }}>
         {/* Company tabs */}

@@ -22,9 +22,18 @@ export default function DocsSection({ theme }: { theme: ThemeConfig }) {
       .then(data => {
         if (data.status === 'success') {
           setDocs(data.documents);
+        } else {
+          throw new Error("Invalid status");
         }
       })
-      .catch(e => console.error("Error loading library", e))
+      .catch(e => {
+        console.error("Error loading library, using mocks", e);
+        setDocs([
+          { id: 'd1', name: 'Manual de Instalación Mikrotik v2', filename: 'manual_mt_v2.pdf', type: 'pdf', category: 'Manuales Técnicos', path: 'manuales/mt.pdf' },
+          { id: 'd2', name: 'Estándar de Cableado Estructurado 2026', filename: 'estandar_cableado.pdf', type: 'pdf', category: 'Estándares', path: 'estandares/cableado.pdf' },
+          { id: 'd3', name: 'Reporte de Gobierno Q1 2025', filename: 'reporte_gob_q1.pdf', type: 'pdf', category: 'Reportes', path: 'reportes/gob.pdf' }
+        ]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

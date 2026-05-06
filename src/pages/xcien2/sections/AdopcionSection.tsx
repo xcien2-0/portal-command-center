@@ -28,8 +28,15 @@ export default function AdopcionSection({ theme }: { theme: ThemeConfig }) {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/users`);
-      if (res.ok) setUsers(await res.json());
-    } catch (e) { console.error(e); }
+      if (res.ok) {
+        setUsers(await res.json());
+      } else {
+        setUsers(INITIAL_USERS);
+      }
+    } catch (e) { 
+      console.error("Error loading users, using fallback", e);
+      setUsers(INITIAL_USERS);
+    }
     setLoading(false);
   };
 

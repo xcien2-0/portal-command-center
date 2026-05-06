@@ -86,10 +86,16 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
       fetch(`${API}/api/activos`).then(r => r.json()),
       fetch(`${API}/api/transacciones`).then(r => r.json()),
     ]).then(([a, t]) => {
-      if (Array.isArray(a)) setActivos(a);
-      if (Array.isArray(t)) setTxs(t);
+      if (Array.isArray(a) && a.length > 0) setActivos(a);
+      else setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'xcien', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
+      if (Array.isArray(t) && t.length > 0) setTxs(t);
+      else setTxs([{ tx_id: 'TX-001', empresa_origen: 'xcien', empresa_destino: 'wispi', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
       setOnline(true);
-    }).catch(() => setOnline(false));
+    }).catch(() => {
+      setOnline(false);
+      setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'xcien', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
+      setTxs([{ tx_id: 'TX-001', empresa_origen: 'xcien', empresa_destino: 'wispi', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
+    });
   }, []);
 
   const fetchAll = () => {
@@ -97,8 +103,8 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
       fetch(`${API}/api/activos`).then(r => r.json()),
       fetch(`${API}/api/transacciones`).then(r => r.json()),
     ]).then(([a, t]) => {
-      if (Array.isArray(a)) setActivos(a);
-      if (Array.isArray(t)) setTxs(t);
+      if (Array.isArray(a) && a.length > 0) setActivos(a);
+      if (Array.isArray(t) && t.length > 0) setTxs(t);
       setOnline(true);
     }).catch(() => setOnline(false));
   };

@@ -123,7 +123,7 @@ function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEn
 
 function Sidebar({ active, onSelect, theme }: SidebarProps) {
   const [now, setNow] = useState(new Date());
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia', 'Administración', 'Planeación Estratégica']);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -548,7 +548,11 @@ export default function Xcien2Page() {
     const params = new URLSearchParams(location.search);
     const id = params.get('section') as SectionId;
     if (id && id !== section) {
-      setSection(id);
+      if (SECTION_TITLE[id]) {
+        setSection(id);
+      } else {
+        setSection('inicio');
+      }
     }
   }, [location.search, section]);
 
