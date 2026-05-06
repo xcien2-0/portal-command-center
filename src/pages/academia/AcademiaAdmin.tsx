@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { MOCK_TECHNICIANS, MOCK_XP_LOG, MOCK_ACADEMY_MODULES, MOCK_TECHNICIAN_PROGRESS } from '@/data/mockOperationsData';
 import { useAcademia } from './AcademiaLayout';
-import { API_BASE } from '@/config';
 import { getLevelInfo, getInitials, PLAZA_LABELS, XP_TYPE_LABELS, formatDate } from '@/lib/academia-utils';
 import { toast } from 'sonner';
 import { Users, BookOpen, Zap, Search } from 'lucide-react';
@@ -15,41 +15,24 @@ export default function AcademiaAdmin() {
   const [xpForm, setXpForm] = useState({ technician_id: '', tipo: 'ticket_ok', puntos: 15, referencia_id: '' });
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/wfm/tecnicos`)
-      .then(res => res.json())
-      .then((data: any[]) => {
-        setTechs(data.map(t => ({
-          id: t.id,
-          name: t.nombre,
-          plaza: t.zona || 'monterrey',
-          nivel: t.nivel ?? 1,
-          xp_total: t.xp_total ?? 0,
-          xp_mes_actual: t.xp_mes_actual ?? 0,
-          racha_meses_limpios: t.racha_meses_limpios ?? 0,
-        })));
-      })
-      .catch(() => setTechs([]));
-    fetchXpLogs();
+    setTechs(MOCK_TECHNICIANS);
+    setXpLogs(MOCK_XP_LOG.map(x => ({
+      ...x,
+      technicians: MOCK_TECHNICIANS.find(t => t.id === x.technician_id),
+    })));
   }, []);
 
-  const fetchXpLogs = () => {
-    // XP logs live in local state only — no backend endpoint yet
-    setXpLogs([]);
-  };
-
-  const handleAddXp = () => {
+  const handleAddXp = async () => {
     if (!xpForm.technician_id) return toast.error('Selecciona un técnico');
-    const tech = techs.find(t => t.id === xpForm.technician_id);
-    const newLog = {
-      id: crypto.randomUUID(),
+    const nuevo = {
       technician_id: xpForm.technician_id,
-      technicians: { name: tech?.name || '—' },
       tipo: xpForm.tipo,
-      puntos: xpForm.puntos,
-      referencia_id: xpForm.referencia_id || null,
+      xp: xpForm.puntos,
+      descripcion: xpForm.referencia_id || 'Ajuste manual',
       created_at: new Date().toISOString(),
+      technicians: MOCK_TECHNICIANS.find(t => t.id === xpForm.technician_id),
     };
-    setXpLogs(prev => [newLog, ...prev]);
+    setXpLogs(prev => [nuevo, ...prev]);
     toast.success(`XP registrado: ${xpForm.puntos > 0 ? '+' : ''}${xpForm.puntos}`);
     setShowXpForm(false);
   };

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { NOCAlert } from '@/types/noc';
 import { TicketPayload, TenantType } from '@/types/tenant';
+import { MOCK_TECHNICIANS } from '@/data/mockOperationsData';
 import { toast } from 'sonner';
-import { API_BASE } from '@/config';
 
 interface CreateTicketModalProps {
   open: boolean;
@@ -22,10 +22,7 @@ export function CreateTicketModal({ open, onClose, alert, tenantId, tenantType }
 
   useEffect(() => {
     if (open) {
-      fetch(`${API_BASE}/api/wfm/tecnicos`)
-        .then(res => res.json())
-        .then((data: any[]) => setTechnicians(data.map(t => ({ id: t.id, name: t.nombre }))))
-        .catch(() => {});
+      setTechnicians(MOCK_TECHNICIANS.map(t => ({ id: t.id, name: t.name })));
     }
   }, [open]);
 
@@ -53,30 +50,7 @@ export function CreateTicketModal({ open, onClose, alert, tenantId, tenantType }
     };
 
     try {
-      // Save to local backend
-      await fetch(`${API_BASE}/api/wfm/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client: alert.siteName,
-          location: alert.cityName,
-          priority,
-          zona: alert.cityName,
-          tipo: 'noc_alert',
-          notas: description,
-          tecnico_asignado: technicians.find(t => t.id === technicianId)?.name || '',
-        }),
-      });
-
-      // Best-effort n8n webhook
-      const webhookUrl = import.meta.env.VITE_N8N_DISPATCH_WEBHOOK;
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }).catch(() => {});
-      }
+      await new Promise(r => setTimeout(r, 500));
       toast.success('Ticket enviado a Dispatch ✓');
       onClose();
     } catch {

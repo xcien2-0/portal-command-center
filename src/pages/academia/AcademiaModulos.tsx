@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { MOCK_ACADEMY_MODULES, MOCK_TECHNICIAN_PROGRESS } from '@/data/mockOperationsData';
 import { useAcademia } from './AcademiaLayout';
-import { API_BASE } from '@/config';
 import { getLevelInfo } from '@/lib/academia-utils';
 import { Lock, CheckCircle2, Play, FileText, Wrench, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,42 +16,22 @@ export default function AcademiaModulos() {
 
   const fetchData = () => {
     if (!technician) return;
-    // Fetch doc list from local backend, map to module format
-    fetch(`${API_BASE}/api/docs`)
-      .then(res => res.json())
-      .then((docs: any[]) => {
-        const mapped = docs.map((d, i) => ({
-          id: d.filename || String(i),
-          titulo: d.title || d.filename,
-          descripcion: d.description || 'Estándar de operación',
-          tipo: 'documento',
-          nivel_requerido: 1,
-          xp_otorga: 30,
-          orden: i,
-        }));
-        setModules(mapped);
-      })
-      .catch(() => {
-        // Minimal fallback modules
-        setModules([
-          { id: 'm1', titulo: 'Proceso de Soporte HL', descripcion: 'Estándar de atención a clientes de alta prioridad', tipo: 'documento', nivel_requerido: 1, xp_otorga: 30, orden: 0 },
-          { id: 'm2', titulo: 'Protocolo NOC', descripcion: 'Manejo de alertas y escalamiento de incidentes de red', tipo: 'documento', nivel_requerido: 1, xp_otorga: 30, orden: 1 },
-        ]);
-      });
-    // Progress is local state only — no backend yet
-    setProgress({});
+    setModules(MOCK_ACADEMY_MODULES);
+    const map: Record<string, any> = {};
+    MOCK_TECHNICIAN_PROGRESS.filter(p => p.technician_id === technician.id)
+      .forEach(p => { map[p.module_id] = p; });
+    setProgress(map);
   };
 
   useEffect(fetchData, [technician?.id]);
 
   const handleComplete = async (mod: any) => {
     if (!technician) return;
-    // Mark complete locally — no backend write endpoint yet
     setProgress(prev => ({
       ...prev,
-      [mod.id]: { module_id: mod.id, completado: true, fecha_completado: new Date().toISOString(), xp_ganado: mod.xp_otorga },
+      [mod.id]: { technician_id: technician.id, module_id: mod.id, completado: true, fecha_completado: new Date().toISOString() },
     }));
-    toast.success(`+${mod.xp_otorga} XP — Módulo completado`, { description: mod.titulo });
+    toast.success(`+${mod.xp_recompensa} XP — Módulo completado`, { description: mod.titulo });
     setSelected(null);
   };
 

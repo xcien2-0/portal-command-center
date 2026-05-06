@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MOCK_TECHNICIANS, MOCK_XP_LOG, MOCK_ACADEMY_MODULES, MOCK_TECHNICIAN_PROGRESS } from '@/data/mockOperationsData';
 import { useAcademia } from './AcademiaLayout';
 import {
   getLevelInfo, getNextLevelInfo, getProgressToNextLevel, getInitials,
@@ -18,16 +19,12 @@ export default function AcademiaPerfil() {
 
   useEffect(() => {
     if (!technician) return;
-    // No backend for XP/badges yet — use representative mock data
     setBadges([]);
     setAllBadges([]);
-    setXpLog([
-      { id: '1', tipo: 'examen_aprobado', puntos: 50, created_at: new Date(Date.now() - 86400000).toISOString() },
-      { id: '2', tipo: 'modulo_completado', puntos: 30, created_at: new Date(Date.now() - 172800000).toISOString() },
-      { id: '3', tipo: 'racha_mensual', puntos: 20, created_at: new Date(Date.now() - 259200000).toISOString() },
-    ]);
-    setModulesCompleted(2);
-    setExamsPassed(1);
+    const log = MOCK_XP_LOG.filter(x => x.technician_id === technician.id);
+    setXpLog(log.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE));
+    setModulesCompleted(MOCK_TECHNICIAN_PROGRESS.filter(p => p.technician_id === technician.id && p.completado).length);
+    setExamsPassed(0);
   }, [technician?.id, page]);
 
   if (!technician) return null;

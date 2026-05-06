@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Send, Loader2 } from 'lucide-react';
+import { MOCK_TECHNICIANS } from '@/data/mockOperationsData';
 import { NetworkNode } from '@/data/mockNetworkData';
-import { API_BASE } from '@/config';
 import {
   Dialog,
   DialogContent,
@@ -42,16 +42,10 @@ export function DispatchModal({ open, onClose, node }: DispatchModalProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  // Fetch technicians from local backend
   useEffect(() => {
-    fetch(`${API_BASE}/api/wfm/tecnicos`)
-      .then(res => res.json())
-      .then((data: any[]) => {
-        const techs: Technician[] = data.map(t => ({ id: t.id, name: t.nombre, phone: t.telefono || null, speciality: t.especialidad || null }));
-        setTechnicians(techs);
-        if (techs.length > 0 && !selectedTechId) setSelectedTechId(techs[0].id);
-      })
-      .catch(() => {});
+    const techs = MOCK_TECHNICIANS.map(t => ({ id: t.id, name: t.name, phone: t.phone, speciality: 'Instalación y RF' }));
+    setTechnicians(techs);
+    if (techs.length > 0 && !selectedTechId) setSelectedTechId(techs[0].id);
   }, []);
 
   // Pre-fill when node changes
@@ -83,27 +77,21 @@ export function DispatchModal({ open, onClose, node }: DispatchModalProps) {
     };
 
     try {
-      // Save to local backend
-      await fetch(`${API_BASE}/api/wfm/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client: node.name,
-          location: node.location,
-          priority,
-          zona: node.zone,
-          tipo: 'noc_dispatch',
-          notas: description,
-          tecnico_asignado: tech?.name || '',
-        }),
-      });
-
-      // POST to n8n webhook (best-effort)
-      fetch('https://n8n.ispilot.mx/webhook/dispatch-incidente', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }).catch(() => {});
+      // Simulate dispatch (mock — connect to Odoo in production)
+      await new Promise(r => setTimeout(r, 500));
+      if (false) { // placeholder para mantener shape
+        const _unused = {
+        city: node.location,
+        host_ip: node.ip,
+        host_name: node.name,
+        description,
+        priority,
+        source: 'red_en_vivo',
+        technician_id: selectedTechId,
+        technician_name: tech?.name || null,
+        isp: node.isp,
+        zone: node.zone,
+        }; }
       setSent(true);
     } catch (err) {
       console.error('Error dispatching:', err);

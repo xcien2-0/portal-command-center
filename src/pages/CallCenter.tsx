@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { API_BASE } from '../config';
+import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/data/mockOperationsData';
 import { MessageSquare, Phone, Ticket, Bot, AlertTriangle, CheckCircle2, Clock, Send, User, Building2, ChevronRight, PanelRightOpen, PanelRightClose, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,12 +88,7 @@ const STATUS_FILTERS: { key: Status | 'all'; label: string; icon: React.ReactNod
   { key: 'resolved', label: 'Resueltas', icon: <span>✅</span> },
 ];
 
-interface Props {
-  theme?: any;
-  activeThemeId?: string;
-}
-
-export default function CallCenter({ theme, activeThemeId }: Props) {
+export default function CallCenter() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -105,39 +100,21 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Load data — local mocks (no Supabase)
+  // Load mock data
   useEffect(() => {
     setCompanies([
-      { id: '1', name: 'Xcien', color: '#00ff88' },
-      { id: '2', name: 'Wispi', color: '#0ea5e9' },
+      { id: 'comp-1', name: 'Wispi', color: '#1D9E75' },
+      { id: 'comp-2', name: 'XCIEN', color: '#2563eb' },
+      { id: 'comp-3', name: 'Luminet', color: '#9333ea' },
     ]);
-    setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
-    setConversations([
-      {
-        id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated',
-        subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
-        companies: { id: '1', name: 'Xcien', color: '#00ff88' },
-        assigned_agent_id: null,
-      },
-      {
-        id: 'c2', company_id: '2', contact_id: 'ct2', channel: 'ticket', status: 'in_progress',
-        subject: 'Velocidad degradada MTY', created_at: new Date(Date.now() - 7200000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString(),
-        contacts: { id: 'ct2', name: 'María López', phone: '555-0202', email: 'maria@demo.com', odoo_client_id: '456', company_id: '2' },
-        companies: { id: '2', name: 'Wispi', color: '#0ea5e9' },
-        assigned_agent_id: 'a1',
-        agents: { id: 'a1', name: 'Agente Demo', is_online: true },
-      },
-    ]);
+    setAgents([{ id: 'agent-1', name: 'Agente NOC', is_online: true }]);
+    setConversations(MOCK_CONVERSATIONS as any);
   }, []);
 
-  // Load messages when conversation selected — local mocks
+  // Load messages when conversation selected
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
-    setMessages([
-      { id: 'm1', conversation_id: selectedId, sender_type: 'client', sender_name: 'Cliente Demo', content: 'Tengo un problema con el servicio, hay intermitencia desde hace 1 hora.', created_at: new Date(Date.now() - 3600000).toISOString() },
-      { id: 'm2', conversation_id: selectedId, sender_type: 'bot', sender_name: 'Bot', content: 'Hola. He analizado la telemetría y detectado una falla en la zona. Escalaré tu caso inmediatamente al Centro de Mando NOC.', created_at: new Date(Date.now() - 3500000).toISOString() },
-    ]);
+    setMessages((MOCK_MESSAGES[selectedId] || []) as any);
   }, [selectedId]);
 
   // Auto-scroll
@@ -153,7 +130,7 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
     return true;
   });
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!replyText.trim() || !selectedId) return;
     const content = replyText.trim();
     setReplyText('');
@@ -166,36 +143,16 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
       created_at: new Date().toISOString(),
     };
     setMessages(prev => [...prev, optimistic]);
-    // Update conversation timestamp locally
-    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, updated_at: new Date().toISOString() } : c));
   };
 
-  const handleTake = () => {
+  const handleTake = async () => {
     if (!selectedId) return;
-    setConversations(prev => prev.map(c =>
-      c.id === selectedId ? { ...c, status: 'in_progress' as Status, assigned_agent_id: agents[0]?.id ?? null, agents: agents[0] } : c
-    ));
+    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'in_progress' as any } : c));
   };
 
-  const handleResolve = () => {
+  const handleResolve = async () => {
     if (!selectedId) return;
-    setConversations(prev => prev.map(c =>
-      c.id === selectedId ? { ...c, status: 'resolved' as Status } : c
-    ));
-  };
-
-  const handleIntegrationAction = async (platform: string, label: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/integrations/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform, action: 'test_connection' })
-      });
-      const data = await res.json();
-      alert(`Integración ${label}: ${data.message || data.status}`);
-    } catch (e) {
-      alert(`Error conectando con ${label}`);
-    }
+    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'resolved' as any } : c));
   };
 
   const contactConvCount = selectedId && selected?.contact_id
@@ -203,7 +160,7 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
     : 0;
 
   return (
-    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden relative" style={{ background: theme?.bg || '#0f1117', color: '#e2e8f0' }}>
+    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden" style={{ background: '#0f1117', color: '#e2e8f0' }}>
       {/* Left Panel */}
       <div className="flex flex-col border-r" style={{ width: '30%', minWidth: 320, borderColor: '#1e2535', background: '#161b27' }}>
         {/* Company tabs */}
@@ -291,57 +248,6 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
             )}
           </div>
         </ScrollArea>
-        {/* Integrations Area - Enhanced Visibility */}
-        <div className="p-4 border-t mt-auto" style={{ 
-          borderColor: 'rgba(0,255,136,0.3)', 
-          background: 'rgba(0,20,40,0.6)',
-          boxShadow: '0 -10px 20px rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">🔌 CONECTORES EXTERNOS</span>
-            <div className="flex gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Sincronización Activa" />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <button 
-              onClick={() => handleIntegrationAction('net2phone', 'Net2Phone')}
-              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
-              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(0,255,136,0.1)' }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📞</span>
-                <span className="text-[11px] font-bold text-white">Net2Phone</span>
-              </div>
-              <span className="text-[9px] text-emerald-400/70 font-mono">LINKED</span>
-            </button>
-
-            <button 
-              onClick={() => handleIntegrationAction('hubspot', 'HubSpot')}
-              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
-              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(255,167,0,0.1)' }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🧡</span>
-                <span className="text-[11px] font-bold text-white">HubSpot CRM</span>
-              </div>
-              <span className="text-[9px] text-orange-400/70 font-mono">LINKED</span>
-            </button>
-
-            <button 
-              onClick={() => handleIntegrationAction('ai_agents', 'Agentes IA')}
-              className="flex items-center justify-between p-2.5 rounded-lg border transition-all hover:scale-[1.02] active:scale-95"
-              style={{ background: 'rgba(0,0,0,0.4)', borderColor: 'rgba(167,139,250,0.1)' }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🤖</span>
-                <span className="text-[11px] font-bold text-white">Agentes IA</span>
-              </div>
-              <span className="text-[9px] text-purple-400/70 font-mono">READY</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Right Panel */}
@@ -504,19 +410,6 @@ function MessageBubble({ msg }: { msg: Message }) {
         </div>
         <p className="text-[13px] leading-relaxed whitespace-pre-line" style={{ color: '#e2e8f0' }}>{msg.content}</p>
       </div>
-    </div>
-  );
-}
-
-function IntegrationBadge({ icon, label, active, onClick }: { icon: string; label: string; active?: boolean; onClick?: () => void }) {
-  return (
-    <div 
-      title={active ? `Conectado a ${label}` : `Conectar ${label}`}
-      onClick={onClick}
-      className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded border transition-colors ${active ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-slate-700 bg-slate-800'}`}
-    >
-      <span className="text-lg mb-1">{icon}</span>
-      <span className="text-[9px] font-medium text-slate-300">{label}</span>
     </div>
   );
 }

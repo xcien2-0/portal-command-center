@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { MOCK_TECHNICIANS, MOCK_XP_LOG } from '@/data/mockOperationsData';
 import { useAcademia } from './AcademiaLayout';
-import { API_BASE } from '@/config';
 import {
   getLevelInfo, getNextLevelInfo, getProgressToNextLevel, getInitials,
   PLAZA_LABELS, XP_TYPE_LABELS, formatTimeAgo,
@@ -15,24 +15,8 @@ export default function AcademiaDashboard() {
 
   useEffect(() => {
     if (!technician) return;
-    // XP log — mock entries based on technician data
-    setXpLog([
-      { id: '1', tipo: 'examen_aprobado', puntos: 50, created_at: new Date(Date.now() - 86400000).toISOString() },
-      { id: '2', tipo: 'modulo_completado', puntos: 30, created_at: new Date(Date.now() - 172800000).toISOString() },
-      { id: '3', tipo: 'racha_mensual', puntos: 20, created_at: new Date(Date.now() - 259200000).toISOString() },
-    ]);
-    // Leaderboard — pull from local backend
-    fetch(`${API_BASE}/api/wfm/tecnicos`)
-      .then(res => res.json())
-      .then((data: any[]) => {
-        const sorted = data
-          .map(t => ({ id: t.id, name: t.nombre, plaza: t.zona || 'monterrey', nivel: t.nivel ?? 1, xp_mes_actual: t.xp_mes_actual ?? 0, racha_meses_limpios: t.racha_meses_limpios ?? 0 }))
-          .sort((a, b) => b.xp_mes_actual - a.xp_mes_actual)
-          .slice(0, 5);
-        setLeaderboard(sorted);
-      })
-      .catch(() => setLeaderboard([technician]));
-    // Badges — empty for now (no backend endpoint yet)
+    setXpLog(MOCK_XP_LOG.filter(x => x.technician_id === technician.id).slice(0, 5));
+    setLeaderboard([...MOCK_TECHNICIANS].sort((a, b) => b.xp_mes_actual - a.xp_mes_actual).slice(0, 5));
     setBadges([]);
   }, [technician?.id]);
 

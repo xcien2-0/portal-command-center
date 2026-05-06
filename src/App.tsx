@@ -24,7 +24,13 @@ import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
 import Docs from "./pages/Docs.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
 import InvitePage from "./pages/InvitePage.tsx";
+import Migracion from "./pages/Migracion.tsx";
+import Metricas from "./pages/Metricas.tsx";
+import Bitacora from "./pages/Bitacora.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
+import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
+import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
+import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
 
 function HeaderActions() {
   const { mode, toggleMode } = useViewMode();
@@ -43,10 +49,6 @@ function HeaderActions() {
   );
 }
 
-import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
-import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
-import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
-
 const queryClient = new QueryClient();
 
 const getGlobalTheme = () => {
@@ -64,12 +66,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Main Hub (Classic Entry) */}
+          {/* Main Hub */}
           <Route path="/" element={<Index />} />
           <Route path="/portal" element={<Xcien2Page />} />
           <Route path="/invite" element={<InvitePage />} />
 
-          {/* Legacy/Classic routes can stay for now but without double sidebar */}
+          {/* Full-screen routes (no sidebar) */}
           <Route path="/gerencia" element={<Gerencia />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/noc" element={<NOC />} />
@@ -83,7 +85,7 @@ const App = () => (
             <Route path="admin" element={<AcademiaAdmin />} />
           </Route>
 
-          {/* Fallback for classic shell modules */}
+          {/* Classic shell with sidebar */}
           <Route path="*" element={
             <SidebarProvider>
               <div className="min-h-screen flex w-full">
@@ -99,6 +101,9 @@ const App = () => (
                       <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
                       <Route path="/reporte-impacto" element={<ReporteImpacto />} />
                       <Route path="/docs" element={<Docs />} />
+                      <Route path="/migracion" element={<Migracion />} />
+                      <Route path="/metricas" element={<Metricas />} />
+                      <Route path="/bitacora" element={<Bitacora />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>

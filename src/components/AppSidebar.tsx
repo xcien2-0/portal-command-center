@@ -2,9 +2,9 @@ import { useState } from 'react';
 import {
   Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone,
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
-  ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink, Tag
+  ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink,
+  Database, TrendingUp,
 } from 'lucide-react';
-import brand from '@/brand';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ type Item = { title: string; url: string; icon: any; gob?: boolean; external?: b
 
 const topItems: Item[] = [
   { title: 'Inicio', url: '/', icon: Home },
+  { title: 'Red en Vivo', url: '/red-en-vivo', icon: Radio },
 ];
 
 const nocGroup: { label: string; icon: any; main: Item; children: Item[] } = {
@@ -43,31 +44,36 @@ const opsGroup: { label: string; icon: any; children: Item[] } = {
   children: [
     { title: 'Dispatch', url: '/dispatch', icon: Send },
     { title: 'Call Center', url: '/call-center', icon: Phone },
-    { title: 'Inventario & Scanner', url: '/scan', icon: ScanLine },
-    { title: 'Creación de Etiquetas', url: '/portal?section=etiquetas', icon: Tag, external: true },
+    { title: 'Scanner', url: '/scan', icon: ScanLine },
   ],
 };
 
 const reportsGroup: { label: string; icon: any; children: Item[] } = {
-  label: 'Reportes & Documentos',
+  label: 'Reportes',
   icon: FileBarChart,
   children: [
     { title: 'Gerencia', url: '/gerencia', icon: LayoutDashboard },
     { title: 'Gobierno', url: '/reportes-gobierno', icon: FileText, gob: true },
     { title: 'Impacto', url: '/reporte-impacto', icon: BarChart3 },
-    { title: 'Biblioteca Documental', url: '/docs', icon: BookOpen },
   ],
 };
 
-const xcien2Item: Item = { title: `${brand.name} ${brand.version}`, url: '/portal', icon: ExternalLink };
+const estrategiaGroup: { label: string; icon: any; children: Item[] } = {
+  label: 'Estrategia & Datos',
+  icon: TrendingUp,
+  children: [
+    { title: 'Métricas & KPIs', url: '/metricas', icon: BarChart3 },
+    { title: 'Migración Odoo', url: '/migracion', icon: Database },
+  ],
+};
 
 const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } = {
-  label: brand.academiaLabel,
+  label: 'Academia XCIEN',
   icon: GraduationCap,
   main: { title: 'Dashboard', url: '/academia', icon: Home },
   children: [
-    { title: 'Biblioteca & Exámenes', url: '/academia/modulos', icon: BookOpen },
-    { title: 'WFM Control Operativo', url: '/portal', icon: Users },
+    { title: 'Biblioteca & Exámenes', url: 'http://localhost:8000', icon: BookOpen, external: true },
+    { title: 'WFM Control Operativo', url: 'http://localhost:8000/wfm.html', icon: Users, external: true },
   ],
 };
 
@@ -82,9 +88,11 @@ export function AppSidebar() {
   const reportsActive = reportsGroup.children.some(c => path.startsWith(c.url));
 
   const academiaActive = path.startsWith('/academia');
+  const estrategiaActive = estrategiaGroup.children.some(c => path.startsWith(c.url));
   const [nocOpen, setNocOpen] = useState(nocActive);
   const [opsOpen, setOpsOpen] = useState(opsActive);
   const [reportsOpen, setReportsOpen] = useState(reportsActive);
+  const [estrategiaOpen, setEstrategiaOpen] = useState(estrategiaActive);
   const [academiaOpen, setAcademiaOpen] = useState(academiaActive);
 
   const renderItem = (item: Item) => (
@@ -181,10 +189,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest">
             {collapsed ? (
-              <img src={brand.logo} alt={brand.name} className="h-6 w-6 object-contain mx-auto" />
+              <img src="/xcien.png" alt="XCIEN" className="h-6 w-6 object-contain mx-auto" />
             ) : (
               <div className="flex items-center gap-2 py-1">
-                <img src={brand.logo} alt={brand.name} className="h-7 w-auto object-contain" />
+                <img src="/xcien.png" alt="XCIEN" className="h-7 w-auto object-contain" />
                 <span className="text-[11px] font-semibold tracking-widest text-sidebar-foreground">2.0</span>
               </div>
             )}
@@ -192,10 +200,10 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {topItems.map(renderItem)}
-              {renderItem(xcien2Item)}
               {renderGroup(nocGroup, nocOpen, setNocOpen, nocActive)}
               {renderGroup(opsGroup, opsOpen, setOpsOpen, opsActive)}
               {renderGroup(reportsGroup, reportsOpen, setReportsOpen, reportsActive)}
+              {renderGroup(estrategiaGroup, estrategiaOpen, setEstrategiaOpen, estrategiaActive)}
               {renderGroup(academiaGroup, academiaOpen, setAcademiaOpen, academiaActive)}
             </SidebarMenu>
           </SidebarGroupContent>

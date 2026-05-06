@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { API_BASE } from '../config';
+import { MOCK_DISPATCH_JOBS, MOCK_TECHNICIANS } from '@/data/mockOperationsData';
 import {
   Send, Clock, CheckCircle2, XCircle, AlertTriangle, Filter, RefreshCw, Plus,
   User, MapPin, Calendar, List, Columns3, ChevronRight, Phone, FileText,
@@ -129,14 +129,7 @@ const timeSince = (iso: string) => {
 /* ═══  MAIN COMPONENT  ════════════════════════════════════ */
 /* ═══════════════════════════════════════════════════════════ */
 
-import { useViewMode } from "../contexts/ViewModeContext.tsx";
-import WFMSection from "./xcien2/sections/WFMSection.tsx";
-import { DEFAULT_THEME } from "./xcien2/types.ts";
-
 export default function Dispatch() {
-  const { mode } = useViewMode();
-  const theme = DEFAULT_THEME;
-
   const [jobs, setJobs] = useState<DispatchJob[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,51 +143,13 @@ export default function Dispatch() {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/wfm/tickets`);
-      if (res.ok) {
-        const data = await res.json();
-        // Map backend tickets to DispatchJob structure
-        const mappedJobs = data.map((t: any) => ({
-          id: t.id,
-          job_number: t.id,
-          customer_name: t.client,
-          site_address: t.location,
-          service_type: 'mantenimiento', // Default or derived
-          visit_type: 'seguimiento',    // Default or derived
-          priority: t.priority,
-          status: t.status === 'Abierto' ? 'pending_dispatch' : 
-                  t.status === 'Agendado' ? 'scheduled' :
-                  t.status === 'En Sitio' ? 'on_site' :
-                  t.status === 'Completado' ? 'completed' : 'blocked',
-          customer_status: 'confirmed',
-          scheduled_date: t.created_at,
-          zone: t.zona,
-          created_at: new Date().toISOString(), // Mocking timestamp if missing
-        }));
-        setJobs(mappedJobs);
-      }
-    } catch (e) {
-      console.error("Error fetching jobs from backend:", e);
-    }
+    setJobs(MOCK_DISPATCH_JOBS as unknown as DispatchJob[]);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchJobs();
-    fetch(`${API_BASE}/api/wfm/tecnicos`)
-      .then(res => res.json())
-      .then(data => {
-        setTechnicians(data.map((tec: any) => ({
-          id: tec.id,
-          name: tec.nombre,
-          plaza: tec.zona,
-          is_active: true
-        })));
-      });
-    
-    const interval = setInterval(fetchJobs, 10000); // Polling instead of WebSocket for stability
-    return () => clearInterval(interval);
+    setTechnicians(MOCK_TECHNICIANS as Technician[]);
   }, [fetchJobs]);
 
   const zones = useMemo(() => [...new Set(jobs.map(j => j.zone).filter(Boolean))], [jobs]);
@@ -224,38 +179,12 @@ export default function Dispatch() {
   }), [jobs]);
 
   const updateJobStatus = async (jobId: string, newStatus: JobStatus) => {
-    const backendStatusMap: Record<JobStatus, string> = {
-      pending_dispatch: 'Abierto',
-      scheduled: 'Agendado',
-      in_route: 'Agendado', // Map to Agendado for now
-      on_site: 'En Sitio',
-      completed: 'Completado',
-      blocked: 'Bloqueado'
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}/api/wfm/tickets/${jobId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: backendStatusMap[newStatus] })
-      });
-
-      if (res.ok) {
-        toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus].label}"`);
-        fetchJobs();
-      } else {
-        toast.error('Error al actualizar en el servidor');
-      }
-    } catch (e) {
-      toast.error('Error de conexión con el backend');
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: newStatus } : j));
+    toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus].label}"`);
+    if (selectedJob?.id === jobId) {
+      setSelectedJob(prev => prev ? { ...prev, status: newStatus } : null);
     }
   };
-
-  if (mode === 'holo') return (
-    <div className="flex-1 h-[calc(100vh-2.5rem)] bg-[#0a0a0a] overflow-y-auto relative p-6">
-      <WFMSection theme={theme} />
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#0B1120] text-slate-200">
@@ -643,44 +572,40 @@ function JobDetailPanel({ job, technicians, onStatusChange, onClose, onRefresh }
   const pc = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.media;
 
   useEffect(() => {
-    // Reset local state when job changes — history/notes/crew live in local state only
     setHistory([]);
     setNotes([]);
-    setAssignedTechs([]);
+    if (job.crew_id) setAssignedTechs([job.crew_id]);
     setCustomerStatus(job.customer_status);
     setSchedDate(job.scheduled_date || '');
     setSchedTime(job.scheduled_time || '');
     setDuration(String(job.estimated_duration_minutes || 60));
   }, [job.id]);
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!newNote.trim()) return;
-    const note: DispatchNote = {
-      id: crypto.randomUUID(),
-      author_name: 'Dispatcher',
-      content: newNote.trim(),
-      created_at: new Date().toISOString(),
-    };
-    setNotes(prev => [note, ...prev]);
+    const nota: DispatchNote = { id: crypto.randomUUID(), author_name: 'Dispatcher', content: newNote.trim(), created_at: new Date().toISOString() };
+    setNotes(prev => [nota, ...prev]);
     setNewNote('');
     toast.success('Nota agregada');
   };
 
-  const updateCustomerStatus = (cs: CustomerStatus) => {
+  const updateCustomerStatus = async (cs: CustomerStatus) => {
     setCustomerStatus(cs);
     toast.success('Estado del cliente actualizado');
   };
 
-  const saveSchedule = () => {
+  const saveSchedule = async () => {
     setEditSchedule(false);
-    toast.success('Horario actualizado (local)');
+    toast.success('Horario actualizado');
     onRefresh();
   };
 
-  const toggleTechnician = (techId: string) => {
-    setAssignedTechs(prev =>
-      prev.includes(techId) ? prev.filter(id => id !== techId) : [...prev, techId]
-    );
+  const toggleTechnician = async (techId: string) => {
+    if (assignedTechs.includes(techId)) {
+      setAssignedTechs(prev => prev.filter(id => id !== techId));
+    } else {
+      setAssignedTechs(prev => [...prev, techId]);
+    }
     toast.success('Asignación actualizada');
   };
 
@@ -963,27 +888,11 @@ function CreateJobModal({ technicians, onClose, onCreated }: {
   const submit = async () => {
     if (!form.customer_name || !form.site_address) { toast.error('Cliente y dirección son requeridos'); return; }
     setSaving(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/wfm/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client: form.customer_name,
-          location: form.site_address,
-          priority: form.priority,
-          zona: form.zone || '',
-          tipo: form.service_type,
-          notas: form.notes || '',
-        }),
-      });
-      if (!res.ok) throw new Error('Backend error');
-      toast.success('Job de dispatch creado');
-      onCreated();
-    } catch {
-      toast.error('Error al crear job en el servidor');
-    } finally {
-      setSaving(false);
-    }
+
+    await new Promise(r => setTimeout(r, 400));
+    toast.success('Job de dispatch creado');
+    setSaving(false);
+    onCreated();
   };
 
   const InputField = ({ label, field, type = 'text', placeholder = '' }: { label: string; field: string; type?: string; placeholder?: string }) => (

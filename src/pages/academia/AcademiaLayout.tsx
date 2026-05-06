@@ -1,9 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { MOCK_TECHNICIANS } from '@/data/mockOperationsData';
 import { Home, BookOpen, ClipboardCheck, User, Trophy, Settings, ChevronDown } from 'lucide-react';
-import { API_BASE } from '@/config';
 import { getInitials, getLevelInfo, PLAZA_LABELS } from '@/lib/academia-utils';
-import brand from '@/brand';
 
 interface Technician {
   id: string;
@@ -46,30 +45,9 @@ export default function AcademiaLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/wfm/tecnicos`)
-      .then(res => res.json())
-      .then((data: any[]) => {
-        const techs: Technician[] = data.map(t => ({
-          id: t.id,
-          name: t.nombre,
-          plaza: t.zona || 'monterrey',
-          nivel: t.nivel ?? 1,
-          xp_total: t.xp_total ?? 0,
-          xp_mes_actual: t.xp_mes_actual ?? 0,
-          racha_meses_limpios: t.racha_meses_limpios ?? 0,
-        }));
-        setTechnicians(techs);
-        if (techs.length > 0) setActiveTech(techs[0]);
-      })
-      .catch(() => {
-        // Fallback demo technician so the UI is never empty
-        const demo: Technician = {
-          id: 'demo-1', name: 'Técnico Demo', plaza: 'monterrey',
-          nivel: 2, xp_total: 350, xp_mes_actual: 120, racha_meses_limpios: 3,
-        };
-        setTechnicians([demo]);
-        setActiveTech(demo);
-      });
+    const techs = MOCK_TECHNICIANS as unknown as Technician[];
+    setTechnicians(techs);
+    if (!activeTech && techs.length > 0) setActiveTech(techs[0]);
   }, []);
 
   const levelInfo = activeTech ? getLevelInfo(activeTech.nivel) : null;
@@ -85,7 +63,7 @@ export default function AcademiaLayout() {
               <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ background: '#1D9E75' }}>
                 X
               </div>
-              <span className="font-semibold text-base hidden sm:block">{brand.academiaLabel}</span>
+              <span className="font-semibold text-base hidden sm:block">Academia <span style={{ color: '#1D9E75' }}>XCIEN</span></span>
             </Link>
 
             {/* Nav links */}
