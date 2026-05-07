@@ -150,25 +150,51 @@ export default function Dispatch() {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('dispatch_jobs')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (data) setJobs(data as unknown as DispatchJob[]);
-    if (error) console.error(error);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/tickets`);
+      if (res.ok) {
+        const data = await res.json();
+        // Map backend tickets to DispatchJob structure
+        const mappedJobs = data.map((t: any) => ({
+          id: t.id,
+          job_number: t.id,
+          customer_name: t.client,
+          site_address: t.location,
+          service_type: 'mantenimiento', // Default or derived
+          visit_type: 'seguimiento',    // Default or derived
+          priority: t.priority,
+          status: t.status === 'Abierto' ? 'pending_dispatch' : 
+                  t.status === 'Agendado' ? 'scheduled' :
+                  t.status === 'En Sitio' ? 'on_site' :
+                  t.status === 'Completado' ? 'completed' : 'blocked',
+          customer_status: 'confirmed',
+          scheduled_date: t.created_at,
+          zone: t.zona,
+          created_at: new Date().toISOString(), // Mocking timestamp if missing
+        }));
+        setJobs(mappedJobs);
+      }
+    } catch (e) {
+      console.error("Error fetching jobs from backend:", e);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchJobs();
-    supabase.from('technicians').select('id, name, plaza, phone, is_active').eq('is_active', true).then(({ data }) => {
-      if (data) setTechnicians(data as Technician[]);
-    });
-    const channel = supabase
-      .channel('dispatch_jobs_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_jobs' }, () => fetchJobs())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    fetch(`${API_BASE}/api/wfm/tecnicos`)
+      .then(res => res.json())
+      .then(data => {
+        setTechnicians(data.map((tec: any) => ({
+          id: tec.id,
+          name: tec.nombre,
+          plaza: tec.zona,
+          is_active: true
+        })));
+      });
+    
+    const interval = setInterval(fetchJobs, 10000); // Polling instead of WebSocket for stability
+    return () => clearInterval(interval);
   }, [fetchJobs]);
 
   const zones = useMemo(() => [...new Set(jobs.map(j => j.zone).filter(Boolean))], [jobs]);
@@ -198,33 +224,30 @@ export default function Dispatch() {
   }), [jobs]);
 
   const updateJobStatus = async (jobId: string, newStatus: JobStatus) => {
-    const job = jobs.find(j => j.id === jobId);
-    const { error } = await supabase.from('dispatch_jobs').update({ status: newStatus }).eq('id', jobId);
-    if (error) { toast.error('Error al actualizar'); return; }
+    const backendStatusMap: Record<JobStatus, string> = {
+      pending_dispatch: 'Abierto',
+      scheduled: 'Agendado',
+      in_route: 'Agendado', // Map to Agendado for now
+      on_site: 'En Sitio',
+      completed: 'Completado',
+      blocked: 'Bloqueado'
+    };
 
-    // Log status change
-    await supabase.from('dispatch_status_history').insert({
-      job_id: jobId,
-      old_status: job?.status || null,
-      new_status: newStatus,
-      changed_by_name: 'Dispatcher',
-    });
-
-    // Fire n8n webhook
     try {
-      const webhookUrl = import.meta.env.VITE_N8N_DISPATCH_WEBHOOK;
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'status_change', job_id: jobId, old_status: job?.status, new_status: newStatus, job }),
-        }).catch(() => {});
-      }
-    } catch {}
+      const res = await fetch(`${API_BASE}/api/wfm/tickets/${jobId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: backendStatusMap[newStatus] })
+      });
 
-    toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus].label}"`);
-    if (selectedJob?.id === jobId) {
-      setSelectedJob(prev => prev ? { ...prev, status: newStatus } : null);
+      if (res.ok) {
+        toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus].label}"`);
+        fetchJobs();
+      } else {
+        toast.error('Error al actualizar en el servidor');
+      }
+    } catch (e) {
+      toast.error('Error de conexión con el backend');
     }
   };
 

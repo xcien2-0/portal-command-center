@@ -84,9 +84,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Montar estáticos (Examen Holo, etc.)
-os.makedirs("static", exist_ok=True)
+# Montar estáticos (React build y Assets)
+DIST_DIR = os.path.join(BASE_DIR, "..", "dist")
+
+# Siempre montar /static para archivos legados (Academia, Exam, etc.)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+if os.path.exists(DIST_DIR):
+    # El build de Vite pone los chunks en assets/
+    app.mount("/assets", StaticFiles(directory=os.path.join(DIST_DIR, "assets")), name="assets")
+
+@app.get("/")
+async def serve_index():
+    index_path = os.path.join(DIST_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return FileResponse("static/index.html")
 
 # ─── Modelos Pydantic ─────────────────────────────────────────────────────────
 class QuizRequest(BaseModel):
@@ -125,6 +138,18 @@ class WFMAuditoriaRequest(BaseModel):
 class SkillResult(BaseModel):
     nombre_tecnico: str
     resultados: dict  # {pilar: score}
+
+class TicketCreateRequest(BaseModel):
+    client: str
+    description: str
+    location: str
+    tipo: str
+    zona: str
+    priority: str
+
+class TicketUpdateStatusRequest(BaseModel):
+    status: str
+    asignado: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str
@@ -294,11 +319,18 @@ def get_diagnostic_exam(area: str = "NOC"):
 @app.get("/api/docs/content")
 def get_doc_content(path: str):
     """Devuelve el contenido de un documento (SOP) de forma segura"""
-    # Solo permitir archivos en docs/
-    safe_path = os.path.normpath(path).replace("..", "")
-    full_path = os.path.join(os.getcwd(), "docs", safe_path)
+    # Intentar resolver en docs/estandares o docs/
+    # Limpiamos el path para evitar directory traversal
+    clean_path = path.replace("..", "").lstrip("/")
+    
+    # 1. Intentar en docs/estandares (donde suelen estar los SOPs)
+    full_path = os.path.join(BASE_DIR, "..", "docs", "estandares", os.path.basename(clean_path))
     if not os.path.exists(full_path):
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        # 2. Intentar en la ruta relativa desde docs/
+        full_path = os.path.join(BASE_DIR, "..", "docs", clean_path)
+    
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail=f"Documento no encontrado: {path}")
     
     try:
         with open(full_path, "r", encoding="utf-8") as f:
@@ -495,6 +527,37 @@ def update_tecnico_status(tecnico_id: str, nuevo_status: str):
             _save_wfm(data)
             return {"status": "updated", "tecnico": tec["nombre"], "nuevo_status": nuevo_status}
     raise HTTPException(status_code=404, detail="Técnico no encontrado")
+
+@app.post("/api/wfm/tickets")
+def create_ticket(req: TicketCreateRequest):
+    data = _load_wfm()
+    new_ticket = {
+        "id": f"T-{int(time.time())}",
+        "client": req.client,
+        "description": req.description,
+        "location": req.location,
+        "tipo": req.tipo,
+        "zona": req.zona,
+        "priority": req.priority,
+        "status": "Abierto",
+        "asignado": None,
+        "created_at": str(date.today())
+    }
+    data["tickets"].append(new_ticket)
+    _save_wfm(data)
+    return new_ticket
+
+@app.put("/api/wfm/tickets/{ticket_id}/status")
+def update_ticket_status(ticket_id: str, req: TicketUpdateStatusRequest):
+    data = _load_wfm()
+    for t in data["tickets"]:
+        if t["id"] == ticket_id:
+            t["status"] = req.status
+            if req.asignado is not None:
+                t["asignado"] = req.asignado
+            _save_wfm(data)
+            return {"status": "updated", "ticket": t}
+    raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
 # ─── NOC: Datos reales desde NOCBoard ────────────────────────────────────────
 
@@ -1117,6 +1180,32 @@ async def get_integrations_status():
         "net2phone": {"connected": True, "calls_active": 0},
         "ai_agents": {"active": True, "model": "Director General v2"}
     }
+
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    """Maneja el enrutamiento de React (SPA) para cualquier ruta no definida en la API."""
+    # 1. Si es una ruta de API o de estáticos conocidos que no existe, 404 real
+    if full_path.startswith("api/") or full_path.startswith("static/") or full_path.startswith("assets/"):
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+    
+    # 2. Verificar si es un archivo físico en la raíz de DIST_DIR (ej: favicon.ico, xcien.png)
+    if os.path.exists(DIST_DIR):
+        file_in_dist = os.path.join(DIST_DIR, full_path)
+        if os.path.isfile(file_in_dist):
+            return FileResponse(file_in_dist)
+            
+        # 3. Si no es un archivo, servir index.html para que React Router maneje la ruta
+        index_path = os.path.join(DIST_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+    
+    # 4. Fallback final a la versión legacy si no hay build de React
+    legacy_index = os.path.join(BASE_DIR, "static", "index.html")
+    if os.path.exists(legacy_index):
+        return FileResponse(legacy_index)
+    
+    raise HTTPException(status_code=404, detail="Portal no disponible")
 
 if __name__ == "__main__":
     import uvicorn
