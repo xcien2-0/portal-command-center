@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { NOCAlert } from '@/types/noc';
 import { TicketPayload, TenantType } from '@/types/tenant';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { API_BASE } from '@/config';
 
 interface CreateTicketModalProps {
   open: boolean;
@@ -22,9 +22,10 @@ export function CreateTicketModal({ open, onClose, alert, tenantId, tenantType }
 
   useEffect(() => {
     if (open) {
-      supabase.from('technicians').select('id, name').eq('is_active', true).then(({ data }) => {
-        if (data) setTechnicians(data);
-      });
+      fetch(`${API_BASE}/api/wfm/tecnicos`)
+        .then(res => res.json())
+        .then((data: any[]) => setTechnicians(data.map(t => ({ id: t.id, name: t.nombre }))))
+        .catch(() => {});
     }
   }, [open]);
 
@@ -52,22 +53,25 @@ export function CreateTicketModal({ open, onClose, alert, tenantId, tenantType }
     };
 
     try {
-      // Save to dispatch_tickets table
-      await supabase.from('dispatch_tickets').insert({
-        city: alert.cityName,
-        site: alert.siteName,
-        host_ip: alert.hostIp,
-        description,
-        priority,
-        source: 'noc_alert',
-        technician_id: technicianId || null,
-        tenant_id: tenantId,
-        tenant_type: tenantType,
+      // Save to local backend
+      await fetch(`${API_BASE}/api/wfm/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: alert.siteName,
+          location: alert.cityName,
+          priority,
+          zona: alert.cityName,
+          tipo: 'noc_alert',
+          notas: description,
+          tecnico_asignado: technicians.find(t => t.id === technicianId)?.name || '',
+        }),
       });
 
+      // Best-effort n8n webhook
       const webhookUrl = import.meta.env.VITE_N8N_DISPATCH_WEBHOOK;
       if (webhookUrl) {
-        await fetch(webhookUrl, {
+        fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

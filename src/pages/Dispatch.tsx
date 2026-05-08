@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { API_BASE } from '../config';
 import {
   Send, Clock, CheckCircle2, XCircle, AlertTriangle, Filter, RefreshCw, Plus,
   User, MapPin, Calendar, List, Columns3, ChevronRight, Phone, FileText,
@@ -643,55 +643,44 @@ function JobDetailPanel({ job, technicians, onStatusChange, onClose, onRefresh }
   const pc = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.media;
 
   useEffect(() => {
-    // Fetch history
-    supabase.from('dispatch_status_history').select('*').eq('job_id', job.id).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setHistory(data as unknown as StatusHistoryEntry[]); });
-    // Fetch notes
-    supabase.from('dispatch_notes').select('*').eq('job_id', job.id).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setNotes(data as unknown as DispatchNote[]); });
-    // Fetch assigned technicians
-    supabase.from('dispatch_job_technicians').select('technician_id').eq('job_id', job.id)
-      .then(({ data }) => { if (data) setAssignedTechs(data.map(d => d.technician_id)); });
+    // Reset local state when job changes — history/notes/crew live in local state only
+    setHistory([]);
+    setNotes([]);
+    setAssignedTechs([]);
     setCustomerStatus(job.customer_status);
     setSchedDate(job.scheduled_date || '');
     setSchedTime(job.scheduled_time || '');
     setDuration(String(job.estimated_duration_minutes || 60));
   }, [job.id]);
 
-  const addNote = async () => {
+  const addNote = () => {
     if (!newNote.trim()) return;
-    await supabase.from('dispatch_notes').insert({ job_id: job.id, author_name: 'Dispatcher', content: newNote.trim() });
+    const note: DispatchNote = {
+      id: crypto.randomUUID(),
+      author_name: 'Dispatcher',
+      content: newNote.trim(),
+      created_at: new Date().toISOString(),
+    };
+    setNotes(prev => [note, ...prev]);
     setNewNote('');
-    const { data } = await supabase.from('dispatch_notes').select('*').eq('job_id', job.id).order('created_at', { ascending: false });
-    if (data) setNotes(data as unknown as DispatchNote[]);
     toast.success('Nota agregada');
   };
 
-  const updateCustomerStatus = async (cs: CustomerStatus) => {
-    await supabase.from('dispatch_jobs').update({ customer_status: cs }).eq('id', job.id);
+  const updateCustomerStatus = (cs: CustomerStatus) => {
     setCustomerStatus(cs);
     toast.success('Estado del cliente actualizado');
   };
 
-  const saveSchedule = async () => {
-    await supabase.from('dispatch_jobs').update({
-      scheduled_date: schedDate || null,
-      scheduled_time: schedTime || null,
-      estimated_duration_minutes: parseInt(duration) || 60,
-    }).eq('id', job.id);
+  const saveSchedule = () => {
     setEditSchedule(false);
-    toast.success('Horario actualizado');
+    toast.success('Horario actualizado (local)');
     onRefresh();
   };
 
-  const toggleTechnician = async (techId: string) => {
-    if (assignedTechs.includes(techId)) {
-      await supabase.from('dispatch_job_technicians').delete().eq('job_id', job.id).eq('technician_id', techId);
-      setAssignedTechs(prev => prev.filter(id => id !== techId));
-    } else {
-      await supabase.from('dispatch_job_technicians').insert({ job_id: job.id, technician_id: techId });
-      setAssignedTechs(prev => [...prev, techId]);
-    }
+  const toggleTechnician = (techId: string) => {
+    setAssignedTechs(prev =>
+      prev.includes(techId) ? prev.filter(id => id !== techId) : [...prev, techId]
+    );
     toast.success('Asignación actualizada');
   };
 
@@ -974,59 +963,27 @@ function CreateJobModal({ technicians, onClose, onCreated }: {
   const submit = async () => {
     if (!form.customer_name || !form.site_address) { toast.error('Cliente y dirección son requeridos'); return; }
     setSaving(true);
-
-    const { data, error } = await supabase.from('dispatch_jobs').insert({
-      customer_name: form.customer_name,
-      site_address: form.site_address,
-      service_type: form.service_type,
-      visit_type: form.visit_type,
-      priority: form.priority,
-      contact_person: form.contact_person || null,
-      contact_phone: form.contact_phone || null,
-      zone: form.zone || null,
-      territory: form.territory || null,
-      project_id: form.project_id || null,
-      work_order_id: form.work_order_id || null,
-      scheduled_date: form.scheduled_date || null,
-      scheduled_time: form.scheduled_time || null,
-      estimated_duration_minutes: parseInt(form.estimated_duration_minutes) || 60,
-      notes: form.notes || null,
-    }).select().single();
-
-    if (error) { toast.error('Error al crear job'); setSaving(false); return; }
-
-    // Assign technicians
-    if (data && selectedTechs.length > 0) {
-      await supabase.from('dispatch_job_technicians').insert(
-        selectedTechs.map(tid => ({ job_id: data.id, technician_id: tid }))
-      );
-    }
-
-    // Log initial status
-    if (data) {
-      await supabase.from('dispatch_status_history').insert({
-        job_id: data.id,
-        new_status: 'pending_dispatch',
-        changed_by_name: 'Dispatcher',
-        notes: 'Job creado',
-      });
-    }
-
-    // n8n webhook
     try {
-      const webhookUrl = import.meta.env.VITE_N8N_DISPATCH_WEBHOOK;
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event: 'job_created', job: data }),
-        }).catch(() => {});
-      }
-    } catch {}
-
-    toast.success('Job de dispatch creado');
-    setSaving(false);
-    onCreated();
+      const res = await fetch(`${API_BASE}/api/wfm/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: form.customer_name,
+          location: form.site_address,
+          priority: form.priority,
+          zona: form.zone || '',
+          tipo: form.service_type,
+          notas: form.notes || '',
+        }),
+      });
+      if (!res.ok) throw new Error('Backend error');
+      toast.success('Job de dispatch creado');
+      onCreated();
+    } catch {
+      toast.error('Error al crear job en el servidor');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const InputField = ({ label, field, type = 'text', placeholder = '' }: { label: string; field: string; type?: string; placeholder?: string }) => (

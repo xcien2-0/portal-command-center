@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
+import { API_BASE } from '@/config';
 import { getLevelInfo } from '@/lib/academia-utils';
 import { Lock, CheckCircle2, Play, FileText, Wrench, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,40 +16,43 @@ export default function AcademiaModulos() {
 
   const fetchData = () => {
     if (!technician) return;
-    supabase.from('academy_modules').select('*').order('nivel_requerido').order('orden')
-      .then(({ data }) => data && setModules(data));
-    supabase.from('technician_progress').select('*').eq('technician_id', technician.id)
-      .then(({ data }) => {
-        if (data) {
-          const map: Record<string, any> = {};
-          data.forEach(p => { map[p.module_id] = p; });
-          setProgress(map);
-        }
+    // Fetch doc list from local backend, map to module format
+    fetch(`${API_BASE}/api/docs`)
+      .then(res => res.json())
+      .then((docs: any[]) => {
+        const mapped = docs.map((d, i) => ({
+          id: d.filename || String(i),
+          titulo: d.title || d.filename,
+          descripcion: d.description || 'Estándar de operación XCIEN',
+          tipo: 'documento',
+          nivel_requerido: 1,
+          xp_otorga: 30,
+          orden: i,
+        }));
+        setModules(mapped);
+      })
+      .catch(() => {
+        // Minimal fallback modules
+        setModules([
+          { id: 'm1', titulo: 'Proceso de Soporte HL', descripcion: 'Estándar de atención a clientes de alta prioridad', tipo: 'documento', nivel_requerido: 1, xp_otorga: 30, orden: 0 },
+          { id: 'm2', titulo: 'Protocolo NOC', descripcion: 'Manejo de alertas y escalamiento de incidentes de red', tipo: 'documento', nivel_requerido: 1, xp_otorga: 30, orden: 1 },
+        ]);
       });
+    // Progress is local state only — no backend yet
+    setProgress({});
   };
 
   useEffect(fetchData, [technician?.id]);
 
   const handleComplete = async (mod: any) => {
     if (!technician) return;
-    const { error } = await supabase.from('technician_progress').insert({
-      technician_id: technician.id,
-      module_id: mod.id,
-      completado: true,
-      fecha_completado: new Date().toISOString(),
-      xp_ganado: mod.xp_otorga,
-    });
-    if (!error) {
-      await supabase.from('xp_log').insert({
-        technician_id: technician.id,
-        tipo: 'modulo' as any,
-        puntos: mod.xp_otorga,
-        referencia_id: mod.id,
-      });
-      toast.success(`+${mod.xp_otorga} XP — Módulo completado`, { description: mod.titulo });
-      fetchData();
-      setSelected(null);
-    }
+    // Mark complete locally — no backend write endpoint yet
+    setProgress(prev => ({
+      ...prev,
+      [mod.id]: { module_id: mod.id, completado: true, fecha_completado: new Date().toISOString(), xp_ganado: mod.xp_otorga },
+    }));
+    toast.success(`+${mod.xp_otorga} XP — Módulo completado`, { description: mod.titulo });
+    setSelected(null);
   };
 
   if (!technician) return null;

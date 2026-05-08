@@ -4,7 +4,7 @@
     "cliente": "Corporativo Xcien",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
-    "estado": "REVISION_PM",
+    "estado": "APROVISIONAMIENTO",
     "fecha_creacion": "2026-04-26T18:54:09.156133",
     "preventa": {
       "analisis": "Factible v\u00eda FO",
@@ -21,7 +21,7 @@
       "equipos_asignados": [
         {
           "modelo": "CCR2004",
-          "sn": "SN-5ZGIBP"
+          "sn": "SN-7TCUF"
         }
       ],
       "esperando_inventario": false
@@ -121,6 +121,26 @@
         "fecha": "2026-04-28T13:02:33.950572",
         "accion": "Servicio aprovisionado",
         "usuario": "Ing. NOC"
+      },
+      {
+        "fecha": "2026-05-07T23:32:12.684507",
+        "accion": "Preventa actualiz\u00f3 an\u00e1lisis",
+        "usuario": "Ing. Preventa"
+      },
+      {
+        "fecha": "2026-05-07T23:32:14.049407",
+        "accion": "Preventa actualiz\u00f3 an\u00e1lisis",
+        "usuario": "Ing. Preventa"
+      },
+      {
+        "fecha": "2026-05-07T23:32:15.301705",
+        "accion": "Contrato firmado. Enviado a Almac\u00e9n",
+        "usuario": "Gerente Ventas"
+      },
+      {
+        "fecha": "2026-05-07T23:32:18.215562",
+        "accion": "Equipos asignados en Almac\u00e9n",
+        "usuario": "Jefe Almac\u00e9n"
       }
     ]
   },

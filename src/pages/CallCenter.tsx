@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../config';
-import { supabase } from '@/integrations/supabase/client';
 import { MessageSquare, Phone, Ticket, Bot, AlertTriangle, CheckCircle2, Clock, Send, User, Building2, ChevronRight, PanelRightOpen, PanelRightClose, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -106,80 +105,39 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
   const [showClientInfo, setShowClientInfo] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Load data
+  // Load data — local mocks (no Supabase)
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [cRes, aRes, convRes] = await Promise.all([
-          supabase.from('companies').select('*'),
-          supabase.from('agents').select('*'),
-          supabase.from('conversations').select('*, contacts(*), companies(*), agents(*)').order('updated_at', { ascending: false }),
-        ]);
-        if (cRes.data && cRes.data.length > 0) setCompanies(cRes.data);
-        else setCompanies([
-          { id: '1', name: 'Xcien', color: '#00ff88' },
-          { id: '2', name: 'Wispi', color: '#0ea5e9' }
-        ]);
-
-        if (aRes.data && aRes.data.length > 0) setAgents(aRes.data as Agent[]);
-        else setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
-
-        if (convRes.data && convRes.data.length > 0) setConversations(convRes.data as any);
-        else setConversations([
-          { 
-            id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated', 
-            subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-            contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
-            companies: { id: '1', name: 'Xcien', color: '#00ff88' }
-          }
-        ]);
-      } catch (e) {
-        console.error("Supabase load failed, using mocks", e);
-        setCompanies([{ id: '1', name: 'Xcien', color: '#00ff88' }]);
-        setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
-        setConversations([{ 
-          id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated', 
-          subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-          contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
-          companies: { id: '1', name: 'Xcien', color: '#00ff88' }
-        }]);
-      }
-    };
-    load();
+    setCompanies([
+      { id: '1', name: 'Xcien', color: '#00ff88' },
+      { id: '2', name: 'Wispi', color: '#0ea5e9' },
+    ]);
+    setAgents([{ id: 'a1', name: 'Agente Demo', is_online: true }]);
+    setConversations([
+      {
+        id: 'c1', company_id: '1', contact_id: 'ct1', channel: 'whatsapp', status: 'escalated',
+        subject: 'Falla masiva Saltillo', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        contacts: { id: 'ct1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@demo.com', odoo_client_id: '123', company_id: '1' },
+        companies: { id: '1', name: 'Xcien', color: '#00ff88' },
+        assigned_agent_id: null,
+      },
+      {
+        id: 'c2', company_id: '2', contact_id: 'ct2', channel: 'ticket', status: 'in_progress',
+        subject: 'Velocidad degradada MTY', created_at: new Date(Date.now() - 7200000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString(),
+        contacts: { id: 'ct2', name: 'María López', phone: '555-0202', email: 'maria@demo.com', odoo_client_id: '456', company_id: '2' },
+        companies: { id: '2', name: 'Wispi', color: '#0ea5e9' },
+        assigned_agent_id: 'a1',
+        agents: { id: 'a1', name: 'Agente Demo', is_online: true },
+      },
+    ]);
   }, []);
 
-  // Realtime subscriptions
-  useEffect(() => {
-    const convChannel = supabase
-      .channel('conversations-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        supabase.from('conversations').select('*, contacts(*), companies(*), agents(*)').order('updated_at', { ascending: false })
-          .then(({ data }) => { if (data) setConversations(data as any); });
-      })
-      .subscribe();
-
-    const msgChannel = supabase
-      .channel('messages-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(convChannel); supabase.removeChannel(msgChannel); };
-  }, []);
-
-  // Load messages when conversation selected
+  // Load messages when conversation selected — local mocks
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
-    supabase.from('messages').select('*').eq('conversation_id', selectedId).order('created_at', { ascending: true })
-      .then(({ data }) => { if (data) setMessages(data); })
-      .catch(e => {
-        console.error("Failed to load messages from Supabase, using mocks", e);
-        setMessages([
-          { id: 'm1', conversation_id: selectedId, sender_type: 'client', sender_name: 'Cliente Demo', content: 'Tengo un problema con el servicio en Saltillo, hay intermitencia desde hace 1 hora.', created_at: new Date(Date.now() - 3600000).toISOString() },
-          { id: 'm2', conversation_id: selectedId, sender_type: 'bot', sender_name: 'Bot', content: 'Hola. He analizado la telemetría y detectado una falla masiva en la zona. Escalaré tu caso inmediatamente al Centro de Mando NOC.', created_at: new Date(Date.now() - 3500000).toISOString() }
-        ]);
-      });
+    setMessages([
+      { id: 'm1', conversation_id: selectedId, sender_type: 'client', sender_name: 'Cliente Demo', content: 'Tengo un problema con el servicio, hay intermitencia desde hace 1 hora.', created_at: new Date(Date.now() - 3600000).toISOString() },
+      { id: 'm2', conversation_id: selectedId, sender_type: 'bot', sender_name: 'Bot', content: 'Hola. He analizado la telemetría y detectado una falla en la zona. Escalaré tu caso inmediatamente al Centro de Mando NOC.', created_at: new Date(Date.now() - 3500000).toISOString() },
+    ]);
   }, [selectedId]);
 
   // Auto-scroll
@@ -195,11 +153,10 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
     return true;
   });
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!replyText.trim() || !selectedId) return;
     const content = replyText.trim();
     setReplyText('');
-    // Optimistic
     const optimistic: Message = {
       id: crypto.randomUUID(),
       conversation_id: selectedId,
@@ -209,18 +166,22 @@ export default function CallCenter({ theme, activeThemeId }: Props) {
       created_at: new Date().toISOString(),
     };
     setMessages(prev => [...prev, optimistic]);
-    await supabase.from('messages').insert({ conversation_id: selectedId, sender_type: 'agent' as any, sender_name: 'Agente', content });
-    await supabase.from('conversations').update({ updated_at: new Date().toISOString() } as any).eq('id', selectedId);
+    // Update conversation timestamp locally
+    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, updated_at: new Date().toISOString() } : c));
   };
 
-  const handleTake = async () => {
+  const handleTake = () => {
     if (!selectedId) return;
-    await supabase.from('conversations').update({ status: 'in_progress' as any, assigned_agent_id: agents[0]?.id } as any).eq('id', selectedId);
+    setConversations(prev => prev.map(c =>
+      c.id === selectedId ? { ...c, status: 'in_progress' as Status, assigned_agent_id: agents[0]?.id ?? null, agents: agents[0] } : c
+    ));
   };
 
-  const handleResolve = async () => {
+  const handleResolve = () => {
     if (!selectedId) return;
-    await supabase.from('conversations').update({ status: 'resolved' as any } as any).eq('id', selectedId);
+    setConversations(prev => prev.map(c =>
+      c.id === selectedId ? { ...c, status: 'resolved' as Status } : c
+    ));
   };
 
   const handleIntegrationAction = async (platform: string, label: string) => {

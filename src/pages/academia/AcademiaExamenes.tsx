@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
+import { API_BASE } from '@/config';
 import { getLevelInfo } from '@/lib/academia-utils';
 import { CheckCircle2, XCircle, ClipboardCheck, ArrowLeft, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,10 +18,12 @@ export default function AcademiaExamenes() {
 
   const fetchData = () => {
     if (!technician) return;
-    supabase.from('exams').select('*, academy_modules(titulo, nivel_requerido)').order('created_at')
-      .then(({ data }) => data && setExams(data));
-    supabase.from('technician_exam_attempts').select('*').eq('technician_id', technician.id)
-      .then(({ data }) => data && setAttempts(data));
+    // Mock exams derived from available docs — no DB yet
+    setExams([
+      { id: 'e1', titulo: 'Proceso de Soporte HL', calificacion_minima: 70, max_intentos: 3, xp_primer_intento: 50, xp_reintento: 25, academy_modules: { titulo: 'Estándares Operativos', nivel_requerido: 1 } },
+      { id: 'e2', titulo: 'Protocolo NOC', calificacion_minima: 80, max_intentos: 3, xp_primer_intento: 75, xp_reintento: 40, academy_modules: { titulo: 'Operaciones de Red', nivel_requerido: 1 } },
+    ]);
+    setAttempts([]);
   };
 
   useEffect(fetchData, [technician?.id]);
@@ -42,9 +44,32 @@ export default function AcademiaExamenes() {
     setAnswers({});
     setShowFeedback(false);
     setResult(null);
-    const { data } = await supabase.from('exam_questions').select('*').eq('exam_id', exam.id);
-    setQuestions(data || []);
+    try {
+      // Ask the backend to generate quiz questions from local docs
+      const res = await fetch(`${API_BASE}/api/academia/quiz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tema: exam.titulo, num_preguntas: 5 }),
+      });
+      const data = await res.json();
+      // Map backend format to local format
+      const qs = (data.preguntas || []).map((q: any, i: number) => ({
+        id: String(i),
+        pregunta: q.pregunta,
+        opciones: q.opciones,
+        respuesta_correcta: q.respuesta_correcta,
+        explicacion: q.explicacion || '',
+      }));
+      setQuestions(qs.length > 0 ? qs : fallbackQuestions(exam));
+    } catch {
+      setQuestions(fallbackQuestions(exam));
+    }
   };
+
+  const fallbackQuestions = (exam: any) => [
+    { id: '0', pregunta: `¿Cuál es el primer paso en el protocolo ${exam.titulo}?`, opciones: ['Identificar el problema', 'Escalar inmediatamente', 'Cerrar el ticket', 'Ignorar la alerta'], respuesta_correcta: 0, explicacion: 'Siempre se debe identificar primero el problema.' },
+    { id: '1', pregunta: 'Cuando un cliente reporta pérdida de servicio, ¿cuál es el SLA estándar de respuesta?', opciones: ['30 minutos', '4 horas', '24 horas', '1 hora'], respuesta_correcta: 3, explicacion: 'El SLA de respuesta estándar para pérdida de servicio es 1 hora.' },
+  ];
 
   const selectAnswer = (qIdx: number, ansIdx: number) => {
     if (showFeedback) return;
@@ -66,32 +91,25 @@ export default function AcademiaExamenes() {
     const correct = questions.reduce((sum, q, i) => sum + (answers[i] === q.respuesta_correcta ? 1 : 0), 0);
     const score = Math.round((correct / questions.length) * 100);
     const passed = score >= activeExam.calificacion_minima;
-    const examAttempts = attempts.filter(a => a.exam_id === activeExam.id);
+    const examAttempts = attempts.filter((a: any) => a.exam_id === activeExam.id);
     const attemptNum = examAttempts.length + 1;
     const isFirst = attemptNum === 1;
     const xp = passed ? (isFirst ? activeExam.xp_primer_intento : activeExam.xp_reintento) : 0;
 
-    await supabase.from('technician_exam_attempts').insert({
+    // Record attempt in local state — no backend write endpoint yet
+    setAttempts(prev => [...prev, {
+      id: crypto.randomUUID(),
       technician_id: technician.id,
       exam_id: activeExam.id,
       calificacion: score,
       aprobado: passed,
       intento_num: attemptNum,
-    });
-
-    if (passed && xp > 0) {
-      await supabase.from('xp_log').insert({
-        technician_id: technician.id,
-        tipo: (isFirst ? 'examen_1er' : 'examen_reintento') as any,
-        puntos: xp,
-        referencia_id: activeExam.id,
-      });
-    }
+      created_at: new Date().toISOString(),
+    }]);
 
     setResult({ score, passed, xp, attemptNum });
     if (passed) toast.success(`🎓 Examen aprobado — +${xp} XP`);
     else toast.error(`Examen reprobado — ${score}%`);
-    fetchData();
   };
 
   if (!technician) return null;

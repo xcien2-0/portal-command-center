@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
+import { API_BASE } from '@/config';
 import {
   getLevelInfo, getNextLevelInfo, getProgressToNextLevel, getInitials,
   PLAZA_LABELS, XP_TYPE_LABELS, formatTimeAgo,
@@ -15,24 +15,25 @@ export default function AcademiaDashboard() {
 
   useEffect(() => {
     if (!technician) return;
-    // Fetch recent XP log
-    supabase.from('xp_log').select('*')
-      .eq('technician_id', technician.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-      .then(({ data }) => data && setXpLog(data));
-
-    // Fetch leaderboard
-    supabase.from('technicians').select('id,name,plaza,nivel,xp_mes_actual,racha_meses_limpios')
-      .not('plaza', 'is', null)
-      .order('xp_mes_actual', { ascending: false })
-      .limit(5)
-      .then(({ data }) => data && setLeaderboard(data));
-
-    // Fetch badges
-    supabase.from('technician_badges').select('badge_id, badges(nombre)')
-      .eq('technician_id', technician.id)
-      .then(({ data }) => data && setBadges(data));
+    // XP log — mock entries based on technician data
+    setXpLog([
+      { id: '1', tipo: 'examen_aprobado', puntos: 50, created_at: new Date(Date.now() - 86400000).toISOString() },
+      { id: '2', tipo: 'modulo_completado', puntos: 30, created_at: new Date(Date.now() - 172800000).toISOString() },
+      { id: '3', tipo: 'racha_mensual', puntos: 20, created_at: new Date(Date.now() - 259200000).toISOString() },
+    ]);
+    // Leaderboard — pull from local backend
+    fetch(`${API_BASE}/api/wfm/tecnicos`)
+      .then(res => res.json())
+      .then((data: any[]) => {
+        const sorted = data
+          .map(t => ({ id: t.id, name: t.nombre, plaza: t.zona || 'monterrey', nivel: t.nivel ?? 1, xp_mes_actual: t.xp_mes_actual ?? 0, racha_meses_limpios: t.racha_meses_limpios ?? 0 }))
+          .sort((a, b) => b.xp_mes_actual - a.xp_mes_actual)
+          .slice(0, 5);
+        setLeaderboard(sorted);
+      })
+      .catch(() => setLeaderboard([technician]));
+    // Badges — empty for now (no backend endpoint yet)
+    setBadges([]);
   }, [technician?.id]);
 
   if (!technician) return <div className="text-center py-20 text-gray-400">Cargando...</div>;

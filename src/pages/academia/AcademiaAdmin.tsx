@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
+import { API_BASE } from '@/config';
 import { getLevelInfo, getInitials, PLAZA_LABELS, XP_TYPE_LABELS, formatDate } from '@/lib/academia-utils';
 import { toast } from 'sonner';
 import { Users, BookOpen, Zap, Search } from 'lucide-react';
@@ -15,31 +15,43 @@ export default function AcademiaAdmin() {
   const [xpForm, setXpForm] = useState({ technician_id: '', tipo: 'ticket_ok', puntos: 15, referencia_id: '' });
 
   useEffect(() => {
-    supabase.from('technicians').select('*').not('plaza', 'is', null).order('name')
-      .then(({ data }) => setTechs(data || []));
+    fetch(`${API_BASE}/api/wfm/tecnicos`)
+      .then(res => res.json())
+      .then((data: any[]) => {
+        setTechs(data.map(t => ({
+          id: t.id,
+          name: t.nombre,
+          plaza: t.zona || 'monterrey',
+          nivel: t.nivel ?? 1,
+          xp_total: t.xp_total ?? 0,
+          xp_mes_actual: t.xp_mes_actual ?? 0,
+          racha_meses_limpios: t.racha_meses_limpios ?? 0,
+        })));
+      })
+      .catch(() => setTechs([]));
     fetchXpLogs();
   }, []);
 
   const fetchXpLogs = () => {
-    let q = supabase.from('xp_log').select('*, technicians(name)').order('created_at', { ascending: false }).limit(50);
-    supabase.from('xp_log').select('*, technicians(name)').order('created_at', { ascending: false }).limit(50)
-      .then(({ data }) => setXpLogs(data || []));
+    // XP logs live in local state only — no backend endpoint yet
+    setXpLogs([]);
   };
 
-  const handleAddXp = async () => {
+  const handleAddXp = () => {
     if (!xpForm.technician_id) return toast.error('Selecciona un técnico');
-    const { error } = await supabase.from('xp_log').insert({
+    const tech = techs.find(t => t.id === xpForm.technician_id);
+    const newLog = {
+      id: crypto.randomUUID(),
       technician_id: xpForm.technician_id,
-      tipo: xpForm.tipo as any,
+      technicians: { name: tech?.name || '—' },
+      tipo: xpForm.tipo,
       puntos: xpForm.puntos,
       referencia_id: xpForm.referencia_id || null,
-    });
-    if (error) toast.error('Error: ' + error.message);
-    else {
-      toast.success(`XP registrado: ${xpForm.puntos > 0 ? '+' : ''}${xpForm.puntos}`);
-      setShowXpForm(false);
-      fetchXpLogs();
-    }
+      created_at: new Date().toISOString(),
+    };
+    setXpLogs(prev => [newLog, ...prev]);
+    toast.success(`XP registrado: ${xpForm.puntos > 0 ? '+' : ''}${xpForm.puntos}`);
+    setShowXpForm(false);
   };
 
   if (!isSupervisor) {

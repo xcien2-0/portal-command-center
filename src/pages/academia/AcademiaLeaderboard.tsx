@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademia } from './AcademiaLayout';
 import { getLevelInfo, getInitials, PLAZA_LABELS } from '@/lib/academia-utils';
 import { Trophy, Flame } from 'lucide-react';
+import { API_BASE } from '@/config';
 
 export default function AcademiaLeaderboard() {
   const { technician } = useAcademia();
@@ -11,10 +11,24 @@ export default function AcademiaLeaderboard() {
   const [mode, setMode] = useState<'mes' | 'total'>('mes');
 
   useEffect(() => {
-    supabase.from('technicians').select('*')
-      .not('plaza', 'is', null)
-      .order(mode === 'mes' ? 'xp_mes_actual' : 'xp_total', { ascending: false })
-      .then(({ data }) => setTechs(data || []));
+    fetch(`${API_BASE}/api/wfm/tecnicos`)
+      .then(res => res.json())
+      .then((data: any[]) => {
+        const mapped = data.map(t => ({
+          id: t.id,
+          name: t.nombre,
+          plaza: t.zona || 'monterrey',
+          nivel: t.nivel ?? 1,
+          xp_total: t.xp_total ?? 0,
+          xp_mes_actual: t.xp_mes_actual ?? 0,
+          racha_meses_limpios: t.racha_meses_limpios ?? 0,
+        }));
+        const sorted = [...mapped].sort((a, b) =>
+          mode === 'mes' ? b.xp_mes_actual - a.xp_mes_actual : b.xp_total - a.xp_total
+        );
+        setTechs(sorted);
+      })
+      .catch(() => setTechs([]));
   }, [mode]);
 
   const plazas = ['all', ...Object.keys(PLAZA_LABELS)];

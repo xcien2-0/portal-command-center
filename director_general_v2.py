@@ -85,7 +85,7 @@ Al recibir una orden:
 
         try:
             message = self.client.messages.create(
-                model="claude-sonnet-4-6",
+                model="claude-3-5-sonnet-20240620",
                 max_tokens=1024,
                 system=system_prompt,
                 messages=[

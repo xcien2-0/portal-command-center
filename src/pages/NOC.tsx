@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Monitor } from 'lucide-react';
 import { CASA_TENANTS } from '@/types/tenant';
 import { NOCCity, NOCAlert } from '@/types/noc';
 import { getAllCasaData, getNOCData, getAllAlerts, getAlertsForTenant, getTotalAlertCount, getRealCities, getRealAlerts, fetchNOCSummary } from '@/services/nocboard';

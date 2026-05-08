@@ -31,11 +31,8 @@ sys.path.insert(0, os.path.join(BASE_DIR, "agents"))
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
 # Importar Agentes Corporativos
-import token_service
-from director_general_v2 import DirectorGeneralV2
-from telegram_bot import TelegramBot
-
 from agents.director_general_v2 import DirectorGeneralV2
+from agents.telegram_bot import TelegramBot
 from agents import token_service
 from agents import asset_service
 from agents import transacciones_service
@@ -51,15 +48,19 @@ wfm_service = WFMWorkflowService()
 print("🚀 [XCIEN-BACKEND] Servidor cargado/recargado correctamente.")
 
 # ─── Cliente Claude ───────────────────────────────────────────────────────────
-_claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+_claude_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 def ask_claude(prompt: str) -> str:
-    msg = _claude.messages.create(
-        model="claude-2.1",
-        max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return msg.content[0].text
+    try:
+        msg = _claude_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return msg.content[0].text
+    except Exception as e:
+        logger.error(f"Error en comunicación con Claude: {e}")
+        return '{"titulo": "Error de Conexión", "preguntas": []}'
 
 # ─── Constantes ──────────────────────────────────────────────────────────────
 DOCS_DIR = os.path.join(BASE_DIR, "..", "docs", "estandares")
@@ -565,18 +566,17 @@ NOCBOARD_DIR = os.path.expanduser("~/Library/Application Support/NOCBoard")
 NOCBOARD_HOSTS_FILE   = os.path.join(NOCBOARD_DIR, "hosts.json")
 NOCBOARD_ALERTS_FILE  = os.path.join(NOCBOARD_DIR, "alerts.json")
 NOCBOARD_API_BASE = "http://localhost:9401/api"
+NOCBOARD_API_KEY  = "87a08190b801416392e944ab79c7e3c9"
 
 import requests
 
 def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
     try:
-        # Intentar API
         url = f"{NOCBOARD_API_BASE}/{endpoint}"
-        r = requests.get(url, timeout=2)
+        r = requests.get(url, headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=2)
         if r.status_code == 200:
             data = r.json()
-            # La API envuelve los datos en una llave con el nombre del endpoint
             if endpoint in data and isinstance(data[endpoint], list):
                 return data[endpoint]
             return data
