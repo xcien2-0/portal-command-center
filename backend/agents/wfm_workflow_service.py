@@ -32,81 +32,164 @@ CHECKLIST_ITEMS = [
 ]
 
 class WFMWorkflowService:
+
+    # Mapeo Odoo stage_id → WFM estado
+    ODOO_STAGE_MAP = {
+        67: "SOLICITUD_PREVENTA",   # Borrador
+        63: "ANTEPROYECTO",         # > Ing. Pre-Venta
+        2:  "ANTEPROYECTO",         # Calificacion
+        5:  "ANTEPROYECTO",         # > Estudio Presencial
+        7:  "ANTEPROYECTO",         # Negociacion
+        3:  "ANTEPROYECTO",         # Propuesta
+        4:  "ALMACEN_VALIDACION",   # > Contratacion
+        8:  "APROVISIONAMIENTO",    # > Habilitacion
+        9:  "FACTURACION",          # > Facturacion
+        41: "CERRADO",              # > Concretado
+        43: "BACKLOG",              # Resultado_Negativo
+    }
+
+    # Mapeo inverso WFM estado → Odoo stage_id (para escribir de vuelta)
+    WFM_TO_ODOO_STAGE = {
+        "SOLICITUD_PREVENTA":  67,
+        "ANTEPROYECTO":        63,
+        "ORDEN_IMPLEMENTACION":4,
+        "ALMACEN_VALIDACION":  4,
+        "ESPERA_INVENTARIO":   4,
+        "APROVISIONAMIENTO":   8,
+        "REVISION_PM":         8,
+        "LISTO_INSTALACION":   8,
+        "INSTALACION":         8,
+        "NOC_VALIDACION":      8,
+        "FACTURACION":         9,
+        "CERRADO":             41,
+        "BACKLOG":             43,
+    }
+
     def __init__(self):
         self._ensure_db()
         self.odoo_url = os.environ.get("ODOO_URL")
-        self.odoo_db = os.environ.get("ODOO_DB")
+        self.odoo_db  = os.environ.get("ODOO_DB")
         self.odoo_user = os.environ.get("ODOO_USER")
-        self.odoo_pwd = os.environ.get("ODOO_PASSWORD")
+        self.odoo_pwd  = os.environ.get("ODOO_PASSWORD")
+        self._odoo_uid: Optional[int] = None
         self.last_sync = 0
-        self.sync_interval = 600 # 10 minutos
+        self.sync_interval = 300  # 5 minutos
+
+    def _odoo_connect(self):
+        """Retorna (uid, models) o (None, None) si falla."""
+        if not self.odoo_url or not self.odoo_pwd:
+            return None, None
+        try:
+            common = xmlrpc.client.ServerProxy(f'{self.odoo_url}/xmlrpc/2/common')
+            uid = common.authenticate(self.odoo_db, self.odoo_user, self.odoo_pwd, {})
+            if not uid:
+                return None, None
+            models = xmlrpc.client.ServerProxy(f'{self.odoo_url}/xmlrpc/2/object')
+            return uid, models
+        except Exception as e:
+            print(f"❌ Odoo connect error: {e}")
+            return None, None
+
+    def _write_estado_odoo(self, odoo_id: int, wfm_estado: str):
+        """Escribe el cambio de estado de vuelta a Odoo (stage_id)."""
+        stage_id = self.WFM_TO_ODOO_STAGE.get(wfm_estado)
+        if not stage_id or not odoo_id:
+            return
+        uid, models = self._odoo_connect()
+        if not uid:
+            return
+        try:
+            models.execute_kw(self.odoo_db, uid, self.odoo_pwd,
+                'crm.lead', 'write',
+                [[odoo_id], {'stage_id': stage_id}]
+            )
+            print(f"✅ Odoo lead {odoo_id} → stage {stage_id} ({wfm_estado})")
+        except Exception as e:
+            print(f"⚠️ No se pudo escribir en Odoo lead {odoo_id}: {e}")
 
     def _sync_with_odoo(self):
-        """ODOO es la fuente de verdad única. Sincroniza CRM Leads como Órdenes WFM."""
-        if not self.odoo_url or not self.odoo_pwd:
-            return
-        
-        # Evitar sincronizaciones muy seguidas si no se solicita forzado
+        """Sincronización bidireccional Odoo CRM ↔ WFM."""
         import time
         if time.time() - self.last_sync < self.sync_interval:
             return
 
+        uid, models = self._odoo_connect()
+        if not uid:
+            return
+
         try:
             print("📡 Sincronizando WFM con Odoo (crm.lead)...")
-            common = xmlrpc.client.ServerProxy(f'{self.odoo_url}/xmlrpc/2/common')
-            uid = common.authenticate(self.odoo_db, self.odoo_user, self.odoo_pwd, {})
-            
-            if not uid:
-                print("❌ Autenticación fallida en Odoo para WFM.")
-                return
-
-            models = xmlrpc.client.ServerProxy(f'{self.odoo_url}/xmlrpc/2/object')
-            # Buscamos leads/oportunidades que no estén en etapas de 'Perdido' o 'Ganado' (opcional)
             leads = models.execute_kw(self.odoo_db, uid, self.odoo_pwd,
                 'crm.lead', 'search_read',
-                [[]], # Traer todos por ahora para demo, luego filtrar por tags
-                {'fields': ['id', 'name', 'partner_name', 'contact_name', 'stage_id', 'description', 'create_date'], 'limit': 20}
+                [[]],
+                {'fields': ['id','name','partner_name','partner_id','user_id',
+                            'stage_id','description','create_date','expected_revenue',
+                            'date_deadline','tag_ids'],
+                 'limit': 100}
             )
 
             if not leads:
-                print("ℹ️ No se encontraron leads en Odoo.")
                 return
 
             current_orders = self._load_orders()
-            # Mapa de IDs de Odoo existentes para no duplicar
-            odoo_ids = {o.get("odoo_id") for o in current_orders if o.get("odoo_id")}
+            odoo_map = {o.get("odoo_id"): o for o in current_orders if o.get("odoo_id")}
+            nuevas = 0
+            actualizadas = 0
 
             for lead in leads:
-                if lead['id'] in odoo_ids: continue
+                stage_id = lead['stage_id'][0] if lead['stage_id'] else 67
+                wfm_estado = self.ODOO_STAGE_MAP.get(stage_id, "SOLICITUD_PREVENTA")
+                cliente   = lead.get('partner_name') or (lead['partner_id'][1] if lead.get('partner_id') else "Sin nombre")
+                comercial = lead['user_id'][1] if lead.get('user_id') else "Sin asignar"
 
-                # Crear estructura de orden WFM basada en el lead de Odoo
-                nueva_orden = {
-                    "id": f"ODOO-{lead['id']}",
-                    "odoo_id": lead['id'],
-                    "cliente": lead['partner_name'] or lead['contact_name'] or "Cliente sin nombre",
-                    "servicio": lead['name'],
-                    "comercial": "Sincronizado Odoo",
-                    "estado": "SOLICITUD_PREVENTA", # Estado inicial por defecto
-                    "fecha_creacion": lead['create_date'],
-                    "preventa": {
-                        "analisis": lead['description'] or "",
-                        "factibilidad": None,
-                        "tecnologia": None,
-                        "equipos_sugeridos": [],
-                        "anteproyecto_url": None
-                    },
-                    "almacen": {"disponibilidad": False, "equipos_asignados": [], "esperando_inventario": False},
-                    "aprovisionamiento": {"config_logica": None, "parametros_red": {}, "listo": False},
-                    "pm": {"auditoria_ok": False, "bloqueada": False, "motivo_bloqueo": None, "backlogs": []},
-                    "historial": [
-                        {"fecha": datetime.now().isoformat(), "accion": "Sincronizado desde Odoo CRM", "usuario": "Sistema"}
-                    ]
-                }
-                current_orders.append(nueva_orden)
-            
+                if lead['id'] in odoo_map:
+                    # Actualizar estado si cambió en Odoo (Odoo es fuente de verdad)
+                    o = odoo_map[lead['id']]
+                    if o.get("odoo_stage_id") != stage_id:
+                        o["odoo_stage_id"]   = stage_id
+                        o["cliente"]         = cliente
+                        o["comercial"]       = comercial
+                        o["revenue"]         = lead.get("expected_revenue", 0)
+                        # Solo actualiza estado si no fue modificado localmente después
+                        if o.get("estado_fuente") != "local":
+                            o["estado"] = wfm_estado
+                        o["historial"].append({
+                            "fecha": datetime.now().isoformat(),
+                            "accion": f"Odoo sync: stage → {lead['stage_id'][1] if lead['stage_id'] else '?'} ({wfm_estado})",
+                            "usuario": "Sistema"
+                        })
+                        actualizadas += 1
+                else:
+                    # Nueva orden desde Odoo
+                    nueva = {
+                        "id": f"ODOO-{lead['id']}",
+                        "odoo_id": lead['id'],
+                        "odoo_stage_id": stage_id,
+                        "cliente": cliente,
+                        "servicio": lead['name'],
+                        "comercial": comercial,
+                        "estado": wfm_estado,
+                        "estado_fuente": "odoo",
+                        "revenue": lead.get("expected_revenue", 0),
+                        "fecha_deadline": lead.get("date_deadline"),
+                        "fecha_creacion": lead['create_date'],
+                        "preventa": {"analisis": lead.get('description') or "", "factibilidad": None, "tecnologia": None, "equipos_sugeridos": [], "anteproyecto_url": None},
+                        "almacen": {"disponibilidad": False, "equipos_asignados": [], "esperando_inventario": False},
+                        "aprovisionamiento": {"config_logica": None, "parametros_red": {}, "listo": False},
+                        "pm": {"auditoria_ok": False, "bloqueada": False, "motivo_bloqueo": None, "backlogs": []},
+                        "evidencias": {"fotos_antes": [], "fotos_despues": [], "checklist_ok": False, "notas": "", "cerrado_por": None, "fecha_cierre": None},
+                        "checklist": [],
+                        "pruebas_velocidad": [],
+                        "noc": {"ping_ok": None, "latencia_ms": None, "dado_de_alta": False, "herramienta_monitoreo": None, "host_id": None, "alertas_configuradas": False, "grupos_alerta": [], "aprobado": False, "aprobado_por": None, "fecha_alta": None, "observaciones": ""},
+                        "timestamps_estados": {wfm_estado: lead['create_date']},
+                        "historial": [{"fecha": datetime.now().isoformat(), "accion": f"Importado desde Odoo CRM — {lead['stage_id'][1] if lead['stage_id'] else 'Sin etapa'}", "usuario": "Sistema"}]
+                    }
+                    current_orders.append(nueva)
+                    nuevas += 1
+
             self._save_orders(current_orders)
             self.last_sync = time.time()
-            print(f"✅ Sincronización completada. {len(leads)} registros procesados.")
+            print(f"✅ Sync Odoo: {nuevas} nuevas, {actualizadas} actualizadas.")
 
         except Exception as e:
             print(f"❌ Error en sincronización Odoo WFM: {e}")
@@ -117,6 +200,11 @@ class WFMWorkflowService:
         if not os.path.exists(DB_PATH):
             with open(DB_PATH, "w") as f:
                 json.dump([], f)
+
+    def sync_forzado(self):
+        """Fuerza sincronización ignorando el intervalo de tiempo."""
+        self.last_sync = 0
+        self._sync_with_odoo()
 
     def _load_orders(self) -> List[Dict]:
         if not os.path.exists(DB_PATH): return []
@@ -207,9 +295,12 @@ class WFMWorkflowService:
             if o["id"] == order_id:
                 o["preventa"].update(data)
                 o["estado"] = "ANTEPROYECTO"
+                o["estado_fuente"] = "local"
                 self._stamp(o, "ANTEPROYECTO")
                 o["historial"].append({"fecha": datetime.now().isoformat(), "accion": "Preventa actualizó análisis", "usuario": usuario})
                 self._save_orders(orders)
+                # write-back a Odoo desactivado (modo lectura) — habilitar cuando sea bidireccional
+                # if o.get("odoo_id"): self._write_estado_odoo(o["odoo_id"], "ANTEPROYECTO")
                 return o
         return None
 

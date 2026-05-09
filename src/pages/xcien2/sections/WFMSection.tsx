@@ -1351,6 +1351,16 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
 
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await fetch(`${API_BASE}/api/wfm/sync`, { method: 'POST' });
+      await fetchOrders();
+    } finally { setSyncing(false); }
+  };
+
   const fetchOrders = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/wfm/ordenes`);
@@ -1511,11 +1521,12 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Dashboard de {ROLE_DATA[role].label}</h2>
             <p style={{ fontSize: 12, color: theme.dim }}>Gestión de órdenes de implementación y field services</p>
           </div>
-          <button 
-            onClick={fetchOrders}
-            style={{ padding: '8px 16px', borderRadius: 8, background: theme.card, border: `1px solid ${theme.border}`, color: theme.text, cursor: 'pointer' }}
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            style={{ padding: '8px 16px', borderRadius: 8, background: syncing ? `${theme.accent}22` : theme.card, border: `1px solid ${syncing ? theme.accent : theme.border}`, color: syncing ? theme.accent : theme.text, cursor: 'pointer', fontWeight: syncing ? 700 : 400, transition: 'all 0.2s' }}
           >
-            🔄 Sincronizar
+            {syncing ? '⏳ Sincronizando...' : '🔄 Sync Odoo'}
           </button>
         </div>
 
@@ -1548,7 +1559,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             )}
 
             {orders.map(o => (
-              <div 
+              <div
                 key={o.id}
                 onClick={() => setSelected(o.id)}
                 style={{
@@ -1556,15 +1567,21 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                   borderRadius: 12, padding: 14, cursor: 'pointer', transition: 'all 0.2s', position: 'relative'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: theme.dim }}>{o.id}</span>
-                    {o.id.startsWith('ODOO-') && <span style={{ fontSize: 9, color: '#00C896', background: '#00C89610', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>ODOO SYNC</span>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: theme.dim }}>{o.id}</span>
+                    {o.odoo_id && <span style={{ fontSize: 9, color: '#00C896', background: '#00C89612', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>ODOO</span>}
                   </div>
                   <Badge label={STATE_LABEL[o.estado]} color={STATE_COLOR[o.estado] ?? theme.accent} />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{o.cliente}</div>
-                <div style={{ fontSize: 12, color: theme.dim }}>{o.servicio}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{o.cliente}</div>
+                <div style={{ fontSize: 11, color: theme.dim, marginBottom: o.revenue || o.comercial ? 6 : 0 }}>{o.servicio}</div>
+                {(o.revenue || o.comercial) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {o.comercial && <span style={{ fontSize: 10, color: theme.dim }}>👤 {o.comercial.split(' ')[0]}</span>}
+                    {o.revenue ? <span style={{ fontSize: 10, fontWeight: 700, color: theme.accent }}>${o.revenue.toLocaleString()}</span> : null}
+                  </div>
+                )}
               </div>
             ))}
           </div>

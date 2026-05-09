@@ -1320,9 +1320,19 @@ def health():
 
 @app.get("/api/wfm/ordenes")
 async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):
-    # Lanzar sincronización en segundo plano para no bloquear la respuesta
     background_tasks.add_task(wfm_service._sync_with_odoo)
     return wfm_service.obtener_ordenes(estado)
+
+@app.post("/api/wfm/sync")
+async def wfm_sync_forzado():
+    """Fuerza sincronización inmediata con Odoo."""
+    try:
+        wfm_service.sync_forzado()
+        ordenes = wfm_service.obtener_ordenes()
+        odoo_count = sum(1 for o in ordenes if o.get("odoo_id"))
+        return {"ok": True, "total": len(ordenes), "de_odoo": odoo_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/wfm/comercial/solicitar")
 async def wfm_solicitar(req: WFMCreateRequest):

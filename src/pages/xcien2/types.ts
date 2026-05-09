@@ -285,10 +285,15 @@ export type WFMOrderState =
 
 export interface WFMOrder {
   id: string;
+  odoo_id?: number;
+  odoo_stage_id?: number;
   cliente: string;
   servicio: string;
   comercial: string;
   estado: WFMOrderState;
+  estado_fuente?: 'odoo' | 'local';
+  revenue?: number;
+  fecha_deadline?: string | null;
   fecha_creacion: string;
   preventa: {
     analisis: string | null;
