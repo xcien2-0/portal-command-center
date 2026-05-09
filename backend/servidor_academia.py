@@ -41,8 +41,11 @@ from agents.wfm_workflow_service import WFMWorkflowService
 from agents.integration_orchestrator import orchestrator
 from agents.odoo_connector import odoo_conn
 
-# Instanciar el Director General
+from agents.devops_agent import DevOpsAgent
+
+# Instanciar el Director General y el SRE
 dg_agent = DirectorGeneralV2()
+sre_agent = DevOpsAgent()
 wfm_service = WFMWorkflowService()
 
 print("🚀 [XCIEN-BACKEND] Servidor cargado/recargado correctamente.")
@@ -92,8 +95,6 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173", 
         "http://localhost:5174", 
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
         "http://localhost:8000",
         "http://127.0.0.1:8000"
     ],
@@ -142,23 +143,29 @@ class WFMAlmacenRequest(BaseModel):
     equipos: List[Dict]
     usuario: str
 
-class WFMAlmacenRespuestaRequest(BaseModel):
-    order_id: str
-    respuesta: str          # 'disponible' | 'no_disponible' | 'disponible_en_fecha'
-    equipos: List[Dict] = []
-    fecha_estimada: Optional[str] = None
-    motivo: str = ""
-    usuario: str
-
 class WFMAproRequest(BaseModel):
     order_id: str
     config: Dict
     usuario: str
 
+class WFMAuditoriaRequest(BaseModel):
+    order_id: str
+    ok: bool
+    motivo: str
+    usuario: str
+
+class WFMAlmacenRespuestaRequest(BaseModel):
+    order_id: str
+    respuesta: str          # 'disponible' | 'no_disponible' | 'disponible_en_fecha'
+    equipos: List[Dict] = []
+    fecha_estimada: Optional[str] = None
+    motivo: Optional[str] = None
+    usuario: str
+
 class WFMAprovisionar2Request(BaseModel):
     order_id: str
     vlan: Optional[int] = None
-    bw_mbps: Optional[int] = None
+    bw_mbps: Optional[float] = None
     ip_wan: Optional[str] = None
     gateway: Optional[str] = None
     firmware: Optional[str] = None
@@ -166,16 +173,11 @@ class WFMAprovisionar2Request(BaseModel):
     notas_config: Optional[str] = None
     usuario: str
 
-class WFMAuditoriaRequest(BaseModel):
-    order_id: str
-    ok: bool
-    motivo: str
-
 class WFMEvidenciaRequest(BaseModel):
     order_id: str
-    tipo: str          # 'antes' | 'despues'
+    tipo: str               # 'antes' | 'despues'
     filename: str
-    data_b64: str      # imagen en base64
+    data_b64: str           # imagen en base64
     usuario: str
 
 class WFMCerrarInstalacionRequest(BaseModel):
@@ -190,25 +192,6 @@ class WFMChecklistItemRequest(BaseModel):
     observacion: str = ""
     usuario: str
 
-class WFMNocPingRequest(BaseModel):
-    order_id: str
-    ping_ok: bool
-    latencia_ms: float
-    ip_destino: str
-    usuario: str
-
-class WFMNocAltaRequest(BaseModel):
-    order_id: str
-    herramienta: str           # 'Zabbix' | 'PRTG' | 'Nagios' | 'Otro'
-    host_id: str
-    grupos_alerta: List[str] = []
-    usuario: str
-
-class WFMNocAprobarRequest(BaseModel):
-    order_id: str
-    observaciones: str = ""
-    usuario: str
-
 class WFMPruebaVelocidadRequest(BaseModel):
     order_id: str
     bw_contratado_mbps: float
@@ -216,9 +199,26 @@ class WFMPruebaVelocidadRequest(BaseModel):
     subida_mbps: float
     latencia_ms: float
     perdida_pct: float = 0.0
-    servidor: str = "Servidor automatico"
-    herramienta: str = "Manual"
+    servidor: str = ""
+    herramienta: str = "manual"
     usuario: str
+
+class WFMNocPingRequest(BaseModel):
+    order_id: str
+    ip_destino: str
+    ping_ok: bool
+    latencia_ms: Optional[float] = None
+    usuario: str
+
+class WFMNocAltaRequest(BaseModel):
+    order_id: str
+    herramienta_monitoreo: str
+    host_id: str = ""
+    grupos_alerta: List[str] = []
+    usuario: str
+
+class WFMNocAprobarRequest(BaseModel):
+    order_id: str
     usuario: str
 
 class SkillResult(BaseModel):
@@ -778,32 +778,11 @@ def get_noc_cities():
 
     # Coordenadas por ciudad
     COORDS = {
-        "Monterrey":        {"lat": 25.6866,  "lng": -100.3161},
-        "Saltillo":         {"lat": 25.4232,  "lng": -100.9928},
-        "Piedras Negras":   {"lat": 28.7000,  "lng": -100.5231},
-        "San Luis Potosi":  {"lat": 22.1565,  "lng": -100.9855},
-        "San Luis Potosí":  {"lat": 22.1565,  "lng": -100.9855},
-        "Coco":             {"lat": 25.5000,  "lng": -103.5000},
-        "Torreón":          {"lat": 25.5428,  "lng": -103.4068},
-        "Torreon":          {"lat": 25.5428,  "lng": -103.4068},
-        "Chihuahua":        {"lat": 28.6353,  "lng": -106.0889},
-        "Nuevo Laredo":     {"lat": 27.4765,  "lng": -99.5151},
-        "Reynosa":          {"lat": 26.0922,  "lng": -98.2772},
-        "Matamoros":        {"lat": 25.8691,  "lng": -97.5027},
-        "Monclova":         {"lat": 26.9083,  "lng": -101.4217},
-        "Sabinas":          {"lat": 27.8529,  "lng": -101.1191},
-        "Guadalajara":      {"lat": 20.6597,  "lng": -103.3496},
-        "Ciudad de México":  {"lat": 19.4326,  "lng": -99.1332},
-        "CDMX":             {"lat": 19.4326,  "lng": -99.1332},
-        "Querétaro":        {"lat": 20.5888,  "lng": -100.3899},
-        "Queretaro":        {"lat": 20.5888,  "lng": -100.3899},
-        "Celaya":           {"lat": 20.5200,  "lng": -100.8161},
-        "León":             {"lat": 21.1221,  "lng": -101.6823},
-        "Leon":             {"lat": 21.1221,  "lng": -101.6823},
-        "Tampico":          {"lat": 22.2552,  "lng": -97.8686},
-        "Mérida":           {"lat": 20.9674,  "lng": -89.5926},
-        "Merida":           {"lat": 20.9674,  "lng": -89.5926},
-        "Puebla":           {"lat": 19.0414,  "lng": -98.2063},
+        "Monterrey":      {"lat": 25.6866, "lng": -100.3161},
+        "Saltillo":       {"lat": 25.4232, "lng": -100.9928},
+        "Piedras Negras": {"lat": 28.7000, "lng": -100.5231},
+        "San Luis Potosi":{"lat": 22.1565, "lng": -100.9855},
+        "Coco":           {"lat": 25.5000, "lng": -103.5000},
     }
 
     # Agrupar hosts por ciudad → sitio
@@ -902,120 +881,6 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
         }
         for a in alerts
     ]
-
-@app.get("/api/noc/mtr")
-async def run_mtr(ip: str, cycles: int = 15):
-    """Corre MTR en tiempo real y hace stream de resultados via SSE."""
-    import asyncio, shutil, re as _re
-
-    MTR_BIN  = "/opt/homebrew/sbin/mtr"
-    HAS_MTR  = os.path.isfile(MTR_BIN)
-
-    async def _stream_mtr():
-        hops: dict = {}          # hop_index -> {ip, latencies, sent}
-
-        async def _emit(done=False, error=None):
-            rows = []
-            for h in sorted(hops.keys()):
-                d = hops[h]
-                lats = d["latencies"]
-                sent = d.get("sent", len(lats))
-                recv = len(lats)
-                loss = round((sent - recv) / sent * 100, 1) if sent > 0 else 0
-                rows.append({
-                    "hop":   h + 1,
-                    "ip":    d["ip"],
-                    "sent":  sent,
-                    "loss":  loss,
-                    "last":  round(lats[-1], 2)            if lats else None,
-                    "avg":   round(sum(lats)/len(lats), 2) if lats else None,
-                    "best":  round(min(lats), 2)           if lats else None,
-                    "worst": round(max(lats), 2)           if lats else None,
-                })
-            payload = {"hops": rows, "done": done, "target": ip}
-            if error: payload["error"] = error
-            return f"data: {json.dumps(payload)}\n\n"
-
-        # ── Intento 1: mtr --raw ──────────────────────────────────────────────
-        if HAS_MTR:
-            try:
-                cmd = [MTR_BIN, "--raw", "--no-dns", f"--report-cycles={cycles}", ip]
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                async for raw_line in proc.stdout:
-                    line = raw_line.decode().strip()
-                    parts = line.split()
-                    if len(parts) < 3:
-                        continue
-                    kind, hop_s, val = parts[0], parts[1], parts[2]
-                    hop = int(hop_s)
-                    if kind == "h":
-                        hops.setdefault(hop, {"ip": val, "latencies": [], "sent": 0})
-                        hops[hop]["ip"] = val
-                    elif kind == "p":
-                        lat_ms = int(val) / 1000.0
-                        hops.setdefault(hop, {"ip": "???", "latencies": [], "sent": 0})
-                        hops[hop]["latencies"].append(lat_ms)
-                        hops[hop]["sent"] += 1
-                    yield await _emit()
-                await proc.wait()
-                if proc.returncode == 0:
-                    yield await _emit(done=True)
-                    return
-                # si falló (permisos), caemos al fallback
-            except Exception:
-                pass
-
-        # ── Fallback: traceroute + ping por hop ───────────────────────────────
-        try:
-            tr_proc = await asyncio.create_subprocess_exec(
-                "traceroute", "-n", "-q", "1", "-w", "2", "-m", "20", ip,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-            )
-            hop_ips = []
-            async for raw_line in tr_proc.stdout:
-                line = raw_line.decode().strip()
-                m = _re.match(r"^\s*(\d+)\s+([\d\.]+|\*)", line)
-                if m:
-                    h_num, h_ip = int(m.group(1)), m.group(2)
-                    if h_ip != "*":
-                        hop_ips.append((h_num - 1, h_ip))
-                    else:
-                        hop_ips.append((h_num - 1, "*"))
-                    hops[h_num - 1] = {"ip": h_ip, "latencies": [], "sent": 0}
-                    yield await _emit()
-            await tr_proc.wait()
-
-            # Ping a cada hop descubierto
-            for h_idx, h_ip in hop_ips:
-                if h_ip == "*":
-                    continue
-                ping_proc = await asyncio.create_subprocess_exec(
-                    "ping", "-c", str(min(cycles, 10)), "-i", "0.2",
-                    "-W", "1000", h_ip,
-                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-                )
-                async for raw_line in ping_proc.stdout:
-                    line = raw_line.decode().strip()
-                    m = _re.search(r"time[=<]([\d\.]+)\s*ms", line)
-                    if m:
-                        hops[h_idx]["latencies"].append(float(m.group(1)))
-                        hops[h_idx]["sent"] += 1
-                        yield await _emit()
-                await ping_proc.wait()
-            yield await _emit(done=True)
-
-        except Exception as e:
-            yield await _emit(done=True, error=str(e))
-
-    return StreamingResponse(
-        _stream_mtr(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
@@ -1218,6 +1083,14 @@ def director_chat(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/devops/chat")
+def devops_chat(request: ChatRequest):
+    try:
+        respuesta = sre_agent.analizar_y_responder(request.message, request.history)
+        return {"status": "success", "response": respuesta}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/bridge")
 def get_bridge_status():
     return AGENT_BRIDGE
@@ -1302,6 +1175,179 @@ def bridge_query(req: CommandRequest):
     return {"status": "error", "message": "Unknown query command"}
 
 @app.post("/api/bridge/command")
+def push_command(req: CommandRequest):
+    AGENT_BRIDGE["command_queue"].append({
+        "command": req.command,
+        "context": req.context,
+        "ts": datetime.datetime.now().strftime("%H:%M:%S"),
+        "status": "pending"
+    })
+    return {"status": "queued", "pos": len(AGENT_BRIDGE["command_queue"])}
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
+# ─── Endpoints WFM ───────────────────────────────────────────────────────────
+
+@app.get("/api/wfm/ordenes")
+async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):
+    # Lanzar sincronización en segundo plano para no bloquear la respuesta
+    background_tasks.add_task(wfm_service._sync_with_odoo)
+    return wfm_service.obtener_ordenes(estado)
+
+@app.post("/api/wfm/comercial/solicitar")
+async def wfm_solicitar(req: WFMCreateRequest):
+    return wfm_service.crear_solicitud_comercial(req.cliente, req.servicio, req.comercial)
+
+@app.post("/api/wfm/preventa/actualizar")
+async def wfm_preventa(req: WFMUpdatePreventaRequest):
+    return wfm_service.actualizar_preventa(req.order_id, req.data, req.usuario)
+
+@app.post("/api/wfm/ventas/contratar")
+async def wfm_contratar(req: WFMBasicActionRequest):
+    return wfm_service.contratar_orden(req.order_id, req.usuario)
+
+@app.post("/api/wfm/almacen/asignar")
+async def wfm_almacen(req: WFMAlmacenRequest):
+    return wfm_service.asignar_equipos_almacen(req.order_id, req.equipos, req.usuario)
+
+@app.post("/api/wfm/aprovisionar")
+async def wfm_aprovisionar(req: WFMAproRequest):
+    return wfm_service.aprovisionar_servicio(req.order_id, req.config, req.usuario)
+
+@app.post("/api/wfm/pm/auditar")
+async def wfm_auditar(req: WFMAuditoriaRequest):
+    return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
+
+# ─── Integraciones Externas ──────────────────────────────────────────────────
+
+@app.post("/api/integrations/execute")
+async def execute_integration(req: IntegrationRequest):
+    """Ejecuta una acción en una plataforma externa (HubSpot, Net2Phone, etc)"""
+    try:
+        result = orchestrator.execute(req.platform, req.action, req.params)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ─── Biblioteca Documental ───────────────────────────────────────────────────
+
+@app.get("/api/library/docs")
+def get_library_docs():
+    """Retorna la lista de documentos organizados por categoría."""
+    docs_dir = os.path.join(os.path.dirname(BASE_DIR), "docs")
+    db_dir = os.path.join(BASE_DIR, "db")
+    
+    library = []
+    
+    # Escanear directorio docs/
+    if os.path.exists(docs_dir):
+        for root, dirs, files in os.walk(docs_dir):
+            category = os.path.basename(root).replace("_", " ").title()
+            if category == "Docs": category = "General"
+            
+            for file in files:
+                if file.endswith(".md") or file.endswith(".pdf"):
+                    library.append({
+                        "id": file,
+                        "name": file.replace("_", " ").replace(".md", "").replace(".pdf", ""),
+                        "filename": file,
+                        "type": "pdf" if file.endswith(".pdf") else "md",
+                        "category": category,
+                        "path": os.path.join(root, file)
+                    })
+                    
+    # Añadir PDFs generados en db/ (ej. FODA_XCIEN_2026.pdf)
+    if os.path.exists(db_dir):
+        for file in os.listdir(db_dir):
+            if file.endswith(".pdf"):
+                library.append({
+                    "id": file,
+                    "name": file.replace("_", " ").replace(".pdf", ""),
+                    "filename": file,
+                    "type": "pdf",
+                    "category": "Reportes Estratégicos",
+                    "path": os.path.join(db_dir, file)
+                })
+                
+    return {"status": "success", "documents": library}
+
+@app.get("/api/library/download")
+def download_doc(path: str):
+    """Descarga o sirve el documento solicitado."""
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+    # Seguridad básica para evitar que salgan del proyecto
+    abs_path = os.path.abspath(path)
+    if "Antigravity" not in abs_path:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+    return FileResponse(abs_path)
+
+
+USUARIOS_DB = os.path.join(BASE_DIR, "db", "usuarios.json")
+
+@app.get("/api/users")
+def get_users():
+    if not os.path.exists(USUARIOS_DB):
+        return []
+    with open(USUARIOS_DB, "r") as f:
+        return json.load(f)
+
+@app.post("/api/users")
+def create_user(user: Dict[str, Any]):
+    users = get_users()
+    user["id"] = str(len(users) + 1)
+    user["status"] = "pending"
+    user["invited_at"] = str(date.today())
+    users.append(user)
+    with open(USUARIOS_DB, "w") as f:
+        json.dump(users, f, indent=2)
+    
+    # Intento de envío de notificación real (Telegram)
+    try:
+        config = _load_telegram_config()
+        if config.get("enabled") and config.get("token"):
+            bot = TelegramBot(token=config["token"], chat_id=config["chat_id"])
+            msg = (
+                f"👤 *NUEVA INVITACIÓN XCIEN 2.0*\n\n"
+                f"Se ha invitado a *{user['name']}* a la plataforma.\n"
+                f"🏢 *Depto:* {user['department']}\n"
+                f"🔑 *Rol:* {user['role']}\n\n"
+                f"Acceso pendiente de activación."
+            )
+            bot.send_message(msg)
+    except Exception as e:
+        logger.error(f"Error enviando notificación de invitación: {e}")
+
+    return user
+
+@app.post("/api/users/activate/{user_id}")
+def activate_user(user_id: str):
+    users = get_users()
+    for u in users:
+      if u["id"] == user_id:
+        u["status"] = "active"
+        u["lastSeen"] = str(date.today())
+        with open(USUARIOS_DB, "w") as f:
+            json.dump(users, f, indent=2)
+        return {"status": "success", "user": u}
+    raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+@app.get("/api/integrations/status")
+async def get_integrations_status():
+    """Retorna el estado de las conexiones configuradas"""
+    return {
+        "hubspot": {"connected": True, "last_sync": "2026-04-27 13:00"},
+        "net2phone": {"connected": True, "calls_active": 0},
+        "ai_agents": {"active": True, "model": "Director General v2"}
+    }
+
 def push_command(req: CommandRequest):
     AGENT_BRIDGE["command_queue"].append({
         "command": req.command,
