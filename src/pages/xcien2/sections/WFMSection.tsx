@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ThemeConfig, WFMOrder, WFMOrderState } from '../types';
 
 import { API_BASE } from '../../../config';
@@ -35,7 +35,8 @@ function MatrixBackground() {
   );
 }
 
-type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm' | 'dispatch';
+type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm' | 'dispatch' | 'noc' | 'gerencia';
+type DispatchTab = 'bidrillas' | 'checklist' | 'pruebas' | 'evidencias';
 
 const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }> = {
   comercial:        { label: 'Comercial',        icon: '🤝', color: '#00C896' },
@@ -43,19 +44,33 @@ const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }>
   almacen:          { label: 'Almacén',          icon: '📦', color: '#FFB703' },
   aprovisionamiento: { label: 'Aprovisionamiento',icon: '⚙️', color: '#A855F7' },
   pm:               { label: 'PM / Operaciones', icon: '📋', color: '#FF4757' },
-  dispatch:         { label: 'Dispatch / Bidrillas', icon: '🚛', color: '#00ff88' },
+  dispatch:         { label: 'Dispatch / Equipos',   icon: '🚛', color: '#00ff88' },
+  noc:              { label: 'NOC',                  icon: '📡', color: '#00B4D8' },
+  gerencia:         { label: 'Gerencia / KPIs',      icon: '📊', color: '#F97316' },
 };
 
 const STATE_LABEL: Record<WFMOrderState, string> = {
-  SOLICITUD_PREVENTA:  'Solicitud Preventa',
-  ANTEPROYECTO:        'Anteproyecto Listo',
+  SOLICITUD_PREVENTA:   'Solicitud Preventa',
+  ANTEPROYECTO:         'Anteproyecto Listo',
   ORDEN_IMPLEMENTACION: 'Orden de Imp.',
-  ALMACEN_VALIDACION:  'Validando Almacén',
-  ESPERA_INVENTARIO:   'Espera Inventario',
-  APROVISIONAMIENTO:   'En Aprovisionamiento',
-  REVISION_PM:         'Revisión Final PM',
-  LISTO_INSTALACION:   'Listo p/ Instalación',
-  BACKLOG:             'Backlog / Incidencia',
+  ALMACEN_VALIDACION:   'Validando Almacén',
+  ESPERA_INVENTARIO:    'Espera Inventario',
+  APROVISIONAMIENTO:    'En Aprovisionamiento',
+  REVISION_PM:          'Revisión Final PM',
+  LISTO_INSTALACION:    'Listo p/ Instalación',
+  INSTALACION:          'En Instalación',
+  NOC_VALIDACION:       'Validación NOC',
+  FACTURACION:          'Facturación ✓',
+  BACKLOG:              'Backlog / Incidencia',
+  CERRADO:              'Cerrado ✓',
+};
+
+const STATE_COLOR: Partial<Record<WFMOrderState, string>> = {
+  CERRADO:        '#00C896',
+  FACTURACION:    '#00C896',
+  BACKLOG:        '#FF4757',
+  INSTALACION:    '#FFB703',
+  NOC_VALIDACION: '#00B4D8',
 };
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -68,6 +83,1261 @@ function Badge({ label, color }: { label: string; color: string }) {
   );
 }
 
+// ── KPIsPanel ─────────────────────────────────────────────────────────────────
+interface KPIEtapa {
+  horas: number | null; dias: number | null;
+  sla_horas: number; sla_dias: number;
+  estado: 'ok' | 'alerta' | 'excedido' | 'sin_datos';
+  pct_sla: number | null;
+}
+interface KPIsGlobales {
+  total_ordenes: number;
+  por_estado: Record<string, number>;
+  promedios_etapas: Record<string, { promedio_horas?: number; promedio_dias?: number; min_horas?: number; max_horas?: number; n: number; sla_horas?: number; pct_dentro_sla?: number }>;
+  ordenes: Array<{ order_id: string; cliente: string; servicio: string; estado_actual: string; etapas: Record<string, KPIEtapa> }>;
+  slas: Record<string, number>;
+}
+
+interface KPIsPanelProps { theme: ThemeConfig; order: WFMOrder | undefined; }
+
+const ETAPA_META: Record<string, { label: string; color: string }> = {
+  preventa:          { label: 'Preventa',          color: '#4FC3F7' },
+  almacen:           { label: 'Almacén',           color: '#FFB703' },
+  aprovisionamiento: { label: 'Aprovisionamiento', color: '#A855F7' },
+  instalacion:       { label: 'Instalación',       color: '#00ff88' },
+  noc:               { label: 'NOC',               color: '#00B4D8' },
+  total:             { label: 'Total',             color: '#F97316' },
+};
+
+const ESTADO_COLOR_KPI: Record<string, string> = { ok: '#00C896', alerta: '#FFB703', excedido: '#FF4757', sin_datos: '#555' };
+
+function KPIsPanel({ theme, order }: KPIsPanelProps) {
+  const [globales, setGlobales]   = useState<KPIsGlobales | null>(null);
+  const [ordenKpi, setOrdenKpi]   = useState<{ etapas: Record<string, KPIEtapa> } | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [vista, setVista]         = useState<'global' | 'orden'>('global');
+  const O = '#F97316';
+
+  const fetchKpis = async () => {
+    setLoading(true);
+    try {
+      const [gRes, oRes] = await Promise.all([
+        fetch(`${API_BASE}/api/wfm/kpis`),
+        order ? fetch(`${API_BASE}/api/wfm/kpis/${order.id}`) : Promise.resolve(null),
+      ]);
+      if (gRes.ok) setGlobales(await gRes.json());
+      if (oRes?.ok) setOrdenKpi(await oRes.json());
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchKpis(); }, [order?.id]);
+
+  const EtapaBar = ({ etapa, data }: { etapa: string; data: KPIEtapa }) => {
+    const meta = ETAPA_META[etapa];
+    const color = ESTADO_COLOR_KPI[data.estado];
+    const pct = Math.min(100, data.pct_sla ?? 0);
+    const tiempoStr = data.horas != null
+      ? data.dias! >= 1 ? `${data.dias!.toFixed(1)}d` : `${data.horas.toFixed(1)}h`
+      : '—';
+    const slaStr = data.sla_dias >= 1 ? `${data.sla_dias}d` : `${data.sla_horas}h`;
+
+    return (
+      <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${data.estado === 'sin_datos' ? theme.border : color + '30'}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} />
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{meta.label}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color }}>{tiempoStr}</span>
+            <span style={{ fontSize: 10, color: theme.dim }}>/ SLA {slaStr}</span>
+            {data.estado !== 'sin_datos' && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: `${color}18`, color, border: `1px solid ${color}40` }}>
+                {data.pct_sla}%
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.5s ease' }} />
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) return <div style={{ padding: 20, color: theme.dim, fontSize: 12 }}>Calculando KPIs...</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(249,115,22,0.06)', borderRadius: 10, border: '1px solid rgba(249,115,22,0.2)' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: O, marginBottom: 4 }}>📊 KPIs DE TIEMPO POR ETAPA — US-054–057</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>
+          {globales?.total_ordenes ?? 0} órdenes totales · SLA: Preventa 5d · Almacén 2d · Apro 1d · Instalación 3d · NOC 1d · Total 15d
+        </div>
+      </div>
+
+      {/* Tab vista */}
+      <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 4, alignSelf: 'flex-start' }}>
+        {(['global', 'orden'] as const).map(v => (
+          <button key={v} onClick={() => setVista(v)} style={{ padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer', background: vista === v ? `${O}22` : 'transparent', color: vista === v ? O : theme.dim, fontSize: 11, fontWeight: vista === v ? 700 : 500, boxShadow: vista === v ? `0 0 0 1px ${O}40` : 'none' }}>
+            {v === 'global' ? '📊 Global' : '🔍 Esta orden'}
+          </button>
+        ))}
+      </div>
+
+      {/* Vista global */}
+      {vista === 'global' && globales && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Estado del pipeline */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Pipeline de órdenes</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {Object.entries(globales.por_estado).sort((a,b) => b[1]-a[1]).map(([estado, n]) => (
+                <div key={estado} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${STATE_COLOR[estado as WFMOrderState] ?? theme.border}30` }}>
+                  <span style={{ fontSize: 10, color: STATE_COLOR[estado as WFMOrderState] ?? theme.dim, fontWeight: 700 }}>{n}</span>
+                  <span style={{ fontSize: 10, color: theme.dim, marginLeft: 5 }}>{STATE_LABEL[estado as WFMOrderState] ?? estado}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Promedios por etapa */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Tiempo promedio por etapa</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Object.entries(ETAPA_META).map(([key, meta]) => {
+                const d = globales.promedios_etapas[key];
+                if (!d || d.n === 0) return (
+                  <div key={key} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} /><span style={{ fontSize: 12 }}>{meta.label}</span></div>
+                    <span style={{ fontSize: 11, color: theme.dim }}>Sin datos</span>
+                  </div>
+                );
+                const pct_sla = d.pct_dentro_sla ?? 0;
+                const color = pct_sla >= 80 ? '#00C896' : pct_sla >= 50 ? '#FFB703' : '#FF4757';
+                const avgDias = (d.promedio_horas! / 24);
+                return (
+                  <div key={key} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${meta.color}20` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} />
+                        <span style={{ fontSize: 12, fontWeight: 700 }}>{meta.label}</span>
+                        <span style={{ fontSize: 10, color: theme.dim }}>({d.n} órdenes)</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: meta.color }}>{avgDias >= 1 ? `${avgDias.toFixed(1)}d` : `${d.promedio_horas!.toFixed(1)}h`} prom.</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: `${color}18`, color, border: `1px solid ${color}40` }}>{pct_sla}% en SLA</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                      <div style={{ height: '100%', width: `${pct_sla}%`, background: color, borderRadius: 2, transition: 'width 0.5s' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span style={{ fontSize: 9, color: theme.dim }}>Min: {(d.min_horas!/24).toFixed(1)}d</span>
+                      <span style={{ fontSize: 9, color: theme.dim }}>SLA: {d.sla_horas!/24}d</span>
+                      <span style={{ fontSize: 9, color: theme.dim }}>Max: {(d.max_horas!/24).toFixed(1)}d</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top órdenes más lentas */}
+          {globales.ordenes.length > 0 && (() => {
+            const conTotal = globales.ordenes.filter(o => o.etapas.total.horas != null).sort((a,b) => (b.etapas.total.horas ?? 0) - (a.etapas.total.horas ?? 0)).slice(0, 5);
+            if (!conTotal.length) return null;
+            return (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Órdenes más antiguas</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {conTotal.map(o => {
+                    const total = o.etapas.total;
+                    const color = ESTADO_COLOR_KPI[total.estado];
+                    return (
+                      <div key={o.order_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: `1px solid ${color}20` }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700 }}>{o.cliente}</div>
+                          <div style={{ fontSize: 10, color: theme.dim }}>{o.order_id} · {STATE_LABEL[o.estado_actual as WFMOrderState] ?? o.estado_actual}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color }}>{total.dias!.toFixed(1)}d</div>
+                          <div style={{ fontSize: 9, color: theme.dim }}>SLA {total.sla_dias}d</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Vista orden individual */}
+      {vista === 'orden' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {!order && <div style={{ color: theme.dim, fontSize: 12 }}>Selecciona una orden en la lista.</div>}
+          {order && !ordenKpi && <div style={{ color: theme.dim, fontSize: 12 }}>Sin datos de KPIs para esta orden.</div>}
+          {order && ordenKpi && (
+            <>
+              <div style={{ fontSize: 12, color: theme.dim, marginBottom: 4 }}>{order.cliente} · {order.id}</div>
+              {Object.entries(ETAPA_META).map(([key]) => (
+                <EtapaBar key={key} etapa={key} data={ordenKpi.etapas[key]} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      <button onClick={fetchKpis} style={{ alignSelf: 'flex-end', padding: '6px 14px', background: 'transparent', border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.dim, fontSize: 11, cursor: 'pointer' }}>
+        🔄 Recalcular
+      </button>
+    </div>
+  );
+}
+
+// ── NocValidacionPanel ────────────────────────────────────────────────────────
+interface NocPanelProps { theme: ThemeConfig; order: WFMOrder | undefined; onRefresh: () => void; }
+
+const HERRAMIENTAS_NOC = ['Zabbix', 'PRTG', 'Nagios', 'LibreNMS', 'Otro'];
+const GRUPOS_ALERTA_DEFAULT = ['Caída de host', 'Alta latencia', 'Pérdida de paquetes', 'Uso de ancho de banda'];
+
+function NocValidacionPanel({ theme, order, onRefresh }: NocPanelProps) {
+  const [noc, setNoc] = useState(order?.noc ?? null);
+  const [loading, setLoading]   = useState(false);
+  const [saving, setSaving]     = useState<string | null>(null);
+
+  // Ping form
+  const [ipDestino, setIpDestino]   = useState(order?.aprovisionamiento?.gateway ?? '');
+  const [pingOk, setPingOk]         = useState<boolean | null>(null);
+  const [latenciaNoc, setLatenciaNoc] = useState('');
+
+  // Alta monitoreo form
+  const [herramienta, setHerramienta] = useState('Zabbix');
+  const [hostId, setHostId]           = useState('');
+  const [grupos, setGrupos]           = useState<string[]>([...GRUPOS_ALERTA_DEFAULT]);
+
+  // Aprobación
+  const [observaciones, setObservaciones] = useState('');
+
+  const N = '#00B4D8';
+
+  const fetchNoc = async () => {
+    if (!order) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/noc/${order.id}`);
+      if (res.ok) setNoc(await res.json());
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchNoc(); }, [order?.id]);
+
+  const handlePing = async () => {
+    if (!order || pingOk === null || !latenciaNoc) return;
+    setSaving('ping');
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/noc/ping`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, ping_ok: pingOk, latencia_ms: parseFloat(latenciaNoc), ip_destino: ipDestino, usuario: 'NOC' }),
+      });
+      if (res.ok) { await fetchNoc(); onRefresh(); }
+    } finally { setSaving(null); }
+  };
+
+  const handleAlta = async () => {
+    if (!order || !hostId) return;
+    setSaving('alta');
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/noc/alta-monitoreo`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, herramienta, host_id: hostId, grupos_alerta: grupos, usuario: 'NOC' }),
+      });
+      if (res.ok) { await fetchNoc(); onRefresh(); }
+    } finally { setSaving(null); }
+  };
+
+  const handleAprobar = async () => {
+    if (!order) return;
+    setSaving('aprobar');
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/noc/aprobar`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, observaciones, usuario: 'Supervisor NOC' }),
+      });
+      if (res.ok) { await fetchNoc(); onRefresh(); }
+      else { const e = await res.json(); alert(e.detail); }
+    } finally { setSaving(null); }
+  };
+
+  const toggleGrupo = (g: string) =>
+    setGrupos(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+
+  const inputStyle = { width: '100%', padding: '8px 10px', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.text, fontSize: 12, boxSizing: 'border-box' as const };
+
+  const Step = ({ num, title, done, active }: { num: number; title: string; done: boolean; active: boolean }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 8, background: done ? 'rgba(0,180,216,0.08)' : active ? 'rgba(255,255,255,0.04)' : 'transparent', border: `1px solid ${done ? N + '40' : active ? theme.border : 'transparent'}` }}>
+      <div style={{ width: 24, height: 24, borderRadius: '50%', background: done ? N : active ? 'rgba(255,255,255,0.1)' : 'transparent', border: `2px solid ${done ? N : theme.dim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: done ? '#000' : theme.dim, flexShrink: 0 }}>
+        {done ? '✓' : num}
+      </div>
+      <span style={{ fontSize: 12, fontWeight: done ? 700 : 500, color: done ? N : active ? theme.text : theme.dim }}>{title}</span>
+    </div>
+  );
+
+  if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
+
+  const step1Done = noc?.ping_ok === true;
+  const step2Done = noc?.dado_de_alta === true;
+  const step3Done = noc?.aprobado === true;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(0,180,216,0.06)', borderRadius: 10, border: `1px solid rgba(0,180,216,0.2)` }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: N, marginBottom: 4 }}>📡 FLUJO NOC — US-047 a 050</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>Validación conectividad · Alta en monitoreo · Configuración alertas · Aprobación</div>
+      </div>
+
+      {/* Progreso visual */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Step num={1} title="US-047 · Validar conectividad (ping)" done={step1Done} active={!step1Done} />
+        <Step num={2} title="US-048–049 · Alta en monitoreo + alertas" done={step2Done} active={step1Done && !step2Done} />
+        <Step num={3} title="US-050 · Aprobar — listo para facturación" done={step3Done} active={step2Done && !step3Done} />
+      </div>
+
+      {/* Estado final */}
+      {step3Done && (
+        <div style={{ padding: 14, borderRadius: 10, background: 'rgba(0,200,150,0.1)', border: '1px solid #00C89640', textAlign: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#00C896' }}>✅ APROBADO POR NOC</div>
+          <div style={{ fontSize: 11, color: theme.dim, marginTop: 4 }}>Host: {noc?.host_id} · {noc?.herramienta_monitoreo} · {noc?.aprobado_por}</div>
+          {noc?.observaciones && <div style={{ fontSize: 11, color: theme.dim, marginTop: 4, fontStyle: 'italic' }}>"{noc.observaciones}"</div>}
+        </div>
+      )}
+
+      {/* PASO 1: Ping */}
+      {!step1Done && (
+        <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: N, marginBottom: 12 }}>Paso 1 · Validación de conectividad</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>IP de destino</div>
+              <input style={inputStyle} placeholder="ej. 200.1.2.1" value={ipDestino} onChange={e => setIpDestino(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Latencia medida (ms)</div>
+              <input style={inputStyle} type="number" placeholder="ej. 15" value={latenciaNoc} onChange={e => setLatenciaNoc(e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {[true, false].map(v => (
+              <button key={String(v)} onClick={() => setPingOk(v)}
+                style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${pingOk === v ? (v ? '#00C896' : '#FF4757') : theme.border}`, background: pingOk === v ? (v ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)') : 'transparent', color: pingOk === v ? (v ? '#00C896' : '#FF4757') : theme.dim, cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
+                {v ? '✅ Ping exitoso' : '❌ Ping fallido'}
+              </button>
+            ))}
+          </div>
+          <button disabled={pingOk === null || !latenciaNoc || saving === 'ping'} onClick={handlePing}
+            style={{ width: '100%', padding: 10, borderRadius: 8, border: 'none', background: N, color: '#000', fontWeight: 800, cursor: 'pointer', opacity: pingOk === null ? 0.5 : 1 }}>
+            {saving === 'ping' ? 'Registrando...' : 'REGISTRAR PING'}
+          </button>
+        </div>
+      )}
+
+      {/* Resultado ping */}
+      {step1Done && (
+        <div style={{ padding: 12, borderRadius: 8, background: noc?.ping_ok ? 'rgba(0,200,150,0.08)' : 'rgba(255,71,87,0.08)', border: `1px solid ${noc?.ping_ok ? '#00C89640' : '#FF475740'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: noc?.ping_ok ? '#00C896' : '#FF4757' }}>
+            {noc?.ping_ok ? '✅' : '❌'} Ping → {noc?.ip_destino}
+          </span>
+          <span style={{ fontSize: 12, color: theme.dim }}>{noc?.latencia_ms}ms</span>
+        </div>
+      )}
+
+      {/* PASO 2: Alta en monitoreo */}
+      {step1Done && !step2Done && (
+        <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: N, marginBottom: 12 }}>Paso 2 · Alta en monitoreo y alertas</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Herramienta</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {HERRAMIENTAS_NOC.map(h => (
+                  <button key={h} onClick={() => setHerramienta(h)}
+                    style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${herramienta === h ? N : theme.border}`, background: herramienta === h ? `${N}18` : 'transparent', color: herramienta === h ? N : theme.dim, fontSize: 10, cursor: 'pointer', fontWeight: herramienta === h ? 700 : 400 }}>
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Host ID / Nombre en {herramienta}</div>
+              <input style={inputStyle} placeholder="ej. xcien-cliente-fw01" value={hostId} onChange={e => setHostId(e.target.value)} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 6 }}>Grupos de alerta configurados</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {GRUPOS_ALERTA_DEFAULT.map(g => (
+                <button key={g} onClick={() => toggleGrupo(g)}
+                  style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${grupos.includes(g) ? N : theme.border}`, background: grupos.includes(g) ? `${N}18` : 'transparent', color: grupos.includes(g) ? N : theme.dim, fontSize: 10, cursor: 'pointer' }}>
+                  {grupos.includes(g) ? '✓ ' : ''}{g}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button disabled={!hostId || saving === 'alta'} onClick={handleAlta}
+            style={{ width: '100%', padding: 10, borderRadius: 8, border: 'none', background: N, color: '#000', fontWeight: 800, cursor: 'pointer', opacity: !hostId ? 0.5 : 1 }}>
+            {saving === 'alta' ? 'Registrando...' : 'DAR DE ALTA EN MONITOREO'}
+          </button>
+        </div>
+      )}
+
+      {/* Resultado alta */}
+      {step2Done && (
+        <div style={{ padding: 12, borderRadius: 8, background: 'rgba(0,180,216,0.08)', border: '1px solid rgba(0,180,216,0.3)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: N, marginBottom: 6 }}>📡 En monitoreo: {noc?.herramienta_monitoreo} · {noc?.host_id}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {(noc?.grupos_alerta ?? []).map(g => (
+              <span key={g} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: `${N}18`, color: N, border: `1px solid ${N}40` }}>{g}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* PASO 3: Aprobar */}
+      {step2Done && !step3Done && (
+        <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: N, marginBottom: 12 }}>Paso 3 · Confirmar monitoreo activo</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Observaciones</div>
+            <textarea style={{ ...inputStyle, height: 60, resize: 'none' } as React.CSSProperties}
+              placeholder="Todo en orden, equipo visible y alertas activas..."
+              value={observaciones} onChange={e => setObservaciones(e.target.value)} />
+          </div>
+          <button disabled={saving === 'aprobar'} onClick={handleAprobar}
+            style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: '#00C896', color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+            {saving === 'aprobar' ? 'Aprobando...' : '✅ APROBAR — LISTO PARA FACTURACIÓN'}
+          </button>
+        </div>
+      )}
+
+      {loading && <div style={{ fontSize: 11, color: theme.dim }}>Cargando estado NOC...</div>}
+    </div>
+  );
+}
+
+// ── AprovisionamientoPanel ────────────────────────────────────────────────────
+interface AproProps { theme: ThemeConfig; order: WFMOrder | undefined; onRefresh: () => void; }
+
+function AprovisionamientoPanel({ theme, order, onRefresh }: AproProps) {
+  const apro = order?.aprovisionamiento;
+  const [form, setForm] = useState({
+    vlan: apro?.vlan?.toString() ?? '',
+    bw_mbps: apro?.bw_mbps?.toString() ?? '',
+    ip_wan: apro?.ip_wan ?? '',
+    gateway: apro?.gateway ?? '',
+    firmware: apro?.firmware ?? '',
+    mac_address: apro?.mac_address ?? '',
+    notas_config: apro?.notas_config ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
+
+  const listo = apro?.listo;
+  const inputStyle = { width: '100%', padding: '8px 10px', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.text, fontSize: 12, boxSizing: 'border-box' as const };
+  const P = '#A855F7';
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      const body: Record<string, any> = { order_id: order.id, usuario: 'Ing. Aprovisionamiento' };
+      if (form.vlan)        body.vlan        = parseInt(form.vlan);
+      if (form.bw_mbps)     body.bw_mbps     = parseInt(form.bw_mbps);
+      if (form.ip_wan)      body.ip_wan      = form.ip_wan;
+      if (form.gateway)     body.gateway     = form.gateway;
+      if (form.firmware)    body.firmware    = form.firmware;
+      if (form.mac_address) body.mac_address = form.mac_address;
+      if (form.notas_config)body.notas_config= form.notas_config;
+      const res = await fetch(`${API_BASE}/api/wfm/aprovisionamiento/registrar`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (res.ok) onRefresh();
+      else { const e = await res.json(); alert(e.detail); }
+    } finally { setSaving(false); }
+  };
+
+  const Field = ({ label, field, placeholder, type = 'text' }: { label: string; field: keyof typeof form; placeholder: string; type?: string }) => (
+    <div>
+      <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>{label}</div>
+      <input style={inputStyle} type={type} placeholder={placeholder}
+        value={form[field]} onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))} />
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(168,85,247,0.06)', borderRadius: 10, border: '1px solid rgba(168,85,247,0.2)' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: P, marginBottom: 4 }}>⚙️ APROVISIONAMIENTO LÓGICO — HU-07</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>Registra parámetros de red, firmware y dirección MAC del equipo</div>
+      </div>
+
+      {/* Estado actual si ya está aprovisionado */}
+      {listo && (
+        <div style={{ padding: 14, borderRadius: 10, background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.3)' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: P, marginBottom: 10 }}>✓ Aprovisionado — {apro?.aprovisionado_por} · {apro?.fecha_aprovisionamiento?.split('T')[0]}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+            {[
+              ['VLAN',     apro?.vlan],
+              ['BW',       apro?.bw_mbps ? `${apro.bw_mbps} Mbps` : null],
+              ['IP WAN',   apro?.ip_wan],
+              ['Gateway',  apro?.gateway],
+              ['Firmware', apro?.firmware],
+              ['MAC',      apro?.mac_address],
+            ].filter(([, v]) => v).map(([label, val]) => (
+              <div key={label as string} style={{ padding: 10, background: theme.bg, borderRadius: 8, border: `1px solid ${theme.border}` }}>
+                <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>{label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 2 }}>{String(val)}</div>
+              </div>
+            ))}
+          </div>
+          {apro?.notas_config && (
+            <div style={{ marginTop: 10, fontSize: 11, color: theme.dim, fontStyle: 'italic' }}>"{apro.notas_config}"</div>
+          )}
+        </div>
+      )}
+
+      {/* Formulario */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, textTransform: 'uppercase' }}>Parámetros de red</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="VLAN"        field="vlan"    placeholder="ej. 4022"       type="number" />
+          <Field label="BW (Mbps)"   field="bw_mbps" placeholder="ej. 1000"       type="number" />
+          <Field label="IP WAN"      field="ip_wan"  placeholder="ej. 200.1.2.3"              />
+          <Field label="Gateway"     field="gateway" placeholder="ej. 200.1.2.1"              />
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, textTransform: 'uppercase', marginTop: 4 }}>Identificación del equipo (HU-07)</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Versión de firmware</div>
+            <input style={{ ...inputStyle, borderColor: form.firmware ? '#A855F7' : undefined }}
+              placeholder="ej. RouterOS 7.14.3"
+              value={form.firmware} onChange={e => setForm(f => ({ ...f, firmware: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Dirección MAC</div>
+            <input style={{ ...inputStyle, borderColor: form.mac_address ? '#A855F7' : undefined, fontFamily: 'monospace' }}
+              placeholder="ej. DC:2C:6E:A1:B2:C3"
+              value={form.mac_address}
+              onChange={e => {
+                // Auto-formato XX:XX:XX:XX:XX:XX
+                const raw = e.target.value.replace(/[^a-fA-F0-9]/g, '').toUpperCase().slice(0, 12);
+                const mac = raw.match(/.{1,2}/g)?.join(':') ?? raw;
+                setForm(f => ({ ...f, mac_address: mac }));
+              }} />
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Notas de configuración</div>
+          <textarea style={{ ...inputStyle, height: 60, resize: 'none' } as React.CSSProperties}
+            placeholder="Parámetros adicionales, observaciones..."
+            value={form.notas_config} onChange={e => setForm(f => ({ ...f, notas_config: e.target.value }))} />
+        </div>
+      </div>
+
+      {/* Indicadores de campos críticos */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {[['Firmware', !!form.firmware], ['MAC', !!form.mac_address], ['VLAN', !!form.vlan], ['BW', !!form.bw_mbps]].map(([label, ok]) => (
+          <div key={label as string} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: ok ? 'rgba(168,85,247,0.12)' : 'rgba(255,255,255,0.04)', color: ok ? P : theme.dim, border: `1px solid ${ok ? P + '40' : theme.border}` }}>
+            {ok ? '✓' : '○'} {label}
+          </div>
+        ))}
+      </div>
+
+      <button
+        disabled={saving}
+        onClick={handleSubmit}
+        style={{ padding: 12, borderRadius: 10, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: P, color: '#fff', transition: 'opacity 0.2s', opacity: saving ? 0.6 : 1 }}>
+        {saving ? 'Guardando...' : listo ? '⚙️ ACTUALIZAR APROVISIONAMIENTO' : '⚙️ REGISTRAR APROVISIONAMIENTO'}
+      </button>
+    </div>
+  );
+}
+
+// ── AlmacenPanel ─────────────────────────────────────────────────────────────
+interface AlmacenPanelProps { theme: ThemeConfig; order: WFMOrder | undefined; onRefresh: () => void; }
+
+function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
+  const [respuesta, setRespuesta] = useState<'disponible' | 'no_disponible' | 'disponible_en_fecha' | null>(null);
+  const [motivo, setMotivo]         = useState('');
+  const [fecha, setFecha]           = useState('');
+  const [modelo, setModelo]         = useState('');
+  const [serie, setSerie]           = useState('');
+  const [saving, setSaving]         = useState(false);
+
+  if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
+
+  const yaRespondio = order.almacen?.respuesta;
+  const OPCIONES = [
+    { id: 'disponible',          label: 'Disponible',              color: '#00C896', icon: '✅', desc: 'Equipo listo para despachar' },
+    { id: 'no_disponible',       label: 'No disponible',           color: '#FF4757', icon: '❌', desc: 'Sin stock — pasa a Backlog'  },
+    { id: 'disponible_en_fecha', label: 'Disponible en fecha',     color: '#FFB703', icon: '📅', desc: 'Hay stock confirmado en fecha futura' },
+  ] as const;
+
+  const handleEnviar = async () => {
+    if (!respuesta) return;
+    setSaving(true);
+    const equipos = modelo && serie ? [{ modelo, sn: serie }] : [];
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/almacen/responder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, respuesta, equipos, fecha_estimada: fecha || null, motivo, usuario: 'Jefe Almacén' }),
+      });
+      if (res.ok) { onRefresh(); }
+      else { const e = await res.json(); alert(e.detail); }
+    } finally { setSaving(false); }
+  };
+
+  const inputStyle = { width: '100%', padding: '8px 10px', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.text, fontSize: 12, boxSizing: 'border-box' as const };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(255,183,3,0.06)', borderRadius: 10, border: '1px solid rgba(255,183,3,0.2)' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#FFB703', marginBottom: 4 }}>📦 RESPUESTA DE ALMACÉN — HU-05</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>Indica disponibilidad de equipos para esta orden</div>
+      </div>
+
+      {/* Respuesta previa */}
+      {yaRespondio && (() => {
+        const op = OPCIONES.find(o => o.id === yaRespondio);
+        return (
+          <div style={{ padding: 14, borderRadius: 10, background: `${op?.color}10`, border: `1px solid ${op?.color}40` }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: op?.color }}>{op?.icon} Respuesta registrada: {op?.label}</div>
+            {order.almacen.fecha_estimada && <div style={{ fontSize: 11, color: theme.dim, marginTop: 4 }}>Fecha estimada: {order.almacen.fecha_estimada}</div>}
+            {order.almacen.motivo        && <div style={{ fontSize: 11, color: theme.dim, marginTop: 2 }}>Motivo: {order.almacen.motivo}</div>}
+            {order.almacen.respondido_por && <div style={{ fontSize: 11, color: theme.dim, marginTop: 2 }}>Por: {order.almacen.respondido_por}</div>}
+          </div>
+        );
+      })()}
+
+      {/* Selector de respuesta */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Disponibilidad de equipos</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {OPCIONES.map(op => (
+            <button key={op.id} onClick={() => setRespuesta(op.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, border: `1px solid ${respuesta === op.id ? op.color : theme.border}`, background: respuesta === op.id ? `${op.color}12` : 'rgba(255,255,255,0.02)', cursor: 'pointer', textAlign: 'left' }}>
+              <span style={{ fontSize: 20 }}>{op.icon}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: respuesta === op.id ? op.color : theme.text }}>{op.label}</div>
+                <div style={{ fontSize: 11, color: theme.dim }}>{op.desc}</div>
+              </div>
+              {respuesta === op.id && <span style={{ marginLeft: 'auto', fontSize: 14, color: op.color }}>●</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Campos contextuales */}
+      {respuesta === 'disponible' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Modelo del equipo</div>
+            <input style={inputStyle} placeholder="ej. Mikrotik CCR2004" value={modelo} onChange={e => setModelo(e.target.value)} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Número de serie</div>
+            <input style={inputStyle} placeholder="ej. SN-2026-X123" value={serie} onChange={e => setSerie(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      {respuesta === 'disponible_en_fecha' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Fecha estimada de llegada</div>
+            <input style={inputStyle} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Modelo esperado</div>
+            <input style={inputStyle} placeholder="ej. Mikrotik CCR2004" value={modelo} onChange={e => setModelo(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      {(respuesta === 'no_disponible' || respuesta === 'disponible_en_fecha') && (
+        <div>
+          <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Motivo / Observaciones</div>
+          <input style={inputStyle} placeholder="ej. Proveedor sin stock hasta próximo mes" value={motivo} onChange={e => setMotivo(e.target.value)} />
+        </div>
+      )}
+
+      {/* Botón enviar */}
+      <button
+        disabled={!respuesta || saving}
+        onClick={handleEnviar}
+        style={{ padding: 12, borderRadius: 10, border: 'none', fontWeight: 800, fontSize: 13, cursor: respuesta ? 'pointer' : 'not-allowed', background: respuesta ? '#FFB703' : 'rgba(255,255,255,0.06)', color: respuesta ? '#000' : theme.dim, transition: 'all 0.2s' }}>
+        {saving ? 'Enviando...' : respuesta ? `📦 REGISTRAR RESPUESTA` : 'Selecciona disponibilidad'}
+      </button>
+    </div>
+  );
+}
+
+// ── PruebasVelocidadPanel ─────────────────────────────────────────────────────
+type PruebaVelocidad = NonNullable<WFMOrder['pruebas_velocidad']>[number];
+
+interface PruebasProps { theme: ThemeConfig; order: WFMOrder; onRefresh: () => void; }
+
+function PruebasVelocidadPanel({ theme, order, onRefresh }: PruebasProps) {
+  const [pruebas, setPruebas] = useState<PruebaVelocidad[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [form, setForm] = useState({
+    bw_contratado_mbps: '',
+    descarga_mbps: '',
+    subida_mbps: '',
+    latencia_ms: '',
+    perdida_pct: '0',
+    servidor: 'XCIEN-SRV-MTY',
+    herramienta: 'iPerf3',
+  });
+
+  const fetchPruebas = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/pruebas-velocidad/${order.id}`);
+      if (res.ok) setPruebas(await res.json());
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchPruebas(); }, [order.id]);
+
+  const handleSubmit = async () => {
+    const bw = parseFloat(form.bw_contratado_mbps);
+    if (!bw || !form.descarga_mbps || !form.subida_mbps || !form.latencia_ms) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/prueba-velocidad`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id,
+          bw_contratado_mbps: bw,
+          descarga_mbps: parseFloat(form.descarga_mbps),
+          subida_mbps:   parseFloat(form.subida_mbps),
+          latencia_ms:   parseFloat(form.latencia_ms),
+          perdida_pct:   parseFloat(form.perdida_pct) || 0,
+          servidor: form.servidor,
+          herramienta: form.herramienta,
+          usuario: 'Técnico',
+        })
+      });
+      if (res.ok) {
+        await fetchPruebas();
+        onRefresh();
+        setForm(f => ({ ...f, descarga_mbps: '', subida_mbps: '', latencia_ms: '', perdida_pct: '0' }));
+      }
+    } finally { setSaving(false); }
+  };
+
+  const lastPrueba = pruebas[pruebas.length - 1];
+
+  const Gauge = ({ label, value, max, unit, ok }: { label: string; value: number; max: number; unit: string; ok: boolean }) => {
+    const pct = Math.min(100, Math.round((value / max) * 100));
+    const color = ok ? '#00C896' : '#FF4757';
+    return (
+      <div style={{ flex: 1, padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: `1px solid ${ok ? '#00C89630' : '#FF475730'}` }}>
+        <div style={{ fontSize: 10, color: theme.dim, marginBottom: 6, textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color, marginBottom: 8 }}>{value}<span style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>{unit}</span></div>
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.4s ease' }} />
+        </div>
+        <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 700 }}>{ok ? '✓ OK' : '✗ FUERA DE RANGO'}</div>
+      </div>
+    );
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '8px 10px', background: theme.bg,
+    border: `1px solid ${theme.border}`, borderRadius: 8,
+    color: theme.text, fontSize: 12, boxSizing: 'border-box' as const,
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(0,180,216,0.06)', borderRadius: 10, border: '1px solid rgba(0,180,216,0.2)' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#00B4D8', marginBottom: 4 }}>📡 PRUEBAS DE VELOCIDAD Y LATENCIA — US-038–040</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>Criterios: ↓↑ ≥ 90% del BW contratado · Latencia ≤ 50ms · Pérdida ≤ 1%</div>
+      </div>
+
+      {/* Última prueba — gauges */}
+      {lastPrueba && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim }}>
+            Última prueba — {lastPrueba.fecha.split('T')[0]} {lastPrueba.fecha.split('T')[1]?.substring(0,5)} · {lastPrueba.herramienta} · {lastPrueba.servidor}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Gauge label="Descarga" value={lastPrueba.descarga_mbps} max={lastPrueba.bw_contratado_mbps} unit="Mbps" ok={lastPrueba.resultados.ok_descarga} />
+            <Gauge label="Subida"   value={lastPrueba.subida_mbps}   max={lastPrueba.bw_contratado_mbps} unit="Mbps" ok={lastPrueba.resultados.ok_subida} />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Gauge label="Latencia"    value={lastPrueba.latencia_ms} max={100} unit="ms"  ok={lastPrueba.resultados.ok_latencia} />
+            <Gauge label="Pérdida pkt" value={lastPrueba.perdida_pct} max={5}   unit="%"   ok={lastPrueba.resultados.ok_perdida} />
+          </div>
+          <div style={{
+            padding: 12, borderRadius: 10, textAlign: 'center', fontWeight: 800, fontSize: 14,
+            background: lastPrueba.resultados.aprobada ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)',
+            color: lastPrueba.resultados.aprobada ? '#00C896' : '#FF4757',
+            border: `1px solid ${lastPrueba.resultados.aprobada ? '#00C89640' : '#FF475740'}`,
+          }}>
+            {lastPrueba.resultados.aprobada ? '✅ PRUEBA APROBADA' : '❌ PRUEBA FALLIDA — Requiere revisión'}
+          </div>
+        </div>
+      )}
+
+      {/* Formulario nueva prueba */}
+      <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12 }}>+ Registrar nueva prueba</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>BW Contratado (Mbps)</div>
+            <input style={inputStyle} type="number" placeholder="ej. 1000"
+              value={form.bw_contratado_mbps} onChange={e => setForm(f => ({ ...f, bw_contratado_mbps: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Descarga (Mbps)</div>
+            <input style={inputStyle} type="number" placeholder="ej. 945"
+              value={form.descarga_mbps} onChange={e => setForm(f => ({ ...f, descarga_mbps: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Subida (Mbps)</div>
+            <input style={inputStyle} type="number" placeholder="ej. 932"
+              value={form.subida_mbps} onChange={e => setForm(f => ({ ...f, subida_mbps: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Latencia (ms)</div>
+            <input style={inputStyle} type="number" placeholder="ej. 12"
+              value={form.latencia_ms} onChange={e => setForm(f => ({ ...f, latencia_ms: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Pérdida paquetes (%)</div>
+            <input style={inputStyle} type="number" placeholder="0"
+              value={form.perdida_pct} onChange={e => setForm(f => ({ ...f, perdida_pct: e.target.value }))} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Servidor de prueba</div>
+            <input style={inputStyle} placeholder="XCIEN-SRV-MTY"
+              value={form.servidor} onChange={e => setForm(f => ({ ...f, servidor: e.target.value }))} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Herramienta</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['iPerf3', 'Speedtest CLI', 'Manual'].map(h => (
+              <button key={h} onClick={() => setForm(f => ({ ...f, herramienta: h }))}
+                style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${form.herramienta === h ? '#00B4D8' : theme.border}`, background: form.herramienta === h ? 'rgba(0,180,216,0.12)' : 'transparent', color: form.herramienta === h ? '#00B4D8' : theme.dim, fontSize: 11, cursor: 'pointer', fontWeight: form.herramienta === h ? 700 : 400 }}>
+                {h}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          disabled={saving || !form.bw_contratado_mbps || !form.descarga_mbps || !form.subida_mbps || !form.latencia_ms}
+          onClick={handleSubmit}
+          style={{ width: '100%', padding: 10, borderRadius: 8, border: 'none', background: '#00B4D8', color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Registrando...' : '📡 REGISTRAR PRUEBA'}
+        </button>
+      </div>
+
+      {/* Historial */}
+      {pruebas.length > 1 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 8 }}>Historial de pruebas</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[...pruebas].reverse().slice(1).map(p => (
+              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: `1px solid ${p.resultados.aprobada ? '#00C89620' : '#FF475720'}` }}>
+                <div>
+                  <span style={{ fontSize: 10, color: theme.dim }}>{p.fecha.split('T')[0]} {p.fecha.split('T')[1]?.substring(0,5)}</span>
+                  <span style={{ fontSize: 11, marginLeft: 10 }}>↓{p.descarga_mbps} ↑{p.subida_mbps} Mbps · {p.latencia_ms}ms</span>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: p.resultados.aprobada ? '#00C896' : '#FF4757' }}>
+                  {p.resultados.aprobada ? '✓' : '✗'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && pruebas.length === 0 && (
+        <div style={{ padding: 20, textAlign: 'center', color: theme.dim, fontSize: 12 }}>
+          Sin pruebas registradas para esta orden
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ChecklistPanel ───────────────────────────────────────────────────────────
+type ChecklistItem = NonNullable<WFMOrder['checklist']>[number];
+
+interface ChecklistPanelProps {
+  theme: ThemeConfig;
+  order: WFMOrder;
+  onRefresh: () => void;
+}
+
+const CATEGORIA_COLORS: Record<string, string> = {
+  'Sitio': '#FFB703',
+  'Cableado': '#4FC3F7',
+  'Equipo': '#A855F7',
+  'Conectividad': '#00C896',
+  'NOC': '#00B4D8',
+  'Cliente': '#F97316',
+  'Limpieza': '#00ff88',
+};
+
+function ChecklistPanel({ theme, order, onRefresh }: ChecklistPanelProps) {
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [obs, setObs] = useState<Record<string, string>>({});
+
+  const fetchChecklist = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/checklist/${order.id}`);
+      if (res.ok) setItems(await res.json());
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchChecklist(); }, [order.id]);
+
+  const toggle = async (item: ChecklistItem) => {
+    setToggling(item.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id,
+          item_id: item.id,
+          completado: !item.completado,
+          observacion: obs[item.id] ?? item.observacion,
+          usuario: 'Técnico',
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.checklist);
+        onRefresh();
+      }
+    } finally { setToggling(null); }
+  };
+
+  const completados = items.filter(i => i.completado).length;
+  const total = items.length;
+  const pct = total ? Math.round((completados / total) * 100) : 0;
+
+  // Group by category
+  const categorias = Array.from(new Set(items.map(i => i.categoria)));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Header + progress */}
+      <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 800 }}>📋 CHECKLIST DE INSTALACIÓN — US-036</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: pct === 100 ? '#00C896' : theme.accent }}>
+            {completados}/{total} · {pct}%
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#00C896' : theme.accent, borderRadius: 3, transition: 'width 0.3s ease' }} />
+        </div>
+        {pct === 100 && (
+          <div style={{ marginTop: 8, fontSize: 11, color: '#00C896', fontWeight: 700 }}>✅ Checklist completo</div>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: 11, color: theme.dim, padding: 10 }}>Cargando checklist...</div>
+      ) : (
+        categorias.map(cat => {
+          const catItems = items.filter(i => i.categoria === cat);
+          const catColor = CATEGORIA_COLORS[cat] ?? theme.accent;
+          const catDone = catItems.filter(i => i.completado).length;
+          return (
+            <div key={cat}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: catColor, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 1 }}>
+                {cat} ({catDone}/{catItems.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {catItems.map(item => (
+                  <div key={item.id}>
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+                        background: item.completado ? `${catColor}0d` : 'rgba(255,255,255,0.02)',
+                        borderRadius: 8,
+                        border: `1px solid ${item.completado ? catColor + '40' : theme.border}`,
+                        cursor: 'pointer', transition: 'all 0.15s'
+                      }}
+                      onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+                    >
+                      {/* Checkbox */}
+                      <button
+                        disabled={toggling === item.id}
+                        onClick={e => { e.stopPropagation(); toggle(item); }}
+                        style={{
+                          flexShrink: 0, width: 20, height: 20, borderRadius: 5,
+                          border: `2px solid ${item.completado ? catColor : theme.dim}`,
+                          background: item.completado ? catColor : 'transparent',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#000', fontSize: 11, fontWeight: 900, transition: 'all 0.15s'
+                        }}
+                      >
+                        {item.completado ? '✓' : ''}
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: item.completado ? theme.text : theme.dim, textDecoration: item.completado ? 'none' : 'none', lineHeight: 1.4 }}>
+                          <span style={{ fontSize: 10, color: theme.dim, marginRight: 6 }}>{item.id}</span>
+                          {item.descripcion}
+                        </div>
+                        {item.completado && item.completado_por && (
+                          <div style={{ fontSize: 10, color: catColor, marginTop: 3 }}>
+                            {item.completado_por} · {item.fecha_completado?.split('T')[1]?.substring(0, 5)}
+                          </div>
+                        )}
+                        {item.observacion && (
+                          <div style={{ fontSize: 10, color: theme.dim, marginTop: 2, fontStyle: 'italic' }}>
+                            "{item.observacion}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Expanded observacion input */}
+                    {expanded === item.id && !item.completado && (
+                      <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '0 0 8px 8px', border: `1px solid ${theme.border}`, borderTop: 'none', marginTop: -4 }}>
+                        <input
+                          placeholder="Observación (opcional)..."
+                          value={obs[item.id] ?? ''}
+                          onChange={e => setObs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          onClick={e => e.stopPropagation()}
+                          style={{ width: '100%', background: 'transparent', border: 'none', color: theme.dim, fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ── EvidenciasPanel ──────────────────────────────────────────────────────────
+interface EvidenciasPanelProps {
+  theme: ThemeConfig;
+  order: WFMOrder;
+  onRefresh: () => void;
+}
+
+function EvidenciasPanel({ theme, order, onRefresh }: EvidenciasPanelProps) {
+  const [uploading, setUploading] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [notas, setNotas] = useState('');
+  const [previewFotos, setPreviewFotos] = useState<{ tipo: 'antes' | 'despues'; dataUrl: string; filename: string }[]>([]);
+  const [loadedEv, setLoadedEv] = useState<WFMOrder['evidencias'] | null>(null);
+  const [loadingEv, setLoadingEv] = useState(false);
+  const fileInputAntes   = useRef<HTMLInputElement>(null);
+  const fileInputDespues = useRef<HTMLInputElement>(null);
+
+  const G = '#00ff88';
+  const fotos_antes   = loadedEv?.fotos_antes   ?? order.evidencias?.fotos_antes   ?? [];
+  const fotos_despues = loadedEv?.fotos_despues  ?? order.evidencias?.fotos_despues ?? [];
+  const cerrado       = (loadedEv?.cerrado_por ?? order.evidencias?.cerrado_por) != null;
+  const canClose      = fotos_antes.length >= 1 && fotos_despues.length >= 1 && !cerrado;
+
+  const loadEvidencias = async () => {
+    setLoadingEv(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/evidencias/${order.id}`);
+      if (res.ok) setLoadedEv(await res.json());
+    } catch { /* ignore */ } finally { setLoadingEv(false); }
+  };
+
+  useEffect(() => { loadEvidencias(); }, [order.id]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, tipo: 'antes' | 'despues') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const b64 = dataUrl.split(',')[1];
+        const res = await fetch(`${API_BASE}/api/wfm/instalacion/evidencia`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: order.id, tipo, filename: file.name, data_b64: b64, usuario: 'Técnico' })
+        });
+        if (res.ok) {
+          setPreviewFotos(prev => [...prev, { tipo, dataUrl, filename: file.name }]);
+          await loadEvidencias();
+          onRefresh();
+        }
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch { setUploading(false); }
+  };
+
+  const handleCerrar = async () => {
+    if (!canClose) return;
+    setClosing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/instalacion/cerrar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, notas, usuario: 'Técnico' })
+      });
+      if (res.ok) { await loadEvidencias(); onRefresh(); }
+      else { const err = await res.json(); alert(err.detail); }
+    } finally { setClosing(false); }
+  };
+
+  const renderFotoGrid = (fotos: NonNullable<WFMOrder['evidencias']>['fotos_antes'], label: string, color: string) => (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 8, textTransform: 'uppercase' }}>
+        {label} ({fotos.length})
+      </div>
+      {fotos.length === 0 ? (
+        <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: `1px dashed ${color}40`, textAlign: 'center', fontSize: 11, color: theme.dim }}>
+          Sin fotos — requerida mínimo 1
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {fotos.map((f, i) => (
+            <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}40` }}>
+              {f.data_b64 ? (
+                <img src={`data:image/jpeg;base64,${f.data_b64}`} alt={f.filename}
+                  style={{ width: 100, height: 80, objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <div style={{ width: 100, height: 80, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: theme.dim }}>
+                  {f.size_kb}KB
+                </div>
+              )}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', fontSize: 9, padding: '2px 4px', color: '#ccc', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                {f.fecha.split('T')[1]?.substring(0, 5)} · {f.usuario}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ padding: 14, background: 'rgba(0,255,136,0.05)', borderRadius: 10, border: `1px solid ${G}30` }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: G, marginBottom: 4 }}>📸 REPORTE FOTOGRÁFICO — US-041A</div>
+        <div style={{ fontSize: 11, color: theme.dim }}>Mínimo 1 foto ANTES + 1 foto DESPUÉS · Bloquea cierre si faltan</div>
+      </div>
+
+      {/* Estado */}
+      {cerrado && (
+        <div style={{ padding: 12, background: 'rgba(0,200,150,0.08)', borderRadius: 8, border: '1px solid #00C89640', fontSize: 12, color: '#00C896', fontWeight: 700 }}>
+          ✅ Instalación cerrada · {loadedEv?.cerrado_por ?? order.evidencias?.cerrado_por}
+        </div>
+      )}
+
+      {loadingEv && <div style={{ fontSize: 11, color: theme.dim }}>Cargando evidencias...</div>}
+
+      {/* Fotos antes */}
+      {renderFotoGrid(fotos_antes, 'Fotos Antes', '#FFB703')}
+
+      {/* Upload antes */}
+      {!cerrado && (
+        <div style={{ marginBottom: 8 }}>
+          <input ref={fileInputAntes} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => handleFileChange(e, 'antes')} />
+          <button disabled={uploading} onClick={() => fileInputAntes.current?.click()}
+            style={{ padding: '8px 16px', background: '#FFB70322', border: '1px solid #FFB70360', borderRadius: 8, color: '#FFB703', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            {uploading ? 'Subiendo...' : '+ Foto Antes'}
+          </button>
+        </div>
+      )}
+
+      {/* Fotos después */}
+      {renderFotoGrid(fotos_despues, 'Fotos Después', '#4FC3F7')}
+
+      {/* Upload después */}
+      {!cerrado && (
+        <div style={{ marginBottom: 12 }}>
+          <input ref={fileInputDespues} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => handleFileChange(e, 'despues')} />
+          <button disabled={uploading} onClick={() => fileInputDespues.current?.click()}
+            style={{ padding: '8px 16px', background: '#4FC3F722', border: '1px solid #4FC3F760', borderRadius: 8, color: '#4FC3F7', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            {uploading ? 'Subiendo...' : '+ Foto Después'}
+          </button>
+        </div>
+      )}
+
+      {/* Requerimiento visual */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1, padding: 10, borderRadius: 8, background: fotos_antes.length >= 1 ? 'rgba(0,200,150,0.08)' : 'rgba(255,71,87,0.08)', border: `1px solid ${fotos_antes.length >= 1 ? '#00C89640' : '#FF475740'}`, textAlign: 'center', fontSize: 11, fontWeight: 700, color: fotos_antes.length >= 1 ? '#00C896' : '#FF4757' }}>
+          {fotos_antes.length >= 1 ? '✓' : '✗'} Antes ({fotos_antes.length}/1)
+        </div>
+        <div style={{ flex: 1, padding: 10, borderRadius: 8, background: fotos_despues.length >= 1 ? 'rgba(0,200,150,0.08)' : 'rgba(255,71,87,0.08)', border: `1px solid ${fotos_despues.length >= 1 ? '#00C89640' : '#FF475740'}`, textAlign: 'center', fontSize: 11, fontWeight: 700, color: fotos_despues.length >= 1 ? '#00C896' : '#FF4757' }}>
+          {fotos_despues.length >= 1 ? '✓' : '✗'} Después ({fotos_despues.length}/1)
+        </div>
+      </div>
+
+      {/* Notas */}
+      {!cerrado && (
+        <textarea
+          placeholder="Notas de cierre (opcional)..."
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          style={{ width: '100%', height: 60, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.text, padding: 10, fontSize: 12, resize: 'none', boxSizing: 'border-box' }}
+        />
+      )}
+
+      {/* Cerrar botón */}
+      {!cerrado && (
+        <button
+          disabled={!canClose || closing}
+          onClick={handleCerrar}
+          style={{
+            padding: 12, borderRadius: 10, border: 'none', fontWeight: 800, fontSize: 13, cursor: canClose ? 'pointer' : 'not-allowed',
+            background: canClose ? G : 'rgba(255,255,255,0.06)',
+            color: canClose ? '#000' : theme.dim,
+            transition: 'all 0.2s'
+          }}
+        >
+          {closing ? 'Cerrando...' : canClose ? '✅ CERRAR INSTALACIÓN' : '🔒 Faltan fotos requeridas'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Main Section ─────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 
@@ -76,6 +1346,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const [orders, setOrders]       = useState<WFMOrder[]>([]);
   const [loading, setLoading]     = useState(true);
   const [selectedId, setSelected] = useState<string | null>(null);
+  const [dispatchTab, setDispatchTab] = useState<DispatchTab>('checklist');
 
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
@@ -290,7 +1561,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                     <span style={{ fontSize: 11, fontWeight: 700, color: theme.dim }}>{o.id}</span>
                     {o.id.startsWith('ODOO-') && <span style={{ fontSize: 9, color: '#00C896', background: '#00C89610', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>ODOO SYNC</span>}
                   </div>
-                  <Badge label={STATE_LABEL[o.estado]} color={o.estado === 'BACKLOG' ? '#FF4757' : theme.accent} />
+                  <Badge label={STATE_LABEL[o.estado]} color={STATE_COLOR[o.estado] ?? theme.accent} />
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{o.cliente}</div>
                 <div style={{ fontSize: 12, color: theme.dim }}>{o.servicio}</div>
@@ -341,47 +1612,11 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                   )}
 
                   {role === 'almacen' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Gestión de Inventario (US-015)</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Router Mikrotik CCR-2004</span>
-                            <span style={{ color: '#00C896' }}>S/N: 2026-X123</span>
-                          </div>
-                          <button 
-                            onClick={handleAlmacenAsignar}
-                            style={{ padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                          >
-                            Asignar y Enviar a Apro (US-018)
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <AlmacenPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
                   )}
 
                   {role === 'aprovisionamiento' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 10 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Aprovisionamiento Lógico de Red</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, border: `1px solid ${theme.border}` }}>
-                            <div style={{ fontSize: 10, color: theme.dim }}>VLAN</div>
-                            <div style={{ fontWeight: 700 }}>4022</div>
-                          </div>
-                          <div style={{ padding: 10, background: theme.bg, borderRadius: 6, border: `1px solid ${theme.border}` }}>
-                            <div style={{ fontSize: 10, color: theme.dim }}>BW</div>
-                            <div style={{ fontWeight: 700 }}>1024 Mbps</div>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={handleAprovisionar}
-                          style={{ width: '100%', padding: 10, background: theme.accent, border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          Ejecutar Aprovisionamiento (US-022)
-                        </button>
-                      </div>
-                    </div>
+                    <AprovisionamientoPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
                   )}
 
                   {role === 'pm' && (
@@ -422,31 +1657,86 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                       </div>
                     </div>
                   )}
-                  {role === 'dispatch' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                      <div style={{ background: 'rgba(0,255,136,0.05)', padding: 15, borderRadius: 10, border: `1px solid ${G}` }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12, color: G }}>🚛 GESTIÓN DE BIDRILLAS ACTIVAS</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {[
-                            { id: 'B-01', name: 'Escuadrón Alpha', status: 'En Sitio', tech: 'Laura Garza' },
-                            { id: 'B-02', name: 'Escuadrón Delta', status: 'Trayecto', tech: 'Ana Rodríguez' }
-                          ].map(b => (
-                            <div key={b.id} style={{ padding: 12, background: theme.bg, borderRadius: 8, border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <div style={{ fontSize: 11, fontWeight: 700 }}>{b.id} — {b.name}</div>
-                                <div style={{ fontSize: 10, color: theme.dim }}>Líder: {b.tech}</div>
-                              </div>
-                              <Badge label={b.status} color={b.status === 'En Sitio' ? G : '#4FC3F7'} />
-                            </div>
-                          ))}
-                        </div>
-                        <button 
-                          style={{ width: '100%', marginTop: 15, padding: 10, background: 'transparent', border: `1px solid ${G}`, color: G, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          + ASIGNAR NUEVA BIDRILLA
-                        </button>
+                  {role === 'dispatch' && selectedOrder && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {/* Tab bar */}
+                      <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 4, alignSelf: 'flex-start' }}>
+                        {([
+                          ['bidrillas', '🚛 Equipos'],
+                          ['checklist', '📋 Checklist'],
+                          ['pruebas',   '📡 Velocidad'],
+                          ['evidencias','📸 Evidencias'],
+                        ] as [DispatchTab, string][]).map(([id, label]) => (
+                          <button key={id} onClick={() => setDispatchTab(id)} style={{
+                            padding: '7px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                            background: dispatchTab === id ? `${G}22` : 'transparent',
+                            color: dispatchTab === id ? G : theme.dim,
+                            fontSize: 11, fontWeight: dispatchTab === id ? 700 : 500,
+                            boxShadow: dispatchTab === id ? `0 0 0 1px ${G}40` : 'none',
+                            transition: 'all 0.15s',
+                          }}>
+                            {label}
+                          </button>
+                        ))}
                       </div>
+
+                      {/* Bidrillas */}
+                      {dispatchTab === 'bidrillas' && (
+                        <div style={{ background: 'rgba(0,255,136,0.05)', padding: 15, borderRadius: 10, border: `1px solid ${G}` }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12, color: G }}>🚛 GESTIÓN DE EQUIPOS EN CAMPO</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {[
+                              { id: 'B-01', name: 'Escuadrón Alpha', status: 'En Sitio', tech: 'Laura Garza' },
+                              { id: 'B-02', name: 'Escuadrón Delta', status: 'Trayecto', tech: 'Ana Rodríguez' }
+                            ].map(b => (
+                              <div key={b.id} style={{ padding: 12, background: theme.bg, borderRadius: 8, border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700 }}>{b.id} — {b.name}</div>
+                                  <div style={{ fontSize: 10, color: theme.dim }}>Líder: {b.tech}</div>
+                                </div>
+                                <Badge label={b.status} color={b.status === 'En Sitio' ? G : '#4FC3F7'} />
+                              </div>
+                            ))}
+                          </div>
+                          <button style={{ width: '100%', marginTop: 15, padding: 10, background: 'transparent', border: `1px solid ${G}`, color: G, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                            + ASIGNAR NUEVO EQUIPO
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Checklist US-036 */}
+                      {dispatchTab === 'checklist' && (
+                        <div style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 16 }}>
+                          <ChecklistPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
+                        </div>
+                      )}
+
+                      {/* Pruebas velocidad US-038–040 */}
+                      {dispatchTab === 'pruebas' && (
+                        <div style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 16 }}>
+                          <PruebasVelocidadPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
+                        </div>
+                      )}
+
+                      {/* Evidencias US-041A */}
+                      {dispatchTab === 'evidencias' && (
+                        <div style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 16 }}>
+                          <EvidenciasPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {role === 'dispatch' && !selectedOrder && (
+                    <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden para gestionar campo.</div>
+                  )}
+
+                  {role === 'noc' && (
+                    <NocValidacionPanel theme={theme} order={selectedOrder} onRefresh={fetchOrders} />
+                  )}
+
+                  {role === 'gerencia' && (
+                    <KPIsPanel theme={theme} order={selectedOrder} />
                   )}
 
                   <div style={{ marginTop: 30 }}>

@@ -782,6 +782,183 @@ interface Props {
   onTenantChange?: (id: string | null) => void;
 }
 
+// ── Reporte Semanal ───────────────────────────────────────────────────────────
+function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAlert[] }) {
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + 1);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+  const [ciudad, setCiudad]           = useState('todas');
+  const [fechaInicio, setFechaInicio] = useState(fmt(monday));
+  const [fechaFin, setFechaFin]       = useState(fmt(today));
+  const [loading, setLoading]         = useState(false);
+  const [wfmStats, setWfmStats]       = useState<{total:number;backlog:number;listo:number;proceso:number}>({total:0,backlog:0,listo:0,proceso:0});
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/wfm/ordenes`).then(r => r.json()).then(d => {
+      if (!Array.isArray(d)) return;
+      setWfmStats({
+        total:   d.length,
+        backlog: d.filter((o:any) => o.estado === 'BACKLOG').length,
+        listo:   d.filter((o:any) => o.estado === 'LISTO_INSTALACION').length,
+        proceso: d.filter((o:any) => !['BACKLOG','LISTO_INSTALACION'].includes(o.estado)).length,
+      });
+    }).catch(() => {});
+  }, []);
+
+  const cityNames = ['todas', ...Array.from(new Set(cities.map(c => c.name))).sort()];
+
+  const filteredCities = ciudad === 'todas' ? cities : cities.filter(c => c.name === ciudad);
+  const filteredAlerts = ciudad === 'todas' ? alerts : alerts.filter(a => a.cityName === ciudad);
+
+  const totalHosts   = filteredCities.reduce((s, c) => s + c.totalHosts, 0);
+  const totalOnline  = filteredCities.reduce((s, c) => s + c.online, 0);
+  const totalOffline = filteredCities.reduce((s, c) => s + c.offline, 0);
+  const critical     = filteredAlerts.filter(a => a.severity === 'critical').length;
+  const warnings     = filteredAlerts.filter(a => a.severity === 'warning').length;
+  const avgScore     = filteredCities.length
+    ? Math.round(filteredCities.reduce((s, c) => s + c.score, 0) / filteredCities.length)
+    : 0;
+
+  const offlineCities = filteredCities.filter(c => c.offline > 0)
+    .sort((a, b) => b.offline - a.offline).slice(0, 8);
+
+  const handleDownload = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ ciudad, fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+      const res = await fetch(`${API_BASE}/api/reportes/semanal?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_NOC_${ciudad}_${fechaInicio}_${fechaFin}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Error generando PDF');
+    } finally { setLoading(false); }
+  };
+
+  const kpiStyle = (color: string): React.CSSProperties => ({
+    flex: 1, background: '#1A2733', border: `1px solid ${color}25`,
+    borderRadius: 12, padding: '14px 16px', display: 'flex',
+    flexDirection: 'column', gap: 3, borderTop: `2px solid ${color}`,
+  });
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Controles */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, color: DIM }}>Ciudad</span>
+          <select value={ciudad} onChange={e => setCiudad(e.target.value)} style={{
+            background: '#1A2733', border: '1px solid rgba(0,255,136,0.2)', color: '#fff',
+            borderRadius: 8, padding: '8px 12px', fontSize: 12, cursor: 'pointer', outline: 'none',
+          }}>
+            {cityNames.map(c => <option key={c} value={c}>{c === 'todas' ? '🌐 Todas las ciudades' : c}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, color: DIM }}>Desde</span>
+          <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} style={{
+            background: '#1A2733', border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
+            borderRadius: 8, padding: '8px 12px', fontSize: 12, outline: 'none',
+          }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, color: DIM }}>Hasta</span>
+          <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} style={{
+            background: '#1A2733', border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
+            borderRadius: 8, padding: '8px 12px', fontSize: 12, outline: 'none',
+          }} />
+        </div>
+        <button onClick={handleDownload} disabled={loading} style={{
+          background: loading ? 'rgba(0,255,136,0.2)' : G, color: '#000',
+          border: 'none', borderRadius: 8, padding: '8px 24px',
+          fontSize: 13, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto',
+          opacity: loading ? 0.7 : 1, transition: 'all 0.15s',
+        }}>
+          {loading
+            ? <><div style={{ width: 14, height: 14, border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Generando...</>
+            : <>📄 Descargar PDF</>}
+        </button>
+      </div>
+
+      {/* Preview NOC */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: G, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
+          Red — {ciudad === 'todas' ? 'Global' : ciudad}
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Hosts Totales',   value: totalHosts,   color: '#60A5FA' },
+            { label: 'Online',          value: totalOnline,  color: G },
+            { label: 'Offline',         value: totalOffline, color: R },
+            { label: 'Alertas Críticas',value: critical,     color: R },
+            { label: 'Warnings',        value: warnings,     color: Y },
+            { label: 'Score Promedio',  value: `${avgScore}%`, color: Y },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={kpiStyle(color)}>
+              <span style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1, fontFamily: 'monospace' }}>{value}</span>
+              <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sitios con fallas */}
+      {offlineCities.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: R, letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
+            Sitios con hosts caídos
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {offlineCities.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#1A2733', borderRadius: 10, border: '1px solid rgba(255,51,102,0.15)' }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{c.name}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <span style={{ fontSize: 11, color: R, fontWeight: 700 }}>{c.offline} offline</span>
+                  <span style={{ fontSize: 11, color: G }}>{c.online} online</span>
+                  <span style={{ fontSize: 11, color: Y }}>{c.score}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Preview WFM */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#60A5FA', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
+          WFM — Órdenes de Servicio
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[
+            { label: 'Total Órdenes', value: wfmStats.total,   color: '#60A5FA' },
+            { label: 'Listas',        value: wfmStats.listo,   color: G },
+            { label: 'Backlog',       value: wfmStats.backlog, color: R },
+            { label: 'En Proceso',    value: wfmStats.proceso, color: Y },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={kpiStyle(color)}>
+              <span style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1, fontFamily: 'monospace' }}>{value}</span>
+              <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
 export default function NocSection({
   theme,
   cities = [],
@@ -790,7 +967,7 @@ export default function NocSection({
   onTenantChange,
 }: Props) {
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
-  const [view, setView] = useState<'map' | 'grid'>('map');
+  const [view, setView] = useState<'map' | 'grid' | 'reportes'>('map');
 
   const totalHosts  = useMemo(() => cities.reduce((a, c) => a + c.totalHosts, 0), [cities]);
   const totalOnline = useMemo(() => cities.reduce((a, c) => a + c.online, 0), [cities]);
@@ -849,8 +1026,8 @@ export default function NocSection({
 
         {/* View toggle */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', padding: 3, borderRadius: 10, gap: 2 }}>
-          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid]] as const).map(([id, label, Icon]) => (
-            <button key={id} onClick={() => setView(id)} style={{
+          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
+            <button key={id} onClick={() => setView(id as any)} style={{
               padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 7,
               border: 'none', cursor: 'pointer', transition: 'all 0.15s',
               background: view === id ? G : 'transparent',
@@ -865,7 +1042,10 @@ export default function NocSection({
 
       {/* Main content */}
       <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, overflow: 'hidden' }}>
-        {view === 'map' ? (
+        {view === 'reportes' && (
+          <ReporteSemanal cities={cities} alerts={alerts} />
+        )}
+        {view !== 'reportes' && view === 'map' ? (
           <>
             {/* Map + alerts side by side */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, overflow: 'hidden' }}>
@@ -882,7 +1062,7 @@ export default function NocSection({
               <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
             )}
           </>
-        ) : (
+        ) : view === 'grid' ? (
           <>
             <div style={{
               flex: 1, overflowY: 'auto',
@@ -897,7 +1077,7 @@ export default function NocSection({
               <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
             )}
           </>
-        )}
+        ) : null}
       </div>
 
       <style>{`

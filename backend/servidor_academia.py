@@ -142,15 +142,83 @@ class WFMAlmacenRequest(BaseModel):
     equipos: List[Dict]
     usuario: str
 
+class WFMAlmacenRespuestaRequest(BaseModel):
+    order_id: str
+    respuesta: str          # 'disponible' | 'no_disponible' | 'disponible_en_fecha'
+    equipos: List[Dict] = []
+    fecha_estimada: Optional[str] = None
+    motivo: str = ""
+    usuario: str
+
 class WFMAproRequest(BaseModel):
     order_id: str
     config: Dict
+    usuario: str
+
+class WFMAprovisionar2Request(BaseModel):
+    order_id: str
+    vlan: Optional[int] = None
+    bw_mbps: Optional[int] = None
+    ip_wan: Optional[str] = None
+    gateway: Optional[str] = None
+    firmware: Optional[str] = None
+    mac_address: Optional[str] = None
+    notas_config: Optional[str] = None
     usuario: str
 
 class WFMAuditoriaRequest(BaseModel):
     order_id: str
     ok: bool
     motivo: str
+
+class WFMEvidenciaRequest(BaseModel):
+    order_id: str
+    tipo: str          # 'antes' | 'despues'
+    filename: str
+    data_b64: str      # imagen en base64
+    usuario: str
+
+class WFMCerrarInstalacionRequest(BaseModel):
+    order_id: str
+    notas: str = ""
+    usuario: str
+
+class WFMChecklistItemRequest(BaseModel):
+    order_id: str
+    item_id: str
+    completado: bool
+    observacion: str = ""
+    usuario: str
+
+class WFMNocPingRequest(BaseModel):
+    order_id: str
+    ping_ok: bool
+    latencia_ms: float
+    ip_destino: str
+    usuario: str
+
+class WFMNocAltaRequest(BaseModel):
+    order_id: str
+    herramienta: str           # 'Zabbix' | 'PRTG' | 'Nagios' | 'Otro'
+    host_id: str
+    grupos_alerta: List[str] = []
+    usuario: str
+
+class WFMNocAprobarRequest(BaseModel):
+    order_id: str
+    observaciones: str = ""
+    usuario: str
+
+class WFMPruebaVelocidadRequest(BaseModel):
+    order_id: str
+    bw_contratado_mbps: float
+    descarga_mbps: float
+    subida_mbps: float
+    latencia_ms: float
+    perdida_pct: float = 0.0
+    servidor: str = "Servidor automatico"
+    herramienta: str = "Manual"
+    usuario: str
     usuario: str
 
 class SkillResult(BaseModel):
@@ -1272,13 +1340,127 @@ async def wfm_contratar(req: WFMBasicActionRequest):
 async def wfm_almacen(req: WFMAlmacenRequest):
     return wfm_service.asignar_equipos_almacen(req.order_id, req.equipos, req.usuario)
 
+@app.post("/api/wfm/almacen/responder")
+async def wfm_almacen_responder(req: WFMAlmacenRespuestaRequest):
+    try:
+        return wfm_service.responder_almacen(
+            req.order_id, req.respuesta, req.equipos,
+            req.fecha_estimada, req.motivo, req.usuario
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/api/wfm/aprovisionar")
 async def wfm_aprovisionar(req: WFMAproRequest):
     return wfm_service.aprovisionar_servicio(req.order_id, req.config, req.usuario)
 
+@app.post("/api/wfm/aprovisionamiento/registrar")
+async def wfm_aprovisionamiento_registrar(req: WFMAprovisionar2Request):
+    config = {k: v for k, v in req.dict().items() if k not in ("order_id", "usuario") and v is not None}
+    try:
+        return wfm_service.aprovisionar_servicio(req.order_id, config, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/api/wfm/pm/auditar")
 async def wfm_auditar(req: WFMAuditoriaRequest):
     return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
+
+@app.post("/api/wfm/instalacion/evidencia")
+async def wfm_registrar_evidencia(req: WFMEvidenciaRequest):
+    try:
+        return wfm_service.registrar_evidencia(req.order_id, req.tipo, req.filename, req.data_b64, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/wfm/instalacion/evidencias/{order_id}")
+async def wfm_get_evidencias(order_id: str):
+    try:
+        return wfm_service.obtener_evidencias(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/api/wfm/instalacion/cerrar")
+async def wfm_cerrar_instalacion(req: WFMCerrarInstalacionRequest):
+    try:
+        return wfm_service.cerrar_instalacion(req.order_id, req.notas, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/wfm/kpis")
+async def wfm_kpis_globales():
+    return wfm_service.calcular_kpis_globales()
+
+@app.get("/api/wfm/kpis/{order_id}")
+async def wfm_kpis_orden(order_id: str):
+    try:
+        return wfm_service.calcular_kpis_orden(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/wfm/noc/{order_id}")
+async def wfm_noc_estado(order_id: str):
+    try:
+        return wfm_service.obtener_estado_noc(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/api/wfm/noc/ping")
+async def wfm_noc_ping(req: WFMNocPingRequest):
+    try:
+        return wfm_service.registrar_ping_noc(req.order_id, req.ping_ok, req.latencia_ms, req.ip_destino, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/wfm/noc/alta-monitoreo")
+async def wfm_noc_alta(req: WFMNocAltaRequest):
+    try:
+        return wfm_service.dar_alta_monitoreo(req.order_id, req.herramienta, req.host_id, req.grupos_alerta, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/wfm/noc/aprobar")
+async def wfm_noc_aprobar(req: WFMNocAprobarRequest):
+    try:
+        return wfm_service.aprobar_noc(req.order_id, req.observaciones, req.usuario)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/wfm/instalacion/prueba-velocidad")
+async def wfm_registrar_prueba(req: WFMPruebaVelocidadRequest):
+    try:
+        return wfm_service.registrar_prueba_velocidad(
+            req.order_id, req.bw_contratado_mbps,
+            req.descarga_mbps, req.subida_mbps,
+            req.latencia_ms, req.perdida_pct,
+            req.servidor, req.herramienta, req.usuario
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/wfm/instalacion/pruebas-velocidad/{order_id}")
+async def wfm_get_pruebas(order_id: str):
+    try:
+        return wfm_service.obtener_pruebas_velocidad(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/wfm/instalacion/checklist/{order_id}")
+async def wfm_get_checklist(order_id: str):
+    try:
+        return wfm_service.obtener_checklist(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/api/wfm/instalacion/checklist")
+async def wfm_marcar_checklist(req: WFMChecklistItemRequest):
+    try:
+        orden = wfm_service.marcar_checklist_item(req.order_id, req.item_id, req.completado, req.observacion, req.usuario)
+        checklist = orden.get("checklist", [])
+        completados = sum(1 for i in checklist if i["completado"])
+        return {"ok": True, "completados": completados, "total": len(checklist), "checklist": checklist}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ─── Integraciones Externas ──────────────────────────────────────────────────
 
@@ -1492,6 +1674,331 @@ async def get_academia_cursos():
     except Exception as e:
         logger.error(f"[Academia] Odoo error: {e}")
         raise HTTPException(status_code=503, detail=str(e))
+
+
+# ─── Reportes Semanales NOC + WFM ────────────────────────────────────────────
+
+def _build_reporte_pdf(ciudad: str, fecha_inicio: str, fecha_fin: str,
+                        noc_data: dict, wfm_orders: list) -> bytes:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.enums import TA_CENTER
+    import io
+
+    buf = io.BytesIO()
+
+    XCIEN_GREEN = colors.HexColor('#00C896')
+    DARK_BG     = colors.HexColor('#0F1923')
+    SURFACE     = colors.HexColor('#1A2733')
+    RED         = colors.HexColor('#FF3366')
+    YELLOW      = colors.HexColor('#FFB703')
+    BLUE        = colors.HexColor('#60A5FA')
+    GREY        = colors.HexColor('#8BA3B8')
+    WHITE       = colors.white
+
+    styles = getSampleStyleSheet()
+    def sty(name='Normal', **kw):
+        return ParagraphStyle(name + str(id(kw)), parent=styles[name], **kw)
+
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        leftMargin=0.75*inch, rightMargin=0.75*inch,
+        topMargin=0.75*inch, bottomMargin=0.75*inch)
+
+    elems = []
+
+    ciudad_label = ciudad if ciudad != 'todas' else 'Todas las Ciudades'
+
+    # ── Header
+    hdr = Table([[
+        Paragraph('<b>XCIEN — NOC</b>', sty(fontSize=9, textColor=XCIEN_GREEN, fontName='Helvetica-Bold')),
+        Paragraph(f'<b>REPORTE SEMANAL<br/>{ciudad_label.upper()}</b>',
+                  sty(fontSize=16, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph(f'<b>{fecha_inicio}</b><br/>al {fecha_fin}',
+                  sty(fontSize=9, textColor=GREY, alignment=2)),
+    ]], colWidths=[1.2*inch, 4.6*inch, 1.2*inch])
+    hdr.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), DARK_BG),
+        ('BOX', (0,0), (-1,-1), 1.5, XCIEN_GREEN),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 12),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('LEFTPADDING', (0,0), (0,-1), 12),
+        ('RIGHTPADDING', (-1,0), (-1,-1), 12),
+    ]))
+    elems.append(hdr)
+    elems.append(Spacer(1, 0.2*inch))
+
+    # ── NOC KPIs
+    cities = noc_data.get('cities', [])
+    alerts = noc_data.get('alerts', [])
+    total_hosts  = sum(c['totalHosts'] for c in cities)
+    total_online = sum(c['online'] for c in cities)
+    total_offline= sum(c['offline'] for c in cities)
+    critical     = sum(1 for a in alerts if a.get('severity') == 'critical')
+    warnings     = sum(1 for a in alerts if a.get('severity') == 'warning')
+    avg_score    = round(sum(c['score'] for c in cities) / len(cities), 1) if cities else 0
+
+    def section_title(text):
+        return Paragraph(text, sty(fontSize=12, textColor=XCIEN_GREEN, fontName='Helvetica-Bold',
+                                    spaceBefore=14, spaceAfter=6))
+
+    elems.append(section_title('RED — ESTADO DE INFRAESTRUCTURA'))
+    kpi_data = [
+        [Paragraph(f'<b>{total_hosts}</b>',  sty(fontSize=20, textColor=BLUE,        fontName='Helvetica-Bold', alignment=TA_CENTER)),
+         Paragraph(f'<b>{total_online}</b>',  sty(fontSize=20, textColor=XCIEN_GREEN, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+         Paragraph(f'<b>{total_offline}</b>', sty(fontSize=20, textColor=RED,         fontName='Helvetica-Bold', alignment=TA_CENTER)),
+         Paragraph(f'<b>{critical}</b>',      sty(fontSize=20, textColor=RED,         fontName='Helvetica-Bold', alignment=TA_CENTER)),
+         Paragraph(f'<b>{avg_score}</b>',     sty(fontSize=20, textColor=YELLOW,      fontName='Helvetica-Bold', alignment=TA_CENTER))],
+        [Paragraph('HOSTS',    sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+         Paragraph('ONLINE',   sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+         Paragraph('OFFLINE',  sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+         Paragraph('CRÍTICAS', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+         Paragraph('SCORE',    sty(fontSize=8, textColor=GREY, alignment=TA_CENTER))],
+    ]
+    kt = Table(kpi_data, colWidths=[1.35*inch]*5)
+    kt.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), SURFACE),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LINEABOVE', (0,0), (-1,0), 2, RED),
+    ]))
+    elems.append(kt)
+    elems.append(Spacer(1, 0.1*inch))
+
+    # ── Sitios con fallas
+    offline_cities = sorted([c for c in cities if c['offline'] > 0],
+                            key=lambda x: -x['offline'])
+    if offline_cities:
+        elems.append(section_title('CIUDADES CON HOSTS CAÍDOS'))
+        rows = [['Ciudad', 'Offline', 'Online', 'Score', 'Alertas']]
+        for c in offline_cities[:12]:
+            rows.append([c['name'], str(c['offline']), str(c['online']),
+                         f"{c['score']}%", str(c.get('alerts', 0))])
+        def rc(i):
+            return colors.HexColor('#1a0a10') if i > 0 and int(rows[i][1]) >= 3 else (SURFACE if i > 0 else DARK_BG)
+        tbl_data = [[Paragraph(str(cell), sty(fontSize=9, textColor=(XCIEN_GREEN if i == 0 else WHITE),
+                                               fontName='Helvetica-Bold' if i == 0 else 'Helvetica', leading=12))
+                     for cell in row] for i, row in enumerate(rows)]
+        t = Table(tbl_data, colWidths=[2*inch, 0.9*inch, 0.9*inch, 0.9*inch, 1.1*inch])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
+            *[('BACKGROUND', (0,i), (-1,i), rc(i)) for i in range(1, len(rows))],
+            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
+            ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ]))
+        elems.append(t)
+        elems.append(Spacer(1, 0.1*inch))
+
+    # ── Alertas críticas top
+    crit_alerts = [a for a in alerts if a.get('severity') == 'critical'][:10]
+    if crit_alerts:
+        elems.append(section_title(f'ALERTAS CRÍTICAS ACTIVAS — TOP {len(crit_alerts)}'))
+        a_rows = [['Ciudad', 'Host', 'Mensaje', 'Desde']]
+        for a in crit_alerts:
+            msg = (a.get('message') or a.get('type') or '')[:55]
+            host = (a.get('hostName') or a.get('hostIp') or '')[:28]
+            ts = (a.get('timestamp') or '')[:10]
+            a_rows.append([a.get('cityName','—'), host, msg, ts])
+        a_data = [[Paragraph(str(c), sty(fontSize=8, textColor=(XCIEN_GREEN if i==0 else (RED if i>0 else WHITE)),
+                                          fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
+                   for c in row] for i, row in enumerate(a_rows)]
+        at = Table(a_data, colWidths=[1.1*inch, 1.5*inch, 3.0*inch, 0.8*inch])
+        at.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#1a0a10'), SURFACE]*10),
+            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
+            ('TOPPADDING', (0,0), (-1,-1), 5), ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ]))
+        elems.append(at)
+        elems.append(Spacer(1, 0.15*inch))
+
+    # ── WFM
+    elems.append(section_title('WFM — ÓRDENES DE SERVICIO'))
+    estados = {}
+    for o in wfm_orders:
+        est = o.get('estado', 'DESCONOCIDO')
+        estados[est] = estados.get(est, 0) + 1
+
+    wfm_kpi = [[
+        Paragraph(f'<b>{len(wfm_orders)}</b>', sty(fontSize=20, textColor=BLUE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph(f'<b>{estados.get("LISTO_INSTALACION", 0)}</b>', sty(fontSize=20, textColor=XCIEN_GREEN, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph(f'<b>{estados.get("BACKLOG", 0)}</b>', sty(fontSize=20, textColor=RED, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph(f'<b>{estados.get("EN_PROCESO", estados.get("PREVENTA", 0))}</b>', sty(fontSize=20, textColor=YELLOW, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+    ],[
+        Paragraph('TOTAL', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+        Paragraph('LISTAS', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+        Paragraph('BACKLOG', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+        Paragraph('EN PROCESO', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
+    ]]
+    wt = Table(wfm_kpi, colWidths=[1.69*inch]*4)
+    wt.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), SURFACE),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LINEABOVE', (0,0), (-1,0), 2, BLUE),
+    ]))
+    elems.append(wt)
+    elems.append(Spacer(1, 0.1*inch))
+
+    # Tabla de órdenes recientes
+    recent = sorted(wfm_orders, key=lambda x: x.get('fecha_creacion',''), reverse=True)[:10]
+    if recent:
+        o_rows = [['ID', 'Cliente', 'Servicio', 'Estado', 'Fecha']]
+        for o in recent:
+            o_rows.append([
+                o.get('id','')[-6:],
+                (o.get('cliente',''))[:22],
+                (o.get('servicio',''))[:28],
+                o.get('estado',''),
+                (o.get('fecha_creacion',''))[:10],
+            ])
+        o_data = [[Paragraph(str(c), sty(fontSize=8, textColor=(XCIEN_GREEN if i==0 else WHITE),
+                                          fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
+                   for c in row] for i, row in enumerate(o_rows)]
+        ot = Table(o_data, colWidths=[0.65*inch, 1.7*inch, 2.1*inch, 1.3*inch, 0.9*inch])
+        ot.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [SURFACE, colors.HexColor('#161F29')]*10),
+            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
+            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
+            ('TOPPADDING', (0,0), (-1,-1), 5), ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ]))
+        elems.append(ot)
+
+    # Footer
+    elems.append(Spacer(1, 0.2*inch))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#2A3F50')))
+    elems.append(Spacer(1, 0.08*inch))
+    from datetime import datetime
+    elems.append(Paragraph(
+        f'Generado por XCIEN NOC Command Center · {datetime.now().strftime("%Y-%m-%d %H:%M")} · Confidencial',
+        sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)))
+
+    def dark_page(canvas, doc):
+        canvas.saveState()
+        canvas.setFillColor(DARK_BG)
+        canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
+        canvas.restoreState()
+
+    doc.build(elems, onFirstPage=dark_page, onLaterPages=dark_page)
+    return buf.getvalue()
+
+
+@app.get("/api/reportes/semanal")
+async def reporte_semanal(
+    ciudad: str = "todas",
+    fecha_inicio: str = "",
+    fecha_fin: str = "",
+):
+    """Genera y descarga un PDF con el reporte semanal NOC + WFM"""
+    from datetime import date, timedelta
+
+    # Fechas por defecto: semana actual lun–dom
+    today = date.today()
+    if not fecha_inicio:
+        fecha_inicio = str(today - timedelta(days=today.weekday()))
+    if not fecha_fin:
+        fecha_fin = str(today)
+
+    # Obtener datos NOC directamente (sin llamadas HTTP internas)
+    try:
+        hosts_raw, alerts_raw = _get_enriched_noc_data()
+
+        # Construir cities igual que get_noc_cities()
+        from collections import defaultdict
+        active_alerts = [a for a in alerts_raw if a.get("state") == "active"]
+        city_sites: dict = defaultdict(lambda: defaultdict(list))
+        for h in hosts_raw:
+            city_sites[h.get("city","Sin Ciudad")][h.get("site","Site Principal")].append(h)
+
+        COORDS = {
+            "Monterrey":{"lat":25.6866,"lng":-100.3161},"Saltillo":{"lat":25.4232,"lng":-100.9928},
+            "Piedras Negras":{"lat":28.7000,"lng":-100.5231},"Torreón":{"lat":25.5428,"lng":-103.4068},
+            "Chihuahua":{"lat":28.6353,"lng":-106.0889},"Guadalajara":{"lat":20.6597,"lng":-103.3496},
+            "Ciudad de México":{"lat":19.4326,"lng":-99.1332},"Querétaro":{"lat":20.5888,"lng":-100.3899},
+            "Tampico":{"lat":22.2552,"lng":-97.8686},"Mérida":{"lat":20.9674,"lng":-89.5926},
+            "Reynosa":{"lat":26.0922,"lng":-98.2772},"Nuevo Laredo":{"lat":27.4765,"lng":-99.5151},
+            "San Luis Potosi":{"lat":22.1565,"lng":-100.9855},"León":{"lat":21.1221,"lng":-101.6823},
+            "Monclova":{"lat":26.9083,"lng":-101.4217},"Sabinas":{"lat":27.8529,"lng":-101.1191},
+            "Matamoros":{"lat":25.8691,"lng":-97.5027},
+        }
+
+        cities = []
+        for city_name, sites_dict in city_sites.items():
+            city_hosts = [h for hs in sites_dict.values() for h in hs]
+            total = len(city_hosts)
+            online  = sum(1 for h in city_hosts if _host_status(h) == "online")
+            offline = sum(1 for h in city_hosts if _host_status(h) == "offline")
+            scores  = [h.get("health_score") or h.get("healthScore", 0) for h in city_hosts]
+            avg_sc  = round(sum(scores)/len(scores), 1) if scores else 0
+            city_crits = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
+            coord = COORDS.get(city_name, {"lat":23.0,"lng":-102.0})
+            cities.append({
+                "id": city_name.lower().replace(" ","-"), "name": city_name,
+                "totalHosts": total, "online": online, "offline": offline,
+                "score": avg_sc, "alerts": city_crits,
+                "lat": coord["lat"], "lng": coord["lng"],
+            })
+
+        sev_map = {"degraded":"warning","info":"warning"}
+        alerts = [{
+            "id": a.get("id"), "cityId": a.get("city","").lower().replace(" ","-"),
+            "cityName": a.get("city",""), "hostIp": a.get("host_ip") or a.get("hostIP",""),
+            "hostName": a.get("host_name") or a.get("hostName",""),
+            "type": a.get("cause",""), "message": a.get("message",""),
+            "severity": sev_map.get(a.get("severity"), a.get("severity","warning")),
+            "timestamp": a.get("triggered_at") or a.get("triggeredAt",""),
+            "state": a.get("state"),
+        } for a in active_alerts]
+    except Exception as e:
+        logger.error(f"Error obteniendo datos NOC para reporte: {e}")
+        cities = []; alerts = []
+
+    # Filtrar por ciudad si aplica
+    if ciudad.lower() != 'todas':
+        cities = [c for c in cities if ciudad.lower() in c.get('name','').lower()]
+        alerts = [a for a in alerts if ciudad.lower() in (a.get('cityName','') or '').lower()]
+
+    # Obtener órdenes WFM directamente
+    try:
+        wfm_orders = wfm_service.obtener_ordenes()
+    except Exception as e:
+        logger.error(f"Error obteniendo WFM para reporte: {e}")
+        wfm_orders = []
+
+    noc_data = {"cities": cities, "alerts": alerts}
+
+    try:
+        pdf_bytes = _build_reporte_pdf(ciudad, fecha_inicio, fecha_fin, noc_data, wfm_orders)
+    except Exception as e:
+        logger.error(f"Error generando PDF reporte: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    ciudad_safe = ciudad.replace(' ', '_')
+    filename = f"Reporte_NOC_{ciudad_safe}_{fecha_inicio}_{fecha_fin}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.get("/api/integrations/status")

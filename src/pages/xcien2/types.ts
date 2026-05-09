@@ -268,16 +268,20 @@ export interface WFMTicket {
 }
 
 // ── WFM Implementation Order (Nuevo) ──────────────────────────────────────────
-export type WFMOrderState = 
-  | 'SOLICITUD_PREVENTA' 
-  | 'ANTEPROYECTO' 
-  | 'ORDEN_IMPLEMENTACION' 
-  | 'ALMACEN_VALIDACION' 
-  | 'ESPERA_INVENTARIO' 
-  | 'APROVISIONAMIENTO' 
-  | 'REVISION_PM' 
-  | 'LISTO_INSTALACION' 
-  | 'BACKLOG';
+export type WFMOrderState =
+  | 'SOLICITUD_PREVENTA'
+  | 'ANTEPROYECTO'
+  | 'ORDEN_IMPLEMENTACION'
+  | 'ALMACEN_VALIDACION'
+  | 'ESPERA_INVENTARIO'
+  | 'APROVISIONAMIENTO'
+  | 'REVISION_PM'
+  | 'LISTO_INSTALACION'
+  | 'INSTALACION'
+  | 'NOC_VALIDACION'
+  | 'FACTURACION'
+  | 'BACKLOG'
+  | 'CERRADO';
 
 export interface WFMOrder {
   id: string;
@@ -297,11 +301,25 @@ export interface WFMOrder {
     disponibilidad: boolean;
     equipos_asignados: any[];
     esperando_inventario: boolean;
+    respuesta?: 'disponible' | 'no_disponible' | 'disponible_en_fecha';
+    fecha_estimada?: string | null;
+    motivo?: string;
+    respondido_por?: string;
+    fecha_respuesta?: string;
   };
   aprovisionamiento: {
     config_logica: string | null;
     parametros_red: Record<string, any>;
     listo: boolean;
+    vlan?: number | null;
+    bw_mbps?: number | null;
+    ip_wan?: string | null;
+    gateway?: string | null;
+    firmware?: string | null;
+    mac_address?: string | null;
+    notas_config?: string | null;
+    aprovisionado_por?: string | null;
+    fecha_aprovisionamiento?: string | null;
   };
   pm: {
     auditoria_ok: boolean;
@@ -309,6 +327,58 @@ export interface WFMOrder {
     motivo_bloqueo: string | null;
     backlogs: any[];
   };
+  evidencias?: {
+    fotos_antes: Array<{ filename: string; path_rel: string; tipo: string; fecha: string; usuario: string; size_kb: number; data_b64?: string }>;
+    fotos_despues: Array<{ filename: string; path_rel: string; tipo: string; fecha: string; usuario: string; size_kb: number; data_b64?: string }>;
+    checklist_ok: boolean;
+    notas: string;
+    cerrado_por: string | null;
+    fecha_cierre: string | null;
+  };
+  checklist?: Array<{
+    id: string;
+    categoria: string;
+    descripcion: string;
+    completado: boolean;
+    completado_por: string | null;
+    fecha_completado: string | null;
+    observacion: string;
+  }>;
+  noc?: {
+    ping_ok: boolean | null;
+    latencia_ms: number | null;
+    ip_destino?: string;
+    dado_de_alta: boolean;
+    herramienta_monitoreo: string | null;
+    host_id: string | null;
+    alertas_configuradas: boolean;
+    grupos_alerta: string[];
+    aprobado: boolean;
+    aprobado_por: string | null;
+    fecha_alta: string | null;
+    observaciones: string;
+  };
+  pruebas_velocidad?: Array<{
+    id: string;
+    fecha: string;
+    usuario: string;
+    bw_contratado_mbps: number;
+    descarga_mbps: number;
+    subida_mbps: number;
+    latencia_ms: number;
+    perdida_pct: number;
+    servidor: string;
+    herramienta: string;
+    resultados: {
+      ok_descarga: boolean;
+      ok_subida: boolean;
+      ok_latencia: boolean;
+      ok_perdida: boolean;
+      aprobada: boolean;
+      pct_descarga: number;
+      pct_subida: number;
+    };
+  }>;
   historial: Array<{ fecha: string; accion: string; usuario: string }>;
 }
 

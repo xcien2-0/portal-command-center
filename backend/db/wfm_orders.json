@@ -4,7 +4,7 @@
     "cliente": "Corporativo Xcien",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
-    "estado": "BACKLOG",
+    "estado": "FACTURACION",
     "fecha_creacion": "2026-04-26T18:54:09.156133",
     "preventa": {
       "analisis": "Factible v\u00eda FO",
@@ -163,15 +163,239 @@
         "fecha": "2026-05-08T18:02:36.677101",
         "accion": "Auditor\u00eda PM: Rechazada",
         "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-09T13:47:45.074224",
+        "accion": "Foto 'antes' registrada: antes_20260509_134745.jpg",
+        "usuario": "T\u00e9cnico Test"
+      },
+      {
+        "fecha": "2026-05-09T13:57:06.918593",
+        "accion": "Checklist CK-01: \u2713 (1/15)",
+        "usuario": "J. Garc\u00eda"
+      },
+      {
+        "fecha": "2026-05-09T14:08:52.191707",
+        "accion": "Prueba velocidad \u2705 APROBADA: \u2193945.0/1000.0Mbps \u2191932.0Mbps lat:12.0ms",
+        "usuario": "J. Garc\u00eda"
+      },
+      {
+        "fecha": "2026-05-09T14:32:47.738409",
+        "accion": "NOC Ping \u2705 OK \u2192 200.1.2.1 (14.5ms)",
+        "usuario": "NOC-MTY"
+      },
+      {
+        "fecha": "2026-05-09T14:32:47.828692",
+        "accion": "Alta en monitoreo Zabbix: host=xcien-oi-8e11b5-fw01, alertas=['Ca\u00edda de host', 'Alta latencia']",
+        "usuario": "NOC-MTY"
+      },
+      {
+        "fecha": "2026-05-09T14:32:47.917503",
+        "accion": "NOC aprob\u00f3 \u2014 equipo en monitoreo activo. Listo para facturaci\u00f3n",
+        "usuario": "Supervisor NOC"
       }
-    ]
+    ],
+    "evidencias": {
+      "fotos_antes": [
+        {
+          "filename": "antes_20260509_134745.jpg",
+          "path_rel": "evidencias/OI-8E11B5/antes_20260509_134745.jpg",
+          "tipo": "antes",
+          "fecha": "2026-05-09T13:47:45.074180",
+          "usuario": "T\u00e9cnico Test",
+          "size_kb": 0.0
+        }
+      ],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [
+      {
+        "id": "CK-01",
+        "categoria": "Sitio",
+        "descripcion": "Verificar acceso y condiciones del sitio f\u00edsico",
+        "completado": true,
+        "completado_por": "J. Garc\u00eda",
+        "fecha_completado": "2026-05-09T13:57:06.918540",
+        "observacion": "Sitio accesible sin problemas"
+      },
+      {
+        "id": "CK-02",
+        "categoria": "Sitio",
+        "descripcion": "Revisar energ\u00eda el\u00e9ctrica disponible (voltaje y tierra)",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-03",
+        "categoria": "Cableado",
+        "descripcion": "Tendido de cable (fibra/UTP) seg\u00fan plano aprobado",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-04",
+        "categoria": "Cableado",
+        "descripcion": "Fijaci\u00f3n y etiquetado de cable en rack/canaleta",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-05",
+        "categoria": "Equipo",
+        "descripcion": "Instalaci\u00f3n f\u00edsica del equipo en rack/caja",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-06",
+        "categoria": "Equipo",
+        "descripcion": "Configurar IP, gateway y VLAN seg\u00fan par\u00e1metros de aprovisionamiento",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-07",
+        "categoria": "Equipo",
+        "descripcion": "Verificar firmware y versi\u00f3n de software del equipo",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-08",
+        "categoria": "Conectividad",
+        "descripcion": "Ping exitoso al gateway del ISP",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-09",
+        "categoria": "Conectividad",
+        "descripcion": "Prueba de velocidad sim\u00e9trica (descarga/subida \u2265 90% del contratado)",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-10",
+        "categoria": "Conectividad",
+        "descripcion": "Latencia hacia 8.8.8.8 \u2264 50 ms",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-11",
+        "categoria": "NOC",
+        "descripcion": "Equipo dado de alta en sistema de monitoreo (Zabbix/PRTG)",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-12",
+        "categoria": "NOC",
+        "descripcion": "Alertas configuradas y validadas con NOC",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-13",
+        "categoria": "Cliente",
+        "descripcion": "Demostraci\u00f3n del servicio ante el cliente",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-14",
+        "categoria": "Cliente",
+        "descripcion": "Firma de conformidad / acta de entrega obtenida",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      },
+      {
+        "id": "CK-15",
+        "categoria": "Limpieza",
+        "descripcion": "Sitio entregado limpio y ordenado (Bidrillas)",
+        "completado": false,
+        "completado_por": null,
+        "fecha_completado": null,
+        "observacion": ""
+      }
+    ],
+    "pruebas_velocidad": [
+      {
+        "id": "PT-E96C9E",
+        "fecha": "2026-05-09T14:08:52.189460",
+        "usuario": "J. Garc\u00eda",
+        "bw_contratado_mbps": 1000.0,
+        "descarga_mbps": 945.0,
+        "subida_mbps": 932.0,
+        "latencia_ms": 12.0,
+        "perdida_pct": 0.0,
+        "servidor": "XCIEN-SRV-MTY",
+        "herramienta": "iPerf3",
+        "resultados": {
+          "ok_descarga": true,
+          "ok_subida": true,
+          "ok_latencia": true,
+          "ok_perdida": true,
+          "aprobada": true,
+          "pct_descarga": 94.5,
+          "pct_subida": 93.2
+        }
+      }
+    ],
+    "noc": {
+      "ping_ok": true,
+      "latencia_ms": 14.5,
+      "dado_de_alta": true,
+      "herramienta_monitoreo": "Zabbix",
+      "host_id": "xcien-oi-8e11b5-fw01",
+      "alertas_configuradas": true,
+      "grupos_alerta": [
+        "Ca\u00edda de host",
+        "Alta latencia"
+      ],
+      "aprobado": true,
+      "aprobado_por": "Supervisor NOC",
+      "fecha_alta": "2026-05-09T14:32:47.828685",
+      "observaciones": "Equipo visible, alertas activas",
+      "ip_destino": "200.1.2.1"
+    }
   },
   {
     "id": "OI-5FDD5D",
     "cliente": "Hospital San Jos\u00e9",
     "servicio": "Enlace de Microondas 50MB",
     "comercial": "Luc\u00eda Pineda",
-    "estado": "BACKLOG",
+    "estado": "ESPERA_INVENTARIO",
     "fecha_creacion": "2026-04-26T18:58:06.448236",
     "preventa": {
       "analisis": null,
@@ -181,14 +405,14 @@
       "anteproyecto_url": null
     },
     "almacen": {
-      "disponibilidad": true,
-      "equipos_asignados": [
-        {
-          "modelo": "CCR2004",
-          "sn": "SN-1SN1W"
-        }
-      ],
-      "esperando_inventario": false
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": true,
+      "respuesta": "disponible_en_fecha",
+      "fecha_estimada": "2026-05-20",
+      "motivo": "Proveedor confirma entrega el 20 mayo",
+      "respondido_por": "Jefe Almac\u00e9n",
+      "fecha_respuesta": "2026-05-09T14:14:47.358321"
     },
     "aprovisionamiento": {
       "config_logica": null,
@@ -281,6 +505,11 @@
         "fecha": "2026-05-08T18:02:31.697019",
         "accion": "Auditor\u00eda PM: Rechazada",
         "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-09T14:14:47.358370",
+        "accion": "Almac\u00e9n: DISPONIBLE EN FECHA 2026-05-20 \u2014 Proveedor confirma entrega el 20 mayo",
+        "usuario": "Jefe Almac\u00e9n"
       }
     ]
   },
@@ -289,7 +518,7 @@
     "cliente": "cordilllera",
     "servicio": "1gb",
     "comercial": "Usuario Demo",
-    "estado": "BACKLOG",
+    "estado": "REVISION_PM",
     "fecha_creacion": "2026-04-26T18:59:29.212113",
     "preventa": {
       "analisis": null,
@@ -306,7 +535,16 @@
     "aprovisionamiento": {
       "config_logica": null,
       "parametros_red": {},
-      "listo": false
+      "listo": true,
+      "vlan": 4022,
+      "bw_mbps": 1000,
+      "ip_wan": "200.1.2.3",
+      "gateway": "200.1.2.1",
+      "firmware": "RouterOS 7.14.3",
+      "mac_address": "DC:2C:6E:A1:B2:C3",
+      "notas_config": "MTU 1500, QoS habilitado",
+      "aprovisionado_por": "Ing. Aprovisionamiento",
+      "fecha_aprovisionamiento": "2026-05-09T14:18:41.587333"
     },
     "pm": {
       "auditoria_ok": false,
@@ -362,6 +600,791 @@
         "fecha": "2026-04-28T13:03:10.140248",
         "accion": "Auditor\u00eda PM: Rechazada",
         "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-09T14:18:41.587404",
+        "accion": "Servicio aprovisionado \u00b7 FW: RouterOS 7.14.3 \u00b7 MAC: DC:2C:6E:A1:B2:C3",
+        "usuario": "Ing. Aprovisionamiento"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79777",
+    "odoo_id": 79777,
+    "cliente": "BECA TRADERS",
+    "servicio": "Sandur, SIS-50-10-ilimitado, BECA TRADERS, SITIO: PESQUERIA",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 23:17:02",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>analisis preventa</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><table class=\"table table-bordered\" style=\"vertical-align:top;caption-side:bottom;border-style:solid;margin:0 0 12px 0;box-sizing:border-box;table-layout:fixed;border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;color:#4c4c4c;width:100%;border-collapse:collapse;\" width=\"100%\"><tbody style=\"border-style:solid;box-sizing:border-box;vertical-align:inherit;border-left-width:0px;border-bottom-width:0px;border-right-width:0px;border-top-width:0px;\"><tr style=\"border-style:solid;box-sizing:border-box;border-left-width:0px;border-bottom-width:1px;border-right-width:0px;border-top-width:1px;\"><td style=\"border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;box-shadow: #ffffff 0px 0px 0px 9999px inset; border-style: solid; padding: 9px; box-sizing: border-box; border-color: #e0e2e6; border-width: 1px; vertical-align: top;\"><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">1.- \u00bfQue tipo de aplicativos utilizar\u00e1 para el servicio? CORREO ELECTRONICO, NEVAGACION, VIDEOCONFERENCIAS</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">2.- \u00bfPara qu\u00e9 servicios requiere un enlace satelital?&nbsp;<b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">CORREO ELECTRONICO, NEVAGACION, VIDEOCONFERENCIAS</span></b></span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">3.- \u00bfCu\u00e1ntos usuarios se conectaran al servicio? 15</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">4.- \u00bfCu\u00e1ntos y que dispositivos se conectar\u00e1n al servicio? 15</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">5,- \u00c1rea para colocar la antena : Cuenta con espacio en azotea de concreto para colocar antena (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite) SI</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">6.- Altura del sitio (medida de cable starlink estandar es hasta 20) , en caso de requerirse mayor distancia es hasta 45 m y es con costo adicional.</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">7.-En caso de que no cuente con infraestructura de concreto : Se requiere hacer una base de concreto dependiendo de la antena a colocar (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite).</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">8.-El servicio requiere para uso de streaming ? NO</span></b><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">9.- Requiere alguna configuraci\u00f3n especial o cuenta con equipo que requiera conectar.&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">10.- Requisitos de documentaci\u00f3n para acceso. NINGUNO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500;color: #4c4c4c;font-size: 13px\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">11</span></b><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">.- Tiene horarios especiales para acceso. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">12.- Se requiere acceso especial para colocar los equipos. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><u>STARLINK medida de cableado estandar hasta 20 m, de ser mayor se cotiza adicionalmente y la distancia es hasta 45 metros</u></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\"><span class=\"h5-fs\" style=\"box-sizing:border-box;font-size:15.4px;\">Los precios del servicio recurrente pueden cambiar sin previo aviso, debido a que es un servicio de importaci\u00f3n.</span></strong></p></td></tr></tbody></table><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.453726",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79761",
+    "odoo_id": 79761,
+    "cliente": "VILLAGON EXPRESS PACK",
+    "servicio": "Sandur, SVOZ-EXT-N2P, VILLAGON EXPRESS PACK, SITIO:MATRIZ",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 18:49:14",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>analisis preventa</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"></p><ul style=\"padding:0 0 0 32px;margin:0px 0 0px 0;list-style-type:disc;box-sizing:border-box;margin-top:0;margin-bottom:0;padding-inline-start:48px;\"><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">Tiene PBX NO SOLO LINEAS NORMALES ESTA EL MODEM Y SALE DEL CONECTOR DE TELMEX<br>si la respuesta es s\u00ed, favor de comentar cual es la marca y modelo</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">Tiene personal que administre el PBX</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">El PBX es compatible con SIP</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfRequiere funcionalidades de PBX? (en caso de que no tenga requiere el PBX f\u00edsico o en la nube)</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCuenta con cableado rematado en patch panel e identificado para voz?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCuenta con Switch?&nbsp;</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfDe cuantos puertos, Marca y Modelo?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfEs Switch poe?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfTiene identificados los lugares donde corresponde cada extensi\u00f3n?, y si los lugares est\u00e1n preparados con nodo de red habilitado disponible para el equipo telef\u00f3nico:</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCu\u00e1ntas extensiones requiere?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfQue tipo de tel\u00e9fono requiere para cada extensi\u00f3n, gama Alta, Media o Baja o de recepci\u00f3n ?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCu\u00e1ntos equipos tiene?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfQue Marca, modelo y que version de firmware ?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCuenta con Firewall?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCuenta con oficinas externas (sucursales), cuantas?&nbsp;</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfLas oficinas remotas tienen conmutador? Marca y modelo:</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfCantidad de extensiones en cada sitio?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfRequiere Adecuaciones? puertos para voz, para datos, patchcord para la conexi\u00f3n, cableado, etc</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfRequiere portabilidad ? SI</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfRequiere configuraci\u00f3n de extensiones ?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">\u00bfRequiere IVR?</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">Se cuenta o se requieren configuraciones adicionales para separar la voz y datos VLAN&nbsp;</span></span></li><li dir=\"ltr\" style=\"list-style-type:disc;font-size:10pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;\"><span dir=\"ltr\" style=\"box-sizing:border-box;line-height:1.38;background-color:#ffffff;margin-top:0pt;margin-bottom:7pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">Los equipos telef\u00f3nicos necesitan IP fija o puede ser din\u00e1mica&nbsp;</span></span></li></ul><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal;\" id=\"docs-internal-guid-7ef8813c-7fff-e4ca-fdfd-7193ac798bbc\"><br></b></p><p dir=\"ltr\" style=\"margin:0pt 0 0pt 0;box-sizing:border-box;line-height:1.656;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">NOTA:</span></p><p dir=\"ltr\" style=\"margin:0pt 0 0pt 0;box-sizing:border-box;line-height:1.656;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">En caso de portabilidad es necesario contar con el formato con la informaci\u00f3n &nbsp;asi como los documentos &nbsp;(comprobante de domicilio, INE, en caso de ser persona moral se requiere acta constitutiva <span style=\"font-variant-numeric: normal; font-variant-east-asian: normal; font-size: 11pt; background-color: transparent; vertical-align: baseline;\">y poder notarial del representante legal</span>), adjuntar requisitos en la tarea antes de la solicitud de habilitaci\u00f3n.</span></p><p dir=\"ltr\" style=\"margin:0pt 0 0pt 0;box-sizing:border-box;line-height:1.656;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">El cliente al cancelar con su proveedor anterior tiene 30 d\u00edas para solicitar la portabilidad tomando en cuenta los d\u00edas que este tr\u00e1mite conlleva, en caso de no solicitarlo con tiempo se corre riesgo de perder el/los n\u00fameros telef\u00f3nicos.</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"></p><p dir=\"ltr\" style=\"margin:0pt 0 0pt 0;box-sizing:border-box;line-height:1.656;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\">En caso de configuraciones para nombre de extensiones , IP fija e IVR deber\u00e1 estar completo el documento y adjuntarlo en la tarea antes de la solicitud de habilitaci\u00f3n.</span><br><br></p><p dir=\"ltr\" style=\"margin:0pt 0 0pt 0;box-sizing:border-box;line-height:1.656;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;\"><a href=\"/web/content/619616?unique=25971c0c6aead8f7dc0f06ef72ff55707039dbe1&amp;download=true\" class=\"o_image mso-hide\" title=\"EJEMPLO FORMATO DE PORTABILIDAD (2).pdf\" style='background-repeat:no-repeat;text-decoration:none;box-sizing:border-box;background-position-y:center;background-position-x:center;background-repeat-y:no-repeat;background-repeat-x:no-repeat;background-size:contain;background-image:url(\"/web/static/img/mimetypes/unknown.svg\");height:38px;width:38px;display:inline-block;background-color:transparent;color:#008f8c; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all;' width=\"38\"></a><br></p><div><span style=\"font-size:11pt;font-family:Arial;color:#666666;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;\"><br></span></div>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456022",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79760",
+    "odoo_id": 79760,
+    "cliente": "EJE ELEMENTAL",
+    "servicio": "Sandur, SVOZ-DID_ADI-N2P, EJE ELEMENTAL, Sitio:Capita",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 18:33:18",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">EL CLIENTE ME PIDE LO SIGUIENTE ADJUNTO CATALOGO DE LO QUE REQUIERE EL PRODUCTO PUSE SVOZ PERO NO SE CUAL PUEDA SER YA QUE SON VARIOS EQUIPOS Y SERVICIOS.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">ME COMNENTA LO SIG.&nbsp;Si lo que viene en el catalogo y si ve algun error y tiene alguna sugerencia es bienvenida, le muestro el plano</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene PBX</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">si la respuesta es s\u00ed, favor de comentar cual es la marca y modelo</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene personal que administre el PBX</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El PBX es compatible con SIP</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere funcionalidades de PBX? (en caso de que no tenga requiere el PBX f\u00edsico o en la nube)</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con cableado rematado en patch panel e identificado para voz?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Switch?&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfDe cuantos puertos, Marca y Modelo?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfEs Switch poe?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfTiene identificados los lugares donde corresponde cada extensi\u00f3n?, y si los lugares est\u00e1n preparados con nodo de red habilitado disponible para el equipo telef\u00f3nico:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntas extensiones requiere?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue tipo de tel\u00e9fono requiere para cada extensi\u00f3n, gama Alta, Media o Baja o de recepci\u00f3n ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntos equipos tiene?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue Marca, modelo y que version de firmware ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Firewall?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con oficinas externas (sucursales), cuantas?&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfLas oficinas remotas tienen conmutador? Marca y modelo:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCantidad de extensiones en cada sitio?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere Adecuaciones? puertos para voz, para datos, patchcord para la conexi\u00f3n, cableado, etc</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere portabilidad ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere configuraci\u00f3n de extensiones ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere IVR?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Se cuenta o se requieren configuraciones adicionales para separar la voz y datos VLAN&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Los equipos telef\u00f3nicos necesitan IP fija o puede ser din\u00e1mica&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">NOTA:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">En caso de portabilidad es necesario contar con los documentos &nbsp;(comprobante de domicilio, INE, en caso de ser persona moral se requiere acta constitutiva y poder notarial del representante legal), adjuntar requisitos en la tarea antes de la solicitud de habilitaci\u00f3n.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Net2phone proporcionar\u00e1 el formato correspondiente. </p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El cliente al cancelar con su proveedor anterior tiene 30 d\u00edas para solicitar la portabilidad tomando en cuenta los d\u00edas que este tr\u00e1mite conlleva, en caso de no solicitarlo con tiempo se corre riesgo de perder el/los n\u00fameros telef\u00f3nicos.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">En caso de configuraciones para nombre de extensiones , IP fija e IVR deber\u00e1 estar completo el documento y adjuntarlo en la tarea antes de la solicitud de habilitaci\u00f3n.</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456047",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79759",
+    "odoo_id": 79759,
+    "cliente": "TRANSPORTES URGENTES NUEVO LEON",
+    "servicio": "Sandur, SIS-50-10-ilimitado, TRANSPORTES URGENTES NUEVO LEON, SITIO: PATIO ESCOBEDO 2",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 18:27:23",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;Se realiza esta oportunidad&nbsp;para realizar una entrega de servicio provisional a la instalaci\u00f3n del servicio de internet dedicado de 200 mbps ligada a la siguiente tarea.</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">liga:&nbsp;<a style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\" href=\"https://odoo.wispi.mx/web#id=79021&amp;cids=25&amp;menu_id=130&amp;action=133&amp;model=crm.lead&amp;view_type=form\">https://odoo.wispi.mx/web#id=79021&amp;cids=25&amp;menu_id=130&amp;action=133&amp;model=crm.lead&amp;view_type=form</a></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Tarea:&nbsp;Sandur, SIDP-200 + AD, TRANSPORTES URGENTES NUEVO LEON, SITIO: PATIO ESCOBEDO 2</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456054",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79758",
+    "odoo_id": 79758,
+    "cliente": "TRANSPORTES URGENTES NUEVO LEON",
+    "servicio": "Sandur, [SIN PRODUCTO], TRANSPORTES URGENTES NUEVO LEON, SITIO: PATIO ESCOBEDO 2",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 18:20:24",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [CAE - Operaciones]:<br>falta informacion</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;Se realiza esta oportunidad que va ligada al servicio de internet dedicado de 200 mbps con la que se cubre el costo de la torre</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">liga:&nbsp;<a href=\"https://odoo.wispi.mx/web#id=79021&amp;cids=25&amp;menu_id=130&amp;action=133&amp;model=crm.lead&amp;view_type=form\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">https://odoo.wispi.mx/web#id=79021&amp;cids=25&amp;menu_id=130&amp;action=133&amp;model=crm.lead&amp;view_type=form</a></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Tarea:&nbsp;Sandur, SIDP-200 + AD, TRANSPORTES URGENTES NUEVO LEON, SITIO: PATIO ESCOBEDO 2</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456061",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79752",
+    "odoo_id": 79752,
+    "cliente": "EJE ELEMENTAL",
+    "servicio": "Sandur, SIDP-100, EJE ELEMENTAL, Sitio:Capita",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 15:30:08",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contact form&nbsp;</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:bolder;\">Details:</b></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Nombre Completo</strong>: Ana Su\u00e1rez</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Compa\u00f1\u00eda/Negocio</strong>: Eje Elemental</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Tel\u00e9fono (10 D\u00edgitos)</strong>: 4428158171</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Email</strong>:&nbsp;<a href=\"mailto:compras.ejelemental@gmail.com\" target=\"_blank\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">compras.ejelemental@gmail.com</a></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Ciudad en la que requieres el servicio</strong>: Quer\u00e9taro</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Tipo de Requerimiento</strong>: Soluci\u00f3n de Internet,Videovigilancia,Otro (Data Center/Telefon\u00eda IP, etc.)</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\">Mensaje</strong>: Quer\u00eda ver si me cotizaba un proyecto para cableado estructurado de voz y datos, con sus equipos y site, en quer\u00e9taro</p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li>\u00bf Cuenta con proveedor de Internet actual?: Si la respuesta es SI, \u00bfQui\u00e9n es su proveedor?No tienen nada</li><li>&nbsp; Nuestro servicio quedaria como principal o como respaldo?Principal</li><li>\u00bf C\u00faal es el medio de acceso de su o sus proveedor (es) actual (es)?No</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Referencias de la ubicaci\u00f3n del cliente : Capita Sur S/N Piso 9 Col. Centro de Santiago de Qto.&nbsp;20.569644245373148, -100.3590813181254</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Tipo de edificio (caseta m\u00f3vil, casa, nave, edificio) : Edificio</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El sitio esta listo para instalar o se encuentra en construcci\u00f3n u obra gris :lista</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Altura :30 mts</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Si se sabe el material de azotea (lamina, concreto, madera, etc) :concreto</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">En caso de ser nave , \u00bf se tiene acceso mediante escalera marina? en caso de no contar con ella cuales han sido las v\u00edas de acceso? :en su momento&nbsp;</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Se tienen requisitos como documentaci\u00f3n (INE, SUA, DC3) o examenes medicos &nbsp;para el acceso a azotea e instalaciones del cliente? se requiere conocer esto previo a la habilitaci\u00f3n: en su momento</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;\u00bfCuales son? :NO</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe que la antena que se instalara ser\u00e1 sobre la azotea de (caseta m\u00f3vil, casa, nave, edificio) :si</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe el \u00e1rea (oficina , site, numero de rack) en donde se instalara el equipo demarcador (router) :si</span></li><li>Configuraciones especiales (modo bridge, forward de puertos, puertos que necesita)no</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuenta con sistema de tierras ? :si</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Agregar fotografia de fachada :</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Observaciones adicionales :&nbsp;</span></li><li>Se requiere en sitio del cliente se cuente con energia regulada 110V , contactos puestos a tierra y polarizado</li></ol><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><span style=\"font-size:11pt;background-color:transparent\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456068",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79748",
+    "odoo_id": 79748,
+    "cliente": "PRODUCTOS INDUSTRIALIZADOS DE SALTILLO",
+    "servicio": "Sandur, SIDP-50, PRODUCTOS INDUSTRIALIZADOS DE SALTILLO, SITIO LAS TORRES",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-07 14:37:10",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456104",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79730",
+    "odoo_id": 79730,
+    "cliente": "JUAN ALFONSO RIVERA HERNANDEZ",
+    "servicio": "HUUS, SIEV-80-8, JUAN ALFONSO RIVERA HERNANDEZ, SITIO: LIVERPOOL",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-05 21:32:17",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento 25 MAYO 2026</span></b></span></li><li>Horario del evento 9AM</li><li>Horario de fin del evento para retiro de equipos 8PM</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar&nbsp;Liverpool 76, Ju\u00e1rez, Cuauht\u00e9moc, 06600 Ciudad de M\u00e9xico, CDMX&nbsp;19.42613518411517, -99.1602692220883</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande) CASA</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega) 6M</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso NA&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento 80-100MBPS</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar 150&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos SI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi SI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi 30X18M&nbsp;</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc) NA</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones SI&nbsp;</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600&nbsp; SI&nbsp;</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><img src=\"/web/image/3578242-5791cd1b/LIVERPOOL.png?access_token=46710ab7-ab60-4987-8e70-3417f99cdb30\" class=\"img img-fluid o_we_custom_image\" style=\"box-sizing: border-box; display: inline-block; height: auto; max-width: 100%; vertical-align: middle; width: 1131.64px; mso-hide: all; mso-hide: all;\" width=\"1131.64\"></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456115",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79720",
+    "odoo_id": 79720,
+    "cliente": "Ernesto Roman",
+    "servicio": "Sandur, SIMP-30, Rosendo Martinez Garcia, Sitio:Andalucia",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-05 16:03:51",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Internet Eventual / Eventos&nbsp;</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas indicarme en qu\u00e9 ciudad y estado requieres el servicio?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: San Luis Potos\u00ed</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Yo me encargo en ponerte en contacto con un asesor. \u00bfC\u00faal es tu nombre?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Ernesto Roman</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Por favor ap\u00f3yame con un numero de tel\u00e9fono donde nos podamos comunicar.</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: 4441066244</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas dejarme tu email?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto:&nbsp;<a href=\"mailto:romanr.980805@gmail.com\" target=\"_blank\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">romanr.980805@gmail.com</a></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li>\u00bf Cuenta con proveedor de Internet actual?: Si la respuesta es SI, \u00bfQui\u00e9n es su proveedor?Izzi</li><li>&nbsp; Nuestro servicio quedaria como principal o como respaldo?Principal</li><li>\u00bf C\u00faal es el medio de acceso de su o sus proveedor (es) actual (es)?Fibra</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Referencias de la ubicaci\u00f3n del cliente : Ave. Romulo Garza 518 Col. Andalucia SNGNL, a un lado de las Simi,&nbsp;25.719504985485255, -100.241984573539</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Tipo de edificio (caseta m\u00f3vil, casa, nave, edificio) : Casa</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El sitio esta listo para instalar o se encuentra en construcci\u00f3n u obra gris :lista</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Altura :6 mts</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Si se sabe el material de azotea (lamina, concreto, madera, etc) :concreto</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">En caso de ser nave , \u00bf se tiene acceso mediante escalera marina? en caso de no contar con ella cuales han sido las v\u00edas de acceso? :sin problema</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Se tienen requisitos como documentaci\u00f3n (INE, SUA, DC3) o examenes medicos &nbsp;para el acceso a azotea e instalaciones del cliente? se requiere conocer esto previo a la habilitaci\u00f3n:NO</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;\u00bfCuales son? :NO</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe que la antena que se instalara ser\u00e1 sobre la azotea de (caseta m\u00f3vil, casa, nave, edificio) :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe el \u00e1rea (oficina , site, numero de rack) en donde se instalara el equipo demarcador (router) :SI</span></li><li>Configuraciones especiales (modo bridge, forward de puertos, puertos que necesita):NO</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuenta con sistema de tierras ? :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Agregar fotografia de fachada :<img src=\"/web/image/3579526-a133a6a4/Screenshot%202026-05-06%201.50.46%20PM.png?access_token=ff7c690a-8edb-42f3-bb2b-df9ff2c30f67\" class=\"img-fluid img o_we_custom_image\" style=\"box-sizing: border-box; display: inline-block; height: auto; max-width: 100%; vertical-align: middle; width: 859.062px; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all;\" width=\"859.062\"></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Observaciones adicionales :&nbsp;</span></li><li>Se requiere en sitio del cliente se cuente con energia regulada 110V , contactos puestos a tierra y polarizado</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><span style=\"font-size:11pt;background-color:transparent\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456121",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79703",
+    "odoo_id": 79703,
+    "cliente": "TRGA TRANSPORTES",
+    "servicio": "Sandur, SIDP-100, TRGA TRANSPORTES, TRANSPORTES TREGA,SITIO:ESCOBEDO // FASE 2 BLINDAJE",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-04 22:22:46",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buena tarde equipo, se genera oportunida para vlaidar factibilidad de incremento por tema de Fase 2 Blindaje, actualmente se tienen 80mb por $9,000 ya no tiene contrato vigente</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP-7326&nbsp;</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456127",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79699",
+    "odoo_id": 79699,
+    "cliente": "Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V.",
+    "servicio": "Sandur, SIMPS-100, Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V., SITIO CARRETERA CADEREYTA ALLENDE LOS SABINOS",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-04 19:04:57",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li>\u00bf Cuenta con proveedor de Internet actual?: Si la respuesta es SI, \u00bfQui\u00e9n es su proveedor? starlink</li><li>&nbsp; Nuestro servicio quedaria como principal o como respaldo?salida principal</li><li>\u00bf C\u00faal es el medio de acceso de su o sus proveedor (es) actual (es)?satelital&nbsp;</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Referencias de la ubicaci\u00f3n del cliente : 25.33156,-99.98721</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Tipo de edificio (caseta m\u00f3vil, casa, nave, edificio) : casa</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El sitio esta listo para instalar o se encuentra en construcci\u00f3n u obra gris :terminada</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Altura :5 metros</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Si se sabe el material de azotea (lamina, concreto, madera, etc) :concreto</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">En caso de ser nave , \u00bf se tiene acceso mediante escalera marina? en caso de no contar con ella cuales han sido las v\u00edas de acceso? :sin escalera marina</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Se tienen requisitos como documentaci\u00f3n (INE, SUA, DC3) o examenes medicos &nbsp;para el acceso a azotea e instalaciones del cliente? se requiere conocer esto previo a la habilitaci\u00f3n</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;\u00bfCuales son? :solo INE</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe que la antena que se instalara ser\u00e1 sobre la azotea de (caseta m\u00f3vil, casa, nave, edificio) :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe el \u00e1rea (oficina , site, numero de rack) en donde se instalara el equipo demarcador (router) :SI</span></li><li>Configuraciones especiales (modo bridge, forward de puertos, puertos que necesita)SIN DATOS</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuenta con sistema de tierras ? :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Agregar fotografia de fachada :ABEXO EN NOTAS</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Observaciones adicionales :&nbsp;</span></li><li>Se requiere en sitio del cliente se cuente con energia regulada 110V , contactos puestos a tierra y polarizado</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><span style=\"font-size:11pt;background-color:transparent\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456133",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79696",
+    "odoo_id": 79696,
+    "cliente": "OSCAR ANTONIO URCIEL VILLANUEVA",
+    "servicio": "Sandur, SIDP-20, OSCAR ANTONIO URCIEL VILLANUEVA, SITIO: SAN LUIS POTOSI",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-05-04 17:32:34",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buen dia equipo, se genera oportunidad para validar la factibilidad de decrementar costo de l servicio por tema de retencion de la cuenta</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Actualmente tiene un SID 20MB $2,799 y ya no tiene contrato vigente</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP 7837</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456167",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79684",
+    "odoo_id": 79684,
+    "cliente": "KIWI NETWORKS S.A.P.I. DE C.V.",
+    "servicio": "Sandur, SIDP-500, KIWI NETWORKS S.A.P.I. DE C.V., SITIO BLVD DIAZ ORDAZ IRAPUATO GTO",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-30 19:03:46",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>Direcci\u00f3n y/o coordenadas no coinciden o no est\u00e1n correctas</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li>\u00bf Cuenta con proveedor de Internet actual?: Si la respuesta es SI, \u00bfQui\u00e9n es su proveedor?sin proveedor actual</li><li>&nbsp; Nuestro servicio quedaria como principal o como respaldo?salida principal</li><li>\u00bf C\u00faal es el medio de acceso de su o sus proveedor (es) actual (es)?ninguno</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Referencias de la ubicaci\u00f3n del cliente : 20.67612961840,-101.3415738865</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Tipo de edificio (caseta m\u00f3vil, casa, nave, edificio) : oficina edificio de 03 pisos</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El sitio esta listo para instalar o se encuentra en construcci\u00f3n u obra gris :si</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Altura :12 metros</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Si se sabe el material de azotea (lamina, concreto, madera, etc) :concreto</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">En caso de ser nave , \u00bf se tiene acceso mediante escalera marina? en caso de no contar con ella cuales han sido las v\u00edas de acceso? :son oficinas con acceso al techo</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Se tienen requisitos como documentaci\u00f3n (INE, SUA, DC3) o examenes medicos &nbsp;para el acceso a azotea e instalaciones del cliente? se requiere conocer esto previo a la habilitaci\u00f3n</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;\u00bfCuales son? :INE SUA Y DC3</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe que la antena que se instalara ser\u00e1 sobre la azotea de (caseta m\u00f3vil, casa, nave, edificio) :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe el \u00e1rea (oficina , site, numero de rack) en donde se instalara el equipo demarcador (router) :SI</span></li><li>Configuraciones especiales (modo bridge, forward de puertos, puertos que necesita)SIN DATOS</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuenta con sistema de tierras ? :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Agregar fotografia de fachada :ANEXO EN NOTAS</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Observaciones adicionales :&nbsp;</span></li><li>Se requiere en sitio del cliente se cuente con energia regulada 110V , contactos puestos a tierra y polarizado</li></ol><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><span style=\"font-size:11pt;background-color:transparent\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456357",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79666",
+    "odoo_id": 79666,
+    "cliente": "INNOVACION EN MADERAS ECOPLASTICAS",
+    "servicio": "Luminet, SIDP-150, INNOVACION EN MADERAS ECOPLASTICAS, SITIO: RWOOD PREMIUM DECKS II // FASE 2 BLINDAJE",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-29 23:15:03",
+    "preventa": {
+      "analisis": "<p>Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>analisis preventa</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buena tarde , se genera propuesta para validar factibilidad de entrega de 150Mb en sitio por tema de Fase 2 Blindaje, actualmente se tienen 100MB y paga $11,417 ya no tiene contrato vigente</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP 14412</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456366",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79661",
+    "odoo_id": 79661,
+    "cliente": "INTERMEX MANUFACTURA DE CHIHUAHUA",
+    "servicio": "Sandur, SA-WIFI-1U7Lite, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-29 22:33:16",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;Se instalar\u00e1 un servicio el d\u00eda S\u00e1bado 2 de Mayo, el router que se instala no cuenta con servicio de WiFi, por lo cual se contempla la instalaci\u00f3n de un AP para la conexi\u00f3n WiFi, podemos contemplar algun equipo AP que tengamos en stock</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Tarea del servicio :&nbsp;Sandur, SIDP-500, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Liga:&nbsp;<a href=\"https://odoo.wispi.mx/web#id=79512&amp;cids=25-12&amp;menu_id=130&amp;model=crm.lead&amp;view_type=form\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">https://odoo.wispi.mx/web#id=79512&amp;cids=25-12&amp;menu_id=130&amp;model=crm.lead&amp;view_type=form</a></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456419",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79643",
+    "odoo_id": 79643,
+    "cliente": "SEYCVEL",
+    "servicio": "Sandur, SDWAN Plus - 20, SEYCVEL, Sitio:Terrapark 2",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-28 22:45:11",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.456439",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79642",
+    "odoo_id": 79642,
+    "cliente": "SEYCVEL",
+    "servicio": "Sandur, SDWAN Plus - 20, SEYCVEL, Sitio:Terrapark 1",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-28 22:35:48",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.459566",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79632",
+    "odoo_id": 79632,
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "servicio": "Sandur, MO-INST, MATERIALES ASESORIAS Y SERVICIOS, SITIO TORREON PLAZA BOSQUE VENUSTIANO CARRANZA",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-28 18:04:22",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Se realizara Cobro por el kit de Equipos mas equipo wi-fi mas mano de obra y atipicos.</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.459584",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79623",
+    "odoo_id": 79623,
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "servicio": "Sandur, MO-INST, MATERIALES ASESORIAS Y SERVICIOS, SITIO TORREON PLAZA DE ARMAS",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-28 04:55:01",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SE HARA CARGO DE PAGO UNICO POR EL KIT DE EQUIPAMIENTO MAS MISCELANEOS, EQUIPO DE WIFI Y MANO DE OBRA</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.459592",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79621",
+    "odoo_id": 79621,
+    "cliente": "BACKBONE TECHNOLOGIES",
+    "servicio": "Sandur, SVOZ-EXT-N2P, BACKBONE TECHNOLOGIES, SITIO JULIAN ELECTRIC DERRAMADERO",
+    "comercial": "Sincronizado Odoo",
+    "estado": "SOLICITUD_PREVENTA",
+    "fecha_creacion": "2026-04-28 04:27:03",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>No est\u00e1 completa informaci\u00f3n del servicio/producto</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene PBX SI</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">si la respuesta es s\u00ed, favor de comentar cual es la marca y modelo SIN DATOS</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene personal que administre el PBXSI</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El PBX es compatible con SIP SI ES SIP</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere funcionalidades de PBX? (en caso de que no tenga requiere el PBX f\u00edsico o en la nube)</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con cableado rematado en patch panel e identificado para voz?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Switch?&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfDe cuantos puertos, Marca y Modelo?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfEs Switch poe?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfTiene identificados los lugares donde corresponde cada extensi\u00f3n?, y si los lugares est\u00e1n preparados con nodo de red habilitado disponible para el equipo telef\u00f3nico:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntas extensiones requiere?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue tipo de tel\u00e9fono requiere para cada extensi\u00f3n, gama Alta, Media o Baja o de recepci\u00f3n ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntos equipos tiene?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue Marca, modelo y que version de firmware ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Firewall?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con oficinas externas (sucursales), cuantas?&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfLas oficinas remotas tienen conmutador? Marca y modelo:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCantidad de extensiones en cada sitio?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere Adecuaciones? puertos para voz, para datos, patchcord para la conexi\u00f3n, cableado, etc</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere portabilidad ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere configuraci\u00f3n de extensiones ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere IVR?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Se cuenta o se requieren configuraciones adicionales para separar la voz y datos VLAN&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Los equipos telef\u00f3nicos necesitan IP fija o puede ser din\u00e1mica&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">NOTA:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">En caso de portabilidad es necesario contar con los documentos &nbsp;(comprobante de domicilio, INE, en caso de ser persona moral se requiere acta constitutiva y poder notarial del representante legal), adjuntar requisitos en la tarea antes de la solicitud de habilitaci\u00f3n.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Net2phone proporcionar\u00e1 el formato correspondiente. </p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El cliente al cancelar con su proveedor anterior tiene 30 d\u00edas para solicitar la portabilidad tomando en cuenta los d\u00edas que este tr\u00e1mite conlleva, en caso de no solicitarlo con tiempo se corre riesgo de perder el/los n\u00fameros telef\u00f3nicos.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">En caso de configuraciones para nombre de extensiones , IP fija e IVR deber\u00e1 estar completo el documento y adjuntarlo en la tarea antes de la solicitud de habilitaci\u00f3n.</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-09T00:33:10.459598",
+        "accion": "Sincronizado desde Odoo CRM",
+        "usuario": "Sistema"
       }
     ]
   }
