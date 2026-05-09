@@ -101,7 +101,7 @@ Reporte Cliente → ATC (Ticket) → NOC (L1/L2) → PMO (Field Service) → Ops
 | Sistema | Estado | Detalles |
 |---------|--------|----------|
 | Odoo (`wispi17`) | Activo | UID 944 — JOSE MIGUEL MACIAS |
-| Claude (Anthropic) | Activo | `claude-sonnet-4-6` |
+| Claude (Anthropic) | Activo | `claude-3-5-sonnet-20241022` |
 | Gemini (Antigravity) | Activo | Google DeepMind local |
 | GitHub | Activo | `jmmcmx/XCIEN2.0`, `jmmcmx/live-status-hub` |
 | Lovable (live-status-hub) | En desarrollo | React + Supabase |

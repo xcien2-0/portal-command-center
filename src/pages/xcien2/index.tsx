@@ -7,9 +7,7 @@ import NocSection from './sections/NocSection';
 import AcademiaSection from './sections/AcademiaSection';
 import AcademiaHoloSection from './sections/AcademiaHoloSection';
 import WFMSection from './sections/WFMSection';
-import TokensSection from './sections/TokensSection';
-import TransaccionesSection from './sections/TransaccionesSection';
-import EtiquetasSection from './sections/EtiquetasSection';
+import FinanzasSection from './sections/FinanzasSection';
 import DevPanel from './DevPanel';
 import FodaSection from './sections/FodaSection';
 import AdopcionSection from './sections/AdopcionSection';
@@ -17,12 +15,13 @@ import TelegramBotSection from './sections/TelegramBotSection';
 import DocsSection from './sections/DocsSection';
 import BackupSection from './sections/BackupSection';
 import InicioHoloSection from './sections/InicioHoloSection';
+import BidrillasSection from './sections/BidrillasSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
 // Bridge imports for classic components
 import CallCenter from '../CallCenter';
-import Scan from '../Scan';
+import InventarioSection from './sections/InventarioSection';
 import Gerencia from '../Gerencia';
 import ReportesGobierno from '../ReportesGobierno';
 
@@ -45,14 +44,13 @@ const NAV: NavEntry[] = [
 
   { id: 'noc', label: 'Red en Vivo', icon: '📡', group: 'Operaciones' },
   { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
+  { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
   { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
   { id: 'scan', label: 'Inventario & Scanner', icon: '🔍', group: 'Operaciones' },
-  { id: 'etiquetas', label: 'Creación de Etiquetas', icon: '🏷️', group: 'Operaciones' },
 
   { id: 'academia', label: 'Dashboard Academia', icon: '🎓', group: 'Certificación & Academia' },
-  { id: 'tokens', label: 'Registro de Tokens', icon: '🔖', group: 'Certificación & Academia' },
 
-  { id: 'transacciones', label: 'Transacciones Grupo', icon: '🔄', group: 'Administración' },
+  { id: 'transacciones', label: 'Transacciones & Tokens', icon: '🔄', group: 'Administración' },
   { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
   { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
@@ -72,10 +70,11 @@ const SECTION_TITLE: Record<SectionId, string> = {
   inicio: 'Hub Principal',
   noc: 'Red en Vivo',
   wfm: 'Control Operativo — WFM',
+  bidrillas: 'Gestión de Bidrillas 2026',
   call: 'Centro de Atención (Call Center)',
   scan: 'Inventario & Scanner QR',
-  tokens: 'Tokens & Certificados',
-  transacciones: 'Transacciones Intragrupo',
+  tokens: 'Transacciones & Tokens',
+  transacciones: 'Transacciones & Tokens',
   etiquetas: 'Creación de Etiquetas & Comprobantes',
   foda: 'Análisis de Riesgos y Oportunidades',
   adopcion: 'Adopción y Gestión de Usuarios',
@@ -294,10 +293,12 @@ function Content({
       )}
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'bidrillas' && <BidrillasSection theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
-      {section === 'scan' && <Scan />}
+      {section === 'scan'      && <InventarioSection theme={theme} />}
+      {section === 'etiquetas' && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'reports' && <ReportesGobierno />}
 
@@ -458,9 +459,8 @@ function Content({
       {section === 'telegram' && <TelegramBotSection theme={theme} />}
       {section === 'docs' && <DocsSection theme={theme} />}
       {section === 'backup' && <BackupSection theme={theme} />}
-      {section === 'tokens'        && <TokensSection        theme={theme} activeThemeId={activeThemeId} />}
-      {section === 'transacciones' && <TransaccionesSection  theme={theme} activeThemeId={activeThemeId} />}
-      {section === 'etiquetas'     && <EtiquetasSection      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'transacciones' && <FinanzasSection theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'tokens'        && <FinanzasSection theme={theme} activeThemeId={activeThemeId} initialTab="tokens" />}
       {section === 'editor' && (
         <DevPanel
           theme={theme}
@@ -511,14 +511,6 @@ export default function Xcien2Page() {
   }, []);
 
   // Sync section with URL search params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('section') !== section) {
-      params.set('section', section);
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [section]);
   const [theme, dispatch] = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
       const saved = localStorage.getItem('xcien2_theme');
@@ -584,7 +576,8 @@ export default function Xcien2Page() {
 
   const onSelectSection = useCallback((id: SectionId) => {
     setSection(id);
-  }, []);
+    navigate(`?section=${id}`, { replace: true });
+  }, [navigate]);
 
   return (
     <div

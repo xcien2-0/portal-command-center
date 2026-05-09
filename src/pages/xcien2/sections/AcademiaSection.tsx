@@ -1,6 +1,218 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+
+// ── Odoo eLearning types ──────────────────────────────────────────────────────
+interface OdooLesson {
+  id: number; name: string; type: string; category: string;
+  duration_h: number; published: boolean; sequence: number;
+  url: string; website_url: string; has_quiz: boolean; views: number;
+}
+interface OdooCurso {
+  id: number; name: string; description: string;
+  total_slides: number; total_time_h: number;
+  members: number; published: boolean; enroll: string; channel_type: string;
+  avg_completion: number; lessons: OdooLesson[];
+  members_list: { name: string; pct: number; status: string }[];
+}
+
+// ── Cursos view ───────────────────────────────────────────────────────────────
+const SLIDE_TYPE_ICON: Record<string, string> = {
+  pdf: '📄', youtube_video: '▶️', google_drive_video: '🎬',
+  article: '📝', certification: '🏅', infographic: '🖼️',
+};
+
+function BarProgress({ pct, color = '#00C896' }: { pct: number; color?: string }) {
+  return (
+    <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.8s ease' }} />
+    </div>
+  );
+}
+
+function CursosView() {
+  const [cursos, setCursos]   = useState<OdooCurso[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
+  const [selected, setSelected] = useState<OdooCurso | null>(null);
+  const [search, setSearch]   = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/cursos`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setCursos(await r.json());
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = cursos.filter(c =>
+    !search || c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#555', gap: 12 }}>
+      <div style={{ width: 16, height: 16, border: '2px solid #00C896', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      Cargando cursos desde Odoo...
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ textAlign: 'center', padding: 40, color: '#FF4757' }}>
+      Error conectando con Odoo: {error}
+    </div>
+  );
+
+  // ── Detalle de un curso ──────────────────────────────────────────────────
+  if (selected) return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => setSelected(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 12 }}>
+          ← Volver
+        </button>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{selected.name}</div>
+          <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>
+            {selected.lessons.length} lecciones · {selected.members} inscritos · {selected.avg_completion}% completado en promedio
+          </div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: selected.published ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: selected.published ? '#00C896' : '#FF4757', border: `1px solid ${selected.published ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
+            {selected.published ? '● Publicado' : '● No publicado'}
+          </span>
+          <a href={`https://odoo.wispi.mx/slides/${selected.id}`} target="_blank" rel="noreferrer"
+            style={{ fontSize: 11, fontWeight: 600, padding: '5px 14px', borderRadius: 8, background: 'rgba(0,200,150,0.15)', color: '#00C896', border: '1px solid rgba(0,200,150,0.3)', textDecoration: 'none' }}>
+            Abrir en Odoo ↗
+          </a>
+        </div>
+      </div>
+
+      {/* Lecciones */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Lecciones</div>
+        {selected.lessons.length === 0 ? (
+          <div style={{ color: '#555', fontSize: 13, padding: '20px 0' }}>Sin lecciones registradas</div>
+        ) : selected.lessons.map(l => (
+          <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
+            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{SLIDE_TYPE_ICON[l.type] || '📄'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
+                {l.duration_h > 0 && <span style={{ fontSize: 10, color: '#555' }}>{Math.round(l.duration_h * 60)} min</span>}
+                {l.has_quiz && <span style={{ fontSize: 10, color: '#FFB703' }}>🧪 Quiz</span>}
+                {l.views > 0 && <span style={{ fontSize: 10, color: '#555' }}>{l.views} vistas</span>}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: l.published ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)', color: l.published ? '#00C896' : '#FF4757' }}>
+                {l.published ? 'Publicada' : 'Borrador'}
+              </span>
+              {l.website_url && (
+                <a href={`https://odoo.wispi.mx${l.website_url}`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 10, color: '#555', textDecoration: 'none', padding: '3px 8px', borderRadius: 6, border: '0.5px solid rgba(255,255,255,0.08)' }}>
+                  Ver ↗
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Inscritos */}
+      {selected.members_list.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Inscritos ({selected.members_list.length})</div>
+          {selected.members_list.map((m, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#00C896', flexShrink: 0 }}>
+                {m.name.charAt(0)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
+                <BarProgress pct={m.pct} color={m.pct >= 80 ? '#00C896' : m.pct >= 40 ? '#FFB703' : '#FF4757'} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: m.pct >= 80 ? '#00C896' : m.pct >= 40 ? '#FFB703' : '#555', flexShrink: 0 }}>{m.pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Lista de cursos ──────────────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar curso..."
+          style={{ flex: 1, background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 14px', color: '#fff', fontSize: 13, outline: 'none' }} />
+        <button onClick={load} style={{ background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', color: '#555', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontSize: 12 }}>
+          ↺ Actualizar
+        </button>
+        <div style={{ fontSize: 11, color: '#555', whiteSpace: 'nowrap' }}>{filtered.length} cursos</div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+        {filtered.map(c => {
+          const hasContent = c.lessons.length > 0;
+          const color = c.avg_completion >= 80 ? '#00C896' : c.avg_completion >= 40 ? '#FFB703' : '#4FC3F7';
+          return (
+            <div key={c.id}
+              onClick={() => setSelected(c)}
+              style={{ background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: 16, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: 10 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(0,200,150,0.3)'; (e.currentTarget as HTMLDivElement).style.background = '#1a1a1a'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLDivElement).style.background = '#151515'; }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1 }}>{c.name}</div>
+                <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 20, flexShrink: 0, background: c.published ? 'rgba(0,200,150,0.1)' : 'rgba(255,255,255,0.04)', color: c.published ? '#00C896' : '#555', border: `0.5px solid ${c.published ? 'rgba(0,200,150,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                  {c.published ? '● Publicado' : '● Borrador'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{c.lessons.length}</div>
+                  <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>lecciones</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{c.members}</div>
+                  <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>inscritos</div>
+                </div>
+                {c.total_time_h > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{Math.round(c.total_time_h * 60)}</div>
+                    <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>minutos</div>
+                  </div>
+                )}
+              </div>
+
+              {hasContent && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: '#555' }}>Completado</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color }}>{c.avg_completion}%</span>
+                  </div>
+                  <BarProgress pct={c.avg_completion} color={color} />
+                </div>
+              )}
+
+              {!hasContent && (
+                <div style={{ fontSize: 10, color: '#333', fontStyle: 'italic' }}>Sin lecciones aún</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const SLIDES = ['intro','problema','comparacion','solucion','niveles','badges','leaderboard','roadmap','cta'] as const;
@@ -395,7 +607,7 @@ const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
 // ── Main Component ────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 export default function AcademiaSection({ theme, activeThemeId }: Props) {
-  const [view, setView] = useState<'dashboard' | 'exam'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'cursos' | 'exam'>('cursos');
   const [idx, setIdx] = useState(0);
   const total = SLIDES.length;
 
@@ -424,24 +636,18 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
           </div>
           
           <div style={{ display: 'flex', gap: 8 }}>
-            <button 
-              onClick={() => setView('dashboard')}
-              style={{
-                background: view === 'dashboard' ? `${theme.accent}20` : 'transparent',
-                color: view === 'dashboard' ? theme.accent : DIM,
-                border: 'none', padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
-              }}>
-              📊 Estrategia
-            </button>
-            <button 
-              onClick={() => setView('exam')}
-              style={{
-                background: view === 'exam' ? `${theme.accent}20` : 'transparent',
-                color: view === 'exam' ? theme.accent : DIM,
-                border: 'none', padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
-              }}>
-              🔮 Evaluación de Colocación
-            </button>
+            {([
+              ['cursos',    '🎓 Cursos Odoo'],
+              ['dashboard', '📊 Estrategia'],
+              ['exam',      '🔮 Evaluación'],
+            ] as [typeof view, string][]).map(([id, label]) => (
+              <button key={id} onClick={() => setView(id)} style={{
+                background: view === id ? `${theme.accent}20` : 'transparent',
+                color: view === id ? theme.accent : DIM,
+                border: 'none', padding: '6px 16px', borderRadius: 20,
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+              }}>{label}</button>
+            ))}
           </div>
         </div>
 
@@ -465,13 +671,15 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
       {/* Main Content Area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '30px', position: 'relative' }}>
         {activeThemeId === 'matrix' && <MatrixBackground />}
-        {view === 'dashboard' ? (
+        {view === 'cursos' && <CursosView />}
+        {view === 'dashboard' && (
           <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
             <SlideComp theme={theme} onStartExam={() => setView('exam')} />
           </div>
-        ) : (
+        )}
+        {view === 'exam' && (
           <div style={{ height: '100%', minHeight: 700 }}>
-             <SlideExamen theme={theme} />
+            <SlideExamen theme={theme} />
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
-LIBRO_MAESTRO = os.path.join(BASE_DIR, "docs", "estandares", "Estándar_Proceso_Soporte_HL.md")
+LIBRO_MAESTRO = os.path.join(BASE_DIR, "Xcien_Docs", "Estándar_Proceso_Soporte_HL.md")
 WFM_FILE = os.path.join(BASE_DIR, "db", "wfm_data.json")
 SKILLS_DB = os.path.join(BASE_DIR, "db", "skills_matrix.json")
 
@@ -46,10 +46,20 @@ class DirectorGeneralV2:
         print(f"💎 [{self.name}] Sistema en línea. Motor Claude Haiku activado.")
 
     def _cargar_contexto(self):
+        """Carga todos los estándares de Xcien_Docs para tener una base de conocimiento completa."""
+        docs_path = os.path.join(BASE_DIR, "Xcien_Docs")
+        contexto = ""
         try:
-            with open(LIBRO_MAESTRO, "r", encoding="utf-8") as f:
-                return f.read()
-        except: return "No se encontró el manual maestro."
+            if os.path.exists(docs_path):
+                for file in os.listdir(docs_path):
+                    if file.endswith(".md"):
+                        with open(os.path.join(docs_path, file), "r", encoding="utf-8") as f:
+                            content = f.read()
+                            # Solo tomar los primeros 1500 caracteres de cada archivo para evitar saturar el contexto
+                            contexto += f"\n\n--- DOCUMENTO: {file} ---\n{content[:1500]}\n"
+            return contexto if contexto else "No se encontraron manuales en Xcien_Docs."
+        except Exception as e:
+            return f"Error cargando contexto: {e}"
 
     def ejecutar_orden(self, instruccion_usuario, history=None, context=""):
         if history is None: history = []
@@ -89,7 +99,7 @@ Instrucciones:
             messages.append({"role": "user", "content": instruccion_usuario})
 
             response = self.client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=1024,
                 system=system_prompt,
                 messages=messages

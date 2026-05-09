@@ -7,8 +7,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.units import inch
 
 # Rutas
-MD_FILE = "/Users/mesquite/Proyectos/XCIEN2.0/PROYECTO_BIDRILLAS_2026.md"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MD_FILE = os.path.join(BASE_DIR, "..", "PROYECTO_BIDRILLAS_2026.md")
 OUTPUT_PDF = os.path.join(BASE_DIR, "db", "PROYECTO_BIDRILLAS_2026.pdf")
 
 def create_pdf():

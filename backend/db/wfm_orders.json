@@ -4,7 +4,7 @@
     "cliente": "Corporativo Xcien",
     "servicio": "Fibra Dedicada 1GB + Backup Satelital",
     "comercial": "Andr\u00e9s Garc\u00eda",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "BACKLOG",
     "fecha_creacion": "2026-04-26T18:54:09.156133",
     "preventa": {
       "analisis": "Factible v\u00eda FO",
@@ -41,6 +41,18 @@
         {
           "id": "B-8E00",
           "fecha": "2026-04-28T12:29:25.745388",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        },
+        {
+          "id": "B-9B1B",
+          "fecha": "2026-05-08T18:02:35.013190",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        },
+        {
+          "id": "B-3435",
+          "fecha": "2026-05-08T18:02:36.667607",
           "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
           "area_responsable": "POR_DEFINIR"
         }
@@ -141,6 +153,16 @@
         "fecha": "2026-05-07T23:32:18.215562",
         "accion": "Equipos asignados en Almac\u00e9n",
         "usuario": "Jefe Almac\u00e9n"
+      },
+      {
+        "fecha": "2026-05-08T18:02:35.013323",
+        "accion": "Auditor\u00eda PM: Rechazada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-08T18:02:36.677101",
+        "accion": "Auditor\u00eda PM: Rechazada",
+        "usuario": "Auditor PM"
       }
     ]
   },
@@ -149,7 +171,7 @@
     "cliente": "Hospital San Jos\u00e9",
     "servicio": "Enlace de Microondas 50MB",
     "comercial": "Luc\u00eda Pineda",
-    "estado": "LISTO_INSTALACION",
+    "estado": "BACKLOG",
     "fecha_creacion": "2026-04-26T18:58:06.448236",
     "preventa": {
       "analisis": null,
@@ -176,10 +198,23 @@
       "bw": "1GB"
     },
     "pm": {
-      "auditoria_ok": true,
-      "bloqueada": false,
-      "motivo_bloqueo": null,
-      "backlogs": []
+      "auditoria_ok": false,
+      "bloqueada": true,
+      "motivo_bloqueo": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+      "backlogs": [
+        {
+          "id": "B-78C6",
+          "fecha": "2026-05-08T18:02:30.433441",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        },
+        {
+          "id": "B-79F2",
+          "fecha": "2026-05-08T18:02:31.696968",
+          "descripcion": "Documentaci\u00f3n incompleta / Errores t\u00e9cnicos",
+          "area_responsable": "POR_DEFINIR"
+        }
+      ]
     },
     "historial": [
       {
@@ -235,6 +270,16 @@
       {
         "fecha": "2026-04-27T09:49:28.201938",
         "accion": "Auditor\u00eda PM: Aprobada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-08T18:02:30.433518",
+        "accion": "Auditor\u00eda PM: Rechazada",
+        "usuario": "Auditor PM"
+      },
+      {
+        "fecha": "2026-05-08T18:02:31.697019",
+        "accion": "Auditor\u00eda PM: Rechazada",
         "usuario": "Auditor PM"
       }
     ]

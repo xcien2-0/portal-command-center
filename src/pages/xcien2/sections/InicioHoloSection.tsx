@@ -1,4 +1,6 @@
 import { ThemeConfig } from '../types';
+import { useState, useEffect } from 'react';
+import { API_BASE } from '../../../config';
 import { 
   Zap, 
   Shield, 
@@ -15,20 +17,39 @@ interface InicioHoloSectionProps {
   theme: ThemeConfig;
   backendStatus: 'online' | 'offline';
   onSelect: (id: any) => void;
+  bridgeData?: { current_task: string; status: string; log: string[]; last_update: string };
 }
 
 const G = '#00ff88';
 const Y = '#ffcc00';
 const R = '#ff3366';
 
-export default function InicioHoloSection({ theme, backendStatus, onSelect }: InicioHoloSectionProps) {
+export default function InicioHoloSection({ theme, backendStatus, onSelect, bridgeData }: InicioHoloSectionProps) {
+  const [liveStats, setLiveStats] = useState<any>(null);
   const accent = theme.accent;
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/bridge/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'get_dashboard_stats' })
+        });
+        const data = await res.json();
+        if (data.status === 'success') setLiveStats(data.data);
+      } catch (e) { console.error("Error fetching hub stats:", e); }
+    };
+    fetchStats();
+    const id = setInterval(fetchStats, 10000);
+    return () => clearInterval(id);
+  }, []);
+
   const stats = [
-    { label: 'DISPONIBILIDAD RED', value: '99.98%', icon: Globe, color: G },
-    { label: 'TICKETS WFM', value: '24 ACTIVOS', icon: Activity, color: accent },
-    { label: 'AGENTES IA', value: '8 ONLINE', icon: Cpu, color: Y },
-    { label: 'LATENCIA PROM.', value: '14ms', icon: Zap, color: G },
+    { label: 'DISPONIBILIDAD RED', value: liveStats?.availability || '99.98%', icon: Globe, color: G },
+    { label: 'TICKETS WFM', value: liveStats ? `${liveStats.pending_tickets} ACTIVOS` : 'Cargando...', icon: Activity, color: accent },
+    { label: 'PRODUCTIVIDAD', value: liveStats?.productivity || '---', icon: Cpu, color: Y },
+    { label: 'EQUIPOS CAMPO', value: liveStats ? `${liveStats.active_teams} BIDRILLAS` : '---', icon: Zap, color: G },
   ];
 
   return (

@@ -18,7 +18,7 @@ export default function FodaSection({ theme }: { theme: ThemeConfig }) {
 
   useEffect(() => {
     // Attempt to fetch real context from backend if available, else use default
-    fetch(`${API_BASE}/api/bridge/command`, {
+    fetch(`${API_BASE}/api/bridge/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: 'get_foda_context' })

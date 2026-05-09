@@ -1,171 +1,779 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ThemeConfig } from '../types';
-import { API_BASE } from '../../../config';
-import { NOCCity, NOCAlert } from '@/types/noc';
+import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
+import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader } from 'lucide-react';
+import { API_BASE } from '../../../config';
+import RealMap from '@/components/noc/RealMap';
+import 'leaflet/dist/leaflet.css';
 
-// ── Palette constants ─────────────────────────────────────────────────────────
-const G = '#00ff88';
-const Y = '#ffcc00';
-const R = '#ff3366';
+// ── Palette ───────────────────────────────────────────────────────────────────
+const G  = '#00ff88';
+const Y  = '#ffcc00';
+const R  = '#ff3366';
+const DIM = 'rgba(255,255,255,0.35)';
 
-const ISP_COLORS: Record<string, string> = {
-  Xcien: '#00aaff', Luminet: '#aa66ff',
-  Wispi: '#0EA5E9', Sandur: '#FF6B35', Huus: '#9B59D7',
-};
-
-function sc(status: string) {
-  return status === 'critical' || status === 'critico' ? R
-       : status === 'warning'  || status === 'alto'    ? Y : G;
+function nodeColor(score: number) {
+  return score < 80 ? R : score < 95 ? Y : G;
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function MatrixBackground() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.15, pointerEvents: 'none', zIndex: 0 }}>
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'grid', gridTemplateColumns: 'repeat(30, 1fr)',
-        fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
-        whiteSpace: 'nowrap', userSelect: 'none'
-      }}>
-        {Array.from({ length: 30 }).map((_, i) => (
-          <div key={i} style={{ 
-            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
-            animationDelay: `${-Math.random() * 25}s`,
-            writingMode: 'vertical-rl',
-            textAlign: 'center'
-          }}>
-            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
-          </div>
-        ))}
-      </div>
-      <style>{`
-        @keyframes matrixFall {
-          from { transform: translateY(-100%); }
-          to { transform: translateY(100%); }
-        }
-      `}</style>
-    </div>
-  );
+// ── MTR Modal ────────────────────────────────────────────────────────────────
+interface MtrHop {
+  hop: number; ip: string; sent: number; loss: number;
+  last: number | null; avg: number | null; best: number | null; worst: number | null;
 }
 
-function Scanlines() {
+function MtrModal({ host, onClose }: { host: NOCHost; onClose: () => void }) {
+  const [hops, setHops] = useState<MtrHop[]>([]);
+  const [status, setStatus] = useState<'connecting' | 'running' | 'done' | 'error'>('connecting');
+  const [error, setError] = useState<string | null>(null);
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    const es = new EventSource(`${API_BASE}/api/noc/mtr?ip=${encodeURIComponent(host.ip)}&cycles=15`);
+    esRef.current = es;
+    setStatus('running');
+
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.hops) setHops(data.hops);
+        if (data.done) { setStatus('done'); es.close(); }
+        if (data.error) { setError(data.error); setStatus('error'); es.close(); }
+      } catch {}
+    };
+    es.onerror = () => { setStatus('error'); setError('Conexión perdida'); es.close(); };
+    return () => es.close();
+  }, [host.ip]);
+
+  const lossColor = (loss: number) => loss >= 50 ? R : loss > 0 ? Y : G;
+  const latColor  = (ms: number | null) => {
+    if (ms === null) return DIM;
+    return ms > 100 ? R : ms > 30 ? Y : G;
+  };
+
   return (
     <div style={{
-      position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
-      background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03))',
-      backgroundSize: '100% 4px, 3px 100%', opacity: 0.15
-    }} />
-  );
-}
-
-function HUDElement({ pos, label, value }: { pos: any, label: string, value: string }) {
-  return (
-    <div style={{ position: 'absolute', ...pos, zIndex: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ width: 2, height: 10, background: G }} />
-        <span style={{ fontSize: 9, color: `${G}60`, fontFamily: 'monospace', letterSpacing: 1 }}>{label}</span>
-      </div>
-      <span style={{ fontSize: 14, color: G, fontWeight: 700, fontFamily: 'JetBrains Mono', textShadow: `0 0 10px ${G}` }}>{value}</span>
-    </div>
-  );
-}
-
-function HoloGrid() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 'inherit' }}>
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
-        position: 'absolute', inset: -100,
-        backgroundImage: `linear-gradient(rgba(0,255,136,0.05) 1px,transparent 1px),
-                          linear-gradient(90deg,rgba(0,255,136,0.05) 1px,transparent 1px)`,
-        backgroundSize: '40px 40px',
-        transform: 'perspective(1000px) rotateX(60deg)',
-        maskImage: 'radial-gradient(ellipse at center, black, transparent 80%)'
-      }} />
+        width: 760, maxHeight: '80vh',
+        background: 'rgba(0,10,5,0.97)', border: `1px solid ${G}30`,
+        borderRadius: 20, display: 'flex', flexDirection: 'column',
+        boxShadow: `0 0 80px ${G}10`,
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: `1px solid ${G}15`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: `${G}05`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Route size={18} color={G} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+                MTR — {host.ip}
+              </div>
+              <div style={{ fontSize: 10, color: DIM, marginTop: 1 }}>{host.name || host.ip}</div>
+            </div>
+            {status === 'running' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+                <Loader size={12} color={G} style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>TRAZANDO...</span>
+              </div>
+            )}
+            {status === 'done' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+                <CheckCircle size={12} color={G} />
+                <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>COMPLETADO · {hops.length} hops</span>
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff',
+            width: 30, height: 30, borderRadius: 8, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}><X size={14} /></button>
+        </div>
+
+        {/* Column headers */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '40px 180px 55px 60px 70px 70px 70px 70px',
+          padding: '8px 24px', borderBottom: `1px solid rgba(255,255,255,0.05)`,
+          background: 'rgba(255,255,255,0.02)',
+        }}>
+          {['HOP','HOST / IP','SENT','LOSS%','LAST','AVG','BEST','WORST'].map(h => (
+            <div key={h} style={{ fontSize: 8, fontWeight: 800, color: DIM, fontFamily: 'monospace', letterSpacing: 1 }}>{h}</div>
+          ))}
+        </div>
+
+        {/* Hops */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {hops.length === 0 && status === 'running' && (
+            <div style={{ padding: 40, textAlign: 'center', color: DIM, fontSize: 12, fontFamily: 'monospace' }}>
+              Descubriendo ruta...
+            </div>
+          )}
+          {error && (
+            <div style={{ padding: 24, color: R, fontSize: 12, fontFamily: 'monospace' }}>
+              Error: {error}
+            </div>
+          )}
+          {hops.map((hop, i) => {
+            const isLast = i === hops.length - 1;
+            const lc = lossColor(hop.loss);
+            return (
+              <div key={hop.hop} style={{
+                display: 'grid',
+                gridTemplateColumns: '40px 180px 55px 60px 70px 70px 70px 70px',
+                padding: '10px 24px',
+                borderBottom: `1px solid rgba(255,255,255,0.03)`,
+                background: isLast ? `${G}06` : 'transparent',
+                transition: 'background 0.15s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                onMouseLeave={e => (e.currentTarget.style.background = isLast ? `${G}06` : 'transparent')}
+              >
+                <div style={{ fontSize: 12, fontWeight: 700, color: DIM, fontFamily: 'monospace' }}>{hop.hop}</div>
+                <div style={{ fontSize: 11, fontWeight: isLast ? 800 : 500, color: isLast ? G : '#fff', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {hop.ip === '*' ? <span style={{ color: DIM }}>* * *</span> : hop.ip}
+                </div>
+                <div style={{ fontSize: 11, color: DIM, fontFamily: 'monospace' }}>{hop.sent}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: lc, fontFamily: 'monospace' }}>
+                  {hop.ip === '*' ? '100%' : `${hop.loss}%`}
+                </div>
+                {(['last','avg','best','worst'] as const).map(k => (
+                  <div key={k} style={{ fontSize: 11, fontWeight: k === 'avg' ? 700 : 400, color: latColor(hop[k]), fontFamily: 'monospace' }}>
+                    {hop[k] !== null ? `${hop[k]}ms` : <span style={{ color: DIM }}>—</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer legend */}
+        <div style={{
+          padding: '10px 24px', borderTop: `1px solid rgba(255,255,255,0.05)`,
+          display: 'flex', gap: 20, background: 'rgba(0,0,0,0.3)',
+        }}>
+          {[{ c: G, label: 'OK (<30ms / sin pérdida)' }, { c: Y, label: 'Degradado (30-100ms / pérdida parcial)' }, { c: R, label: 'Crítico (>100ms / alta pérdida)' }].map(({ c, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: c }} />
+              <span style={{ fontSize: 9, color: DIM }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
     </div>
   );
 }
 
-function HoloMap({ cities }: { cities: any[] }) {
+// ── KPI Card ──────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, color = G, icon }: {
+  label: string; value: string | number; sub?: string; color?: string; icon: React.ReactNode;
+}) {
   return (
-    <div style={{ position: 'relative', width: '100%', height: 450, background: 'rgba(0,20,10,0.4)', border: `1px solid ${G}25`, borderRadius: 24, marginBottom: 40, overflow: 'hidden', boxShadow: `inset 0 0 100px ${G}05` }}>
-      <MatrixBackground />
-      <HoloGrid />
-      <Scanlines />
-      
-      {/* Decorative HUD */}
-      <HUDElement pos={{ top: 20, left: 20 }} label="GEO_SCAN" value="MX_NORTH_CORE" />
-      <HUDElement pos={{ top: 20, right: 20 }} label="SIG_STRENGTH" value="99.28%" />
-      <HUDElement pos={{ bottom: 20, right: 20 }} label="SYS_STATUS" value="ENCRYPTED" />
+    <div style={{
+      flex: 1, minWidth: 140,
+      background: 'rgba(255,255,255,0.03)',
+      border: `1px solid ${color}25`,
+      borderRadius: 14, padding: '16px 20px',
+      display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: `0 0 20px ${color}08`,
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 10,
+        background: `${color}15`, border: `1px solid ${color}30`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1.5, fontFamily: 'monospace', marginBottom: 2 }}>
+          {label.toUpperCase()}
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 900, color, lineHeight: 1, fontFamily: 'Oswald' }}>
+          {value}
+        </div>
+        {sub && <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
 
-      <svg width="100%" height="100%" viewBox="0 0 1000 450" style={{ position: 'relative', zIndex: 2 }}>
+// ── Map ───────────────────────────────────────────────────────────────────────
+function HoloMap({ cities, onSelectCity, selectedCityId }: {
+  cities: NOCCity[];
+  onSelectCity: (city: NOCCity) => void;
+  selectedCityId: string | null;
+}) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const coreNode = useMemo(() =>
+    cities.find(c => c.name === 'Monterrey') || cities[0], [cities]);
+
+  const { toSVG, nodes } = useMemo(() => {
+    if (cities.length === 0) return {
+      toSVG: () => ({ x: 500, y: 250 }),
+      nodes: [],
+    };
+    const lats = cities.map(c => c.lat);
+    const lngs = cities.map(c => c.lng);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const padX = 90, padY = 60;
+    const W = 1000 - padX * 2, H = 480 - padY * 2;
+    const lngRange = maxLng - minLng || 1;
+    const latRange = maxLat - minLat || 1;
+    const scale = Math.min(W / lngRange, H / latRange);
+    const offX = padX + (W - lngRange * scale) / 2;
+    const offY = padY + (H - latRange * scale) / 2;
+    const fn = (lat: number, lng: number) => ({
+      x: offX + (lng - minLng) * scale,
+      y: offY + (maxLat - lat) * scale,
+    });
+    // Pre-compute node sizes (proportional to host count)
+    const maxHosts = Math.max(...cities.map(c => c.totalHosts), 1);
+    const ns = cities.map(c => ({
+      ...fn(c.lat, c.lng),
+      r: 5 + (c.totalHosts / maxHosts) * 10,
+      city: c,
+    }));
+    return { toSVG: fn, nodes: ns };
+  }, [cities]);
+
+  const gridLines = useMemo(() => {
+    const lines = [];
+    for (let i = 0; i <= 10; i++) {
+      lines.push(
+        <line key={`h${i}`} x1="0" y1={i * 48} x2="1000" y2={i * 48} stroke={`${G}08`} strokeWidth="1" />,
+        <line key={`v${i}`} x1={i * 100} y1="0" x2={i * 100} y2="480" stroke={`${G}08`} strokeWidth="1" />,
+      );
+    }
+    return lines;
+  }, []);
+
+  return (
+    <div style={{
+      position: 'relative', width: '100%', height: 480,
+      background: 'rgba(0,8,4,0.7)',
+      border: `1px solid ${G}20`, borderRadius: 18, overflow: 'hidden',
+      boxShadow: `inset 0 0 60px ${G}06`,
+    }}>
+      {/* Scanline */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+        background: `repeating-linear-gradient(0deg, transparent, transparent 3px, ${G}03 3px, ${G}03 4px)`,
+      }} />
+
+      {/* HUD corners */}
+      {[
+        { style: { top: 16, left: 16 }, label: 'XCIEN NOC', value: `${cities.length} NODOS` },
+        { style: { top: 16, right: 16 }, label: 'SYNC', value: 'REAL-TIME' },
+      ].map(({ style, label, value }) => (
+        <div key={label} style={{
+          position: 'absolute', ...style, zIndex: 3,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
+          padding: '5px 12px', borderRadius: 8, borderLeft: `2px solid ${G}60`,
+        }}>
+          <div style={{ fontSize: 8, color: `${G}60`, fontFamily: 'monospace', letterSpacing: 1.5 }}>{label}</div>
+          <div style={{ fontSize: 12, color: G, fontWeight: 800, fontFamily: 'monospace' }}>{value}</div>
+        </div>
+      ))}
+
+      <svg width="100%" height="100%" viewBox="0 0 1000 480" style={{ position: 'relative', zIndex: 2 }}>
         <defs>
-          <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={G} stopOpacity="0.5" />
-            <stop offset="100%" stopColor={G} stopOpacity="0" />
-          </radialGradient>
+          <filter id="noc-glow">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <filter id="noc-glow-strong">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
 
-        {/* Connection Lines to Core */}
-        {cities.map(city => {
-          const isCore = city.name === 'Monterrey';
-          if (isCore) return null;
-          const x = 500 + (city.lng + 100.31) * 3500;
-          const y = 225 - (city.lat - 25.68) * 3500;
-          const c = city.score < 80 ? R : G;
+        {/* Grid */}
+        {gridLines}
+
+        {/* Connection arcs from core node */}
+        {coreNode && nodes.map(({ x: x2, y: y2, city }) => {
+          if (city.id === coreNode.id) return null;
+          const { x: x1, y: y1 } = toSVG(coreNode.lat, coreNode.lng);
+          const mx = (x1 + x2) / 2;
+          const my = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.15;
+          const c = nodeColor(city.score);
+          const isHov = hoveredId === city.id;
           return (
-            <g key={`l-${city.id}`}>
-              <path 
-                d={`M 500 225 Q ${(500+x)/2} ${(225+y)/2 - 50} ${x} ${y}`} 
-                fill="none" 
-                stroke={c} 
-                strokeWidth="1.5" 
-                strokeDasharray="4,4" 
-                opacity="0.25"
+            <g key={`arc-${city.id}`}>
+              <path
+                d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`}
+                fill="none" stroke={c}
+                strokeWidth={isHov ? 1.5 : 0.8}
+                strokeDasharray="6,8"
+                opacity={isHov ? 0.5 : 0.15}
               >
-                <animate attributeName="stroke-dashoffset" from="100" to="0" dur="4s" repeatCount="indefinite" />
+                <animate attributeName="stroke-dashoffset" from="200" to="0" dur="4s" repeatCount="indefinite" />
               </path>
+              {isHov && (
+                <circle r="3" fill={c} opacity="0.8">
+                  <animateMotion dur="2s" repeatCount="indefinite"
+                    path={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} />
+                </circle>
+              )}
             </g>
           );
         })}
 
         {/* Nodes */}
-        {cities.map(city => {
-          const x = 500 + (city.lng + 100.31) * 3500;
-          const y = 225 - (city.lat - 25.68) * 3500;
-          const c = city.score < 80 ? R : G;
+        {nodes.map(({ x, y, r, city }) => {
+          const isSelected = selectedCityId === city.id;
+          const isHov = hoveredId === city.id;
+          const c = nodeColor(city.score);
+          const active = isSelected || isHov;
+
+          // Smart label offset: push label away from edges
+          const labelRight = x < 850;
+          const labelBelow = y < 60;
+          const lx = labelRight ? x + r + 6 : x - r - 6;
+          const ly = labelBelow ? y + r + 14 : y - r - 6;
+          const anchor = labelRight ? 'start' : 'end';
+
           return (
-            <g key={`n-${city.id}`} style={{ cursor: 'pointer' }}>
-              <circle cx={x} cy={y} r="15" fill={`url(#nodeGlow)`} opacity="0.4" />
-              <circle cx={x} cy={y} r="5" fill="#000" stroke={c} strokeWidth="2" />
-              <circle cx={x} cy={y} r="10" fill="transparent" stroke={c} strokeWidth="1" opacity="0.3">
-                <animate attributeName="r" from="5" to="18" dur="3s" repeatCount="indefinite" />
-                <animate attributeName="opacity" from="0.6" to="0" dur="3s" repeatCount="indefinite" />
-              </circle>
-              <text x={x + 18} y={y + 5} fill={c} style={{ fontSize: 13, fontWeight: 700, fontFamily: 'JetBrains Mono', textShadow: `0 0 10px ${c}` }}>{city.name}</text>
+            <g key={`node-${city.id}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => onSelectCity(city)}
+              onMouseEnter={() => setHoveredId(city.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              {/* Pulse ring */}
+              {active && (
+                <circle cx={x} cy={y} r={r + 6} fill="none" stroke={c} strokeWidth="1.5" opacity="0.4">
+                  <animate attributeName="r" from={r} to={r + 18} dur="1.5s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite" />
+                </circle>
+              )}
+
+              {/* Offline indicator ring */}
+              {city.offline > 0 && (
+                <circle cx={x} cy={y} r={r + 3} fill="none" stroke={R}
+                  strokeWidth="1" strokeDasharray="3,4" opacity="0.5" />
+              )}
+
+              {/* Main node */}
+              <circle cx={x} cy={y} r={r}
+                fill={active ? `${c}25` : `${c}10`}
+                stroke={c}
+                strokeWidth={active ? 2.5 : 1.5}
+                filter={active ? 'url(#noc-glow-strong)' : 'url(#noc-glow)'}
+              />
+
+              {/* Core dot */}
+              <circle cx={x} cy={y} r={r * 0.35} fill={c} opacity={active ? 1 : 0.7} />
+
+              {/* Label */}
+              <text x={lx} y={ly} textAnchor={anchor}
+                fill={active ? '#fff' : c}
+                style={{
+                  fontSize: active ? 12 : 10,
+                  fontWeight: active ? 800 : 600,
+                  fontFamily: 'monospace',
+                  opacity: active ? 1 : 0.75,
+                  textShadow: `0 0 8px ${c}`,
+                }}
+              >
+                {city.name}
+              </text>
+
+              {/* Score badge on hover */}
+              {active && (
+                <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle"
+                  fill={c} style={{ fontSize: 8, fontWeight: 900, fontFamily: 'monospace' }}>
+                  {Math.round(city.score)}
+                </text>
+              )}
             </g>
           );
         })}
       </svg>
-      <div style={{ position: 'absolute', bottom: 20, left: 20, color: `${G}40`, fontSize: 9, fontFamily: 'monospace', letterSpacing: 2 }}>[ HOLOGRAPHIC_INTERFACE_V2.0_READY ]</div>
+
+      {/* Legend */}
+      <div style={{
+        position: 'absolute', bottom: 16, right: 16, zIndex: 3,
+        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+        borderRadius: 10, padding: '8px 14px',
+        display: 'flex', gap: 14, border: `1px solid rgba(255,255,255,0.06)`,
+      }}>
+        {[
+          { c: G, label: '≥95%' },
+          { c: Y, label: '80–94%' },
+          { c: R, label: '<80%' },
+        ].map(({ c, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}` }} />
+            <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>{label}</span>
+          </div>
+        ))}
+        <div style={{ width: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1px dashed ${R}`, opacity: 0.6 }} />
+          <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>Hosts caídos</span>
+        </div>
+      </div>
     </div>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// ── Alert stream ──────────────────────────────────────────────────────────────
+function AlertStream({ alerts }: { alerts: NOCAlert[] }) {
+  const sevConfig: Record<string, { color: string; bg: string; label: string }> = {
+    critical: { color: R,       bg: `${R}15`,       label: 'CRIT' },
+    warning:  { color: Y,       bg: `${Y}15`,       label: 'WARN' },
+    info:     { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', label: 'INFO' },
+  };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-      <div style={{ width: 4, height: 18, background: G, boxShadow: `0 0 15px ${G}`, borderRadius: 2 }} />
-      <span style={{ fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 700, letterSpacing: 2, color: G, textShadow: `0 0 10px ${G}`, textTransform: 'uppercase' }}>{children}</span>
-      <div style={{ flex: 1, height: '1px', background: `linear-gradient(90deg,${G}40,transparent)` }} />
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      background: 'rgba(0,6,3,0.8)', border: `1px solid ${G}15`,
+      borderRadius: 16, overflow: 'hidden', height: '100%',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '12px 18px', borderBottom: `1px solid ${G}10`,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: `${G}04`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Terminal size={13} color={G} />
+          <span style={{ fontSize: 10, fontWeight: 800, color: G, fontFamily: 'monospace', letterSpacing: 1.5 }}>
+            STREAM DE ALERTAS
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: G }}>
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: G, animation: 'nocpulse 1.5s infinite' }} />
+          </div>
+          <span style={{ fontSize: 9, color: G, fontFamily: 'monospace', opacity: 0.7 }}>
+            {alerts.length} activas
+          </span>
+        </div>
+      </div>
+
+      {/* Alerts list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+        {alerts.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, opacity: 0.4 }}>
+            <CheckCircle size={28} color={G} />
+            <span style={{ fontSize: 11, color: G, fontFamily: 'monospace' }}>SIN AMENAZAS ACTIVAS</span>
+          </div>
+        ) : (
+          alerts.map((a, i) => {
+            const s = sevConfig[a.severity] || sevConfig.info;
+            const time = a.timestamp?.split('T')[1]?.slice(0, 5) || '--:--';
+            return (
+              <div key={i} style={{
+                padding: '9px 18px', borderBottom: `1px solid rgba(255,255,255,0.03)`,
+                display: 'flex', gap: 10, alignItems: 'flex-start',
+                transition: 'background 0.15s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                {/* Severity badge */}
+                <div style={{
+                  flexShrink: 0, marginTop: 1,
+                  background: s.bg, color: s.color,
+                  fontSize: 8, fontWeight: 900, fontFamily: 'monospace',
+                  padding: '2px 6px', borderRadius: 4,
+                  border: `1px solid ${s.color}30`,
+                }}>
+                  {s.label}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.cityName}
+                    </span>
+                    <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>
+                      {time}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.type}
+                  </div>
+                  {a.siteName && (
+                    <div style={{ fontSize: 9, color: `${G}50`, marginTop: 1, fontFamily: 'monospace' }}>
+                      {a.siteName}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-interface Props { 
+// ── Grid card ─────────────────────────────────────────────────────────────────
+function CityCard({ city, onClick }: { city: NOCCity; onClick: () => void }) {
+  const c = nodeColor(city.score);
+  const upPct = city.totalHosts > 0 ? Math.round((city.online / city.totalHosts) * 100) : 0;
+  return (
+    <div onClick={onClick} style={{
+      background: 'rgba(0,12,7,0.7)', border: `1px solid ${c}25`,
+      borderRadius: 14, padding: '16px 18px', cursor: 'pointer',
+      transition: 'all 0.2s', position: 'relative', overflow: 'hidden',
+    }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = `${c}08`; (e.currentTarget as HTMLDivElement).style.borderColor = `${c}50`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,12,7,0.7)'; (e.currentTarget as HTMLDivElement).style.borderColor = `${c}25`; }}
+    >
+      {/* Color strip */}
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: c, borderRadius: '14px 0 0 14px' }} />
+
+      <div style={{ paddingLeft: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 8 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{city.name}</div>
+            <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', marginTop: 2, whiteSpace: 'nowrap' }}>
+              {city.sites?.length || 0} sitios · {city.totalHosts} hosts
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0, width: 52 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: c, lineHeight: 1, fontFamily: 'Oswald' }}>
+              {Math.round(city.score)}
+            </div>
+            <div style={{ fontSize: 8, color: DIM, fontFamily: 'monospace' }}>SCORE</div>
+          </div>
+        </div>
+
+        {/* Hosts row */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Wifi size={11} color={G} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: G }}>{city.online}</span>
+            <span style={{ fontSize: 9, color: DIM }}>online</span>
+          </div>
+          {city.offline > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <WifiOff size={11} color={R} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: R }}>{city.offline}</span>
+              <span style={{ fontSize: 9, color: DIM }}>caídos</span>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${upPct}%`,
+            background: c, borderRadius: 4,
+            boxShadow: `0 0 8px ${c}60`,
+            transition: 'width 0.6s ease',
+          }} />
+        </div>
+        <div style={{ fontSize: 8, color: DIM, marginTop: 4, fontFamily: 'monospace', textAlign: 'right' }}>
+          {upPct}% uptime
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Site Inspector ────────────────────────────────────────────────────────────
+function SiteInspector({ city, onClose }: { city: NOCCity; onClose: () => void }) {
+  const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
+  const [mtrHost, setMtrHost] = useState<NOCHost | null>(null);
+  const c = nodeColor(city.score);
+  const upPct = city.totalHosts > 0 ? Math.round((city.online / city.totalHosts) * 100) : 0;
+
+  const toggleSite = (id: string) =>
+    setExpandedSites(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  return (
+    <div style={{
+      width: 320, flexShrink: 0,
+      background: 'rgba(0,12,7,0.92)', backdropFilter: 'blur(20px)',
+      borderLeft: `1px solid ${c}25`, display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${c}15` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'Oswald', letterSpacing: 1 }}>
+              {city.name.toUpperCase()}
+            </h3>
+            <span style={{ fontSize: 9, color: `${c}70`, fontFamily: 'monospace' }}>{city.id}</span>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.06)', border: 'none',
+            color: '#fff', cursor: 'pointer', width: 28, height: 28,
+            borderRadius: 8, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        {/* Score + bar */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+            <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>HEALTH SCORE</span>
+            <span style={{ fontSize: 28, fontWeight: 900, color: c, fontFamily: 'Oswald', lineHeight: 1 }}>
+              {Math.round(city.score)}
+            </span>
+          </div>
+          <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${city.score}%`, background: c, boxShadow: `0 0 8px ${c}`, borderRadius: 4 }} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {[
+            { label: 'TOTAL', value: city.totalHosts, color: '#fff' },
+            { label: 'ONLINE', value: city.online, color: G },
+            { label: 'CAÍDOS', value: city.offline, color: city.offline > 0 ? R : DIM },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{
+              background: 'rgba(255,255,255,0.03)', padding: '10px 8px', borderRadius: 10, textAlign: 'center',
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color, fontFamily: 'Oswald' }}>{value}</div>
+              <div style={{ fontSize: 8, color: DIM, fontFamily: 'monospace', marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Uptime bar */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>UPTIME</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: c, fontFamily: 'monospace' }}>{upPct}%</span>
+          </div>
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${upPct}%`, background: c, boxShadow: `0 0 8px ${c}60`, borderRadius: 4 }} />
+          </div>
+        </div>
+
+        {/* Sites + Hosts */}
+        <div>
+          <div style={{ fontSize: 9, color: `${c}60`, fontFamily: 'monospace', fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>
+            SITIOS ({city.sites?.length || 0})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {city.sites?.map(site => {
+              const sc2 = site.hostsOffline > 0 ? (site.hostsOffline > site.hostsOnline ? R : Y) : G;
+              const isExpanded = expandedSites.has(site.id);
+              return (
+                <div key={site.id}>
+                  {/* Site header — clickable to expand */}
+                  <div
+                    onClick={() => toggleSite(site.id)}
+                    style={{
+                      background: 'rgba(255,255,255,0.03)', padding: '9px 12px', borderRadius: isExpanded ? '8px 8px 0 0' : 8,
+                      border: `1px solid ${sc2}20`, cursor: 'pointer',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {isExpanded ? <ChevronDown size={11} color={DIM} /> : <ChevronRight size={11} color={DIM} />}
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#fff' }}>{site.name}</div>
+                        <div style={{ fontSize: 9, color: DIM, marginTop: 1 }}>{site.hostsOnline + site.hostsOffline} hosts</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: G }}>{site.hostsOnline}↑</span>
+                      {site.hostsOffline > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: R }}>{site.hostsOffline}↓</span>}
+                    </div>
+                  </div>
+
+                  {/* Host list */}
+                  {isExpanded && (
+                    <div style={{
+                      background: 'rgba(0,0,0,0.3)', border: `1px solid ${sc2}15`,
+                      borderTop: 'none', borderRadius: '0 0 8px 8px',
+                      overflow: 'hidden',
+                    }}>
+                      {site.hosts?.map((host, hi) => {
+                        const hc2 = host.status === 'offline' ? R : host.status === 'degraded' ? Y : G;
+                        const displayName = host.name && host.name !== '→' ? host.name : host.ip;
+                        return (
+                          <div key={host.id || hi} style={{
+                            padding: '7px 12px',
+                            borderBottom: hi < (site.hosts?.length || 0) - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                          }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: hc2, flexShrink: 0, boxShadow: `0 0 4px ${hc2}` }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 10, color: '#fff', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {displayName}
+                              </div>
+                              <div style={{ fontSize: 9, color: DIM }}>{host.ip}</div>
+                            </div>
+                            <button
+                              onClick={() => setMtrHost(host)}
+                              style={{
+                                flexShrink: 0, padding: '3px 8px',
+                                background: `${G}12`, color: G,
+                                border: `1px solid ${G}30`, borderRadius: 6,
+                                fontSize: 9, fontWeight: 800, cursor: 'pointer',
+                                fontFamily: 'monospace', letterSpacing: 0.5,
+                                display: 'flex', alignItems: 'center', gap: 4,
+                              }}
+                            >
+                              <Route size={9} />MTR
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* MTR modal */}
+        {mtrHost && <MtrModal host={mtrHost} onClose={() => setMtrHost(null)} />}
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: '14px 20px', borderTop: `1px solid ${c}15`, display: 'flex', gap: 8 }}>
+        <button style={{
+          flex: 1, padding: '10px', background: `${c}12`, color: c,
+          border: `1px solid ${c}35`, borderRadius: 10, fontSize: 11,
+          fontWeight: 700, cursor: 'pointer', fontFamily: 'monospace', letterSpacing: 0.5,
+        }}>
+          PING TEST
+        </button>
+        <button style={{
+          flex: 1, padding: '10px', background: 'rgba(255,255,255,0.04)', color: '#fff',
+          border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, fontSize: 11,
+          fontWeight: 700, cursor: 'pointer', fontFamily: 'monospace',
+        }}>
+          BIDRILLA
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+interface Props {
   theme: ThemeConfig;
   activeThemeId?: string;
   cities?: NOCCity[];
@@ -174,268 +782,129 @@ interface Props {
   onTenantChange?: (id: string | null) => void;
 }
 
-export default function NocSection({ 
-  theme, 
-  activeThemeId,
-  cities = [], 
-  alerts = [], 
+export default function NocSection({
+  theme,
+  cities = [],
+  alerts = [],
   activeTenantId = null,
-  onTenantChange
+  onTenantChange,
 }: Props) {
-  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString('es-MX'));
-  const [view, setView] = useState<'Operador' | 'Gerencial'>('Gerencial');
-  const [alertFilter, setAlertFilter] = useState<'Todos' | 'Crítico' | 'Alto'>('Todos');
-  const [selectedSop, setSelectedSop] = useState<{ id: string, content: string } | null>(null);
+  const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
+  const [view, setView] = useState<'map' | 'grid'>('map');
 
-  const openSop = async (id: string) => {
-    try {
-      const path = id === 'SOP-NOC-001' ? 'estandares/Estándar_Proceso_Soporte_HL.md' : 'estandares/Estándar_Corporativo_de_Instalación_Xcien_estándar_de_instalación.md';
-      const res = await fetch(`${API_BASE}/api/docs/content?path=${path}`);
-      const data = await res.json();
-      setSelectedSop({ id, content: data.content });
-    } catch (e) {
-      console.error(e);
-      setSelectedSop({ id, content: "# Error\nNo se pudo cargar el manual." });
-    }
-  };
+  const totalHosts  = useMemo(() => cities.reduce((a, c) => a + c.totalHosts, 0), [cities]);
+  const totalOnline = useMemo(() => cities.reduce((a, c) => a + c.online, 0), [cities]);
+  const totalOffline = useMemo(() => cities.reduce((a, c) => a + c.offline, 0), [cities]);
+  const healthPct   = useMemo(() => cities.length === 0 ? 100 : Math.round(cities.reduce((a, c) => a + c.score, 0) / cities.length), [cities]);
+  const critCount   = useMemo(() => alerts.filter(a => a.severity === 'critical').length, [alerts]);
+  const warnCount   = useMemo(() => alerts.filter(a => a.severity === 'warning').length, [alerts]);
+  const hc = healthPct >= 95 ? G : healthPct >= 85 ? Y : R;
 
-  useEffect(() => {
-    const id = setInterval(() => setLastUpdated(new Date().toLocaleTimeString('es-MX')), 10_000);
-    return () => clearInterval(id);
+  const handleSelectCity = useCallback((city: NOCCity) => {
+    setSelectedCity(prev => prev?.id === city.id ? null : city);
   }, []);
 
-  const healthPct = cities.length > 0 
-    ? Math.round(cities.reduce((acc, c) => acc + c.score, 0) / cities.length)
-    : 100;
-
-  const hc = healthPct >= 95 ? G : healthPct >= 85 ? Y : R;
-  const critAlerts = alerts.filter(a => a.severity === 'critical').length;
-
   return (
-    <div style={{ position: 'relative', background: 'radial-gradient(circle at center, #00150a 0%, #000804 100%)', borderRadius: theme.radius, border: `1px solid ${G}40`, overflow: 'hidden', padding: 32, boxShadow: `0 0 50px rgba(0,255,136,0.1)` }}>
-      <MatrixBackground />
-      <HoloGrid />
-      <Scanlines />
-      
-      <div style={{ position: 'relative', zIndex: 10 }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 16,
+      height: 'calc(100vh - 140px)',
+    }}>
+      {/* KPI Row */}
+      <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
+        <KpiCard label="Health Global" value={`${healthPct}%`}
+          sub={`${cities.length} ciudades`} color={hc}
+          icon={<Activity size={18} color={hc} />} />
+        <KpiCard label="Hosts Online" value={totalOnline}
+          sub={`de ${totalHosts} total`} color={G}
+          icon={<Server size={18} color={G} />} />
+        <KpiCard label="Hosts Caídos" value={totalOffline}
+          color={totalOffline > 0 ? R : G}
+          icon={<WifiOff size={18} color={totalOffline > 0 ? R : G} />} />
+        <KpiCard label="Alertas Críticas" value={critCount}
+          sub={`${warnCount} warnings`} color={critCount > 0 ? R : G}
+          icon={<AlertTriangle size={18} color={critCount > 0 ? R : G} />} />
+      </div>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 14, height: 14, borderRadius: '50%', background: G, boxShadow: `0 0 30px ${G}`, animation: 'nocpulse 2s ease-in-out infinite' }} />
-            <div>
-              <span style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: 32, letterSpacing: 3, color: '#fff', textShadow: `0 0 30px ${G}`, textTransform: 'uppercase' }}>CENTRO DE MANDO NOC</span>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: `${G}80`, letterSpacing: 2, marginTop: 4 }}>OPERACIONES UNIFICADAS — ESTADO: [ ACTIVO ]</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: `${G}60`, fontWeight: 700, fontFamily: 'JetBrains Mono', letterSpacing: 2 }}>GLOBAL_HEALTH</div>
-              <div style={{ fontFamily: 'Oswald, sans-serif', fontSize: 48, fontWeight: 700, color: hc, textShadow: `0 0 40px ${hc}`, lineHeight: 1 }}>{healthPct}<span style={{ fontSize: 24, opacity: 0.6 }}>%</span></div>
-            </div>
-            {critAlerts > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: `${R}15`, border: `1px solid ${R}`, borderRadius: 12, padding: '12px 24px', boxShadow: `0 0 40px ${R}40` }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: R, animation: 'critpulse 1s ease-in-out infinite' }} />
-                <div style={{ fontFamily: 'Oswald, sans-serif', textAlign: 'left' }}>
-                  <div style={{ color: R, fontWeight: 800, fontSize: 24, lineHeight: 1 }}>{critAlerts}</div>
-                  <div style={{ color: R, fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>CRITICAL_FAILURES</div>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        {/* Tenant filters */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => onTenantChange?.(null)} style={{
+            padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+            background: activeTenantId === null ? `${G}20` : 'rgba(255,255,255,0.04)',
+            color: activeTenantId === null ? G : DIM,
+            border: `1px solid ${activeTenantId === null ? `${G}40` : 'transparent'}`,
+            fontFamily: 'monospace', transition: 'all 0.15s',
+          }}>GLOBAL</button>
+          {CASA_TENANTS.map(t => (
+            <button key={t.id} onClick={() => onTenantChange?.(t.id)} style={{
+              padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+              background: activeTenantId === t.id ? `${G}20` : 'rgba(255,255,255,0.04)',
+              color: activeTenantId === t.id ? G : DIM,
+              border: `1px solid ${activeTenantId === t.id ? `${G}40` : 'transparent'}`,
+              fontFamily: 'monospace', transition: 'all 0.15s',
+            }}>{t.name.toUpperCase()}</button>
+          ))}
         </div>
 
-        {/* Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 32, borderBottom: `1px solid ${G}15`, paddingBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', flex: 1, paddingBottom: 4 }}>
-            <button
-              onClick={() => onTenantChange?.(null)}
-              style={{
-                padding: '12px 24px', fontSize: 11, fontWeight: 700, borderRadius: 8, cursor: 'pointer', fontFamily: 'JetBrains Mono', letterSpacing: 2, textTransform: 'uppercase',
-                background: activeTenantId === null ? `${G}15` : 'rgba(255,255,255,0.02)',
-                color: activeTenantId === null ? G : `${G}40`,
-                border: `1px solid ${activeTenantId === null ? G : 'transparent'}`,
-                transition: 'all 0.3s', whiteSpace: 'nowrap', boxShadow: activeTenantId === null ? `0 0 20px ${G}20` : 'none'
-              }}
-            >
-              Vista Global
+        {/* View toggle */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', padding: 3, borderRadius: 10, gap: 2 }}>
+          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid]] as const).map(([id, label, Icon]) => (
+            <button key={id} onClick={() => setView(id)} style={{
+              padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 7,
+              border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+              background: view === id ? G : 'transparent',
+              color: view === id ? '#000' : G,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <Icon size={12} />{label}
             </button>
-            {CASA_TENANTS.map(t => (
-              <button
-                key={t.id}
-                onClick={() => onTenantChange?.(t.id)}
-                style={{
-                  padding: '12px 24px', fontSize: 11, fontWeight: 700, borderRadius: 8, cursor: 'pointer', fontFamily: 'JetBrains Mono', letterSpacing: 2, textTransform: 'uppercase',
-                  background: activeTenantId === t.id ? `${G}15` : 'rgba(255,255,255,0.02)',
-                  color: activeTenantId === t.id ? G : `${G}40`,
-                  border: `1px solid ${activeTenantId === t.id ? G : 'transparent'}`,
-                  transition: 'all 0.3s', whiteSpace: 'nowrap', boxShadow: activeTenantId === t.id ? `0 0 20px ${G}20` : 'none'
-                }}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: `1px solid ${G}20`, borderRadius: 10, overflow: 'hidden', padding: 4 }}>
-            {(['Operador', 'Gerencial'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                style={{ 
-                  padding: '8px 24px', fontSize: 10, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'JetBrains Mono', 
-                  letterSpacing: 2, textTransform: 'uppercase', borderRadius: 6,
-                  background: view === v ? G : 'transparent', color: view === v ? '#000' : `${G}60`, transition: 'all 0.3s' 
-                }}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          {/* Map visualization */}
-          {view === 'Gerencial' && <HoloMap cities={cities} />}
-
-          {/* Node cards */}
-          {view === 'Operador' && (
-            <div>
-              <SectionLabel>ACTIVE_NODES_STREAM</SectionLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 16 }}>
-                {cities.map(city => {
-                  const c   = sc(city.status || (city.score < 80 ? 'critical' : 'ok'));
-                  const lc  = sc(city.score < 90 ? 'warning' : 'ok');
-                  const tenant = CASA_TENANTS.find(t => t.id === city.tenantId);
-                  const isc = ISP_COLORS[tenant?.name || 'Xcien'] || ISP_COLORS.Xcien;
-                  return (
-                    <div
-                      key={city.id}
-                      style={{
-                        position: 'relative', borderRadius: 16, overflow: 'hidden',
-                        background: 'rgba(0,18,10,0.6)', border: `1px solid ${c}30`,
-                        backdropFilter: 'blur(20px)', padding: '24px',
-                        boxShadow: city.score < 80 ? `0 0 30px ${c}15` : 'none',
-                        transition: 'transform 0.3s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,transparent,${c},transparent)`, boxShadow: `0 0 15px ${c}` }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <span style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 600, fontSize: 20, color: '#fff', textShadow: `0 0 10px ${G}50` }}>{city.name}</span>
-                        <span style={{ background: `${isc}15`, color: isc, border: `1px solid ${isc}40`, borderRadius: 6, padding: '2px 10px', fontSize: 9, fontWeight: 800, fontFamily: 'JetBrains Mono' }}>{tenant?.name || 'Xcien'}</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: `${G}40`, marginBottom: 20, fontFamily: 'JetBrains Mono', letterSpacing: 1 }}>ADDR: {(city as any).primary_ip || '0.0.0.0'}</div>
-                      <div style={{ display: 'flex', gap: 32 }}>
-                        <div>
-                          <div style={{ fontSize: 8, color: `${G}30`, marginBottom: 4, fontFamily: 'JetBrains Mono' }}>LATENCY</div>
-                          <span style={{ color: lc, fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 28, textShadow: `0 0 20px ${lc}` }}>{city.score}</span>
-                          <span style={{ color: `${G}40`, fontSize: 10, marginLeft: 6 }}>ms</span>
-                        </div>
-                        <div style={{ width: 1, background: 'rgba(255,255,255,0.05)' }} />
-                        <div>
-                          <div style={{ fontSize: 8, color: `${G}30`, marginBottom: 4, fontFamily: 'JetBrains Mono' }}>PKT_LOSS</div>
-                          <span style={{ color: lc, fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 28, textShadow: `0 0 20px ${lc}` }}>{city.score < 80 ? '2.1' : '0.0'}</span>
-                          <span style={{ color: `${G}40`, fontSize: 10, marginLeft: 6 }}>%</span>
-                        </div>
-                      </div>
-                      <div style={{ position: 'absolute', bottom: 18, right: 18, width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 15px ${c}`, animation: (city.score < 80) ? 'critpulse 1s ease-in-out infinite' : 'none' }} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Alerts Table */}
-          <div style={{ background: 'rgba(0,15,8,0.7)', border: `1px solid ${G}25`, borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(30px)', boxShadow: `0 30px 60px rgba(0,0,0,0.8)` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 32px', borderBottom: `1px solid ${G}15` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 4, height: 20, background: G, boxShadow: `0 0 15px ${G}`, borderRadius: 2 }} />
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 15, fontWeight: 700, letterSpacing: 2, color: G, textTransform: 'uppercase' }}>Alert_Live_Console</span>
-                <div style={{ background: `${R}15`, border: `1px solid ${R}40`, borderRadius: 6, padding: '4px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 800, color: R }}>{alerts.length} EVENTS</span>
-                </div>
-              </div>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${G}10`, background: 'rgba(255,255,255,0.02)' }}>
-                  {['Event_ID', 'Core_Node', 'Incidence_Type', 'SOP_Link', 'Severity', 'Workflow'].map(h => (
-                    <th key={h} style={{ padding: '20px 32px', fontSize: 10, fontWeight: 700, color: `${G}40`, letterSpacing: 2, textAlign: 'left', textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {alerts.map(a => {
-                  const isCrit = a.severity === 'critical';
-                  const c = isCrit ? R : Y;
-                  return (
-                    <tr key={a.id} style={{ borderBottom: `1px solid rgba(0,255,136,0.05)`, transition: 'background 0.3s' }} className="alert-row">
-                      <td style={{ padding: '24px 32px', fontFamily: 'JetBrains Mono', fontSize: 13, color: `${G}50` }}>{a.id.slice(0, 8)}</td>
-                      <td style={{ padding: '24px 32px', fontSize: 17, color: '#fff', fontWeight: 600, fontFamily: 'Oswald, sans-serif' }}>{a.cityName}</td>
-                      <td style={{ padding: '24px 32px', fontSize: 14, color: '#e0f8ee', fontWeight: 500 }}>{a.type}</td>
-                      <td style={{ padding: '24px 32px' }}>
-                        <span 
-                          onClick={() => openSop((a as any).sopId || 'SOP-NOC-001')}
-                          style={{ color: G, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono', background: `${G}10`, padding: '6px 14px', borderRadius: 6, border: `1px solid ${G}30`, cursor: 'pointer', transition: 'all 0.3s' }}
-                        >
-                          {(a as any).sopId || 'SOP-NOC-001'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '24px 32px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: c, boxShadow: `0 0 15px ${c}`, animation: isCrit ? 'critpulse 1s ease-in-out infinite' : undefined }} />
-                          <span style={{ color: c, fontSize: 11, fontWeight: 800, fontFamily: 'JetBrains Mono', letterSpacing: 1 }}>{isCrit ? 'CRITICAL' : 'WARNING'}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '24px 32px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <span style={{ background: a.ticketCreated ? `${G}10` : `${R}10`, color: a.ticketCreated ? G : R, border: `1px solid ${a.ticketCreated ? G : R}40`, borderRadius: 8, padding: '6px 16px', fontSize: 10, fontWeight: 800, fontFamily: 'JetBrains Mono', textAlign: 'center' }}>
-                            {a.ticketCreated ? 'TICKET_SYNC' : 'ACTION_REQUIRED'}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {alerts.length === 0 && (
-                  <tr><td colSpan={6} style={{ padding: 80, textAlign: 'center', color: `${G}30`, fontSize: 16, fontFamily: 'JetBrains Mono', letterSpacing: 4 }}>— SYSTEM_OPTIMAL: NO_THREATS_DETECTED —</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Footer info */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 32, marginTop: 24 }}>
-          {([['● SYSTEM_ONLINE', G], ['● NETWORK_DEGRADED', Y], ['● CRITICAL_FAILURE', R]] as [string, string][]).map(([l, c]) => (
-            <span key={l} style={{ fontSize: 10, color: c, fontFamily: 'JetBrains Mono', fontWeight: 800, letterSpacing: 2 }}>{l}</span>
           ))}
         </div>
       </div>
 
-      {/* SOP Modal */}
-      {selectedSop && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', padding: 40 }}>
-          <div style={{ width: '100%', maxWidth: 900, height: '85%', background: '#000c08', border: `1px solid ${G}`, borderRadius: 24, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: `0 0 80px ${G}30` }}>
-            <div style={{ padding: '24px 32px', borderBottom: `1px solid ${G}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-              <span style={{ color: G, fontWeight: 800, fontSize: 20, fontFamily: 'Oswald, sans-serif', letterSpacing: 1 }}>SYSTEM_MANUAL: {selectedSop.id}</span>
-              <button onClick={() => setSelectedSop(null)} style={{ background: 'transparent', border: 'none', color: G, fontSize: 32, cursor: 'pointer', lineHeight: 1 }}>×</button>
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, overflow: 'hidden' }}>
+        {view === 'map' ? (
+          <>
+            {/* Map + alerts side by side */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ flex: '0 0 auto', height: 520, position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20` }}>
+                <RealMap cities={cities} onSelectCity={handleSelectCity} selectedCityId={selectedCity?.id || null} />
+              </div>
+              <div style={{ flex: 1, minHeight: 180, overflow: 'hidden' }}>
+                <AlertStream alerts={alerts} />
+              </div>
             </div>
-            <div style={{ flex: 1, padding: 40, overflowY: 'auto', color: '#e0f8ee', fontFamily: 'JetBrains Mono', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-              {selectedSop.content}
+
+            {/* Side panel */}
+            {selectedCity && (
+              <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{
+              flex: 1, overflowY: 'auto',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: 12, alignContent: 'start',
+            }}>
+              {cities.map(city => (
+                <CityCard key={city.id} city={city} onClick={() => handleSelectCity(city)} />
+              ))}
             </div>
-          </div>
-        </div>
-      )}
+            {selectedCity && (
+              <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
+            )}
+          </>
+        )}
+      </div>
 
       <style>{`
-        @keyframes nocpulse  { 0%,100%{opacity:1;box-shadow:0 0 30px #00ff88}50%{opacity:.5;box-shadow:0 0 10px #00ff88} }
-        @keyframes critpulse { 0%,100%{opacity:1}50%{opacity:.2} }
-        .alert-row:hover { background: rgba(0,255,136,0.03) !important; }
+        @keyframes nocpulse {
+          0%,100% { opacity:1; transform:scale(1) }
+          50%      { opacity:0.4; transform:scale(1.8) }
+        }
       `}</style>
     </div>
   );

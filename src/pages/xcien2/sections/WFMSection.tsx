@@ -35,7 +35,7 @@ function MatrixBackground() {
   );
 }
 
-type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm';
+type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm' | 'dispatch';
 
 const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }> = {
   comercial:        { label: 'Comercial',        icon: '🤝', color: '#00C896' },
@@ -43,6 +43,7 @@ const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }>
   almacen:          { label: 'Almacén',          icon: '📦', color: '#FFB703' },
   aprovisionamiento: { label: 'Aprovisionamiento',icon: '⚙️', color: '#A855F7' },
   pm:               { label: 'PM / Operaciones', icon: '📋', color: '#FF4757' },
+  dispatch:         { label: 'Dispatch / Bidrillas', icon: '🚛', color: '#00ff88' },
 };
 
 const STATE_LABEL: Record<WFMOrderState, string> = {
@@ -401,6 +402,49 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                             Rechazar / Backlog
                           </button>
                         </div>
+                      </div>
+                      <div style={{ background: 'rgba(0,255,136,0.05)', padding: 15, borderRadius: 10, border: `1px dashed ${G}` }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: G }}>✨ HIGIENE TOTAL: BIDRILLAS 2026</div>
+                        <p style={{ fontSize: 11, color: theme.dim, marginBottom: 12 }}>Generar reporte de cumplimiento y evidencia de sitio limpio para el cliente.</p>
+                        <button 
+                          onClick={async () => {
+                            await fetch(`${API_BASE}/api/bridge/query`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ command: 'generate_bidrillas_pdf' })
+                            });
+                            alert("Reporte 'Higiene Total' generado exitosamente en /backend/db/");
+                          }}
+                          style={{ width: '100%', padding: 10, background: G, border: 'none', borderRadius: 6, color: '#000', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          GENERAR REPORTE DE CIERRE PDF
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {role === 'dispatch' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                      <div style={{ background: 'rgba(0,255,136,0.05)', padding: 15, borderRadius: 10, border: `1px solid ${G}` }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12, color: G }}>🚛 GESTIÓN DE BIDRILLAS ACTIVAS</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {[
+                            { id: 'B-01', name: 'Escuadrón Alpha', status: 'En Sitio', tech: 'Laura Garza' },
+                            { id: 'B-02', name: 'Escuadrón Delta', status: 'Trayecto', tech: 'Ana Rodríguez' }
+                          ].map(b => (
+                            <div key={b.id} style={{ padding: 12, background: theme.bg, borderRadius: 8, border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700 }}>{b.id} — {b.name}</div>
+                                <div style={{ fontSize: 10, color: theme.dim }}>Líder: {b.tech}</div>
+                              </div>
+                              <Badge label={b.status} color={b.status === 'En Sitio' ? G : '#4FC3F7'} />
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          style={{ width: '100%', marginTop: 15, padding: 10, background: 'transparent', border: `1px solid ${G}`, color: G, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          + ASIGNAR NUEVA BIDRILLA
+                        </button>
                       </div>
                     </div>
                   )}

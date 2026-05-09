@@ -9,8 +9,9 @@ def operacion_higiene_total():
     
     claude = AgenteClaude()
     
-    # Leer el Informe Técnico actual
-    archivo_ruta = "INFORME_TECNICO_OPERACIONES_XCIEN.md"
+    # Leer el Informe Técnico actual (ubicado en la raíz del proyecto)
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    archivo_ruta = os.path.join(base_dir, "INFORME_TECNICO_OPERACIONES_XCIEN.md")
     try:
         with open(archivo_ruta, "r", encoding="utf-8") as f:
             contenido_original = f.read()

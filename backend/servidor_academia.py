@@ -15,10 +15,10 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("XCIEN-BACKEND")
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
@@ -53,7 +53,7 @@ _claude_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY")
 def ask_claude(prompt: str) -> str:
     try:
         msg = _claude_client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-3-5-sonnet-20241022", # Actualizado a modelo estable
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -62,8 +62,10 @@ def ask_claude(prompt: str) -> str:
         logger.error(f"Error en comunicación con Claude: {e}")
         return '{"titulo": "Error de Conexión", "preguntas": []}'
 
+from fastapi import BackgroundTasks
+
 # ─── Constantes ──────────────────────────────────────────────────────────────
-DOCS_DIR = os.path.join(BASE_DIR, "..", "docs", "estandares")
+DOCS_DIR = os.path.join(BASE_DIR, "..", "Xcien_Docs")
 QUIZ_CACHE_DIR = os.path.join(BASE_DIR, "..", "src", "data", "quizzes_cache")
 SKILLS_DB = os.path.join(BASE_DIR, "db", "skills_2026.json")
 BANCO_PREGUNTAS = os.path.join(BASE_DIR, "db", "banco_preguntas_multi.json")
@@ -72,15 +74,30 @@ WFM_DB = os.path.join(BASE_DIR, "db", "wfm_data.json")
 # ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Portal Academia Xcien API")
 
-from fastapi.responses import RedirectResponse
 @app.api_route("/academia", methods=["GET", "HEAD"])
 @app.api_route("/academia/", methods=["GET", "HEAD"])
 def redirect_academia():
     return RedirectResponse(url="/")
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Error no controlado en {request.url}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "Error interno del servidor corporativo."},
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:5174", 
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -320,16 +337,13 @@ def get_diagnostic_exam(area: str = "NOC"):
 @app.get("/api/docs/content")
 def get_doc_content(path: str):
     """Devuelve el contenido de un documento (SOP) de forma segura"""
-    # Intentar resolver en docs/estandares o docs/
-    # Limpiamos el path para evitar directory traversal
     clean_path = path.replace("..", "").lstrip("/")
-    
-    # 1. Intentar en docs/estandares (donde suelen estar los SOPs)
-    full_path = os.path.join(BASE_DIR, "..", "docs", "estandares", os.path.basename(clean_path))
+    filename = os.path.basename(clean_path)
+    full_path = os.path.join(BASE_DIR, "..", "Xcien_Docs", filename)
     if not os.path.exists(full_path):
-        # 2. Intentar en la ruta relativa desde docs/
+        full_path = os.path.join(BASE_DIR, "..", "docs", "estandares", filename)
+    if not os.path.exists(full_path):
         full_path = os.path.join(BASE_DIR, "..", "docs", clean_path)
-    
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail=f"Documento no encontrado: {path}")
     
@@ -629,8 +643,9 @@ def _get_enriched_noc_data():
                     }
                 })
                 if status == "offline":
+                    import uuid
                     alerts.append({
-                        "id": f"sim-alert-{tid}-{i}-{int(time.time())}",
+                        "id": f"sim-alert-{tid}-{uuid.uuid4().hex[:8]}",
                         "city": t["city"],
                         "cityName": t["city"],
                         "tenantId": tid,
@@ -695,11 +710,32 @@ def get_noc_cities():
 
     # Coordenadas por ciudad
     COORDS = {
-        "Monterrey":      {"lat": 25.6866, "lng": -100.3161},
-        "Saltillo":       {"lat": 25.4232, "lng": -100.9928},
-        "Piedras Negras": {"lat": 28.7000, "lng": -100.5231},
-        "San Luis Potosi":{"lat": 22.1565, "lng": -100.9855},
-        "Coco":           {"lat": 25.5000, "lng": -103.5000},
+        "Monterrey":        {"lat": 25.6866,  "lng": -100.3161},
+        "Saltillo":         {"lat": 25.4232,  "lng": -100.9928},
+        "Piedras Negras":   {"lat": 28.7000,  "lng": -100.5231},
+        "San Luis Potosi":  {"lat": 22.1565,  "lng": -100.9855},
+        "San Luis Potosí":  {"lat": 22.1565,  "lng": -100.9855},
+        "Coco":             {"lat": 25.5000,  "lng": -103.5000},
+        "Torreón":          {"lat": 25.5428,  "lng": -103.4068},
+        "Torreon":          {"lat": 25.5428,  "lng": -103.4068},
+        "Chihuahua":        {"lat": 28.6353,  "lng": -106.0889},
+        "Nuevo Laredo":     {"lat": 27.4765,  "lng": -99.5151},
+        "Reynosa":          {"lat": 26.0922,  "lng": -98.2772},
+        "Matamoros":        {"lat": 25.8691,  "lng": -97.5027},
+        "Monclova":         {"lat": 26.9083,  "lng": -101.4217},
+        "Sabinas":          {"lat": 27.8529,  "lng": -101.1191},
+        "Guadalajara":      {"lat": 20.6597,  "lng": -103.3496},
+        "Ciudad de México":  {"lat": 19.4326,  "lng": -99.1332},
+        "CDMX":             {"lat": 19.4326,  "lng": -99.1332},
+        "Querétaro":        {"lat": 20.5888,  "lng": -100.3899},
+        "Queretaro":        {"lat": 20.5888,  "lng": -100.3899},
+        "Celaya":           {"lat": 20.5200,  "lng": -100.8161},
+        "León":             {"lat": 21.1221,  "lng": -101.6823},
+        "Leon":             {"lat": 21.1221,  "lng": -101.6823},
+        "Tampico":          {"lat": 22.2552,  "lng": -97.8686},
+        "Mérida":           {"lat": 20.9674,  "lng": -89.5926},
+        "Merida":           {"lat": 20.9674,  "lng": -89.5926},
+        "Puebla":           {"lat": 19.0414,  "lng": -98.2063},
     }
 
     # Agrupar hosts por ciudad → sitio
@@ -798,6 +834,120 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
         }
         for a in alerts
     ]
+
+@app.get("/api/noc/mtr")
+async def run_mtr(ip: str, cycles: int = 15):
+    """Corre MTR en tiempo real y hace stream de resultados via SSE."""
+    import asyncio, shutil, re as _re
+
+    MTR_BIN  = "/opt/homebrew/sbin/mtr"
+    HAS_MTR  = os.path.isfile(MTR_BIN)
+
+    async def _stream_mtr():
+        hops: dict = {}          # hop_index -> {ip, latencies, sent}
+
+        async def _emit(done=False, error=None):
+            rows = []
+            for h in sorted(hops.keys()):
+                d = hops[h]
+                lats = d["latencies"]
+                sent = d.get("sent", len(lats))
+                recv = len(lats)
+                loss = round((sent - recv) / sent * 100, 1) if sent > 0 else 0
+                rows.append({
+                    "hop":   h + 1,
+                    "ip":    d["ip"],
+                    "sent":  sent,
+                    "loss":  loss,
+                    "last":  round(lats[-1], 2)            if lats else None,
+                    "avg":   round(sum(lats)/len(lats), 2) if lats else None,
+                    "best":  round(min(lats), 2)           if lats else None,
+                    "worst": round(max(lats), 2)           if lats else None,
+                })
+            payload = {"hops": rows, "done": done, "target": ip}
+            if error: payload["error"] = error
+            return f"data: {json.dumps(payload)}\n\n"
+
+        # ── Intento 1: mtr --raw ──────────────────────────────────────────────
+        if HAS_MTR:
+            try:
+                cmd = [MTR_BIN, "--raw", "--no-dns", f"--report-cycles={cycles}", ip]
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                async for raw_line in proc.stdout:
+                    line = raw_line.decode().strip()
+                    parts = line.split()
+                    if len(parts) < 3:
+                        continue
+                    kind, hop_s, val = parts[0], parts[1], parts[2]
+                    hop = int(hop_s)
+                    if kind == "h":
+                        hops.setdefault(hop, {"ip": val, "latencies": [], "sent": 0})
+                        hops[hop]["ip"] = val
+                    elif kind == "p":
+                        lat_ms = int(val) / 1000.0
+                        hops.setdefault(hop, {"ip": "???", "latencies": [], "sent": 0})
+                        hops[hop]["latencies"].append(lat_ms)
+                        hops[hop]["sent"] += 1
+                    yield await _emit()
+                await proc.wait()
+                if proc.returncode == 0:
+                    yield await _emit(done=True)
+                    return
+                # si falló (permisos), caemos al fallback
+            except Exception:
+                pass
+
+        # ── Fallback: traceroute + ping por hop ───────────────────────────────
+        try:
+            tr_proc = await asyncio.create_subprocess_exec(
+                "traceroute", "-n", "-q", "1", "-w", "2", "-m", "20", ip,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            )
+            hop_ips = []
+            async for raw_line in tr_proc.stdout:
+                line = raw_line.decode().strip()
+                m = _re.match(r"^\s*(\d+)\s+([\d\.]+|\*)", line)
+                if m:
+                    h_num, h_ip = int(m.group(1)), m.group(2)
+                    if h_ip != "*":
+                        hop_ips.append((h_num - 1, h_ip))
+                    else:
+                        hop_ips.append((h_num - 1, "*"))
+                    hops[h_num - 1] = {"ip": h_ip, "latencies": [], "sent": 0}
+                    yield await _emit()
+            await tr_proc.wait()
+
+            # Ping a cada hop descubierto
+            for h_idx, h_ip in hop_ips:
+                if h_ip == "*":
+                    continue
+                ping_proc = await asyncio.create_subprocess_exec(
+                    "ping", "-c", str(min(cycles, 10)), "-i", "0.2",
+                    "-W", "1000", h_ip,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+                )
+                async for raw_line in ping_proc.stdout:
+                    line = raw_line.decode().strip()
+                    m = _re.search(r"time[=<]([\d\.]+)\s*ms", line)
+                    if m:
+                        hops[h_idx]["latencies"].append(float(m.group(1)))
+                        hops[h_idx]["sent"] += 1
+                        yield await _emit()
+                await ping_proc.wait()
+            yield await _emit(done=True)
+
+        except Exception as e:
+            yield await _emit(done=True, error=str(e))
+
+    return StreamingResponse(
+        _stream_mtr(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
@@ -988,7 +1138,14 @@ def webhook_odoo(payload: OdooWebhookPayload):
 @app.post("/api/director/chat")
 def director_chat(request: ChatRequest):
     try:
+        AGENT_BRIDGE["current_task"] = "Procesando consulta estratégica..."
+        AGENT_BRIDGE["status"] = "working"
+        AGENT_BRIDGE["log"].append(f"Consulta: {request.message[:30]}...")
+        
         respuesta = dg_agent.ejecutar_orden(request.message, request.history, request.context)
+        
+        AGENT_BRIDGE["current_task"] = "Listo para orquestar"
+        AGENT_BRIDGE["status"] = "idle"
         return {"status": "success", "response": respuesta}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1009,6 +1166,73 @@ def update_bridge_status(req: BridgeRequest):
     AGENT_BRIDGE["last_update"] = datetime.datetime.now().strftime("%H:%M:%S")
     return {"status": "ok"}
 
+@app.post("/api/bridge/query")
+def bridge_query(req: CommandRequest):
+    cmd = req.command
+    if cmd == "get_foda_context":
+        noc_data = _get_enriched_noc_data()
+        wfm_orders = wfm_service.obtener_ordenes()
+        critical_alerts = [a for a in noc_data.get("alerts", []) if a.get("severity") == "critical"]
+        return {
+            "status": "success",
+            "data": {
+                "swot": {
+                    "fortalezas": [
+                        "Integración vertical con Odoo ERP y Agentes Claude.",
+                        "Estructura de Bidrillas 2026 con roles especializados.",
+                        "Academia Digital con 100% de técnicos certificados.",
+                        "Monitoreo proactivo vía NOCBoard (99.9% disponibilidad)."
+                    ],
+                    "oportunidades": [
+                        "Expansión de fibra óptica en zonas de alta latencia.",
+                        "Automatización de despacho por geolocalización.",
+                        "Tokenización de bonos para reducción de rotación."
+                    ],
+                    "debilidades": [
+                        f"Presencia de {len(critical_alerts)} alertas críticas en el NOC.",
+                        f"Backlog acumulado de {len([o for o in wfm_orders if o['estado'] == 'BACKLOG'])} órdenes.",
+                        "Curva de aprendizaje en nuevos procesos Odoo 19."
+                    ],
+                    "amenazas": [
+                        "Competencia agresiva de Starlink en zonas rurales.",
+                        "Condiciones climáticas afectando enlaces de microondas.",
+                        "Fuga de talento técnico capacitado."
+                    ]
+                },
+                "dialogue": [
+                    {"agente": "Director General", "msj": "¿Cómo impacta el backlog actual en el SLA de la próxima semana?"},
+                    {"agente": "NOC Agent", "msj": f"Las {len(critical_alerts)} alertas críticas están consumiendo el 40% de la capacidad técnica."},
+                    {"agente": "WFM Agent", "msj": "Necesitamos reasignar la Bidrilla B-01 de Monterrey a Saltillo urgentemente."},
+                    {"agente": "Academia Agent", "msj": "Hay 3 auxiliares listos para ascenso, eso aliviaría la carga."}
+                ]
+            }
+        }
+    if cmd == "get_dashboard_stats":
+        wfm_orders = wfm_service.obtener_ordenes()
+        return {
+            "status": "success",
+            "data": {
+                "productivity": f"{len([o for o in wfm_orders if o['estado'] == 'LISTO_INSTALACION'])}/5",
+                "availability": "99.85%",
+                "pending_tickets": len([o for o in wfm_orders if o['estado'] != 'LISTO_INSTALACION']),
+                "active_teams": 4,
+                "last_update": datetime.datetime.now().strftime("%H:%M:%S")
+            }
+        }
+    if cmd == "generate_bidrillas_pdf":
+        try:
+            # Ejecutar el script de generación de PDF
+            import subprocess
+            result = subprocess.run(["python3", "backend/generar_bidrillas_reportlab.py"], capture_output=True, text=True)
+            if result.returncode == 0:
+                return {"status": "success", "message": "PDF generado exitosamente"}
+            else:
+                return {"status": "error", "message": f"Error ejecutando script: {result.stderr}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    return {"status": "error", "message": "Unknown query command"}
+
 @app.post("/api/bridge/command")
 def push_command(req: CommandRequest):
     AGENT_BRIDGE["command_queue"].append({
@@ -1027,7 +1251,9 @@ def health():
 # ─── Endpoints WFM ───────────────────────────────────────────────────────────
 
 @app.get("/api/wfm/ordenes")
-async def get_wfm_orders(estado: str = None):
+async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):
+    # Lanzar sincronización en segundo plano para no bloquear la respuesta
+    background_tasks.add_task(wfm_service._sync_with_odoo)
     return wfm_service.obtener_ordenes(estado)
 
 @app.post("/api/wfm/comercial/solicitar")
@@ -1171,6 +1397,102 @@ def activate_user(user_id: str):
             json.dump(users, f, indent=2)
         return {"status": "success", "user": u}
     raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+# ── Academia / Odoo eLearning ─────────────────────────────────────────────────
+_academia_cache: dict = {"data": None, "ts": 0}
+_ACADEMIA_TTL = 120
+
+@app.get("/api/academia/cursos")
+async def get_academia_cursos():
+    """Cursos, lecciones y progreso desde Odoo eLearning"""
+    global _academia_cache
+    if _academia_cache["data"] and (time.time() - _academia_cache["ts"]) < _ACADEMIA_TTL:
+        return _academia_cache["data"]
+    try:
+        ODOO_URL = os.environ.get("ODOO_URL")
+        ODOO_DB  = os.environ.get("ODOO_DB")
+        ODOO_USR = os.environ.get("ODOO_USER")
+        ODOO_PWD = os.environ.get("ODOO_PASSWORD")
+        common = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/common")
+        uid    = common.authenticate(ODOO_DB, ODOO_USR, ODOO_PWD, {})
+        mdl    = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/object")
+
+        def qry(model, domain=[], fields=[], limit=300):
+            return mdl.execute_kw(ODOO_DB, uid, ODOO_PWD, model, "search_read",
+                                  [domain], {"fields": fields, "limit": limit})
+
+        channels = qry("slide.channel", [], [
+            "name", "description", "total_slides", "total_time",
+            "website_published", "members_count", "enroll", "channel_type"
+        ])
+        slides = qry("slide.slide", [], [
+            "name", "channel_id", "slide_type", "slide_category",
+            "completion_time", "is_published", "sequence",
+            "url", "video_url", "website_url", "questions_count", "total_views"
+        ])
+        progress = qry("slide.channel.partner", [], [
+            "channel_id", "partner_id", "completion", "member_status"
+        ], limit=1000)
+
+        # Agrupar lecciones por curso
+        slides_by_ch: dict = {}
+        for s in slides:
+            cid = s["channel_id"][0] if s["channel_id"] else None
+            slides_by_ch.setdefault(cid, []).append({
+                "id":          s["id"],
+                "name":        s["name"],
+                "type":        s["slide_type"] or "pdf",
+                "category":    s["slide_category"] or "",
+                "duration_h":  round(s["completion_time"] or 0, 2),
+                "published":   s["is_published"],
+                "sequence":    s["sequence"],
+                "url":         s["url"] or s["video_url"] or "",
+                "website_url": s["website_url"] or "",
+                "has_quiz":    (s["questions_count"] or 0) > 0,
+                "views":       s["total_views"] or 0,
+            })
+
+        # Progreso promedio por curso
+        prog_by_ch: dict = {}
+        members_by_ch: dict = {}
+        for p in progress:
+            cid = p["channel_id"][0] if p["channel_id"] else None
+            prog_by_ch.setdefault(cid, []).append(p["completion"])
+            members_by_ch.setdefault(cid, []).append({
+                "name":   p["partner_id"][1] if p["partner_id"] else "—",
+                "pct":    p["completion"],
+                "status": p["member_status"],
+            })
+
+        result = []
+        for ch in channels:
+            cid   = ch["id"]
+            progs = prog_by_ch.get(cid, [])
+            avg   = round(sum(progs) / len(progs), 1) if progs else 0
+            lessons = sorted(slides_by_ch.get(cid, []), key=lambda x: x["sequence"])
+            result.append({
+                "id":             cid,
+                "name":           ch["name"],
+                "description":    ch["description"] or "",
+                "total_slides":   ch["total_slides"],
+                "total_time_h":   round(ch["total_time"] or 0, 2),
+                "members":        ch["members_count"],
+                "published":      ch["website_published"],
+                "enroll":         ch["enroll"],
+                "channel_type":   ch["channel_type"],
+                "avg_completion": avg,
+                "lessons":        lessons,
+                "members_list":   members_by_ch.get(cid, []),
+            })
+
+        result.sort(key=lambda x: (-len(x["lessons"]), -x["members"]))
+        _academia_cache["data"] = result
+        _academia_cache["ts"]   = time.time()
+        return result
+    except Exception as e:
+        logger.error(f"[Academia] Odoo error: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
+
 
 @app.get("/api/integrations/status")
 async def get_integrations_status():

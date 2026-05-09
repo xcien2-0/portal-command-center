@@ -18,11 +18,17 @@ class WFMWorkflowService:
         self.odoo_db = os.environ.get("ODOO_DB")
         self.odoo_user = os.environ.get("ODOO_USER")
         self.odoo_pwd = os.environ.get("ODOO_PASSWORD")
+        self.last_sync = 0
+        self.sync_interval = 600 # 10 minutos
 
     def _sync_with_odoo(self):
         """ODOO es la fuente de verdad única. Sincroniza CRM Leads como Órdenes WFM."""
         if not self.odoo_url or not self.odoo_pwd:
-            print("⚠️ Faltan credenciales de Odoo para sincronización WFM.")
+            return
+        
+        # Evitar sincronizaciones muy seguidas si no se solicita forzado
+        import time
+        if time.time() - self.last_sync < self.sync_interval:
             return
 
         try:
@@ -79,6 +85,7 @@ class WFMWorkflowService:
                 current_orders.append(nueva_orden)
             
             self._save_orders(current_orders)
+            self.last_sync = time.time()
             print(f"✅ Sincronización completada. {len(leads)} registros procesados.")
 
         except Exception as e:
@@ -244,7 +251,6 @@ class WFMWorkflowService:
         return None
 
     def obtener_ordenes(self, estado: Optional[str] = None) -> List[Dict]:
-        self._sync_with_odoo()
         orders = self._load_orders()
         if estado:
             return [o for o in orders if o["estado"] == estado]
