@@ -29,7 +29,8 @@
     "department": "Planeaci\u00f3n",
     "role": "Analista",
     "id": "4",
-    "status": "pending"
+    "status": "active",
+    "lastSeen": "2026-05-09"
   },
   {
     "name": "jose m macias ",
@@ -45,6 +46,7 @@
     "department": "Gerencia",
     "role": "Auditor",
     "id": "6",
-    "status": "pending"
+    "status": "active",
+    "lastSeen": "2026-05-09"
   }
 ]
