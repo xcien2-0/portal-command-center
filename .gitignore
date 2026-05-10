@@ -1,3 +1,9 @@
+# Backups y temporales que rompen Vite/TS
+*.bak
+*.backup
+*.orig
+*.tmp
+
 # Logs
 logs
 *.log
