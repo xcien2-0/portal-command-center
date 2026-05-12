@@ -1338,6 +1338,482 @@ function EvidenciasPanel({ theme, order, onRefresh }: EvidenciasPanelProps) {
   );
 }
 
+// ── SLA Escalation Banner (dinámico + editable) ───────────────────────────────
+interface SLALimite { dias: number; owner: string; label: string; icon: string }
+interface SLANodo   { label: string; icon: string; color: string }
+interface SLAConfig {
+  limites: Record<string, SLALimite>;
+  nodos:   Record<string, SLANodo>;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+// fallback mientras carga
+const _FALLBACK_SLA_LIMITS: Record<string, number> = {
+  SOLICITUD_PREVENTA:   5,   // días
+  ANTEPROYECTO:         3,
+  ORDEN_IMPLEMENTACION: 2,
+  ALMACEN_VALIDACION:   2,
+  ESPERA_INVENTARIO:    5,
+  APROVISIONAMIENTO:    1,
+  REVISION_PM:          1,
+  LISTO_INSTALACION:    1,
+  INSTALACION:          3,
+  NOC_VALIDACION:       1,
+  FACTURACION:          2,
+};
+
+function diasEnEstado(order: WFMOrder, limites?: Record<string, SLALimite>): number {
+  const ts = (order as any).timestamps_estados?.[order.estado];
+  if (ts) return (Date.now() - new Date(ts).getTime()) / 86_400_000;
+  return (Date.now() - new Date(order.fecha_creacion).getTime()) / 86_400_000;
+}
+
+function slaStatusDynamic(order: WFMOrder, limites: Record<string, SLALimite>): 'ok' | 'alerta' | 'critico' {
+  if (order.estado === 'CERRADO' || order.estado === 'FACTURACION' || order.estado === 'BACKLOG') return 'ok';
+  const limit = limites[order.estado]?.dias ?? _FALLBACK_SLA_LIMITS[order.estado] ?? 3;
+  const dias  = diasEnEstado(order);
+  if (dias >= limit) return 'critico';
+  if (dias >= limit * 0.7) return 'alerta';
+  return 'ok';
+}
+
+function slaStatus(order: WFMOrder): 'ok' | 'alerta' | 'critico' {
+  if (order.estado === 'CERRADO' || order.estado === 'FACTURACION' || order.estado === 'BACKLOG') return 'ok';
+  const limit = SLA_LIMITS[order.estado] ?? 3;
+  const dias  = diasEnEstado(order);
+  if (dias >= limit) return 'critico';
+  if (dias >= limit * 0.7) return 'alerta';
+  return 'ok';
+}
+
+interface EscEntry {
+  esc_id: string; triggered_at: string; order_id: string; cliente: string;
+  estado: string; severity: string; dias_sla: number; owner_node: string;
+  status: string; cleared_at: string | null; cleared_by: string | null; notas: string;
+}
+
+interface SLABannerProps { theme: ThemeConfig; orders: WFMOrder[] }
+
+function SLAEscalationBanner({ theme, orders }: SLABannerProps) {
+  const [config, setConfig]       = useState<SLAConfig | null>(null);
+  const [editMode, setEditMode]   = useState(false);
+  const [draft, setDraft]         = useState<Record<string, number>>({});
+  const [saving, setSaving]       = useState(false);
+  const [showSLATable, setShowSLATable] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [escLog, setEscLog]       = useState<EscEntry[]>([]);
+  const [showLog, setShowLog]     = useState(false);
+  const [clearing, setClearing]   = useState<string | null>(null); // order_id en proceso
+
+  const fetchConfig = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/wfm/sla-config`);
+      if (r.ok) {
+        const d: SLAConfig = await r.json();
+        setConfig(d);
+        setLastSaved(d.updated_at ? `${d.updated_by} · ${new Date(d.updated_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : null);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const fetchLog = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/wfm/sla-escalaciones?limit=50`);
+      if (r.ok) { const d = await r.json(); setEscLog(d.log ?? []); }
+    } catch { /* ignore */ }
+  };
+
+  // Auto-registra escalaciones activas en el backend
+  const autoRegister = async (ordersList: WFMOrder[], limitesCfg: Record<string, SLALimite>) => {
+    const criticos = ordersList.filter(o => slaStatusDynamic(o, limitesCfg) === 'critico');
+    for (const o of criticos) {
+      const owner = limitesCfg[o.estado]?.owner ?? 'ops';
+      await fetch(`${API_BASE}/api/wfm/sla-escalacion/registrar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: o.id, cliente: o.cliente, estado: o.estado,
+          severity: 'critico', dias: diasEnEstado(o), owner_node: owner,
+          cleared_by: '', notas: '',
+        }),
+      }).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+    fetchLog();
+    const t = setInterval(() => { fetchConfig(); fetchLog(); }, 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Auto-registra cuando cambian las órdenes
+  useEffect(() => {
+    if (config && orders.length > 0) autoRegister(orders, config.limites);
+  }, [orders, config]);
+
+  const handleClear = async (order: WFMOrder, severity: string) => {
+    setClearing(order.id);
+    try {
+      const owner = config?.limites[order.estado]?.owner ?? 'ops';
+      await fetch(`${API_BASE}/api/wfm/sla-escalacion/clear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id, cliente: order.cliente, estado: order.estado,
+          severity, dias: diasEnEstado(order), owner_node: owner,
+          cleared_by: 'NOC Operador', notas: 'Clear manual desde banner SLA',
+        }),
+      });
+      await fetchLog();
+    } finally { setClearing(null); }
+  };
+
+  const limites = config?.limites ?? {};
+  const nodos   = config?.nodos   ?? {
+    noc: { label: 'NOC',              icon: '📡', color: '#00B4D8' },
+    pm:  { label: 'PM / Operaciones', icon: '📋', color: '#FF4757' },
+    ops: { label: 'Campo / Dispatch', icon: '🚛', color: '#00ff88' },
+  };
+
+  const active = orders.filter(o => o.estado !== 'CERRADO' && o.estado !== 'BACKLOG');
+
+  const byNode = (node: string) =>
+    active.filter(o => limites[o.estado]?.owner === node || (!limites[o.estado] && node === 'ops'));
+
+  const countStatus = (list: WFMOrder[]) => ({
+    ok:      list.filter(o => slaStatusDynamic(o, limites) === 'ok').length,
+    alerta:  list.filter(o => slaStatusDynamic(o, limites) === 'alerta').length,
+    critico: list.filter(o => slaStatusDynamic(o, limites) === 'critico').length,
+  });
+
+  const nodeKeys  = Object.keys(nodos);
+  const nodeStats = Object.fromEntries(nodeKeys.map(k => [k, countStatus(byNode(k))]));
+
+  const totalCritico  = active.filter(o => slaStatusDynamic(o, limites) === 'critico').length;
+  const totalAlerta   = active.filter(o => slaStatusDynamic(o, limites) === 'alerta').length;
+  const cumplimiento  = active.length > 0
+    ? Math.round((active.filter(o => slaStatusDynamic(o, limites) === 'ok').length / active.length) * 100)
+    : 100;
+
+  const nodeColor = (stats: { ok: number; alerta: number; critico: number }) =>
+    stats.critico > 0 ? '#FF4757' : stats.alerta > 0 ? '#FFB703' : '#00C896';
+
+  // Guardar cambios SLA
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const limitesPatch: Record<string, { dias: number }> = {};
+      for (const [estado, dias] of Object.entries(draft)) {
+        limitesPatch[estado] = { dias };
+      }
+      const r = await fetch(`${API_BASE}/api/wfm/sla-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limites: limitesPatch, usuario: 'NOC Operaciones' }),
+      });
+      if (r.ok) {
+        await fetchConfig();
+        setEditMode(false);
+        setDraft({});
+      }
+    } finally { setSaving(false); }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('¿Restaurar SLAs a valores por defecto?')) return;
+    await fetch(`${API_BASE}/api/wfm/sla-config/reset`, { method: 'POST' });
+    await fetchConfig();
+    setEditMode(false);
+    setDraft({});
+  };
+
+  // Sub-componentes
+  const NodePulse = ({ color }: { color: string }) => (
+    <span style={{ position: 'relative', display: 'inline-block', width: 10, height: 10, flexShrink: 0 }}>
+      <span style={{
+        position: 'absolute', inset: 0, borderRadius: '50%', background: color,
+        animation: color === '#FF4757' ? 'sla-pulse 1.2s ease-in-out infinite' : 'none',
+        boxShadow: `0 0 8px ${color}`,
+      }} />
+    </span>
+  );
+
+  const Connector = () => (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '0 6px', flexShrink: 0 }}>
+      <div style={{ width: 32, height: 2, background: `linear-gradient(90deg, ${theme.accent}20, ${theme.accent}60, ${theme.accent}20)`, position: 'relative' }}>
+        <div style={{ position: 'absolute', right: -4, top: -3, width: 8, height: 8, borderTop: `2px solid ${theme.accent}60`, borderRight: `2px solid ${theme.accent}60`, transform: 'rotate(45deg)' }} />
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{
+      background: theme.card, border: `1px solid ${theme.border}`,
+      borderRadius: 14, padding: '12px 16px', marginBottom: 14,
+    }}>
+      <style>{`
+        @keyframes sla-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.7)} }
+      `}</style>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1 }}>
+          ⚡ SLA · Escalamiento en Vivo
+        </span>
+        {/* Métricas globales */}
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#00C896' }}>✓ {cumplimiento}%</span>
+        {totalCritico > 0 && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#FF4757', background: '#FF475718', padding: '2px 10px', borderRadius: 20, animation: 'sla-pulse 2s infinite' }}>
+            ⚡ {totalCritico} CRÍTICO{totalCritico > 1 ? 'S' : ''}
+          </span>
+        )}
+        {totalAlerta > 0 && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#FFB703', background: '#FFB70318', padding: '2px 10px', borderRadius: 20 }}>
+            ⚠ {totalAlerta} en alerta
+          </span>
+        )}
+        <span style={{ fontSize: 10, color: theme.dim }}>{active.length} activas</span>
+
+        {/* Botones derecha */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {lastSaved && !editMode && (
+            <span style={{ fontSize: 9, color: theme.dim }}>Editado: {lastSaved}</span>
+          )}
+          <button onClick={() => { setShowLog(x => !x); if (!showLog) fetchLog(); }} style={{
+            fontSize: 10, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+            background: escLog.filter(e => e.status === 'ACTIVO').length > 0 ? '#FF475718' : 'transparent',
+            border: `1px solid ${escLog.filter(e => e.status === 'ACTIVO').length > 0 ? '#FF475750' : theme.border}`,
+            color: escLog.filter(e => e.status === 'ACTIVO').length > 0 ? '#FF4757' : theme.dim, fontWeight: 700,
+          }}>
+            📋 Log {escLog.length > 0 ? `(${escLog.length})` : ''}
+          </button>
+          <button onClick={() => setShowSLATable(x => !x)} style={{
+            fontSize: 10, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+            background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim,
+          }}>
+            {showSLATable ? '▲ SLAs' : '▼ SLAs'}
+          </button>
+          {!editMode ? (
+            <button onClick={() => { setEditMode(true); setShowSLATable(true); const d: Record<string,number>={}; Object.entries(limites).forEach(([k,v])=>{d[k]=v.dias;}); setDraft(d); }} style={{
+              fontSize: 10, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+              background: `${theme.accent}15`, border: `1px solid ${theme.accent}40`, color: theme.accent, fontWeight: 700,
+            }}>
+              ✏ Editar SLAs
+            </button>
+          ) : (
+            <>
+              <button onClick={handleSave} disabled={saving} style={{
+                fontSize: 10, padding: '3px 12px', borderRadius: 6, cursor: 'pointer',
+                background: '#00C896', border: 'none', color: '#000', fontWeight: 800,
+              }}>
+                {saving ? '...' : '✓ Guardar'}
+              </button>
+              <button onClick={() => { setEditMode(false); setDraft({}); }} style={{
+                fontSize: 10, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+                background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim,
+              }}>
+                Cancelar
+              </button>
+              <button onClick={handleReset} style={{
+                fontSize: 10, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+                background: 'transparent', border: `1px solid #FF475740`, color: '#FF4757',
+              }}>
+                Reset
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Nodos conectados ── */}
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        {nodeKeys.map((nodeKey, i) => {
+          const nodo  = nodos[nodeKey];
+          const stats = nodeStats[nodeKey];
+          const nc    = nodeColor(stats);
+          const nodeOrds = byNode(nodeKey);
+          return (
+            <div key={nodeKey} style={{ display: 'flex', alignItems: 'stretch', flex: 1, minWidth: 0 }}>
+              {i > 0 && <Connector />}
+              <div style={{
+                flex: 1, background: `${nc}08`, border: `1px solid ${nc}30`,
+                borderRadius: 10, padding: '10px 14px', minWidth: 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <NodePulse color={nc} />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: nodo.color }}>{nodo.icon} {nodo.label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 9, background: `${nc}20`, color: nc, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
+                    {nodeOrds.length}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {[{ l:'OK', c:'#00C896', n:stats.ok },{ l:'⚠', c:'#FFB703', n:stats.alerta },{ l:'⚡', c:'#FF4757', n:stats.critico }].map(s => (
+                    <div key={s.l} style={{ flex:1, textAlign:'center', background:`${s.c}12`, border:`1px solid ${s.c}25`, borderRadius:6, padding:'4px 2px' }}>
+                      <div style={{ fontSize:16, fontWeight:900, color:s.c, lineHeight:1 }}>{s.n}</div>
+                      <div style={{ fontSize:7, color:`${s.c}80`, fontWeight:700 }}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Órdenes críticas con botón Clear */}
+                {nodeOrds.filter(o => slaStatusDynamic(o, limites) !== 'ok').slice(0, 3).map(o => {
+                  const sv = slaStatusDynamic(o, limites);
+                  const svColor = sv === 'critico' ? '#FF4757' : '#FFB703';
+                  return (
+                    <div key={o.id} style={{ display:'flex', alignItems:'center', gap:4, marginTop:4 }}>
+                      <span style={{ fontSize:8, color:svColor, fontWeight:700, flexShrink:0 }}>
+                        {sv === 'critico' ? '⚡' : '⚠'}
+                      </span>
+                      <span style={{ fontSize:9, color:svColor, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {o.cliente.split(' ')[0]} ({diasEnEstado(o).toFixed(1)}d)
+                      </span>
+                      <button
+                        onClick={() => handleClear(o, sv)}
+                        disabled={clearing === o.id}
+                        style={{
+                          fontSize:8, padding:'1px 6px', borderRadius:4, cursor:'pointer', flexShrink:0,
+                          background: clearing === o.id ? 'transparent' : `${svColor}20`,
+                          border:`1px solid ${svColor}50`, color:svColor, fontWeight:700,
+                        }}
+                      >
+                        {clearing === o.id ? '...' : 'CLEAR'}
+                      </button>
+                    </div>
+                  );
+                })}
+                {stats.critico === 0 && stats.alerta === 0 && (
+                  <div style={{ fontSize:9, color:'#00C896', marginTop:6, fontWeight:600 }}>✓ Dentro de SLA</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Log de Escalaciones NOC ── */}
+      {showLog && (
+        <div style={{ marginTop: 12, borderTop: `1px solid ${theme.border}`, paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1 }}>
+              📋 Protocolo de Escalaciones NOC
+            </span>
+            <span style={{ fontSize: 9, color: theme.dim }}>Auto-clear: {30}min sin atención</span>
+            <button onClick={fetchLog} style={{ marginLeft: 'auto', fontSize: 9, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim }}>
+              ↻ Refrescar
+            </button>
+          </div>
+
+          {escLog.length === 0 ? (
+            <div style={{ fontSize: 11, color: theme.dim, textAlign: 'center', padding: 16 }}>Sin eventos registrados</div>
+          ) : (
+            <div style={{ fontFamily: 'monospace', fontSize: 10, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto' }}>
+              {/* Header tabla */}
+              <div style={{ display: 'grid', gridTemplateColumns: '110px 80px 1fr 100px 80px 80px', gap: 8, padding: '4px 8px', background: `${theme.accent}10`, borderRadius: 4, fontSize: 9, fontWeight: 800, color: theme.dim }}>
+                <span>TIMESTAMP</span><span>ID</span><span>CLIENTE / ESTADO</span><span>SEVERIDAD</span><span>DÍAS SLA</span><span>STATUS</span>
+              </div>
+              {escLog.map((e) => {
+                const statusColor =
+                  e.status === 'ACTIVO'       ? '#FF4757' :
+                  e.status === 'CLEARED'      ? '#00C896' :
+                  e.status === 'ATENDIDO'     ? '#4FC3F7' :
+                  e.status === 'AUTO_CLEARED' ? '#FFB703' : theme.dim;
+                const ts = new Date(e.triggered_at);
+                const tsStr = `${ts.toLocaleDateString('es-MX', { month:'2-digit', day:'2-digit' })} ${ts.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}`;
+                return (
+                  <div key={e.esc_id} style={{
+                    display: 'grid', gridTemplateColumns: '110px 80px 1fr 100px 80px 80px',
+                    gap: 8, padding: '5px 8px', borderRadius: 4,
+                    background: e.status === 'ACTIVO' ? '#FF475708' : `${theme.card}80`,
+                    border: `1px solid ${e.status === 'ACTIVO' ? '#FF475730' : theme.border}`,
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: theme.dim, fontSize: 9 }}>{tsStr}</span>
+                    <span style={{ color: theme.accent, fontWeight: 700, fontSize: 9 }}>{e.esc_id}</span>
+                    <div>
+                      <div style={{ color: theme.text, fontWeight: 600 }}>{e.cliente}</div>
+                      <div style={{ color: theme.dim, fontSize: 9 }}>{e.estado.replace(/_/g, ' ')}</div>
+                    </div>
+                    <span style={{
+                      fontWeight: 800, padding: '2px 6px', borderRadius: 4, fontSize: 9,
+                      background: e.severity === 'CRITICO' ? '#FF475720' : '#FFB70320',
+                      color: e.severity === 'CRITICO' ? '#FF4757' : '#FFB703',
+                    }}>
+                      {e.severity === 'CRITICO' ? '⚡' : '⚠'} {e.severity}
+                    </span>
+                    <span style={{ color: '#FFB703', fontWeight: 700 }}>{e.dias_sla.toFixed(1)}d</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 8, fontWeight: 800, color: statusColor, background: `${statusColor}15`, padding: '1px 5px', borderRadius: 3 }}>
+                        {e.status}
+                      </span>
+                      {e.status === 'ACTIVO' && (
+                        <button
+                          onClick={() => {
+                            const o = orders.find(x => x.id === e.order_id);
+                            if (o) handleClear(o, e.severity.toLowerCase());
+                          }}
+                          disabled={clearing === e.order_id}
+                          style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, cursor: 'pointer', background: '#FF475720', border: '1px solid #FF475750', color: '#FF4757', fontWeight: 700 }}
+                        >
+                          CLR
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tabla SLA editable ── */}
+      {showSLATable && (
+        <div style={{ marginTop: 12, borderTop: `1px solid ${theme.border}`, paddingTop: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>
+            Límites SLA por Etapa {editMode && <span style={{ color: theme.accent }}>— Modo Edición Activo</span>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 6 }}>
+            {Object.entries(limites).map(([estado, cfg]) => {
+              const ownerNode = nodos[cfg.owner];
+              const ownerColor = ownerNode?.color ?? theme.accent;
+              return (
+                <div key={estado} style={{
+                  background: theme.bg, border: `1px solid ${theme.border}`,
+                  borderRadius: 8, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span style={{ fontSize: 14 }}>{cfg.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.label}</div>
+                    <div style={{ fontSize: 9, color: ownerColor, fontWeight: 600 }}>{ownerNode?.label ?? cfg.owner}</div>
+                  </div>
+                  {editMode ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <button onClick={() => setDraft(d => ({ ...d, [estado]: Math.max(1, (d[estado] ?? cfg.dias) - 1) }))}
+                        style={{ width:20, height:20, borderRadius:4, border:`1px solid ${theme.border}`, background:'transparent', color:theme.dim, cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                      <input
+                        type="number" min={1} max={30}
+                        value={draft[estado] ?? cfg.dias}
+                        onChange={e => setDraft(d => ({ ...d, [estado]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                        style={{ width:36, textAlign:'center', background:theme.card, border:`1px solid ${theme.accent}`, borderRadius:4, color:theme.accent, fontWeight:800, fontSize:12, padding:'2px 0' }}
+                      />
+                      <button onClick={() => setDraft(d => ({ ...d, [estado]: Math.min(30, (d[estado] ?? cfg.dias) + 1) }))}
+                        style={{ width:20, height:20, borderRadius:4, border:`1px solid ${theme.border}`, background:'transparent', color:theme.dim, cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                      <span style={{ fontSize:9, color:theme.dim }}>d</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize:13, fontWeight:900, color: theme.accent, flexShrink:0 }}>{cfg.dias}d</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Section ─────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 
@@ -1488,9 +1964,13 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const selectedOrder = orders.find(o => o.id === selectedId);
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: 20, position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0, position: 'relative' }}>
       {activeThemeId === 'matrix' && <MatrixBackground />}
-      
+
+      {/* ── SLA & Escalamiento en Vivo ── */}
+      {!loading && <SLAEscalationBanner theme={theme} orders={orders} />}
+
+      <div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
       {/* Sidebar de Roles */}
       <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Vistas por Rol</h3>
@@ -1778,6 +2258,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
 
         </div>
       </div>
+      </div> {/* end flex row */}
     </div>
   );
 }

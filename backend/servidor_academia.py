@@ -3,6 +3,7 @@ import sys
 import re
 import json
 import time
+import datetime
 import anthropic
 import xmlrpc.client
 import logging
@@ -1366,6 +1367,242 @@ def health():
 
 
 # ─── Endpoints WFM ───────────────────────────────────────────────────────────
+
+# ── SLA Config ────────────────────────────────────────────────────────────────
+_SLA_CONFIG_FILE = os.path.join(BASE_DIR, "db", "sla_config.json")
+
+_DEFAULT_SLA_CONFIG = {
+  "limites": {
+    "SOLICITUD_PREVENTA":   { "dias": 5,  "owner": "ops", "label": "Solicitud Preventa",   "icon": "🔍" },
+    "ANTEPROYECTO":         { "dias": 3,  "owner": "ops", "label": "Anteproyecto",          "icon": "📐" },
+    "ORDEN_IMPLEMENTACION": { "dias": 2,  "owner": "pm",  "label": "Orden Implementación",  "icon": "📋" },
+    "ALMACEN_VALIDACION":   { "dias": 2,  "owner": "ops", "label": "Validación Almacén",    "icon": "📦" },
+    "ESPERA_INVENTARIO":    { "dias": 5,  "owner": "ops", "label": "Espera Inventario",     "icon": "⏳" },
+    "APROVISIONAMIENTO":    { "dias": 1,  "owner": "noc", "label": "Aprovisionamiento",     "icon": "⚙️" },
+    "REVISION_PM":          { "dias": 1,  "owner": "pm",  "label": "Revisión PM",           "icon": "🔎" },
+    "LISTO_INSTALACION":    { "dias": 1,  "owner": "pm",  "label": "Listo p/ Instalación",  "icon": "✅" },
+    "INSTALACION":          { "dias": 3,  "owner": "ops", "label": "Instalación",           "icon": "🚛" },
+    "NOC_VALIDACION":       { "dias": 1,  "owner": "noc", "label": "Validación NOC",        "icon": "📡" },
+    "FACTURACION":          { "dias": 2,  "owner": "pm",  "label": "Facturación",           "icon": "💰" },
+  },
+  "nodos": {
+    "noc": { "label": "NOC",              "icon": "📡", "color": "#00B4D8" },
+    "pm":  { "label": "PM / Operaciones", "icon": "📋", "color": "#FF4757" },
+    "ops": { "label": "Campo / Dispatch", "icon": "🚛", "color": "#00ff88" },
+  },
+  "updated_at": None,
+  "updated_by": None,
+}
+
+def _load_sla_config() -> dict:
+    try:
+        if os.path.exists(_SLA_CONFIG_FILE):
+            with open(_SLA_CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return _DEFAULT_SLA_CONFIG.copy()
+
+def _save_sla_config(cfg: dict):
+    os.makedirs(os.path.dirname(_SLA_CONFIG_FILE), exist_ok=True)
+    with open(_SLA_CONFIG_FILE, "w") as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+class SLAConfigUpdateRequest(BaseModel):
+    limites: Optional[dict] = None
+    nodos:   Optional[dict] = None
+    usuario: str = "sistema"
+
+@app.get("/api/wfm/sla-config")
+def get_sla_config():
+    return _load_sla_config()
+
+@app.post("/api/wfm/sla-config")
+def update_sla_config(req: SLAConfigUpdateRequest):
+    cfg = _load_sla_config()
+    if req.limites:
+        for estado, vals in req.limites.items():
+            if estado in cfg["limites"]:
+                cfg["limites"][estado].update(vals)
+            else:
+                cfg["limites"][estado] = vals
+    if req.nodos:
+        for nodo, vals in req.nodos.items():
+            if nodo in cfg["nodos"]:
+                cfg["nodos"][nodo].update(vals)
+            else:
+                cfg["nodos"][nodo] = vals
+    cfg["updated_at"] = datetime.datetime.now().isoformat()
+    cfg["updated_by"] = req.usuario
+    _save_sla_config(cfg)
+    return {"ok": True, "config": cfg}
+
+@app.post("/api/wfm/sla-config/reset")
+def reset_sla_config():
+    cfg = _DEFAULT_SLA_CONFIG.copy()
+    _save_sla_config(cfg)
+    return {"ok": True, "config": cfg}
+
+
+# ── SLA Escalation Log ────────────────────────────────────────────────────────
+_ESC_LOG_FILE        = os.path.join(BASE_DIR, "db", "sla_escalaciones.json")
+_ESC_AUTO_CLEAR_MINS = 30   # minutos sin atención → auto-clear
+
+def _load_esc_log() -> list:
+    try:
+        if os.path.exists(_ESC_LOG_FILE):
+            with open(_ESC_LOG_FILE, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+def _save_esc_log(log: list):
+    os.makedirs(os.path.dirname(_ESC_LOG_FILE), exist_ok=True)
+    with open(_ESC_LOG_FILE, "w") as f:
+        json.dump(log, f, indent=2, ensure_ascii=False)
+
+def _esc_id() -> str:
+    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    rand = ''.join([str(ord(c) % 10) for c in ts[-4:]])
+    return f"ESC-{datetime.datetime.now().strftime('%Y%m%d')}-{rand}"
+
+def _auto_clear_escalaciones():
+    """Marca como AUTO_CLEARED las escalaciones sin ACK pasados N minutos."""
+    log = _load_esc_log()
+    now = datetime.datetime.now()
+    changed = False
+    for esc in log:
+        if esc.get("status") == "ACTIVO":
+            triggered = datetime.datetime.fromisoformat(esc["triggered_at"])
+            mins_elapsed = (now - triggered).total_seconds() / 60
+            if mins_elapsed >= _ESC_AUTO_CLEAR_MINS:
+                esc["status"]      = "AUTO_CLEARED"
+                esc["cleared_at"]  = now.isoformat()
+                esc["cleared_by"]  = "SISTEMA"
+                esc["notas"]      += f" | AUTO-CLEARED tras {int(mins_elapsed)}min sin atención"
+                changed = True
+    if changed:
+        _save_esc_log(log)
+    return log
+
+class EscalacionAckRequest(BaseModel):
+    esc_id:    str
+    acked_by:  str = "NOC Operador"
+    notas:     str = ""
+
+class EscalacionClearRequest(BaseModel):
+    order_id:   str
+    cliente:    str
+    estado:     str
+    severity:   str          # 'critico' | 'alerta'
+    dias:       float
+    owner_node: str
+    cleared_by: str = "NOC Operador"
+    notas:      str = ""
+
+@app.get("/api/wfm/sla-escalaciones")
+def get_escalaciones(limit: int = 100):
+    _auto_clear_escalaciones()
+    log = _load_esc_log()
+    # Más reciente primero
+    log.sort(key=lambda x: x.get("triggered_at", ""), reverse=True)
+    return {"log": log[:limit], "total": len(log)}
+
+@app.post("/api/wfm/sla-escalacion/clear")
+def clear_escalacion(req: EscalacionClearRequest):
+    """Registra un Clear manual de una alerta SLA con log protocolo NOC."""
+    _auto_clear_escalaciones()
+    log = _load_esc_log()
+    now = datetime.datetime.now()
+
+    # Verificar si ya existe una entrada activa para esta orden+estado
+    existing = next((e for e in log if e.get("order_id") == req.order_id
+                     and e.get("estado") == req.estado
+                     and e.get("status") == "ACTIVO"), None)
+
+    if existing:
+        existing["status"]     = "CLEARED"
+        existing["cleared_at"] = now.isoformat()
+        existing["cleared_by"] = req.cleared_by
+        if req.notas:
+            existing["notas"] += f" | {req.notas}"
+        entry = existing
+    else:
+        # Primera vez que se registra esta escalación
+        entry = {
+            "esc_id":       _esc_id(),
+            "triggered_at": now.isoformat(),
+            "order_id":     req.order_id,
+            "cliente":      req.cliente,
+            "estado":       req.estado,
+            "severity":     req.severity.upper(),
+            "dias_sla":     round(req.dias, 2),
+            "owner_node":   req.owner_node,
+            "status":       "CLEARED",
+            "cleared_at":   now.isoformat(),
+            "cleared_by":   req.cleared_by,
+            "notas":        req.notas or f"Clear manual por {req.cleared_by}",
+        }
+        log.append(entry)
+
+    _save_esc_log(log)
+    return {"ok": True, "entry": entry}
+
+@app.post("/api/wfm/sla-escalacion/ack")
+def ack_escalacion(req: EscalacionAckRequest):
+    """ACK de una escalación — queda registrado como ATENDIDO."""
+    log = _load_esc_log()
+    entry = next((e for e in log if e.get("esc_id") == req.esc_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Escalación no encontrada")
+    entry["status"]    = "ATENDIDO"
+    entry["acked_at"]  = datetime.datetime.now().isoformat()
+    entry["acked_by"]  = req.acked_by
+    if req.notas:
+        entry["notas"] += f" | {req.notas}"
+    _save_esc_log(log)
+    return {"ok": True, "entry": entry}
+
+@app.post("/api/wfm/sla-escalacion/registrar")
+def registrar_escalacion(req: EscalacionClearRequest):
+    """Registra una nueva escalación activa (llamada automática al detectar SLA excedido)."""
+    _auto_clear_escalaciones()
+    log = _load_esc_log()
+    # No duplicar si ya hay una activa para esta orden+estado
+    existing = next((e for e in log if e.get("order_id") == req.order_id
+                     and e.get("estado") == req.estado
+                     and e.get("status") == "ACTIVO"), None)
+    if existing:
+        return {"ok": True, "entry": existing, "duplicado": True}
+
+    entry = {
+        "esc_id":       _esc_id(),
+        "triggered_at": datetime.datetime.now().isoformat(),
+        "order_id":     req.order_id,
+        "cliente":      req.cliente,
+        "estado":       req.estado,
+        "severity":     req.severity.upper(),
+        "dias_sla":     round(req.dias, 2),
+        "owner_node":   req.owner_node,
+        "status":       "ACTIVO",
+        "cleared_at":   None,
+        "cleared_by":   None,
+        "notas":        req.notas or "Escalación automática por SLA excedido",
+    }
+    log.append(entry)
+    _save_esc_log(log)
+    return {"ok": True, "entry": entry}
+
+@app.delete("/api/wfm/sla-escalaciones/purge")
+def purge_escalaciones(dias: int = 30):
+    """Elimina entradas del log anteriores a N días (mantenimiento)."""
+    log = _load_esc_log()
+    cutoff = (datetime.datetime.now() - datetime.timedelta(days=dias)).isoformat()
+    nuevo = [e for e in log if e.get("triggered_at", "") >= cutoff]
+    _save_esc_log(nuevo)
+    return {"ok": True, "eliminadas": len(log) - len(nuevo), "restantes": len(nuevo)}
+
 
 @app.get("/api/wfm/ordenes")
 async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):

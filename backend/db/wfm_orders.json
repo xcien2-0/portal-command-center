@@ -751,7 +751,7 @@
     "cliente": "BECA TRADERS",
     "servicio": "Sandur, SIS-50-10-ilimitado, BECA TRADERS, SITIO: PESQUERIA",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "ANTEPROYECTO",
+    "estado": "ALMACEN_VALIDACION",
     "fecha_creacion": "2026-05-07 23:17:02",
     "preventa": {
       "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>analisis preventa</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><table class=\"table table-bordered\" style=\"vertical-align:top;caption-side:bottom;border-style:solid;margin:0 0 12px 0;box-sizing:border-box;table-layout:fixed;border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;color:#4c4c4c;width:100%;border-collapse:collapse;\" width=\"100%\"><tbody style=\"border-style:solid;box-sizing:border-box;vertical-align:inherit;border-left-width:0px;border-bottom-width:0px;border-right-width:0px;border-top-width:0px;\"><tr style=\"border-style:solid;box-sizing:border-box;border-left-width:0px;border-bottom-width:1px;border-right-width:0px;border-top-width:1px;\"><td style=\"border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;box-shadow: #ffffff 0px 0px 0px 9999px inset; border-style: solid; padding: 9px; box-sizing: border-box; border-color: #e0e2e6; border-width: 1px; vertical-align: top;\"><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">1.- \u00bfQue tipo de aplicativos utilizar\u00e1 para el servicio? CORREO ELECTRONICO, NEVAGACION, VIDEOCONFERENCIAS</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">2.- \u00bfPara qu\u00e9 servicios requiere un enlace satelital?&nbsp;<b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">CORREO ELECTRONICO, NEVAGACION, VIDEOCONFERENCIAS</span></b></span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">3.- \u00bfCu\u00e1ntos usuarios se conectaran al servicio? 15</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">4.- \u00bfCu\u00e1ntos y que dispositivos se conectar\u00e1n al servicio? 15</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">5,- \u00c1rea para colocar la antena : Cuenta con espacio en azotea de concreto para colocar antena (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite) SI</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">6.- Altura del sitio (medida de cable starlink estandar es hasta 20) , en caso de requerirse mayor distancia es hasta 45 m y es con costo adicional.</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">7.-En caso de que no cuente con infraestructura de concreto : Se requiere hacer una base de concreto dependiendo de la antena a colocar (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite).</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">8.-El servicio requiere para uso de streaming ? NO</span></b><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">9.- Requiere alguna configuraci\u00f3n especial o cuenta con equipo que requiera conectar.&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">10.- Requisitos de documentaci\u00f3n para acceso. NINGUNO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500;color: #4c4c4c;font-size: 13px\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">11</span></b><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">.- Tiene horarios especiales para acceso. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">12.- Se requiere acceso especial para colocar los equipos. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><u>STARLINK medida de cableado estandar hasta 20 m, de ser mayor se cotiza adicionalmente y la distancia es hasta 45 metros</u></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\"><span class=\"h5-fs\" style=\"box-sizing:border-box;font-size:15.4px;\">Los precios del servicio recurrente pueden cambiar sin previo aviso, debido a que es un servicio de importaci\u00f3n.</span></strong></p></td></tr></tbody></table><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
@@ -786,9 +786,14 @@
         "fecha": "2026-05-09T14:49:56.199780",
         "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T07:16:44.700175",
+        "accion": "Odoo sync: stage \u2192 > Contratacion (ALMACEN_VALIDACION)",
+        "usuario": "Sistema"
       }
     ],
-    "odoo_stage_id": 7,
+    "odoo_stage_id": 4,
     "revenue": 4200.0
   },
   {
@@ -2427,11 +2432,11 @@
   {
     "id": "ODOO-79512",
     "odoo_id": 79512,
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 9,
     "cliente": "INTERMEX MANUFACTURA DE CHIHUAHUA",
     "servicio": "Sandur, SIDP-500, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "FACTURACION",
     "estado_fuente": "odoo",
     "revenue": 0.0,
     "fecha_deadline": "2026-04-30",
@@ -2489,6 +2494,11 @@
       {
         "fecha": "2026-05-09T14:49:56.199946",
         "accion": "Importado desde Odoo CRM \u2014 > Habilitacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T12:35:02.509650",
+        "accion": "Odoo sync: stage \u2192 > Facturacion (FACTURACION)",
         "usuario": "Sistema"
       }
     ]
@@ -2703,11 +2713,11 @@
   {
     "id": "ODOO-79485",
     "odoo_id": 79485,
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 41,
     "cliente": "DEQUINTER",
     "servicio": "Sandur, SIMP-20, DEQUINTER, PASEO REAL",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "CERRADO",
     "estado_fuente": "odoo",
     "revenue": 201.0,
     "fecha_deadline": "2026-04-22",
@@ -2766,17 +2776,22 @@
         "fecha": "2026-05-09T14:49:56.199967",
         "accion": "Importado desde Odoo CRM \u2014 > Habilitacion",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T07:16:44.700241",
+        "accion": "Odoo sync: stage \u2192 > Concretado (CERRADO)",
+        "usuario": "Sistema"
       }
     ]
   },
   {
     "id": "ODOO-79484",
     "odoo_id": 79484,
-    "odoo_stage_id": 9,
+    "odoo_stage_id": 41,
     "cliente": "DEQUINTER",
     "servicio": "Sandur, SIMP-20, DEQUINTER, Montes Sabinos Bodega",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
-    "estado": "FACTURACION",
+    "estado": "CERRADO",
     "estado_fuente": "odoo",
     "revenue": 201.0,
     "fecha_deadline": "2026-04-22",
@@ -2834,6 +2849,11 @@
       {
         "fecha": "2026-05-09T14:49:56.199970",
         "accion": "Importado desde Odoo CRM \u2014 > Facturacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T07:16:44.700248",
+        "accion": "Odoo sync: stage \u2192 > Concretado (CERRADO)",
         "usuario": "Sistema"
       }
     ]
@@ -3324,11 +3344,11 @@
   {
     "id": "ODOO-79418",
     "odoo_id": 79418,
-    "odoo_stage_id": 7,
+    "odoo_stage_id": 8,
     "cliente": "ALMA ARACELY GOMEZ RODRIGUEZ",
     "servicio": "Sandur, SIDP-20, ALMA ARACELY GOMEZ RODRIGUEZ, SITIO: PLANTA AVANTE Monterrey Industrial Park",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "ANTEPROYECTO",
+    "estado": "APROVISIONAMIENTO",
     "estado_fuente": "odoo",
     "revenue": 2100.0,
     "fecha_deadline": "2026-05-29",
@@ -3386,6 +3406,16 @@
       {
         "fecha": "2026-05-09T14:49:56.200032",
         "accion": "Importado desde Odoo CRM \u2014 Negociacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T08:13:55.063316",
+        "accion": "Odoo sync: stage \u2192 > Contratacion (ALMACEN_VALIDACION)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T08:37:18.933713",
+        "accion": "Odoo sync: stage \u2192 > Habilitacion (APROVISIONAMIENTO)",
         "usuario": "Sistema"
       }
     ]
@@ -3738,11 +3768,11 @@
   {
     "id": "ODOO-79377",
     "odoo_id": 79377,
-    "odoo_stage_id": 9,
+    "odoo_stage_id": 41,
     "cliente": "SEYCVEL",
     "servicio": "Sandur, SDWAN Plus - 20, SEYCVEL, Sitio: Escobedo 1",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
-    "estado": "FACTURACION",
+    "estado": "CERRADO",
     "estado_fuente": "odoo",
     "revenue": 4000.0,
     "fecha_deadline": "2026-04-22",
@@ -3800,6 +3830,11 @@
       {
         "fecha": "2026-05-09T14:49:56.200064",
         "accion": "Importado desde Odoo CRM \u2014 > Facturacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T12:35:02.509668",
+        "accion": "Odoo sync: stage \u2192 > Concretado (CERRADO)",
         "usuario": "Sistema"
       }
     ]
@@ -7181,6 +7216,573 @@
       {
         "fecha": "2026-05-09T14:49:56.200301",
         "accion": "Importado desde Odoo CRM \u2014 Negociacion",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79798",
+    "odoo_id": 79798,
+    "odoo_stage_id": 67,
+    "cliente": "EXINSA",
+    "servicio": "Sandur, SIEV-50-3, EXINSA, Sitio:Expo",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "SOLICITUD_PREVENTA",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-14",
+    "fecha_creacion": "2026-05-11 15:52:59",
+    "preventa": {
+      "analisis": "<p>Raz\u00f3n de devoluci\u00f3n [Ingenieria Pre-Venta]:<br>analisis preventa</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Internet Eventual / Eventos&nbsp;</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas indicarme en qu\u00e9 ciudad y estado requieres el servicio?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: En Guadalajara Jalisco</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Yo me encargo en ponerte en contacto con un asesor. \u00bfC\u00faal es tu nombre?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Adriana Mart\u00ednez</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Por favor ap\u00f3yame con un numero de tel\u00e9fono donde nos podamos comunicar.</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: 3314967099</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: necesito tu n\u00famero de tel\u00e9fono para continuar, me lo podr\u00edas informar por favor?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: 3314967099</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas dejarme tu email?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto:&nbsp;<a href=\"mailto:A.martinez@exinsa.com\" target=\"_blank\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">A.martinez@exinsa.com</a></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfEn qu\u00e9 horario del d\u00eda prefieres que te llamemos?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: De lunes a viernes de 8 am a 6pm</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfQuieres dejarme alguna consulta adicional?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Buscamos internet satelital para una evento es para una Expo en Expo Guadalajara del 19 al 21 de mayo</p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento: 19, 20 y 21 MAYO</span></b></span></li><li>Horario del evento: 9 AM a 9 PM</li><li>Horario de fin del evento para retiro de equipos: 10 a 4 PM</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar: Mariano Otero 1499 Col. Verde Valle Guadalajara, Jal. 44550 Es en la Expo Guadalajara y es a nivel de Piso&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande): Es a nivel de piso no se si tengan algun lugar con altura para instalar nuestra antena</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega): 0 mts.</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso : no se ocupan</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento: 50 megas 3 dias</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar: 5 \u00f3 6 dispositivos concetados</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos: NO estarn en el stand cercas del router</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi: NO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi: Solo el stand del cliente y ahi estarn las 5 \u00f3 6 personas</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc): NO</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones: envio lay out y comnetario del cliente</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600 en su momento</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-11 15:52:59"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T07:16:44.700088",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79797",
+    "odoo_id": 79797,
+    "odoo_stage_id": 5,
+    "cliente": "BOTANA LA SILLA",
+    "servicio": "Sandur, SIEV-200-1, BOTANA LA SILLA, SITIO:HORNO3",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 37990.0,
+    "fecha_deadline": "2026-09-16",
+    "fecha_creacion": "2026-05-11 15:45:06",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento: 3 Octubre 2026</span></b></span></li><li>Horario del evento: 8 AM a 8&nbsp;PM</li><li>Horario de fin del evento para retiro de equipos: 10 AM a 4 PM</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar: Horno 3 en la explanada el servicio se le dara a 30 stand en un aprox de 50 mts por 30 mts o mas quizas</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande) Edificio</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega): 30 mts</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso : no se ocupa</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento: 200 megas para 30 stand ella me pidio esta cotizacion de 200&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar: Nose</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos: SI exterior</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi: SI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi La explanada del Horno 3 en Fundidora mide aprox como 50 x 50</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc)NO</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones:NO</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600 En su momento pero nunca lo han solicitado</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-11 15:45:06"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T07:16:44.700154",
+        "accion": "Importado desde Odoo CRM \u2014 Calificacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T10:58:16.191112",
+        "accion": "Odoo sync: stage \u2192 > Estudio Presencial (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79795",
+    "odoo_id": 79795,
+    "odoo_stage_id": 4,
+    "cliente": "VILLAGON EXPRESS PACK",
+    "servicio": "Sandur, AD, VILLAGON EXPRESS PACK, SITIO:MATRIZ",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "ALMACEN_VALIDACION",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-18",
+    "fecha_creacion": "2026-05-11 15:02:39",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuantos enlaces, con que proveedor y que capacidades tiene el prospecto?.1 Nosotros 2 telmex</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCual es la velocidad real entregada por su proveedor? 200 megas</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCual es la utilizaci\u00f3n de ancho de banda real de los enlaces?200 con nosotros</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">, \u00bfCual es la disponibilidad que requiere el cliente? alta, media o baja. Comentario el cliente es VIP y Quiere cancelar quiero ofrecerle esta solucion en 2,000, ver la posibilidad de que siga con nosotros en estos momento no tienen servicio por Pueblo Nuevo, de perdido cuando se le caiga que tenga esta ventaja y pueda trabajar, sin problema mientras reestablecemos nuestros servicios hacia el.</span></li><li>\u00bfCual es la cantidad de usuarios conectados a su red? 30</li><li>Requiere IP (para este requerimiento se recomienda Alta disponibilidad plus Ya tiene con nosotros</li></ol><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;</p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-11 15:02:39"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T07:16:44.700165",
+        "accion": "Importado desde Odoo CRM \u2014 Negociacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T08:25:27.634482",
+        "accion": "Odoo sync: stage \u2192 > Contratacion (ALMACEN_VALIDACION)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79833",
+    "odoo_id": 79833,
+    "odoo_stage_id": 7,
+    "cliente": "SPECIAL FRAME",
+    "servicio": "HUUS, SIEV-30-1, SPECIAL FRAME, SITIO: CAMINO REAL",
+    "comercial": "OMAR YAIR MACEDO MONDRAGON",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 8990.0,
+    "fecha_deadline": "2026-06-01",
+    "fecha_creacion": "2026-05-12 16:21:13",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento 10 DE JUNIO&nbsp;</span></b></span></li><li>Horario del evento 6AM-5PM</li><li>Horario de fin del evento para retiro de equipos 5PM</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar&nbsp;19.42811680315898, -99.17937361234212&nbsp;&nbsp;Calz. Gral. Mariano Escobedo 700, Anzures, Miguel Hidalgo, 11590 Ciudad de M\u00e9xico, CDMX</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande) EDIFICIO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega) 15M&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso&nbsp; NO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento 3O MBPS</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar 1</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos NO&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi NO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi NA</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc) NA</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones NO</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600 NO</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><img src=\"/web/image/3585709-16fa6dcc/CAMINO%20REAL%20POLANCO.png?access_token=bfec4762-2558-4e39-82fe-0b45b11aabd0\" class=\"img img-fluid o_we_custom_image\" style=\"box-sizing: border-box; display: inline-block; height: auto; max-width: 100%; vertical-align: middle; width: 1131.64px; mso-hide: all;\" width=\"1131.64\"></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-12 16:21:13"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T10:58:16.191039",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T12:35:02.509614",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79823",
+    "odoo_id": 79823,
+    "odoo_stage_id": 63,
+    "cliente": "PROPLASTIKS MANUFACTURING",
+    "servicio": "Sandur, SIDP-100, PROPLASTIKS MANUFACTURING, SITIO:SANTA",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 1800.0,
+    "fecha_deadline": "2026-06-25",
+    "fecha_creacion": "2026-05-12 15:33:12",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-12 15:33:12"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T10:58:16.191101",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79838",
+    "odoo_id": 79838,
+    "odoo_stage_id": 63,
+    "cliente": "SLW INDUSTRIAL ENGINEERING",
+    "servicio": "Luminet, SIMP-20, SLW INDUSTRIAL ENGINEERING, SITIO: PRISCILLA MENDOZA // FASE 3 BLINDAJE",
+    "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-13",
+    "fecha_creacion": "2026-05-12 17:26:49",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buen dia equipo, se genera oportunidad para validar factibilidad&nbsp; de incremento en sitio del cliente por tema de Fase 3 Blindaje, actualmente se tienen 10Mb por $862.92&nbsp;ya no tiene contrato vigente</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP 6620</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-12 17:26:49"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T12:35:02.509418",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79837",
+    "odoo_id": 79837,
+    "odoo_stage_id": 67,
+    "cliente": "FRANCISCO JAVIER ORTEGA GARCIA",
+    "servicio": "Luminet, SIMP-20, FRANCISCO JAVIER ORTEGA GARCIA, SITIO FRANCISCO ORTEGA",
+    "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
+    "estado": "SOLICITUD_PREVENTA",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-13",
+    "fecha_creacion": "2026-05-12 17:20:08",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buen dia equipo, se genera oportunidad para validar factibilidad&nbsp; de incremento en sitio del cliente por tema de Fase 3 Blindaje, actualmente se tienen 10Mb por $1,035 tiene aplicado un pago anual.</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP 6488</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-12 17:20:08"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T12:35:02.509606",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79830",
+    "odoo_id": 79830,
+    "odoo_stage_id": 63,
+    "cliente": "FRANCO FLORES TECH",
+    "servicio": "HUUS, SIS-100-10-ilimitado, FRANCO FLORES TECH, SITIO: MINA",
+    "comercial": "OMAR YAIR MACEDO MONDRAGON",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 4500.0,
+    "fecha_deadline": "2026-06-30",
+    "fecha_creacion": "2026-05-12 16:06:34",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Internet para Empresas</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas indicarme en qu\u00e9 ciudad y estado requieres el servicio?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Noria de \u00c1ngeles, Zacatecas</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Yo me encargo en ponerte en contacto con un asesor. \u00bfC\u00faal es tu nombre?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: Javier Franco&nbsp;</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: Por favor ap\u00f3yame con un numero de tel\u00e9fono donde nos podamos comunicar.</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: 6671764606</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfPodr\u00edas dejarme tu email?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto:&nbsp;<a href=\"mailto:compras@fftech.mx\" target=\"_blank\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">compras@fftech.mx</a></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfEn qu\u00e9 horario del d\u00eda prefieres que te llamemos?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: 8 am a 6 pm</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Asesor: \u00bfQuieres dejarme alguna consulta adicional?</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Contacto: No</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">200/50 SATELITAL FRANCO FLORES TECH&nbsp;</p><table class=\"table table-bordered\" style=\"vertical-align:top;caption-side:bottom;border-style:solid;margin:0 0 12px 0;box-sizing:border-box;table-layout:fixed;border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;color:#4c4c4c;width:100%;border-collapse:collapse;\" width=\"100%\"><tbody style=\"border-style:solid;box-sizing:border-box;vertical-align:inherit;border-left-width:0px;border-bottom-width:0px;border-right-width:0px;border-top-width:0px;\"><tr style=\"border-style:solid;box-sizing:border-box;border-left-width:0px;border-bottom-width:1px;border-right-width:0px;border-top-width:1px;\"><td style=\"border-left-color:#e0e2e6;border-bottom-color:#e0e2e6;border-right-color:#e0e2e6;border-top-color:#e0e2e6;border-left-width:1px;border-bottom-width:1px;border-right-width:1px;border-top-width:1px;box-shadow: #ffffff 0px 0px 0px 9999px inset; border-style: solid; padding: 9px; box-sizing: border-box; border-color: #e0e2e6; border-width: 1px; vertical-align: top;\"><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">1.- \u00bfQue tipo de aplicativos utilizar\u00e1 para el servicio?&nbsp; USO BASICO&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">2.- \u00bfPara qu\u00e9 servicios requiere un enlace satelital?&nbsp; POR DEFINIR&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">3.- \u00bfCu\u00e1ntos usuarios se conectaran al servicio? POR DEFINIR&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">4.- \u00bfCu\u00e1ntos y que dispositivos se conectar\u00e1n al servicio? POR DEFINIR&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">5,- \u00c1rea para colocar la antena : Cuenta con espacio en azotea de concreto para colocar antena (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite) SI</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">6.- Altura del sitio (medida de cable starlink estandar es hasta 20) , en caso de requerirse mayor distancia es hasta 45 m y es con costo adicional.&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">7.-En caso de que no cuente con infraestructura de concreto : Se requiere hacer una base de concreto dependiendo de la antena a colocar (esta \u00e1rea debe de contar con l\u00ednea libre para enlazar al sat\u00e9lite).&nbsp;</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">8.-El servicio requiere para uso de streaming ? NO</span></b><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">9.- Requiere alguna configuraci\u00f3n especial o cuenta con equipo que requiera conectar. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">10.- Requisitos de documentaci\u00f3n para acceso. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight: 500;color: #4c4c4c;font-size: 13px\"><span style=\"font-size: 10pt;color: #222222;background-color: transparent\">11</span></b><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">.- Tiene horarios especiales para acceso. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:500;\"><span style=\"font-size:10pt;color:#222222;background-color:transparent\">12.- Se requiere acceso especial para colocar los equipos. NO</span></b></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><u>STARLINK medida de cableado estandar hasta 20 m, de ser mayor se cotiza adicionalmente y la distancia es hasta 45 metros</u></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><strong style=\"box-sizing:border-box;font-weight:bolder;\"><span class=\"h5-fs\" style=\"box-sizing:border-box;font-size:15.4px;\">Los precios del servicio recurrente pueden cambiar sin previo aviso, debido a que es un servicio de importaci\u00f3n.</span></strong></p></td></tr></tbody></table><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-12 16:06:34"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T12:35:02.509619",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
         "usuario": "Sistema"
       }
     ]
