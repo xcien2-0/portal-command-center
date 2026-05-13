@@ -2,10 +2,16 @@ import { useEffect, useRef, useMemo } from 'react';
 import { NOCCity } from '@/types/noc';
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
-const G = '#00ff88';
-const Y = '#ffcc00';
-const R = '#ff3366';
-function nodeColor(score: number) { return score < 80 ? R : score < 95 ? Y : G; }
+const G  = '#00ff88';   // verde  — healthy  ≥ 85
+const Y  = '#ffcc00';   // amarillo — degraded 65–84
+const O  = '#ff8800';   // naranja  — alerta   45–64
+const R  = '#ff3366';   // rojo     — crítico   < 45
+function nodeColor(score: number) {
+  if (score >= 85) return G;
+  if (score >= 65) return Y;
+  if (score >= 45) return O;
+  return R;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Props {
