@@ -1814,6 +1814,222 @@ function SLAEscalationBanner({ theme, orders }: SLABannerProps) {
   );
 }
 
+// ── Kanban View ───────────────────────────────────────────────────────────────
+const KANBAN_LANES: {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  slaLabel: string;
+  states: WFMOrderState[];
+}[] = [
+  {
+    id: 'noc',
+    label: 'NOC',
+    icon: '📡',
+    color: '#00B4D8',
+    slaLabel: '30 min',
+    states: ['SOLICITUD_PREVENTA', 'ANTEPROYECTO'],
+  },
+  {
+    id: 'pm',
+    label: 'Almacén / PM',
+    icon: '📋',
+    color: '#FF4757',
+    slaLabel: '2 hrs',
+    states: ['ORDEN_IMPLEMENTACION', 'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO', 'REVISION_PM'],
+  },
+  {
+    id: 'campo',
+    label: 'Campo',
+    icon: '🚛',
+    color: '#00ff88',
+    slaLabel: '4.5 hrs',
+    states: ['LISTO_INSTALACION', 'INSTALACION', 'NOC_VALIDACION', 'FACTURACION'],
+  },
+];
+
+const COLUMN_SHORT: Partial<Record<WFMOrderState, string>> = {
+  SOLICITUD_PREVENTA:   'Solicitud',
+  ANTEPROYECTO:         'Anteproyecto',
+  ORDEN_IMPLEMENTACION: 'Orden Imp.',
+  ALMACEN_VALIDACION:   'Almacén',
+  ESPERA_INVENTARIO:    'Espera Inv.',
+  APROVISIONAMIENTO:    'Aprovision.',
+  REVISION_PM:          'Rev. PM',
+  LISTO_INSTALACION:    'Listo',
+  INSTALACION:          'Instalación',
+  NOC_VALIDACION:       'Val. NOC',
+  FACTURACION:          'Facturación',
+};
+
+function daysInState(order: WFMOrder): number {
+  // Try to find when it entered its current state from historial
+  const hist = [...(order.historial ?? [])].reverse();
+  const entry = hist.find(h =>
+    h.accion?.toLowerCase().includes(order.estado.toLowerCase().replace(/_/g, ' ').substring(0, 8))
+  );
+  const ref = entry?.fecha ?? order.fecha_creacion;
+  return (Date.now() - new Date(ref).getTime()) / 86_400_000;
+}
+
+function KanbanView({ theme, orders, onSelectOrder }: {
+  theme: ThemeConfig;
+  orders: WFMOrder[];
+  onSelectOrder: (id: string) => void;
+}) {
+  // Count per state for bottleneck display
+  const countByState = orders.reduce<Record<string, number>>((acc, o) => {
+    acc[o.estado] = (acc[o.estado] ?? 0) + 1;
+    return acc;
+  }, {});
+  const maxCount = Math.max(1, ...Object.values(countByState));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, overflowX: 'auto', minWidth: 0 }}>
+      {/* SLA strip header */}
+      <div style={{ display: 'flex', gap: 2, marginBottom: 10, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {KANBAN_LANES.map(lane => (
+          <div key={lane.id} style={{
+            flex: lane.states.length,
+            background: `${lane.color}12`,
+            padding: '8px 14px',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: lane.color }}>{lane.icon} {lane.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: lane.color, background: `${lane.color}20`, padding: '2px 8px', borderRadius: 12, border: `1px solid ${lane.color}40` }}>
+              SLA {lane.slaLabel}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Columns row */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        {KANBAN_LANES.map(lane =>
+          lane.states.map(state => {
+            const stateOrders = orders.filter(o => o.estado === state);
+            const count = stateOrders.length;
+            const isBottleneck = state === 'ANTEPROYECTO' && count > 10;
+            const fillPct = Math.round((count / maxCount) * 100);
+
+            return (
+              <div key={state} style={{
+                flex: 1,
+                minWidth: 140,
+                maxWidth: 220,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                background: isBottleneck ? 'rgba(255,71,87,0.06)' : `${lane.color}06`,
+                borderRadius: 10,
+                border: isBottleneck
+                  ? '1.5px solid rgba(255,71,87,0.5)'
+                  : `1px solid ${lane.color}18`,
+                padding: '10px 8px',
+              }}>
+                {/* Column header */}
+                <div style={{ marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: isBottleneck ? '#FF4757' : lane.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {COLUMN_SHORT[state] ?? state}
+                    </span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 800,
+                      padding: '1px 7px', borderRadius: 10,
+                      background: isBottleneck ? 'rgba(255,71,87,0.2)' : `${lane.color}18`,
+                      color: isBottleneck ? '#FF4757' : lane.color,
+                      border: `1px solid ${isBottleneck ? '#FF475750' : lane.color + '40'}`,
+                    }}>
+                      {count}
+                    </span>
+                  </div>
+                  {/* Fill bar */}
+                  <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${fillPct}%`,
+                      background: isBottleneck ? '#FF4757' : lane.color,
+                      borderRadius: 2,
+                      transition: 'width 0.5s ease',
+                      boxShadow: isBottleneck ? '0 0 6px #FF475788' : undefined,
+                    }} />
+                  </div>
+                  {isBottleneck && (
+                    <div style={{ fontSize: 9, color: '#FF4757', fontWeight: 700, marginTop: 3 }}>
+                      ⚡ CUELLO DE BOTELLA
+                    </div>
+                  )}
+                </div>
+
+                {/* Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 420, overflowY: 'auto' }}>
+                  {stateOrders.slice(0, 12).map(order => {
+                    const days = daysInState(order);
+                    const daysStr = days >= 1 ? `${days.toFixed(1)}d` : `${Math.round(days * 24)}h`;
+                    const urgency = days > 3 ? '#FF4757' : days > 1 ? '#FFB703' : '#00C896';
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => onSelectOrder(order.id)}
+                        style={{
+                          padding: '7px 9px',
+                          background: theme.card,
+                          borderRadius: 7,
+                          border: `1px solid ${theme.border}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = lane.color + '60')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = theme.border)}
+                      >
+                        <div style={{ fontSize: 9, fontWeight: 700, color: theme.accent, marginBottom: 2, fontFamily: 'monospace' }}>{order.id}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: theme.text, lineHeight: 1.3, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.cliente}</div>
+                        <div style={{ fontSize: 9, color: theme.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{order.servicio}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: urgency, background: `${urgency}15`, padding: '1px 5px', borderRadius: 4, border: `1px solid ${urgency}30` }}>
+                            {daysStr}
+                          </span>
+                          {order.estado_fuente === 'odoo' && (
+                            <span style={{ fontSize: 8, color: '#4FC3F7', opacity: 0.7 }}>Odoo</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {stateOrders.length > 12 && (
+                    <div style={{ fontSize: 9, color: theme.dim, textAlign: 'center', padding: '4px 0' }}>
+                      +{stateOrders.length - 12} más…
+                    </div>
+                  )}
+                  {stateOrders.length === 0 && (
+                    <div style={{ fontSize: 10, color: theme.dim, textAlign: 'center', padding: '12px 0', opacity: 0.5 }}>vacío</div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Policy strip */}
+      <div style={{ marginTop: 12, padding: '8px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 9, color: '#FFB703', fontWeight: 700 }}>📋 POLÍTICAS SLA</span>
+        {[
+          'Máx 1D incumplimiento/mes por plaza',
+          'Fuera de horario → NOC llama a PM',
+          'PM da seguimiento c/15 min',
+          'Guardia: 20:00 – 16:00 hrs',
+        ].map((p, i) => (
+          <span key={i} style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>· {p}</span>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>Plazas: Mty · SLP · PN · CDMX · Mva · Torreón · GDL · Mérida · Rey · Tamp · Caro</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Section ─────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 
@@ -1823,6 +2039,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const [loading, setLoading]     = useState(true);
   const [selectedId, setSelected] = useState<string | null>(null);
   const [dispatchTab, setDispatchTab] = useState<DispatchTab>('checklist');
+  const [viewMode, setViewMode]   = useState<'roles' | 'kanban'>('kanban');
 
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
@@ -1971,8 +2188,8 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
       {!loading && <SLAEscalationBanner theme={theme} orders={orders} />}
 
       <div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
-      {/* Sidebar de Roles */}
-      <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Sidebar de Roles — hidden in kanban view */}
+      {viewMode === 'roles' && <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Vistas por Rol</h3>
         {(Object.keys(ROLE_DATA) as WFMRole[]).map(r => (
           <button
@@ -1990,27 +2207,68 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             <span style={{ fontSize: 13, fontWeight: 600 }}>{ROLE_DATA[r].label}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+
         {/* Header Dinámico */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Dashboard de {ROLE_DATA[role].label}</h2>
-            <p style={{ fontSize: 12, color: theme.dim }}>Gestión de órdenes de implementación y field services</p>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+              {viewMode === 'kanban' ? 'Kanban WFM — Flujo Compartido' : `Dashboard de ${ROLE_DATA[role].label}`}
+            </h2>
+            <p style={{ fontSize: 12, color: theme.dim }}>
+              {viewMode === 'kanban'
+                ? `${orders.length} órdenes · NOC · PM · Campo · SLA 7hrs total`
+                : 'Gestión de órdenes de implementación y field services'}
+            </p>
           </div>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            style={{ padding: '8px 16px', borderRadius: 8, background: syncing ? `${theme.accent}22` : theme.card, border: `1px solid ${syncing ? theme.accent : theme.border}`, color: syncing ? theme.accent : theme.text, cursor: 'pointer', fontWeight: syncing ? 700 : 400, transition: 'all 0.2s' }}
-          >
-            {syncing ? '⏳ Sincronizando...' : '🔄 Sync Odoo'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* View toggle */}
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+              {(['kanban', 'roles'] as const).map(v => (
+                <button key={v} onClick={() => setViewMode(v)} style={{
+                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: viewMode === v ? `${G}22` : 'transparent',
+                  color: viewMode === v ? G : theme.dim,
+                  fontSize: 11, fontWeight: viewMode === v ? 700 : 500,
+                  boxShadow: viewMode === v ? `0 0 0 1px ${G}40` : 'none',
+                  transition: 'all 0.15s',
+                }}>
+                  {v === 'kanban' ? '⬛ Kanban' : '👤 Roles'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              style={{ padding: '8px 16px', borderRadius: 8, background: syncing ? `${theme.accent}22` : theme.card, border: `1px solid ${syncing ? theme.accent : theme.border}`, color: syncing ? theme.accent : theme.text, cursor: 'pointer', fontWeight: syncing ? 700 : 400, transition: 'all 0.2s' }}
+            >
+              {syncing ? '⏳ Sincronizando...' : '🔄 Sync Odoo'}
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: 20, flex: 1, minHeight: 0 }}>
+        {/* ── KANBAN VIEW ── */}
+        {viewMode === 'kanban' && !loading && (
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+            <KanbanView
+              theme={theme}
+              orders={orders.filter(o => o.estado !== 'CERRADO' && o.estado !== 'BACKLOG')}
+              onSelectOrder={id => { setSelected(id); setViewMode('roles'); }}
+            />
+          </div>
+        )}
+
+        {viewMode === 'kanban' && loading && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.dim }}>
+            Cargando órdenes...
+          </div>
+        )}
+
+        {/* ── ROLES VIEW ── */}
+        {viewMode === 'roles' && <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: 20, flex: 1, minHeight: 0 }}>
           
           {/* Listado de Órdenes */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', paddingRight: 4 }}>
@@ -2256,9 +2514,10 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             )}
           </div>
 
-        </div>
+        </div>}
+
       </div>
-      </div> {/* end flex row */}
+      </div>
     </div>
   );
 }
