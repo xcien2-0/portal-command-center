@@ -443,6 +443,10 @@ class WFMWorkflowService:
 
     def obtener_ordenes(self, estado: Optional[str] = None) -> List[Dict]:
         orders = self._load_orders()
+        # Enrich estado_fuente si no está seteado
+        for o in orders:
+            if not o.get("estado_fuente"):
+                o["estado_fuente"] = "odoo" if o.get("odoo_id") else "local"
         if estado:
             return [o for o in orders if o["estado"] == estado]
         return orders
