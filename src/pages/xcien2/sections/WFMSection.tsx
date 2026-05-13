@@ -1393,9 +1393,15 @@ interface EscEntry {
   status: string; cleared_at: string | null; cleared_by: string | null; notas: string;
 }
 
-interface SLABannerProps { theme: ThemeConfig; orders: WFMOrder[] }
+type ViewMode = 'kanban' | 'timeline' | 'roles';
+interface SLABannerProps {
+  theme: ThemeConfig;
+  orders: WFMOrder[];
+  viewMode?: ViewMode;
+  onViewChange?: (v: ViewMode) => void;
+}
 
-function SLAEscalationBanner({ theme, orders }: SLABannerProps) {
+function SLAEscalationBanner({ theme, orders, viewMode, onViewChange }: SLABannerProps) {
   const [config, setConfig]       = useState<SLAConfig | null>(null);
   const [editMode, setEditMode]   = useState(false);
   const [draft, setDraft]         = useState<Record<string, number>>({});
@@ -1575,6 +1581,29 @@ function SLAEscalationBanner({ theme, orders }: SLABannerProps) {
           </span>
         )}
         <span style={{ fontSize: 10, color: theme.dim }}>{active.length} activas</span>
+
+        {/* ── Selector de vista ── */}
+        {onViewChange && (
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)', marginLeft: 8 }}>
+            {([
+              ['kanban',   '⬛', 'Kanban'],
+              ['timeline', '📅', 'Timeline'],
+              ['roles',    '👤', 'Roles'],
+            ] as [ViewMode, string, string][]).map(([id, icon, label]) => (
+              <button key={id} onClick={() => onViewChange(id)} style={{
+                padding: '4px 11px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                background: viewMode === id ? `${G}22` : 'transparent',
+                color: viewMode === id ? G : theme.dim,
+                fontSize: 10, fontWeight: viewMode === id ? 800 : 500,
+                boxShadow: viewMode === id ? `0 0 0 1px ${G}40` : 'none',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}>
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Botones derecha */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1814,6 +1843,335 @@ function SLAEscalationBanner({ theme, orders }: SLABannerProps) {
   );
 }
 
+// ── Timeline View ─────────────────────────────────────────────────────────────
+const PIPELINE_STATES: WFMOrderState[] = [
+  'SOLICITUD_PREVENTA', 'ANTEPROYECTO', 'ORDEN_IMPLEMENTACION',
+  'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO',
+  'REVISION_PM', 'LISTO_INSTALACION', 'INSTALACION', 'NOC_VALIDACION',
+  'FACTURACION', 'CERRADO',
+];
+const STATE_INDEX = Object.fromEntries(PIPELINE_STATES.map((s, i) => [s, i]));
+const LANE_FOR: Partial<Record<WFMOrderState, { color: string; area: string }>> = {
+  SOLICITUD_PREVENTA:   { color: '#00B4D8', area: 'NOC' },
+  ANTEPROYECTO:         { color: '#00B4D8', area: 'NOC' },
+  ORDEN_IMPLEMENTACION: { color: '#FF4757', area: 'PM' },
+  ALMACEN_VALIDACION:   { color: '#FF4757', area: 'PM' },
+  ESPERA_INVENTARIO:    { color: '#FFB703', area: 'PM' },
+  APROVISIONAMIENTO:    { color: '#A855F7', area: 'PM' },
+  REVISION_PM:          { color: '#FF4757', area: 'PM' },
+  LISTO_INSTALACION:    { color: '#00ff88', area: 'Campo' },
+  INSTALACION:          { color: '#00ff88', area: 'Campo' },
+  NOC_VALIDACION:       { color: '#00B4D8', area: 'Campo' },
+  FACTURACION:          { color: '#00C896', area: 'Campo' },
+  CERRADO:              { color: '#00C896', area: 'Campo' },
+};
+
+function TimelineView({ theme, orders, onSelectOrder }: {
+  theme: ThemeConfig;
+  orders: WFMOrder[];
+  onSelectOrder: (id: string) => void;
+}) {
+  const [filter, setFilter] = useState<'all' | 'active' | 'delayed'>('all');
+  const now = Date.now();
+
+  const filtered = orders.filter(o => {
+    if (o.estado === 'CERRADO') return filter === 'all';
+    if (filter === 'active') return o.estado !== 'CERRADO';
+    if (filter === 'delayed') {
+      const days = (now - new Date(o.fecha_creacion).getTime()) / 86_400_000;
+      return days > 3;
+    }
+    return true;
+  });
+
+  // Sort by creation date desc
+  const sorted = [...filtered].sort((a, b) =>
+    new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime()
+  );
+
+  const stateStep = 100 / (PIPELINE_STATES.length - 1);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 11, color: theme.dim, fontWeight: 700 }}>FILTRO:</span>
+        {([
+          ['all',     '📋 Todas',    theme.text],
+          ['active',  '🟢 Activas',  '#00C896'],
+          ['delayed', '🔴 Retrasadas','#FF4757'],
+        ] as const).map(([id, label, col]) => (
+          <button key={id} onClick={() => setFilter(id)} style={{
+            padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: filter === id ? 700 : 400,
+            background: filter === id ? `${col}20` : 'rgba(255,255,255,0.04)',
+            color: filter === id ? col : theme.dim,
+            boxShadow: filter === id ? `0 0 0 1px ${col}50` : 'none',
+            transition: 'all 0.15s',
+          }}>{label}</button>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: theme.dim }}>{sorted.length} órdenes</span>
+      </div>
+
+      {/* Pipeline state header ruler */}
+      <div style={{ position: 'relative', height: 28, marginBottom: 4 }}>
+        {/* Ruler line */}
+        <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+        {PIPELINE_STATES.map((s, i) => {
+          const pct = i * stateStep;
+          const meta = LANE_FOR[s];
+          return (
+            <div key={s} style={{
+              position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: meta?.color ?? '#555', boxShadow: `0 0 4px ${meta?.color ?? '#555'}88` }} />
+              <span style={{ fontSize: 8, color: meta?.color ?? theme.dim, fontWeight: 700, whiteSpace: 'nowrap', writingMode: 'horizontal-tb' }}>
+                {(COLUMN_SHORT[s] ?? s).substring(0, 8)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Order rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+        {sorted.map(order => {
+          const idx    = STATE_INDEX[order.estado] ?? 0;
+          const pct    = idx * stateStep;
+          const meta   = LANE_FOR[order.estado];
+          const col    = meta?.color ?? '#888';
+          const days   = (now - new Date(order.fecha_creacion).getTime()) / 86_400_000;
+          const daysStr = days >= 1 ? `${days.toFixed(1)}d` : `${Math.round(days * 24)}h`;
+          const urgency = days > 7 ? '#FF4757' : days > 3 ? '#FFB703' : '#00C896';
+          const isActive = order.estado !== 'CERRADO';
+
+          return (
+            <div key={order.id}
+              onClick={() => onSelectOrder(order.id)}
+              style={{
+                padding: '10px 14px', background: theme.card, borderRadius: 10,
+                border: `1px solid ${theme.border}`, cursor: 'pointer',
+                transition: 'border-color 0.15s',
+                opacity: isActive ? 1 : 0.55,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = col + '60')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = theme.border)}
+            >
+              {/* Row top: id + client + state badge + time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: theme.accent, fontFamily: 'monospace', flexShrink: 0 }}>{order.id}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{order.cliente}</span>
+                <span style={{ fontSize: 9, color: theme.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130, flexShrink: 0 }}>{order.servicio}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: `${col}18`, color: col, border: `1px solid ${col}40`, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  {STATE_LABEL[order.estado] ?? order.estado}
+                </span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: urgency, flexShrink: 0 }}>{daysStr}</span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
+                {/* Filled track */}
+                <div style={{
+                  position: 'absolute', left: 0, width: `${pct}%`, height: '100%',
+                  background: `linear-gradient(90deg, #00B4D820, ${col}60)`,
+                  borderRadius: 3, transition: 'width 0.4s ease',
+                }} />
+                {/* Dot at current position */}
+                <div style={{
+                  position: 'absolute', top: '50%', left: `${pct}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: col,
+                  boxShadow: isActive ? `0 0 8px ${col}` : 'none',
+                  border: `2px solid ${theme.card}`,
+                  transition: 'left 0.4s ease',
+                }} />
+              </div>
+
+              {/* Historial pills */}
+              {order.historial && order.historial.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                  {order.historial.slice(-5).map((h, i) => {
+                    const ts = new Date(h.fecha);
+                    const timeStr = `${ts.toLocaleDateString('es-MX', { month:'2-digit', day:'2-digit' })} ${ts.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' })}`;
+                    return (
+                      <span key={i} style={{
+                        fontSize: 8, whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4,
+                        background: 'rgba(255,255,255,0.04)', color: theme.dim, border: `1px solid ${theme.border}`,
+                        flexShrink: 0,
+                      }}>
+                        {timeStr} · {h.accion?.substring(0, 20)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {sorted.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: theme.dim, fontSize: 13 }}>Sin órdenes en este filtro</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline View ─────────────────────────────────────────────────────────────
+const PIPELINE_STATES: WFMOrderState[] = [
+  'SOLICITUD_PREVENTA', 'ANTEPROYECTO', 'ORDEN_IMPLEMENTACION',
+  'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO',
+  'REVISION_PM', 'LISTO_INSTALACION', 'INSTALACION', 'NOC_VALIDACION',
+  'FACTURACION', 'CERRADO',
+];
+const STATE_IDX = Object.fromEntries(PIPELINE_STATES.map((s, i) => [s, i]));
+const LANE_META: Partial<Record<WFMOrderState, { color: string; area: string }>> = {
+  SOLICITUD_PREVENTA:   { color: '#00B4D8', area: 'NOC' },
+  ANTEPROYECTO:         { color: '#00B4D8', area: 'NOC' },
+  ORDEN_IMPLEMENTACION: { color: '#FF4757', area: 'PM' },
+  ALMACEN_VALIDACION:   { color: '#FF4757', area: 'PM' },
+  ESPERA_INVENTARIO:    { color: '#FFB703', area: 'PM' },
+  APROVISIONAMIENTO:    { color: '#A855F7', area: 'PM' },
+  REVISION_PM:          { color: '#FF4757', area: 'PM' },
+  LISTO_INSTALACION:    { color: '#00ff88', area: 'Campo' },
+  INSTALACION:          { color: '#00ff88', area: 'Campo' },
+  NOC_VALIDACION:       { color: '#00B4D8', area: 'Campo' },
+  FACTURACION:          { color: '#00C896', area: 'Campo' },
+  CERRADO:              { color: '#00C896', area: 'Campo' },
+};
+
+function TimelineView({ theme, orders, onSelectOrder }: {
+  theme: ThemeConfig;
+  orders: WFMOrder[];
+  onSelectOrder: (id: string) => void;
+}) {
+  const [filter, setFilter] = useState<'all' | 'active' | 'delayed'>('active');
+  const now = Date.now();
+  const step = 100 / (PIPELINE_STATES.length - 1);
+
+  const filtered = orders.filter(o => {
+    if (filter === 'active')  return o.estado !== 'CERRADO' && o.estado !== 'BACKLOG';
+    if (filter === 'delayed') return (now - new Date(o.fecha_creacion).getTime()) / 86_400_000 > 3;
+    return true;
+  });
+  const sorted = [...filtered].sort((a, b) =>
+    new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime()
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* Filter + counter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: theme.dim, fontWeight: 700, textTransform: 'uppercase' }}>Filtro:</span>
+        {([
+          ['active',  '🟢 Activas',    '#00C896'],
+          ['delayed', '🔴 Retrasadas', '#FF4757'],
+          ['all',     '📋 Todas',      theme.text as string],
+        ] as const).map(([id, label, col]) => (
+          <button key={id} onClick={() => setFilter(id)} style={{
+            padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
+            fontWeight: filter === id ? 700 : 400,
+            background: filter === id ? `${col}20` : 'rgba(255,255,255,0.04)',
+            color: filter === id ? col : theme.dim,
+            boxShadow: filter === id ? `0 0 0 1px ${col}50` : 'none',
+            transition: 'all 0.15s',
+          }}>{label}</button>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: theme.dim }}>{sorted.length} órdenes</span>
+      </div>
+
+      {/* State ruler */}
+      <div style={{ position: 'relative', height: 32, marginBottom: 2 }}>
+        <div style={{ position: 'absolute', top: 8, left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+        {PIPELINE_STATES.map((s, i) => {
+          const meta = LANE_META[s];
+          return (
+            <div key={s} style={{
+              position: 'absolute', left: `${i * step}%`, transform: 'translateX(-50%)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: meta?.color ?? '#555', boxShadow: `0 0 5px ${meta?.color ?? '#555'}88` }} />
+              <span style={{ fontSize: 8, color: meta?.color ?? theme.dim, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {(COLUMN_SHORT[s] ?? s).substring(0, 9)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Order rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 500, overflowY: 'auto', paddingRight: 4 }}>
+        {sorted.map(order => {
+          const idx     = STATE_IDX[order.estado] ?? 0;
+          const pct     = idx * step;
+          const meta    = LANE_META[order.estado];
+          const col     = meta?.color ?? '#888';
+          const days    = (now - new Date(order.fecha_creacion).getTime()) / 86_400_000;
+          const daysStr = days >= 1 ? `${days.toFixed(1)}d` : `${Math.round(days * 24)}h`;
+          const urgency = days > 7 ? '#FF4757' : days > 3 ? '#FFB703' : '#00C896';
+          const isActive = order.estado !== 'CERRADO';
+
+          return (
+            <div
+              key={order.id}
+              onClick={() => onSelectOrder(order.id)}
+              style={{
+                padding: '10px 14px', background: theme.card, borderRadius: 10,
+                border: `1px solid ${theme.border}`, cursor: 'pointer',
+                opacity: isActive ? 1 : 0.5, transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = col + '60')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = theme.border)}
+            >
+              {/* Top row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: theme.accent, fontFamily: 'monospace', flexShrink: 0 }}>{order.id}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 80 }}>{order.cliente}</span>
+                <span style={{ fontSize: 9, color: theme.dim, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.servicio}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: `${col}18`, color: col, border: `1px solid ${col}40`, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  {STATE_LABEL[order.estado] ?? order.estado}
+                </span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: urgency, flexShrink: 0 }}>{daysStr}</span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginBottom: order.historial?.length ? 6 : 0 }}>
+                <div style={{ position: 'absolute', left: 0, width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, #00B4D820, ${col}60)`, borderRadius: 3 }} />
+                <div style={{
+                  position: 'absolute', top: '50%', left: `${pct}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: 11, height: 11, borderRadius: '50%', background: col,
+                  boxShadow: isActive ? `0 0 8px ${col}` : 'none',
+                  border: `2px solid ${theme.card}`,
+                }} />
+              </div>
+
+              {/* Historial pills */}
+              {order.historial && order.historial.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }}>
+                  {order.historial.slice(-5).map((h, i) => {
+                    const ts = new Date(h.fecha);
+                    const tStr = `${ts.toLocaleDateString('es-MX', { month:'2-digit', day:'2-digit' })} ${ts.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' })}`;
+                    return (
+                      <span key={i} style={{ fontSize: 8, whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: theme.dim, border: `1px solid ${theme.border}`, flexShrink: 0 }}>
+                        {tStr} · {(h.accion ?? '').substring(0, 22)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {sorted.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: theme.dim, fontSize: 13 }}>Sin órdenes en este filtro</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Kanban View ───────────────────────────────────────────────────────────────
 const KANBAN_LANES: {
   id: string;
@@ -2039,7 +2397,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const [loading, setLoading]     = useState(true);
   const [selectedId, setSelected] = useState<string | null>(null);
   const [dispatchTab, setDispatchTab] = useState<DispatchTab>('checklist');
-  const [viewMode, setViewMode]   = useState<'roles' | 'kanban'>('kanban');
+  const [viewMode, setViewMode]   = useState<ViewMode>('kanban');
 
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
@@ -2185,7 +2543,14 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
       {activeThemeId === 'matrix' && <MatrixBackground />}
 
       {/* ── SLA & Escalamiento en Vivo ── */}
-      {!loading && <SLAEscalationBanner theme={theme} orders={orders} />}
+      {!loading && (
+        <SLAEscalationBanner
+          theme={theme}
+          orders={orders}
+          viewMode={viewMode}
+          onViewChange={setViewMode}
+        />
+      )}
 
       <div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
       {/* Sidebar de Roles — hidden in kanban view */}
@@ -2216,38 +2581,23 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
-              {viewMode === 'kanban' ? 'Kanban WFM — Flujo Compartido' : `Dashboard de ${ROLE_DATA[role].label}`}
+              {viewMode === 'kanban'   ? 'Kanban WFM — Flujo Compartido'
+               : viewMode === 'timeline' ? 'Timeline — Avance por Orden'
+               : `Dashboard de ${ROLE_DATA[role].label}`}
             </h2>
             <p style={{ fontSize: 12, color: theme.dim }}>
-              {viewMode === 'kanban'
-                ? `${orders.length} órdenes · NOC · PM · Campo · SLA 7hrs total`
-                : 'Gestión de órdenes de implementación y field services'}
+              {viewMode === 'kanban'   ? `${orders.length} órdenes · NOC · PM · Campo · SLA 7hrs total`
+               : viewMode === 'timeline' ? `${orders.length} órdenes en pipeline · progreso visual por etapa`
+               : 'Gestión de órdenes de implementación y field services'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {/* View toggle */}
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
-              {(['kanban', 'roles'] as const).map(v => (
-                <button key={v} onClick={() => setViewMode(v)} style={{
-                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: viewMode === v ? `${G}22` : 'transparent',
-                  color: viewMode === v ? G : theme.dim,
-                  fontSize: 11, fontWeight: viewMode === v ? 700 : 500,
-                  boxShadow: viewMode === v ? `0 0 0 1px ${G}40` : 'none',
-                  transition: 'all 0.15s',
-                }}>
-                  {v === 'kanban' ? '⬛ Kanban' : '👤 Roles'}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              style={{ padding: '8px 16px', borderRadius: 8, background: syncing ? `${theme.accent}22` : theme.card, border: `1px solid ${syncing ? theme.accent : theme.border}`, color: syncing ? theme.accent : theme.text, cursor: 'pointer', fontWeight: syncing ? 700 : 400, transition: 'all 0.2s' }}
-            >
-              {syncing ? '⏳ Sincronizando...' : '🔄 Sync Odoo'}
-            </button>
-          </div>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            style={{ padding: '8px 16px', borderRadius: 8, background: syncing ? `${theme.accent}22` : theme.card, border: `1px solid ${syncing ? theme.accent : theme.border}`, color: syncing ? theme.accent : theme.text, cursor: 'pointer', fontWeight: syncing ? 700 : 400, transition: 'all 0.2s' }}
+          >
+            {syncing ? '⏳ Sincronizando...' : '🔄 Sync Odoo'}
+          </button>
         </div>
 
         {/* ── KANBAN VIEW ── */}
@@ -2261,7 +2611,18 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
           </div>
         )}
 
-        {viewMode === 'kanban' && loading && (
+        {/* ── TIMELINE VIEW ── */}
+        {viewMode === 'timeline' && !loading && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <TimelineView
+              theme={theme}
+              orders={orders}
+              onSelectOrder={id => { setSelected(id); setViewMode('roles'); }}
+            />
+          </div>
+        )}
+
+        {loading && viewMode !== 'roles' && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.dim }}>
             Cargando órdenes...
           </div>
