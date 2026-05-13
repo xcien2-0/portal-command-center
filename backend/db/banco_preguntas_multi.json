@@ -3,20 +3,74 @@
     "titulo": "Examen de Certificación NOC (Operaciones de Red)",
     "preguntas": [
       {
-        "id": 1,
-        "pilar": "Monitoreo",
+        "id": 1, "pilar": "Monitoreo",
         "pregunta": "¿Cuál es la herramienta principal de monitoreo en XCIEN para visualizar latencia y pérdida de paquetes en tiempo real?",
         "opciones": ["Excel", "Zabbix / Grafana", "WhatsApp", "Calculadora"],
         "respuesta_correcta": 1,
         "explicacion": "Zabbix y Grafana son los estándares para monitoreo de red en tiempo real."
       },
       {
-        "id": 2,
-        "pilar": "Protocolos",
+        "id": 2, "pilar": "Protocolos",
         "pregunta": "¿Qué protocolo se utiliza mayormente en XCIEN para la gestión remota segura de routers?",
         "opciones": ["HTTP", "Telnet", "SSH", "FTP"],
         "respuesta_correcta": 2,
         "explicacion": "SSH es el estándar de seguridad para acceso remoto a equipos de red."
+      },
+      {
+        "id": 3, "pilar": "Incidentes",
+        "pregunta": "¿Cuál es el tiempo máximo de respuesta inicial ante una alerta crítica en el NOC de XCIEN?",
+        "opciones": ["30 minutos", "1 hora", "15 minutos", "2 horas"],
+        "respuesta_correcta": 2,
+        "explicacion": "El protocolo NOC exige respuesta inicial en 15 minutos para alertas críticas."
+      },
+      {
+        "id": 4, "pilar": "Redes",
+        "pregunta": "¿Qué rango de latencia se considera ACEPTABLE para un enlace de última milla de fibra en XCIEN?",
+        "opciones": ["< 5 ms", "< 30 ms", "< 100 ms", "< 200 ms"],
+        "respuesta_correcta": 1,
+        "explicacion": "Para fibra óptica, la latencia aceptable es menor a 30 ms en condiciones normales."
+      },
+      {
+        "id": 5, "pilar": "Monitoreo",
+        "pregunta": "¿Qué significa una pérdida de paquetes (packet loss) mayor al 5% en un enlace activo?",
+        "opciones": ["El enlace está perfecto", "Degradación severa, requiere escalamiento", "Es un valor normal", "Solo aplica a fibra"],
+        "respuesta_correcta": 1,
+        "explicacion": "Pérdida > 5% indica degradación severa y debe escalarse inmediatamente al NOC Senior."
+      },
+      {
+        "id": 6, "pilar": "Protocolos",
+        "pregunta": "¿Qué protocolo de routing utiliza XCIEN como estándar en su red troncal (backbone)?",
+        "opciones": ["RIP v1", "OSPF", "BGP", "EIGRP"],
+        "respuesta_correcta": 2,
+        "explicacion": "BGP (Border Gateway Protocol) es el estándar para routing entre ISPs y redes troncales de operadores."
+      },
+      {
+        "id": 7, "pilar": "Incidentes",
+        "pregunta": "Al detectar un nodo caído en Zabbix, ¿cuál es el PRIMER paso según el protocolo XCIEN?",
+        "opciones": ["Llamar al cliente", "Verificar si hay alerta colateral en otros nodos upstream", "Reiniciar el equipo remoto", "Escalar a Dirección"],
+        "respuesta_correcta": 1,
+        "explicacion": "Siempre verificar alertas upstream para determinar si es un fallo aislado o cascada antes de actuar."
+      },
+      {
+        "id": 8, "pilar": "Redes",
+        "pregunta": "¿Para qué se utiliza SNMP en la infraestructura de NOC?",
+        "opciones": ["Enviar correos", "Gestión y monitoreo remoto de dispositivos de red", "Configurar VLANs", "Enrutar paquetes"],
+        "respuesta_correcta": 1,
+        "explicacion": "SNMP (Simple Network Management Protocol) permite recolectar métricas y gestionar dispositivos de red remotamente."
+      },
+      {
+        "id": 9, "pilar": "Monitoreo",
+        "pregunta": "¿Qué herramienta usa XCIEN para monitoreo activo de 384+ hosts con API local?",
+        "opciones": ["Zabbix Cloud", "NOCBoard", "SolarWinds", "LibreNMS"],
+        "respuesta_correcta": 1,
+        "explicacion": "NOCBoard es la aplicación macOS de monitoreo activo de XCIEN con API REST local en puerto 9401."
+      },
+      {
+        "id": 10, "pilar": "Protocolos",
+        "pregunta": "¿Qué indica una MTU mal configurada en un enlace de fibra empresarial?",
+        "opciones": ["Mayor velocidad", "Fragmentación de paquetes y pérdida de rendimiento", "Mejor seguridad", "Ahorro de ancho de banda"],
+        "respuesta_correcta": 1,
+        "explicacion": "Una MTU incorrecta fuerza la fragmentación de paquetes, degradando el throughput real del enlace."
       }
     ]
   },
@@ -24,20 +78,74 @@
     "titulo": "Examen de Certificación OPS (Instalaciones & Mantenimiento)",
     "preguntas": [
       {
-        "id": 1,
-        "pilar": "Instalación",
-        "pregunta": "¿Cuál es el nivel de señal (dBi) considerado como 'Excelente' en una alineación de antena?",
-        "opciones": ["65-75 dBi", "55-65 dBi", "35-45 dBi", "25-35 dBi"],
-        "respuesta_correcta": 2,
-        "explicacion": "El rango de 35 a 45 dBi es el óptimo de excelencia según nuestros estándares."
+        "id": 1, "pilar": "Instalación",
+        "pregunta": "¿Cuál es el nivel de señal (RSSI en dBm) considerado como 'Excelente' en una alineación de antena Mimosa?",
+        "opciones": ["-55 a -65 dBm", "-70 a -80 dBm", "-45 a -55 dBm", "-30 a -45 dBm"],
+        "respuesta_correcta": 0,
+        "explicacion": "Para Mimosa, el rango óptimo de RSSI es -55 a -65 dBm para excelente rendimiento."
       },
       {
-        "id": 2,
-        "pilar": "Administración",
+        "id": 2, "pilar": "Administración",
         "pregunta": "Es obligatorio que el técnico se retire del sitio solo después de:",
-        "opciones": ["Terminar la instalación física", "Recoger su basura", "Documentar la tarea completa en Odoo", "Saludar al cliente"],
+        "opciones": ["Terminar la instalación física", "Recoger su basura", "Documentar la tarea completa en Odoo y recibir confirmación del NOC", "Saludar al cliente"],
         "respuesta_correcta": 2,
-        "explicacion": "La regla administrativa prohíbe salir del sitio sin haber documentado la tarea en el ERP."
+        "explicacion": "La regla administrativa exige documentar en Odoo y confirmar con NOC antes de retirarse."
+      },
+      {
+        "id": 3, "pilar": "Fibra Óptica",
+        "pregunta": "¿Qué valor de pérdida máxima es aceptable en un empalme de fibra óptica monomodo?",
+        "opciones": ["< 0.5 dB", "< 3 dB", "< 1.5 dB", "< 5 dB"],
+        "respuesta_correcta": 0,
+        "explicacion": "Un empalme de fusión de calidad debe tener pérdida menor a 0.5 dB para garantizar el presupuesto óptico."
+      },
+      {
+        "id": 4, "pilar": "Instalación",
+        "pregunta": "¿Cuál es la distancia mínima de separación entre cable de red UTP y cable de energía eléctrica en una instalación?",
+        "opciones": ["5 cm", "30 cm", "1 metro", "No importa"],
+        "respuesta_correcta": 1,
+        "explicacion": "Mínimo 30 cm de separación para evitar interferencia electromagnética en el cable de datos."
+      },
+      {
+        "id": 5, "pilar": "Administración",
+        "pregunta": "¿Qué foto es OBLIGATORIA según el checklist de cierre de instalación XCIEN?",
+        "opciones": ["Solo selfie del técnico", "Foto del equipo instalado + foto de la conexión al cliente + antes y después", "Solo foto del ticket de Odoo", "No se requieren fotos"],
+        "respuesta_correcta": 1,
+        "explicacion": "El protocolo de evidencias exige: equipo instalado, conexión activa al cliente, y comparativa antes/después."
+      },
+      {
+        "id": 6, "pilar": "Fibra Óptica",
+        "pregunta": "¿Qué instrumento se usa para medir la distancia de un corte o reflección en una fibra óptica?",
+        "opciones": ["Multímetro", "OTDR (Optical Time-Domain Reflectometer)", "Nivel láser", "Amperímetro"],
+        "respuesta_correcta": 1,
+        "explicacion": "El OTDR envía pulsos de luz y mide el tiempo de retorno para ubicar fallas en la fibra con precisión de metros."
+      },
+      {
+        "id": 7, "pilar": "Instalación",
+        "pregunta": "¿En qué dirección debe apuntar el logo o LED de estado de una CPE (Customer Premises Equipment) exterior?",
+        "opciones": ["Hacia arriba siempre", "Hacia la calle", "Según el alineamiento con la antena base, siguiendo polarización correcta", "No importa"],
+        "respuesta_correcta": 2,
+        "explicacion": "La orientación de la CPE debe garantizar la polarización correcta (H o V) respecto a la antena base."
+      },
+      {
+        "id": 8, "pilar": "Administración",
+        "pregunta": "¿Cuándo se escala un ticket de instalación de nivel 1 a nivel 2 en XCIEN?",
+        "opciones": ["Después de 4 horas sin solución", "Inmediatamente si implica corte de fibra mayor", "Cuando el cliente llama más de 3 veces", "Solo si el supervisor lo decide"],
+        "respuesta_correcta": 1,
+        "explicacion": "Un corte de fibra mayor se escala de inmediato por su impacto en múltiples clientes."
+      },
+      {
+        "id": 9, "pilar": "Fibra Óptica",
+        "pregunta": "¿Qué tipo de conector es el estándar en las redes de fibra monomodo de XCIEN para patchcords?",
+        "opciones": ["ST", "SC/APC (verde)", "FC/PC", "LC/UPC (azul)"],
+        "respuesta_correcta": 1,
+        "explicacion": "SC/APC (conector verde, pulido en ángulo) minimiza reflexiones y es el estándar para redes GPON/FTTH."
+      },
+      {
+        "id": 10, "pilar": "Instalación",
+        "pregunta": "¿Qué velocidad mínima de descarga (del total contratado) debe mostrar la prueba de velocidad para aprobar una instalación?",
+        "opciones": ["50%", "70%", "90%", "100% exacto"],
+        "respuesta_correcta": 1,
+        "explicacion": "El estándar XCIEN exige mínimo 70% del BW contratado en la prueba de aceptación del cliente."
       }
     ]
   },
@@ -45,33 +153,283 @@
     "titulo": "Examen de Certificación INFRA (Torres & Radioenlaces)",
     "preguntas": [
       {
-        "id": 1,
-        "pilar": "Seguridad",
-        "pregunta": "¿Qué tipo de arnés es obligatorio para trabajos en torres según el estándar Xcien?",
-        "opciones": ["Arnés de 3 puntos", "Arnés de 5 puntos de anclaje", "Cinturón básico", "Ninguno"],
+        "id": 1, "pilar": "Seguridad",
+        "pregunta": "¿Qué tipo de arnés es obligatorio para trabajos en torres según el estándar XCIEN?",
+        "opciones": ["Arnés de 3 puntos", "Arnés de 5 puntos de anclaje", "Cinturón básico de liniero", "Ninguno en torres < 10m"],
         "respuesta_correcta": 1,
-        "explicacion": "Xcien exige específicamente arnés de 5 puntos para máxima seguridad en alturas."
+        "explicacion": "XCIEN exige arnés de 5 puntos con doble cola de vida para máxima seguridad en alturas."
       },
       {
-        "id": 2,
-        "pilar": "Mecánica",
+        "id": 2, "pilar": "Mecánica",
         "pregunta": "¿Cada cuánto tiempo se debe encinchar el cableado en una bajada de mástil?",
         "opciones": ["Cada metro", "Cada 30 cm", "Cada 50 cm", "Cada 2 metros"],
         "respuesta_correcta": 2,
-        "explicacion": "El estándar de instalación segura exige encinchado cada 50 cm."
+        "explicacion": "El estándar de instalación segura exige encinchado cada 50 cm en bajadas de mástil."
+      },
+      {
+        "id": 3, "pilar": "Seguridad",
+        "pregunta": "¿Cuál es la velocidad de viento máxima en la que se permite subir a una torre según el protocolo XCIEN?",
+        "opciones": ["60 km/h", "40 km/h", "30 km/h", "Sin límite con arnés"],
+        "respuesta_correcta": 1,
+        "explicacion": "Con vientos superiores a 40 km/h se detienen los trabajos en altura por riesgo de caída."
+      },
+      {
+        "id": 4, "pilar": "Radioenlaces",
+        "pregunta": "¿Qué herramienta se usa en XCIEN para calcular la zona de Fresnel y línea de vista de un radioenlace?",
+        "opciones": ["Google Earth básico", "LinkPlanner / AirLink Capacity Planner", "Excel manual", "WhatsApp maps"],
+        "respuesta_correcta": 1,
+        "explicacion": "LinkPlanner (Cambium) y AirLink CP son las herramientas estándar para diseño y cálculo de radioenlaces."
+      },
+      {
+        "id": 5, "pilar": "Mecánica",
+        "pregunta": "¿Qué es el 'torque de apriete' y por qué es crítico en la instalación de una antena sectorial?",
+        "opciones": ["Es decorativo", "Es la fuerza de ajuste en Nm que garantiza que los tornillos no se aflojen por vibración o viento", "Solo aplica a fibra óptica", "Lo define el cliente"],
+        "respuesta_correcta": 1,
+        "explicacion": "El torque correcto (según fabricante, normalmente 25-40 Nm) previene el aflojamiento por vibración y asegura la alineación."
+      },
+      {
+        "id": 6, "pilar": "Seguridad",
+        "pregunta": "¿Qué procedimiento OBLIGATORIO se realiza antes de subir a una torre con cable de acero galvanizado?",
+        "opciones": ["Pintar la torre", "Inspección visual y táctil de la escalera y sistemas de anclaje (pre-climb inspection)", "Tomar foto desde abajo", "Nada especial"],
+        "respuesta_correcta": 1,
+        "explicacion": "La pre-climb inspection verifica integridad estructural, oxido, pernos sueltos y sistemas de vida antes de ascender."
+      },
+      {
+        "id": 7, "pilar": "Radioenlaces",
+        "pregunta": "¿Qué porcentaje de zona de Fresnel libre se requiere para un radioenlace de calidad?",
+        "opciones": ["20%", "40%", "60%", "80%"],
+        "respuesta_correcta": 2,
+        "explicacion": "Para un radioenlace óptimo se requiere al menos el 60% de la primera zona de Fresnel libre de obstáculos."
+      },
+      {
+        "id": 8, "pilar": "Mecánica",
+        "pregunta": "¿Cuál es la función del sellador de gel (auto-amalgamante o gel coaxial) en las conexiones exteriores?",
+        "opciones": ["Mejorar la velocidad", "Prevenir la entrada de humedad que degrada el conector y el cable", "Decorativo", "Aumentar la ganancia"],
+        "respuesta_correcta": 1,
+        "explicacion": "La humedad oxida el conector y aumenta las pérdidas. El gel amalgamante crea un sello hermético impermeable."
+      },
+      {
+        "id": 9, "pilar": "Radioenlaces",
+        "pregunta": "¿Cuál es la diferencia entre polarización H (horizontal) y V (vertical) en antenas sectoriales?",
+        "opciones": ["No hay diferencia práctica", "H y V son ortogonales y permiten doble flujo (MIMO) o separación de señales para reducir interferencia", "V solo para NOC, H para clientes", "Depende del color del cable"],
+        "respuesta_correcta": 1,
+        "explicacion": "La polarización ortogonal permite MIMO o aislamiento de canales, crucial en zonas con alta densidad de usuarios."
+      },
+      {
+        "id": 10, "pilar": "Seguridad",
+        "pregunta": "¿Qué documento DEBE tener disponible el técnico al realizar trabajo en sitio de torre en tercera parte (azotea, predio)?",
+        "opciones": ["Solo su credencial XCIEN", "Permiso de trabajo en altura + seguro de vida vigente + carta de autorización del predio", "El ticket de Odoo es suficiente", "No se requiere nada especial"],
+        "respuesta_correcta": 1,
+        "explicacion": "El permiso de trabajo en altura, seguro y carta de autorización son requerimientos legales y de seguridad inderogables."
       }
     ]
   },
   "ING": {
-    "titulo": "Examen de Certificación ING (Diseño & Arquitectura)",
+    "titulo": "Examen de Certificación ING (Diseño & Arquitectura de Red)",
     "preguntas": [
       {
-        "id": 1,
-        "pilar": "Diseño",
-        "pregunta": "¿Qué software se utiliza en XCIEN para realizar simulaciones de línea de vista (LOS) y coberturas?",
-        "opciones": ["Google Maps", "LinkPlanner / AirLink", "Paint", "Excel"],
+        "id": 1, "pilar": "Diseño",
+        "pregunta": "¿Qué software se utiliza en XCIEN para realizar simulaciones de línea de vista (LOS) y coberturas de radioenlace?",
+        "opciones": ["Google Maps básico", "LinkPlanner / AirLink Capacity Planner", "Paint 3D", "Excel con fórmulas"],
         "respuesta_correcta": 1,
-        "explicacion": "LinkPlanner y AirLink son las herramientas estándar para diseño de radioenlaces."
+        "explicacion": "LinkPlanner y AirLink CP son las herramientas estándar para diseño, simulación y cálculo de radioenlaces."
+      },
+      {
+        "id": 2, "pilar": "Arquitectura",
+        "pregunta": "En la jerarquía de red de XCIEN, ¿qué capa conecta los nodos de distribución con la red core?",
+        "opciones": ["Capa de Acceso", "Capa de Agregación (Distribution)", "Capa de Cliente", "Capa de Transporte / Backbone"],
+        "respuesta_correcta": 3,
+        "explicacion": "La capa de Transporte/Backbone conecta los nodos de distribución con el core (internet, peering)."
+      },
+      {
+        "id": 3, "pilar": "Capacidad",
+        "pregunta": "¿Qué significa 'overbooking' en el diseño de una red de acceso para ISP?",
+        "opciones": ["Fibra con sobrecapacidad reservada", "La relación entre capacidad vendida y capacidad física real del enlace", "Protocolo de backup automático", "Técnica de compresión de paquetes"],
+        "respuesta_correcta": 1,
+        "explicacion": "El overbooking es la relación capacidad_vendida/capacidad_real. Un ratio de 10:1 significa que el enlace soportaría falla si todos usan el 100% simultáneamente."
+      },
+      {
+        "id": 4, "pilar": "Diseño",
+        "pregunta": "¿Cuál es la atenuación típica de la fibra monomodo G.652D por kilómetro a 1550 nm?",
+        "opciones": ["3 dB/km", "10 dB/km", "0.2 dB/km", "1 dB/km"],
+        "respuesta_correcta": 2,
+        "explicacion": "La fibra G.652D (estándar FTTH) tiene atenuación de ~0.2 dB/km a 1550 nm, permitiendo enlace de hasta 20 km sin amplificación."
+      },
+      {
+        "id": 5, "pilar": "Arquitectura",
+        "pregunta": "¿Qué tecnología utiliza XCIEN para la distribución de fibra a múltiples clientes con un solo hilo óptico desde el OLT?",
+        "opciones": ["DOCSIS", "xDSL", "GPON (Gigabit Passive Optical Network)", "WIMAX"],
+        "respuesta_correcta": 2,
+        "explicacion": "GPON usa splitters ópticos pasivos para distribuir un solo hilo óptico del OLT a múltiples ONTs de clientes."
+      },
+      {
+        "id": 6, "pilar": "Capacidad",
+        "pregunta": "¿Qué protocolo garantiza alta disponibilidad (failover) entre dos routers core en XCIEN?",
+        "opciones": ["STP", "VRRP / HSRP", "RIP", "SNMP"],
+        "respuesta_correcta": 1,
+        "explicacion": "VRRP (estándar abierto) o HSRP (Cisco) proveen una IP virtual compartida para failover transparente entre routers."
+      },
+      {
+        "id": 7, "pilar": "Diseño",
+        "pregunta": "¿Cuál es el split ratio máximo recomendado en una red GPON para clientes residenciales?",
+        "opciones": ["1:4", "1:16", "1:64", "1:128"],
+        "respuesta_correcta": 2,
+        "explicacion": "El split ratio 1:64 es el máximo práctico en GPON antes de que la atenuación afecte el presupuesto óptico (28 dB)."
+      },
+      {
+        "id": 8, "pilar": "Arquitectura",
+        "pregunta": "¿Qué es un 'nodo de distribución' en la red de XCIEN?",
+        "opciones": ["El router del cliente", "Un punto de presencia (PoP) que agrega tráfico de múltiples accesos hacia el core", "El servidor de Odoo", "La antena sectorial en torre"],
+        "respuesta_correcta": 1,
+        "explicacion": "Un nodo de distribución (PoP) centraliza múltiples clientes o microsegmentos y los conecta al backbone de XCIEN."
+      },
+      {
+        "id": 9, "pilar": "Capacidad",
+        "pregunta": "¿Cuándo se recomienda aplicar QoS en un enlace de distribución empresarial?",
+        "opciones": ["Nunca, QoS es obsoleto", "Cuando el enlace supera el 70% de utilización sostenida para priorizar tráfico crítico (VoIP, video)", "Solo en fibra, no en wireless", "Solo si el cliente lo pide"],
+        "respuesta_correcta": 1,
+        "explicacion": "Con utilización >70%, QoS prioriza VoIP y aplicaciones críticas sobre tráfico best-effort, previniendo jitter y pérdida de paquetes."
+      },
+      {
+        "id": 10, "pilar": "Diseño",
+        "pregunta": "¿Qué documento de diseño produce Ingeniería XCIEN antes de aprobar una nueva instalación empresarial de alto valor?",
+        "opciones": ["Sólo el ticket de Odoo", "Anteproyecto técnico con diagrama de red, presupuesto óptico y propuesta de equipos", "Una cotización en Excel", "El contrato de servicio"],
+        "respuesta_correcta": 1,
+        "explicacion": "El anteproyecto técnico valida la factibilidad real de la instalación antes de comprometer recursos de campo y almacén."
+      }
+    ]
+  },
+  "COLOCACION": {
+    "titulo": "Examen de Colocación — Evaluación Integral XCIEN",
+    "descripcion": "Evaluación multi-área para determinar nivel: Aprendiz → Leyenda",
+    "niveles": [
+      { "min": 0,  "max": 40, "nombre": "Aprendiz",     "icon": "🌱", "color": "#888",    "recomendacion": "Iniciar con cursos básicos de Odoo FSM, seguridad en campo y protocolos de comunicación." },
+      { "min": 40, "max": 55, "nombre": "Técnico",      "icon": "🔧", "color": "#4FC3F7", "recomendacion": "Completar MTCNA, fibra óptica básica y checklist de instalación XCIEN." },
+      { "min": 55, "max": 70, "nombre": "Especialista", "icon": "⚙️", "color": "#00C896", "recomendacion": "Profundizar en diseño RF, GPON y gestión de proyectos en Odoo." },
+      { "min": 70, "max": 82, "nombre": "Avanzado",     "icon": "🏆", "color": "#7c3aed", "recomendacion": "Certificarse en MikroTik (MTCRE), Mimosa avanzado y protocolos BGP." },
+      { "min": 82, "max": 93, "nombre": "Experto",      "icon": "🎖️", "color": "#FFB703", "recomendacion": "Certificaciones oficiales Cambium, Peplink y liderazgo técnico." },
+      { "min": 93, "max": 101,"nombre": "Leyenda",      "icon": "⭐", "color": "#FF4757", "recomendacion": "Mentoring de técnicos junior y diseño de arquitectura de red compleja." }
+    ],
+    "preguntas": [
+      { "id": 1, "pilar": "NOC", "area": "NOC",
+        "pregunta": "¿Qué acción tomas primero cuando Zabbix reporta 'host unreachable' en un nodo de distribución?",
+        "opciones": ["Llamar al cliente directamente", "Verificar alertas en nodos upstream para identificar si es fallo aislado o cascada", "Reiniciar el equipo remoto de inmediato", "Esperar 30 minutos"],
+        "respuesta_correcta": 1,
+        "explicacion": "Siempre verificar la cadena upstream antes de actuar, para no enmascarar el problema raíz."
+      },
+      { "id": 2, "pilar": "OPS", "area": "OPS",
+        "pregunta": "¿Cuándo se cierra oficialmente un ticket de instalación en Odoo?",
+        "opciones": ["Al terminar la instalación física", "Al obtener firma digital del cliente + fotos de evidencia + prueba de velocidad aprobada en el sistema", "Al irse del sitio", "Cuando NOC confirma ping"],
+        "respuesta_correcta": 1,
+        "explicacion": "El cierre requiere: firma cliente, evidencias fotográficas y prueba de velocidad registrada en Odoo."
+      },
+      { "id": 3, "pilar": "INFRA", "area": "INFRA",
+        "pregunta": "¿Cuál es la primera acción al llegar a un sitio de torre antes de iniciar ascenso?",
+        "opciones": ["Subir de inmediato para ganar tiempo", "Realizar inspección visual de la estructura, escalera, anclajes y verificar condiciones climáticas", "Llamar al supervisor para pedir permiso", "Conectar el equipo primero"],
+        "respuesta_correcta": 1,
+        "explicacion": "La pre-climb inspection es el primer paso obligatorio de seguridad antes de cualquier ascenso."
+      },
+      { "id": 4, "pilar": "ING", "area": "ING",
+        "pregunta": "¿Qué determina el 'presupuesto óptico' de un enlace de fibra?",
+        "opciones": ["El precio del proyecto", "La potencia de transmisión del transceptor menos la sensibilidad del receptor, menos todas las pérdidas del enlace", "El número de clientes conectados", "La longitud del cable solamente"],
+        "respuesta_correcta": 1,
+        "explicacion": "El presupuesto óptico = Pt(dBm) - Sr(dBm) - pérdidas(empalmes+conectores+atenuación) ≥ margen de 3 dB."
+      },
+      { "id": 5, "pilar": "NOC", "area": "NOC",
+        "pregunta": "¿Qué protocolo permite al NOC de XCIEN recibir traps automáticos cuando un equipo detecta un fallo interno?",
+        "opciones": ["HTTP GET", "SNMP Trap / Syslog", "Ping continuo", "FTP polling"],
+        "respuesta_correcta": 1,
+        "explicacion": "SNMP Traps y Syslog son los mecanismos de notificación activa desde equipos de red hacia el sistema de monitoreo."
+      },
+      { "id": 6, "pilar": "OPS", "area": "OPS",
+        "pregunta": "¿Qué tipo de conector de fibra tiene menor retorno de reflexión (mejor para GPON)?",
+        "opciones": ["LC/UPC (azul)", "SC/APC (verde)", "ST/PC", "FC/PC"],
+        "respuesta_correcta": 1,
+        "explicacion": "SC/APC con pulido en ángulo de 8° ofrece retorno de reflexión < -65 dB, ideal para redes GPON/FTTH."
+      },
+      { "id": 7, "pilar": "INFRA", "area": "INFRA",
+        "pregunta": "Para un radioenlace de 15 km, ¿qué porcentaje mínimo de zona de Fresnel libre es necesario para rendimiento óptimo?",
+        "opciones": ["20%", "40%", "60%", "100%"],
+        "respuesta_correcta": 2,
+        "explicacion": "Se requiere al menos 60% de la primera zona de Fresnel libre de obstáculos para rendimiento óptimo."
+      },
+      { "id": 8, "pilar": "ING", "area": "ING",
+        "pregunta": "¿Cuántos clientes puede atender teóricamente un puerto GPON con split ratio 1:64?",
+        "opciones": ["16", "32", "64", "128"],
+        "respuesta_correcta": 2,
+        "explicacion": "Con splitter 1:64, un solo puerto OLT GPON sirve hasta 64 ONTs/clientes simultáneamente."
+      },
+      { "id": 9, "pilar": "NOC", "area": "NOC",
+        "pregunta": "Una alerta de latencia de 350 ms en un enlace cuyo SLA es < 50 ms, ¿qué acción corresponde?",
+        "opciones": ["Documentar y revisar mañana", "Escalar como crítico al NOC Senior e iniciar diagnóstico inmediato de la ruta BGP", "Ignorar, puede ser temporal", "Apagar y prender el equipo"],
+        "respuesta_correcta": 1,
+        "explicacion": "7x el SLA de latencia es una violación crítica que requiere escalamiento inmediato y diagnóstico de ruta."
+      },
+      { "id": 10, "pilar": "OPS", "area": "OPS",
+        "pregunta": "¿Qué mide el OTDR que no puede medir un power meter óptico?",
+        "opciones": ["La potencia total del enlace", "La ubicación exacta y magnitud de cada reflexión y pérdida a lo largo de la fibra (perfil de fibra)", "La velocidad del cliente", "El tipo de conector"],
+        "respuesta_correcta": 1,
+        "explicacion": "El OTDR genera un perfil gráfico de toda la fibra, localizando empalmes, conectores y cortes con precisión de metros."
+      },
+      { "id": 11, "pilar": "INFRA", "area": "INFRA",
+        "pregunta": "¿Por qué se aplica sellador autofundente (self-amalgamating) en los conectores coaxiales exteriores?",
+        "opciones": ["Para mejorar la señal RF", "Para prevenir la entrada de humedad que oxida el conector y degrada el enlace", "Por normativa estética", "Para fijar el cable a la pared"],
+        "respuesta_correcta": 1,
+        "explicacion": "La humedad en conectores coaxiales externos genera oxidación y pérdidas, el sellado hermético los previene."
+      },
+      { "id": 12, "pilar": "ING", "area": "ING",
+        "pregunta": "¿Qué es el 'anteproyecto técnico' y cuándo se genera en el flujo de XCIEN?",
+        "opciones": ["Es el contrato de servicio, al final", "Es el documento de factibilidad con diagrama de red, propuesta de equipos y cálculos, generado antes de la orden de implementación", "Es el ticket de Odoo", "Es el reporte mensual de NOC"],
+        "respuesta_correcta": 1,
+        "explicacion": "El anteproyecto técnico valida la viabilidad técnica y define los recursos antes de comprometer campo y almacén."
+      },
+      { "id": 13, "pilar": "NOC", "area": "NOC",
+        "pregunta": "¿Qué información MÍNIMA debe contener un incidente NOC documentado en el sistema?",
+        "opciones": ["Solo el nombre del equipo", "Timestamp, equipo afectado, síntoma, acciones tomadas, resolución y técnico responsable", "Solo el ticket de Odoo", "El nombre del cliente"],
+        "respuesta_correcta": 1,
+        "explicacion": "La documentación completa del incidente es fundamental para análisis de causa raíz, SLA y aprendizaje del equipo."
+      },
+      { "id": 14, "pilar": "OPS", "area": "OPS",
+        "pregunta": "Si la prueba de velocidad de un cliente nuevo muestra 60% del BW contratado, ¿qué haces?",
+        "opciones": ["Cerrar el ticket, es suficiente", "No cerrar la instalación: revisar alineación, interferencias o configuración hasta superar el 70% mínimo", "Decirle al cliente que es normal", "Subir el plan al doble gratis"],
+        "respuesta_correcta": 1,
+        "explicacion": "El estándar XCIEN exige mínimo 70% del BW contratado antes de cerrar la instalación como aprobada."
+      },
+      { "id": 15, "pilar": "INFRA", "area": "INFRA",
+        "pregunta": "¿Cuál es la velocidad de viento máxima permitida para trabajar en torre según protocolo XCIEN?",
+        "opciones": ["Sin límite con arnés correcto", "60 km/h", "40 km/h", "20 km/h"],
+        "respuesta_correcta": 2,
+        "explicacion": "Protocolo XCIEN: vientos > 40 km/h = suspensión obligatoria de trabajos en altura."
+      },
+      { "id": 16, "pilar": "ING", "area": "ING",
+        "pregunta": "¿Qué protocolo de redundancia de capa 3 usa un IP virtual para que los routers hagan failover transparente?",
+        "opciones": ["STP (Spanning Tree)", "VRRP o HSRP", "LACP", "MPLS"],
+        "respuesta_correcta": 1,
+        "explicacion": "VRRP (estándar IEEE) y HSRP (Cisco) permiten que un router secundario tome la IP virtual si el primario falla."
+      },
+      { "id": 17, "pilar": "NOC", "area": "NOC",
+        "pregunta": "¿Qué indica una fluctuación periódica de latencia (jitter) alta en un enlace de microondas?",
+        "opciones": ["El enlace está perfecto", "Posible interferencia de frecuencia, desalineación o condición climática que afecta el canal RF", "El cliente usa mucho streaming", "Un virus en los equipos"],
+        "respuesta_correcta": 1,
+        "explicacion": "El jitter en microondas suele ser síntoma de interferencia RF, fadeo o degradación de la alineación de antenas."
+      },
+      { "id": 18, "pilar": "OPS", "area": "OPS",
+        "pregunta": "¿Qué herramienta de campo se usa para verificar la continuidad de un cable de red UTP en el sitio?",
+        "opciones": ["Multímetro de voltaje", "Probador de cables (cable tester) o localizador de pares", "Osciloscopio", "OTDR"],
+        "respuesta_correcta": 1,
+        "explicacion": "El cable tester verifica los 8 pares del UTP, detectando cortos, cruzados o pares abiertos en segundos."
+      },
+      { "id": 19, "pilar": "INFRA", "area": "INFRA",
+        "pregunta": "¿Por qué es importante registrar el torque de apriete en los pernos de un mástil al instalar una antena?",
+        "opciones": ["No tiene importancia técnica", "Para garantizar que la antena no se desalinee por vibración o viento y documentar la instalación", "Solo para cumplir con la auditoria", "Para calcular el peso de la torre"],
+        "respuesta_correcta": 1,
+        "explicacion": "El torque correcto (per spec del fabricante) previene el desalineamiento por vibración, viento o temperatura."
+      },
+      { "id": 20, "pilar": "ING", "area": "ING",
+        "pregunta": "¿Cuál es el margen de potencia óptica mínimo recomendado para un enlace GPON después de calcular todas las pérdidas?",
+        "opciones": ["0 dB", "3 dB", "10 dB", "15 dB"],
+        "respuesta_correcta": 1,
+        "explicacion": "Un margen de 3 dB asegura que el enlace funcione incluso si las condiciones degradan levemente (temperatura, envejecimiento de conectores)."
       }
     ]
   }
