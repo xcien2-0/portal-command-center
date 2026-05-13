@@ -782,11 +782,28 @@ def get_noc_cities():
 
     # Coordenadas por ciudad
     COORDS = {
-        "Monterrey":      {"lat": 25.6866, "lng": -100.3161},
-        "Saltillo":       {"lat": 25.4232, "lng": -100.9928},
-        "Piedras Negras": {"lat": 28.7000, "lng": -100.5231},
-        "San Luis Potosi":{"lat": 22.1565, "lng": -100.9855},
-        "Coco":           {"lat": 25.5000, "lng": -103.5000},
+        "Monterrey":        {"lat": 25.6866,  "lng": -100.3161},
+        "Saltillo":         {"lat": 25.4232,  "lng": -100.9928},
+        "Piedras Negras":   {"lat": 28.7000,  "lng": -100.5231},
+        "San Luis Potosi":  {"lat": 22.1565,  "lng": -100.9855},
+        "San Luis Potosí":  {"lat": 22.1565,  "lng": -100.9855},
+        "Torreón":          {"lat": 25.5428,  "lng": -103.4068},
+        "Torreon":          {"lat": 25.5428,  "lng": -103.4068},
+        "Chihuahua":        {"lat": 28.6353,  "lng": -106.0889},
+        "Nuevo Laredo":     {"lat": 27.4765,  "lng": -99.5151 },
+        "Reynosa":          {"lat": 26.0922,  "lng": -98.2772 },
+        "Matamoros":        {"lat": 25.8691,  "lng": -97.5027 },
+        "Monclova":         {"lat": 26.9083,  "lng": -101.4217},
+        "Sabinas":          {"lat": 27.8529,  "lng": -101.1191},
+        "Guadalajara":      {"lat": 20.6597,  "lng": -103.3496},
+        "Ciudad de México":  {"lat": 19.4326,  "lng": -99.1332 },
+        "Querétaro":        {"lat": 20.5888,  "lng": -100.3899},
+        "Celaya":           {"lat": 20.5200,  "lng": -100.8161},
+        "León":             {"lat": 21.1221,  "lng": -101.6823},
+        "Tampico":          {"lat": 22.2552,  "lng": -97.8686 },
+        "Mérida":           {"lat": 20.9674,  "lng": -89.5926 },
+        "Puebla":           {"lat": 19.0414,  "lng": -98.2063 },
+        "Coco":             {"lat": 25.5000,  "lng": -103.5000},
     }
 
     # Agrupar hosts por ciudad → sitio
