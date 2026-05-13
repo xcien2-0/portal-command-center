@@ -1400,7 +1400,7 @@
     "cliente": "INTERMEX MANUFACTURA DE CHIHUAHUA",
     "servicio": "Sandur, SA-WIFI-1U7Lite, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "FACTURACION",
     "fecha_creacion": "2026-04-29 22:33:16",
     "preventa": {
       "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;Se instalar\u00e1 un servicio el d\u00eda S\u00e1bado 2 de Mayo, el router que se instala no cuenta con servicio de WiFi, por lo cual se contempla la instalaci\u00f3n de un AP para la conexi\u00f3n WiFi, podemos contemplar algun equipo AP que tengamos en stock</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Tarea del servicio :&nbsp;Sandur, SIDP-500, INTERMEX MANUFACTURA DE CHIHUAHUA, SITIO: YINLUN PLANTA 2 CIENEGA DE FLORES</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Liga:&nbsp;<a href=\"https://odoo.wispi.mx/web#id=79512&amp;cids=25-12&amp;menu_id=130&amp;model=crm.lead&amp;view_type=form\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">https://odoo.wispi.mx/web#id=79512&amp;cids=25-12&amp;menu_id=130&amp;model=crm.lead&amp;view_type=form</a></p>",
@@ -1435,9 +1435,14 @@
         "fecha": "2026-05-09T14:49:56.199837",
         "accion": "Odoo sync: stage \u2192 > Habilitacion (APROVISIONAMIENTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T23:03:40.205821",
+        "accion": "Odoo sync: stage \u2192 > Facturacion (FACTURACION)",
+        "usuario": "Sistema"
       }
     ],
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 9,
     "revenue": 0.0
   },
   {
@@ -2575,11 +2580,11 @@
   {
     "id": "ODOO-79487",
     "odoo_id": 79487,
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 9,
     "cliente": "ARMES",
     "servicio": "Sandur, SIMP-15, FRANCISCO DANIEL OROZCO LEAL ISLA, Sitio:Arteaga",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "FACTURACION",
     "estado_fuente": "odoo",
     "revenue": 1279.0,
     "fecha_deadline": "2026-05-21",
@@ -2638,17 +2643,22 @@
         "fecha": "2026-05-09T14:49:56.199958",
         "accion": "Importado desde Odoo CRM \u2014 > Habilitacion",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T17:09:16.258841",
+        "accion": "Odoo sync: stage \u2192 > Facturacion (FACTURACION)",
+        "usuario": "Sistema"
       }
     ]
   },
   {
     "id": "ODOO-79486",
     "odoo_id": 79486,
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 9,
     "cliente": "ARMES",
     "servicio": "Sandur, SIMP-15, FRANCISCO DANIEL OROZCO LEAL ISLA, Sitio:Ramos",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "FACTURACION",
     "estado_fuente": "odoo",
     "revenue": 1279.0,
     "fecha_deadline": "2026-05-21",
@@ -2706,6 +2716,11 @@
       {
         "fecha": "2026-05-09T14:49:56.199963",
         "accion": "Importado desde Odoo CRM \u2014 > Habilitacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T17:09:16.258847",
+        "accion": "Odoo sync: stage \u2192 > Facturacion (FACTURACION)",
         "usuario": "Sistema"
       }
     ]
@@ -7652,11 +7667,11 @@
   {
     "id": "ODOO-79837",
     "odoo_id": 79837,
-    "odoo_stage_id": 67,
+    "odoo_stage_id": 63,
     "cliente": "FRANCISCO JAVIER ORTEGA GARCIA",
     "servicio": "Luminet, SIMP-20, FRANCISCO JAVIER ORTEGA GARCIA, SITIO FRANCISCO ORTEGA",
     "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
-    "estado": "SOLICITUD_PREVENTA",
+    "estado": "ANTEPROYECTO",
     "estado_fuente": "odoo",
     "revenue": 0.0,
     "fecha_deadline": "2026-05-13",
@@ -7714,6 +7729,11 @@
       {
         "fecha": "2026-05-12T12:35:02.509606",
         "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-12T17:09:16.258788",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
@@ -7782,6 +7802,144 @@
     "historial": [
       {
         "fecha": "2026-05-12T12:35:02.509619",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79856",
+    "odoo_id": 79856,
+    "odoo_stage_id": 67,
+    "cliente": "Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V.",
+    "servicio": "Sandur, SIEV-200, Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V., SITIO ESTADIO BBVA MONTERREY",
+    "comercial": "FELIPE DE JESUS CAZARES VARELA",
+    "estado": "SOLICITUD_PREVENTA",
+    "estado_fuente": "odoo",
+    "revenue": 12500.0,
+    "fecha_deadline": "2026-05-15",
+    "fecha_creacion": "2026-05-13 04:11:13",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento 01&nbsp;DE JUNIO&nbsp;DEL 2026 EVENTO POR 60 D\u00cdAS</span></b></span></li><li>Horario del evento TODO EL DIA</li><li>Horario de fin del evento para retiro de equipos 30 DE JULIO DEL 2026</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar ESTADIO BBVA ESTADIO RAYADOS MONTERREY</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande) ESTADIO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega)30 METROS</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso SE REQUIEREN LOS NOMBRES DE LAS PERSONAS QUE INSTALARAN EN SITIO YA QUE LA FIFA LES ELABORARA UN GAFETE</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento 200 MBPS DE INTERNET DEDICADO</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivosSI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi NO EL CLIENTE HARA UNA RED WIFI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi N/A</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc)en espera de indicaciones</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones no</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600 NO</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-13 04:11:13"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T23:03:40.205081",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79854",
+    "odoo_id": 79854,
+    "odoo_stage_id": 63,
+    "cliente": "DESARROLLO Y CONSTRUCCIONES URBANAS",
+    "servicio": "Sandur, SST-S, DESARROLLO Y CONSTRUCCIONES URBANAS, Desarrollo y Construcciones Urbanas, S.A de C.V / Sitio: Pesqueria 2",
+    "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-13",
+    "fecha_creacion": "2026-05-12 23:14:34",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buen dia equipo, se genera tarea para validar el costo de reposicion de equipo SD Wan, ya que al parecer cliente tuvo temas al momento de las recolecciones en los sitios cancelados ,Favor de indicar el costo individual de cada uno</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP 14778&nbsp;<br>SOP 14780&nbsp;<br>SOP&nbsp; 14944&nbsp;<br>SOP 15073&nbsp;<br>SOP 15202<br>SOP&nbsp; 15634</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-12 23:14:34"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-12T23:03:40.205756",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
         "usuario": "Sistema"
       }
