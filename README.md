@@ -72,3 +72,12 @@ ODOO_PASSWORD=
 La carpeta `docs/` contiene la documentación generada durante la auditoría operativa
 realizada de enero a abril de 2026. Estos archivos son de solo lectura y representan
 el estado del sistema al momento de la entrega-recepción.
+
+---
+
+## 🌟 Ecosistema Expandido (Personal Innovation Hub)
+
+Este repositorio no solo gestiona la operación técnica de XCIEN, sino que sirve como el motor de ejecución para el **Personal Innovation Hub**.
+
+- **Orquestación**: Consulta el [Plan Maestro del Personal Hub](HUB_INNOVACION_PERSONAL.md) para entender la visión de equilibrio biológico y financiero.
+- **Incubadora**: Los proyectos de alto impacto (Marketplace, Utopía, X-Token) se gestionan desde la carpeta `backend/agents/`.
