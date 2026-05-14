@@ -975,9 +975,14 @@
         "fecha": "2026-05-09T14:49:56.199811",
         "accion": "Odoo sync: stage \u2192 > Estudio Presencial (ANTEPROYECTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T17:15:18.397863",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
       }
     ],
-    "odoo_stage_id": 5,
+    "odoo_stage_id": 7,
     "revenue": 0.0
   },
   {
@@ -4892,11 +4897,11 @@
   {
     "id": "ODOO-79268",
     "odoo_id": 79268,
-    "odoo_stage_id": 4,
+    "odoo_stage_id": 8,
     "cliente": "PEGAMENTOS GARZA",
     "servicio": "Sandur, SIMP-20, PEGAMENTOS GARZA, SITIO: PARQUE IND UNIDAD NACIONAL // BLINDAJE FASE 3",
     "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
-    "estado": "ALMACEN_VALIDACION",
+    "estado": "APROVISIONAMIENTO",
     "estado_fuente": "odoo",
     "revenue": 0.0,
     "fecha_deadline": "2026-04-10",
@@ -4954,6 +4959,11 @@
       {
         "fecha": "2026-05-09T14:49:56.200134",
         "accion": "Importado desde Odoo CRM \u2014 > Contratacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T14:40:37.459871",
+        "accion": "Odoo sync: stage \u2192 > Habilitacion (APROVISIONAMIENTO)",
         "usuario": "Sistema"
       }
     ]
@@ -7529,7 +7539,7 @@
   {
     "id": "ODOO-79823",
     "odoo_id": 79823,
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 7,
     "cliente": "PROPLASTIKS MANUFACTURING",
     "servicio": "Sandur, SIDP-100, PROPLASTIKS MANUFACTURING, SITIO:SANTA",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
@@ -7591,6 +7601,11 @@
       {
         "fecha": "2026-05-12T10:58:16.191101",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T11:42:02.662817",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
@@ -7667,7 +7682,7 @@
   {
     "id": "ODOO-79837",
     "odoo_id": 79837,
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 7,
     "cliente": "FRANCISCO JAVIER ORTEGA GARCIA",
     "servicio": "Luminet, SIMP-20, FRANCISCO JAVIER ORTEGA GARCIA, SITIO FRANCISCO ORTEGA",
     "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
@@ -7734,6 +7749,11 @@
       {
         "fecha": "2026-05-12T17:09:16.258788",
         "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T14:22:30.411139",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
@@ -7810,13 +7830,13 @@
   {
     "id": "ODOO-79856",
     "odoo_id": 79856,
-    "odoo_stage_id": 67,
+    "odoo_stage_id": 5,
     "cliente": "Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V.",
     "servicio": "Sandur, SIEV-200, Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V., SITIO ESTADIO BBVA MONTERREY",
     "comercial": "FELIPE DE JESUS CAZARES VARELA",
-    "estado": "SOLICITUD_PREVENTA",
+    "estado": "ANTEPROYECTO",
     "estado_fuente": "odoo",
-    "revenue": 12500.0,
+    "revenue": 25000.0,
     "fecha_deadline": "2026-05-15",
     "fecha_creacion": "2026-05-13 04:11:13",
     "preventa": {
@@ -7872,6 +7892,21 @@
       {
         "fecha": "2026-05-12T23:03:40.205081",
         "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T11:42:02.662768",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T17:15:18.397846",
+        "accion": "Odoo sync: stage \u2192 Calificacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T17:27:23.332874",
+        "accion": "Odoo sync: stage \u2192 > Estudio Presencial (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
@@ -7940,6 +7975,233 @@
     "historial": [
       {
         "fecha": "2026-05-12T23:03:40.205756",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T14:35:22.180452",
+        "accion": "Odoo sync: stage \u2192 Borrador (SOLICITUD_PREVENTA)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T14:40:37.459801",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79870",
+    "odoo_id": 79870,
+    "odoo_stage_id": 7,
+    "cliente": "Sain Soyuk Yin Araiza",
+    "servicio": "Sandur, SIMP-20, Sain Soyuk Yin Araiza, Sain Soyuk Yin Araiza / Sitio: Ejido San Nicolas // FASE 3 BLINDAJE",
+    "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-14",
+    "fecha_creacion": "2026-05-13 18:20:15",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">Buen dia equipo,se genera oportunidad para validar factibilida de incremento en sitio por tema de Fase 3 Blindaje , actualmente se tiene 10Mb por $959 ya no tiene contrato vigente</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">SOP- 11922</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-13 18:20:15"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-13T12:35:17.798216",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T14:35:22.180413",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79868",
+    "odoo_id": 79868,
+    "odoo_stage_id": 63,
+    "cliente": "Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V.",
+    "servicio": "Sandur, [SIN PRODUCTO], Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V., [SIN SITIO]",
+    "comercial": "FELIPE DE JESUS CAZARES VARELA",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 25000.0,
+    "fecha_deadline": false,
+    "fecha_creacion": "2026-05-13 18:04:31",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-13 18:04:31"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-13T12:35:17.798264",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-13T17:27:23.332854",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-79878",
+    "odoo_id": 79878,
+    "odoo_stage_id": 63,
+    "cliente": "ATN INGENIERIA",
+    "servicio": "Sandur, SIDP-100, ATN INGENIERIA, Sitio:Maria Luisa",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 0.0,
+    "fecha_deadline": "2026-05-20",
+    "fecha_creacion": "2026-05-13 20:21:20",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\"Contacto: Internet Dedicado&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: \u00bfPodr\u00edas indicarme en qu\u00e9 ciudad y estado requieres el servicio?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: Le\u00f3n, Guanajuato</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: Yo me encargo en ponerte en contacto con un asesor. \u00bfC\u00faal es tu nombre?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: Eduardo Alejandro De la Cruz Silva</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: Por favor ap\u00f3yame con un numero de tel\u00e9fono donde nos podamos comunicar.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: 81 8333 4898</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: \u00bfPodr\u00edas dejarme tu email?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: <a href=\"http://edelacruz@atn.com.mx\" style=\"text-decoration:none;box-sizing:border-box;color:#008f8c;\">edelacruz@atn.com.mx</a></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: \u00bfEn qu\u00e9 horario del d\u00eda prefieres que te llamemos?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: -</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Asesor: \u00bfQuieres dejarme alguna consulta adicional?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Contacto: Solicito de su apoyo para cotizar los siguiente:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Requerimiento:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Internet dedicado de 100MB</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Que sea redundante</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Favor de indicar el SLA que manejan</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Que la IP publica no cambie (ya que a donde nos vamos a conectar nos autentica por la IP Publica)</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Favor de indicarnos el tiempo que tardan en la implementaci\u00f3n</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Indicar el tipo o medio de trasmisi\u00f3n que usan para entregar el servicio</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">- Indicar las condiciones comerciales</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">- y el precio de la mensualidad y otros costos </p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li>\u00bf Cuenta con proveedor de Internet actual?: Si la respuesta es SI, \u00bfQui\u00e9n es su proveedor?Citro</li><li>&nbsp; Nuestro servicio quedaria como principal o como respaldo?Princicpal</li><li>\u00bf C\u00faal es el medio de acceso de su o sus proveedor (es) actual (es)?MO</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Referencias de la ubicaci\u00f3n del cliente : washington 2342 Col. Maria Luisa, Mty, N.L.&nbsp;25.676923259973428, -100.33704913009262 es una casa blanca de 2 pisos envio foto satelital y fisica</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Tipo de edificio (caseta m\u00f3vil, casa, nave, edificio) : Casa</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El sitio esta listo para instalar o se encuentra en construcci\u00f3n u obra gris :lista</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Altura :6 mts</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Si se sabe el material de azotea (lamina, concreto, madera, etc) :concreto</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">En caso de ser nave , \u00bf se tiene acceso mediante escalera marina? en caso de no contar con ella cuales han sido las v\u00edas de acceso? :sin problemas</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Se tienen requisitos como documentaci\u00f3n (INE, SUA, DC3) o examenes medicos &nbsp;para el acceso a azotea e instalaciones del cliente? se requiere conocer esto previo a la habilitaci\u00f3n: no se ocupa</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">&nbsp;\u00bfCuales son? :NO</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe que la antena que se instalara ser\u00e1 sobre la azotea de (caseta m\u00f3vil, casa, nave, edificio) :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">El cliente sabe el \u00e1rea (oficina , site, numero de rack) en donde se instalara el equipo demarcador (router) :SI</span></li><li>Configuraciones especiales (modo bridge, forward de puertos, puertos que necesita):NO</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">\u00bfCuenta con sistema de tierras ? :SI</span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Agregar fotografia de fachada :<img src=\"/web/image/3587672-871a5c81/Screenshot%202026-05-13%203.54.34%20PM.png?access_token=2975c9a3-128d-4d78-a260-7305e81cb95d\" class=\"img-fluid img o_we_custom_image\" style=\"box-sizing: border-box; display: inline-block; height: auto; max-width: 100%; vertical-align: middle; width: 859.062px; mso-hide: all; mso-hide: all; mso-hide: all;\" width=\"859.062\"></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\">Observaciones adicionales :&nbsp;</span></li><li>Se requiere en sitio del cliente se cuente con energia regulada 110V , contactos puestos a tierra y polarizado</li></ol><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><span style=\"font-size:11pt;background-color:transparent\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-13 20:21:20"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-13T17:15:18.397809",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
         "usuario": "Sistema"
       }
