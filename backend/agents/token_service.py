@@ -6,7 +6,9 @@ import hashlib
 import uuid
 from datetime import datetime, timezone
 
-_SECRET = os.environ.get("TOKEN_SECRET", "xcien-secret-2026")
+_SECRET = os.environ.get("TOKEN_SECRET")
+if not _SECRET:
+    raise RuntimeError("TOKEN_SECRET env var is required and must not be empty")
 _DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "tokens.json")
 
 EMPRESAS_VALIDAS = {"xcien", "luminet", "wispi", "huus"}

@@ -14,19 +14,19 @@ class DevOpsAgent:
         self.client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         print(f"🛠️ [{self.name}] Agente de Infraestructura y ERP activo.")
 
-    def _run_command(self, cmd):
-        """Ejecuta un comando de shell y retorna el output de forma segura."""
+    def _run_command(self, cmd: list):
+        """Ejecuta un comando como lista de args (sin shell) y retorna el output."""
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(cmd, shell=False, capture_output=True, text=True, timeout=5)
             return result.stdout.strip() if result.returncode == 0 else result.stderr.strip()
         except Exception as e:
             return f"Error ejecutando comando: {str(e)}"
 
     def get_git_status(self):
         """Obtiene el estado actual del repositorio local."""
-        status = self._run_command("git status -s")
-        branch = self._run_command("git branch --show-current")
-        unpushed = self._run_command("git log @{u}.. --oneline")
+        status = self._run_command(["git", "status", "-s"])
+        branch = self._run_command(["git", "branch", "--show-current"])
+        unpushed = self._run_command(["git", "log", "@{u}..", "--oneline"])
         return {
             "branch": branch,
             "modified_files": status.split("\n") if status and status.strip() else [],
@@ -35,7 +35,7 @@ class DevOpsAgent:
 
     def get_pm2_status(self):
         """Obtiene el estado de los procesos gestionados por PM2."""
-        status_raw = self._run_command("pm2 jlist")
+        status_raw = self._run_command(["pm2", "jlist"])
         try:
             data = json.loads(status_raw)
             return [
@@ -48,28 +48,43 @@ class DevOpsAgent:
                 }
                 for p in data
             ]
-        except:
+        except Exception:
             return "PM2 no disponible o sin procesos."
 
     def get_odoo_status(self):
         """Verifica si el servicio de Odoo está activo (buscando por proceso)."""
-        odoo_ps = self._run_command("ps aux | grep odoo | grep -v grep")
-        odoo_conf = os.path.join(BASE_DIR, "..", "odoo.conf") # Ruta probable
-        has_conf = os.path.exists(odoo_conf)
+        try:
+            ps_result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=5)
+            odoo_procs = [l for l in ps_result.stdout.splitlines() if "odoo" in l and "grep" not in l]
+        except Exception:
+            odoo_procs = []
+        odoo_conf = os.path.join(BASE_DIR, "..", "odoo.conf")
         return {
-            "is_running": len(odoo_ps) > 0,
-            "processes": odoo_ps.split("\n") if odoo_ps else [],
-            "config_found": has_conf
+            "is_running": len(odoo_procs) > 0,
+            "processes": odoo_procs,
+            "config_found": os.path.exists(odoo_conf)
         }
 
     def get_system_metrics(self):
-        """Obtiene métricas básicas de CPU y Memoria del VPS."""
-        mem = self._run_command("free -m | grep Mem | awk '{print $3\"/\"$2\"MB used\"}'")
-        cpu = self._run_command("top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\([0-9.]*\)%* id.*/\\1/' | awk '{print 100 - $1\"% usage\"}'")
-        disk = self._run_command("df -h / | tail -1 | awk '{print $5\" used (\"$4\" avail)\"}'")
+        """Obtiene métricas básicas de CPU y Memoria del sistema."""
+        try:
+            mem_out = subprocess.run(["free", "-m"], capture_output=True, text=True, timeout=5).stdout
+            mem_line = next((l for l in mem_out.splitlines() if l.startswith("Mem")), "")
+            parts = mem_line.split()
+            mem = f"{parts[2]}/{parts[1]}MB used" if len(parts) >= 3 else "N/A"
+        except Exception:
+            mem = "N/A"
+
+        try:
+            df_out = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=5).stdout
+            df_line = df_out.splitlines()[-1].split() if df_out.strip() else []
+            disk = f"{df_line[4]} used ({df_line[3]} avail)" if len(df_line) >= 5 else "N/A"
+        except Exception:
+            disk = "N/A"
+
         return {
             "memory": mem,
-            "cpu_usage": cpu,
+            "cpu_usage": "N/A (use psutil for cross-platform CPU)",
             "disk_space": disk
         }
 

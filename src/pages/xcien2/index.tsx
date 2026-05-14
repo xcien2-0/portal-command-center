@@ -1,4 +1,4 @@
-import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
+import { useState, useReducer, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE } from '../../config';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
@@ -348,9 +348,12 @@ function Content({
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ command: val, context: 'bridge' })
                       });
-                      el.value = '';
-                      alert('¡Orden recibida! Regresa al chat y di "EJECUTA".');
-                    } catch (err) { alert('Error de conexión.'); }
+                      el.value = '✅ Orden recibida — di "EJECUTA" en el chat';
+                      setTimeout(() => { el.value = ''; }, 3000);
+                    } catch (err) {
+                      el.value = '❌ Error de conexión';
+                      setTimeout(() => { el.value = ''; }, 3000);
+                    }
                     el.disabled = false;
                     el.focus();
                   }
@@ -411,9 +414,12 @@ function Content({
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ command: val, context: 'war_room' })
                       });
-                      el.value = '';
-                      alert('¡Orden enviada a la Sala de Guerra! Antigravity la procesará ahora.');
-                    } catch (err) { alert('Error enviando orden.'); }
+                      el.value = '✅ Orden enviada — Antigravity la procesará ahora';
+                      setTimeout(() => { el.value = ''; }, 3000);
+                    } catch (err) {
+                      el.value = '❌ Error enviando orden';
+                      setTimeout(() => { el.value = ''; }, 3000);
+                    }
                     el.disabled = false;
                     el.focus();
                   }
