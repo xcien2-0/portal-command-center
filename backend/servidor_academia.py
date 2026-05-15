@@ -839,9 +839,9 @@ def get_noc_cities():
                         "id":       h.get("id"),
                         "ip":       h.get("ip"),
                         "name":     h.get("rawName") or f"{h.get('endpointA','')}→{h.get('endpointB','')}",
-                        "score":    round(h.get("healthScore", 0), 1),
+                        "score":    round(h.get("health_score") or h.get("healthScore") or 0, 1),
                         "status":   _host_status(h),
-                        "lastSeen": h.get("lastPingResult", {}).get("timestamp", ""),
+                        "lastSeen": (h.get("ping") or h.get("lastPingResult") or {}).get("timestamp", ""),
                     }
                     for h in site_hosts
                 ],
