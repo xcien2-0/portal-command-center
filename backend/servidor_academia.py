@@ -16,7 +16,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("XCIEN-BACKEND")
-from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi import FastAPI, HTTPException, Response, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -29,7 +29,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, "agents"))
 
-load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
+ROOT_DIR = os.path.dirname(BASE_DIR)
+load_dotenv(os.path.join(ROOT_DIR, ".env"), override=True)
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)  # backend/.env si existe
 
 # Importar Agentes Corporativos
 from agents.director_general_v2 import DirectorGeneralV2
@@ -41,13 +43,17 @@ from agents import label_service
 from agents.wfm_workflow_service import WFMWorkflowService
 from agents.integration_orchestrator import orchestrator
 from agents.odoo_connector import odoo_conn
-
 from agents.devops_agent import DevOpsAgent
+from agents import auth_service
+from agents.auth_service import get_current_user, require_rol
 
 # Instanciar el Director General y el SRE
 dg_agent = DirectorGeneralV2()
 sre_agent = DevOpsAgent()
 wfm_service = WFMWorkflowService()
+
+# Crear admin inicial si no hay usuarios
+auth_service.init_admin()
 
 print("🚀 [XCIEN-BACKEND] Servidor cargado/recargado correctamente.")
 
@@ -57,7 +63,7 @@ _claude_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY")
 def ask_claude(prompt: str) -> str:
     try:
         msg = _claude_client.messages.create(
-            model="claude-3-5-sonnet-20241022", # Actualizado a modelo estable
+            model="claude-sonnet-4-6", # Actualizado a modelo estable
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -2349,6 +2355,82 @@ async def spa_fallback(full_path: str):
     
     raise HTTPException(status_code=404, detail="Portal no disponible")
 
+# ─── Health Check ──────────────────────────────────────────────────────────────
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "service": "XCIEN Backend", "version": "2.0"}
+
+# ─── Auth: Login ───────────────────────────────────────────────────────────────
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/api/auth/login")
+def login(req: LoginRequest):
+    user = auth_service.autenticar(req.email, req.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas o usuario inactivo")
+    return auth_service.crear_token(user)
+
+@app.get("/api/auth/me")
+def me(user: dict = Depends(get_current_user)):
+    return user
+
+@app.post("/api/auth/logout")
+def logout():
+    # JWT es stateless; el cliente descarta el token
+    return {"status": "ok", "message": "Sesión cerrada"}
+
+# ─── Auth: Gestión de Usuarios ─────────────────────────────────────────────────
+class UserCreateRequest(BaseModel):
+    nombre: str
+    email: str
+    password: str
+    rol: str
+    plaza: str = ""
+
+class UserUpdateRequest(BaseModel):
+    nombre: Optional[str] = None
+    rol: Optional[str] = None
+    plaza: Optional[str] = None
+    activo: Optional[bool] = None
+    password: Optional[str] = None
+
+@app.get("/api/auth/usuarios")
+def listar_usuarios(user: dict = Depends(require_rol("admin", "director"))):
+    return auth_service.listar_usuarios()
+
+@app.post("/api/auth/usuarios")
+def crear_usuario(req: UserCreateRequest, user: dict = Depends(require_rol("admin"))):
+    try:
+        nuevo = auth_service.crear_usuario(
+            req.nombre, req.email, req.password, req.rol, req.plaza
+        )
+        return {"status": "success", "usuario": nuevo}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/api/auth/usuarios/{user_id}")
+def actualizar_usuario(user_id: str, req: UserUpdateRequest,
+                       user: dict = Depends(require_rol("admin"))):
+    try:
+        actualizado = auth_service.actualizar_usuario(user_id, req.model_dump(exclude_none=True))
+        return {"status": "success", "usuario": actualizado}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/auth/usuarios/{user_id}")
+def eliminar_usuario(user_id: str, user: dict = Depends(require_rol("admin"))):
+    if user["sub"] == user_id:
+        raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo")
+    auth_service.eliminar_usuario(user_id)
+    return {"status": "success"}
+
+@app.get("/api/auth/roles")
+def listar_roles(user: dict = Depends(get_current_user)):
+    return auth_service.ROLES
+
+# ─── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     print("🚀 XCIEN 2.0 Backend iniciando en puerto 8000...")

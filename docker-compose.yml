@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  # ── Backend FastAPI + Frontend estático ───────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xcien-backend
+    restart: always
+    env_file: .env
+    environment:
+      - PORT=8000
+    volumes:
+      # Persistencia de datos (JSON DB, logs, uploads)
+      - xcien-db:/app/backend/db
+      - xcien-logs:/app/backend/logs
+      - xcien-docs:/app/backend/Xcien_Docs
+    expose:
+      - "8000"
+    networks:
+      - xcien-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Nginx: reverse proxy + SSL + frontend ─────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: xcien-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - xcien-logs:/var/log/nginx
+    depends_on:
+      - backend
+    networks:
+      - xcien-net
+
+volumes:
+  xcien-db:
+  xcien-logs:
+  xcien-docs:
+
+networks:
+  xcien-net:
+    driver: bridge
