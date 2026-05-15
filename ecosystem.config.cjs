@@ -11,7 +11,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 8000,
-        PYTHONUNBUFFERED: "1"
+        PYTHONUNBUFFERED: "1",
+        TOKEN_SECRET: "99cce401f9cb7f94dc283ebd8ded2f3795400eb1f3dcac90e94fc979f3b4afb4"
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file: 'logs/err.log',
