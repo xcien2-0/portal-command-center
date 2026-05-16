@@ -2022,220 +2022,267 @@ def _build_reporte_pdf(ciudad: str, fecha_inicio: str, fecha_fin: str,
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from datetime import datetime
     import io
 
     buf = io.BytesIO()
 
-    XCIEN_GREEN = colors.HexColor('#00C896')
-    DARK_BG     = colors.HexColor('#0F1923')
-    SURFACE     = colors.HexColor('#1A2733')
-    RED         = colors.HexColor('#FF3366')
-    YELLOW      = colors.HexColor('#FFB703')
-    BLUE        = colors.HexColor('#60A5FA')
-    GREY        = colors.HexColor('#8BA3B8')
-    WHITE       = colors.white
+    # ── Paleta institucional: blanco/gris limpio + verde XCIEN
+    GREEN   = colors.HexColor('#00C896')   # verde XCIEN
+    BLACK   = colors.HexColor('#111111')   # texto principal
+    DARK    = colors.HexColor('#1A1A1A')   # encabezados
+    BGHEAD  = colors.HexColor('#F0FBF7')   # fondo cabecera secciones
+    BGROW   = colors.HexColor('#F9F9F9')   # filas alternas
+    BORDER  = colors.HexColor('#DDDDDD')   # bordes
+    RED     = colors.HexColor('#D62828')   # alertas críticas
+    ORANGE  = colors.HexColor('#E07A18')   # advertencias
+    GREY    = colors.HexColor('#888888')   # texto secundario
+    WHITE   = colors.white
 
     styles = getSampleStyleSheet()
     def sty(name='Normal', **kw):
         return ParagraphStyle(name + str(id(kw)), parent=styles[name], **kw)
 
     doc = SimpleDocTemplate(buf, pagesize=letter,
-        leftMargin=0.75*inch, rightMargin=0.75*inch,
-        topMargin=0.75*inch, bottomMargin=0.75*inch)
+        leftMargin=0.7*inch, rightMargin=0.7*inch,
+        topMargin=0.6*inch, bottomMargin=0.6*inch)
 
     elems = []
 
+    now = datetime.now()
+    folio        = f"NOC-{now.strftime('%Y%m%d-%H%M%S')}"
+    generated_at = now.strftime("%Y-%m-%d  %H:%M:%S")
     ciudad_label = ciudad if ciudad != 'todas' else 'Todas las Ciudades'
 
-    # ── Header
+    # ── HEADER institucional ────────────────────────────────────────────────
     hdr = Table([[
-        Paragraph('<b>XCIEN — NOC</b>', sty(fontSize=9, textColor=XCIEN_GREEN, fontName='Helvetica-Bold')),
-        Paragraph(f'<b>REPORTE SEMANAL<br/>{ciudad_label.upper()}</b>',
-                  sty(fontSize=16, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-        Paragraph(f'<b>{fecha_inicio}</b><br/>al {fecha_fin}',
-                  sty(fontSize=9, textColor=GREY, alignment=2)),
-    ]], colWidths=[1.2*inch, 4.6*inch, 1.2*inch])
+        Paragraph(f'<b>XCIEN</b><br/><font size="7" color="#888888">Network Operations</font>',
+                  sty(fontSize=14, textColor=GREEN, fontName='Helvetica-Bold')),
+        Paragraph(f'<b>REPORTE NOC SEMANAL</b><br/>'
+                  f'<font size="10" color="#1A1A1A">{ciudad_label.upper()}</font>',
+                  sty(fontSize=16, textColor=DARK, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph(
+            f'<font size="8" color="#888888">Folio</font><br/>'
+            f'<b><font size="9">{folio}</font></b><br/>'
+            f'<font size="7" color="#888888">{fecha_inicio} → {fecha_fin}</font><br/>'
+            f'<font size="7" color="#888888">Generado: {generated_at}</font>',
+            sty(fontSize=8, textColor=GREY, alignment=TA_RIGHT)),
+    ]], colWidths=[1.4*inch, 4.2*inch, 1.65*inch])
     hdr.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), DARK_BG),
-        ('BOX', (0,0), (-1,-1), 1.5, XCIEN_GREEN),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 12),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
-        ('LEFTPADDING', (0,0), (0,-1), 12),
-        ('RIGHTPADDING', (-1,0), (-1,-1), 12),
+        ('BACKGROUND', (0,0), (-1,-1), WHITE),
+        ('LINEBELOW',  (0,0), (-1,-1), 2.5, GREEN),
+        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        ('LEFTPADDING',  (0,0), (0,-1), 0),
+        ('RIGHTPADDING', (-1,0), (-1,-1), 0),
     ]))
     elems.append(hdr)
-    elems.append(Spacer(1, 0.2*inch))
+    elems.append(Spacer(1, 0.18*inch))
 
-    # ── NOC KPIs
+    # ── helpers
     cities = noc_data.get('cities', [])
     alerts = noc_data.get('alerts', [])
-    total_hosts  = sum(c['totalHosts'] for c in cities)
-    total_online = sum(c['online'] for c in cities)
-    total_offline= sum(c['offline'] for c in cities)
-    critical     = sum(1 for a in alerts if a.get('severity') == 'critical')
-    warnings     = sum(1 for a in alerts if a.get('severity') == 'warning')
-    avg_score    = round(sum(c['score'] for c in cities) / len(cities), 1) if cities else 0
+    total_hosts   = sum(c['totalHosts'] for c in cities)
+    total_online  = sum(c['online']     for c in cities)
+    total_offline = sum(c['offline']    for c in cities)
+    critical      = sum(1 for a in alerts if a.get('severity') == 'critical')
+    warnings_n    = sum(1 for a in alerts if a.get('severity') == 'warning')
+    avg_score     = round(sum(c['score'] for c in cities) / len(cities), 1) if cities else 0
 
-    def section_title(text):
-        return Paragraph(text, sty(fontSize=12, textColor=XCIEN_GREEN, fontName='Helvetica-Bold',
-                                    spaceBefore=14, spaceAfter=6))
+    def sec(text):
+        return Paragraph(
+            f'<b>{text}</b>',
+            sty(fontSize=10, textColor=DARK, fontName='Helvetica-Bold',
+                spaceBefore=14, spaceAfter=5,
+                borderPadding=(4,0,4,6),
+                backColor=BGHEAD))
 
-    elems.append(section_title('RED — ESTADO DE INFRAESTRUCTURA'))
-    kpi_data = [
-        [Paragraph(f'<b>{total_hosts}</b>',  sty(fontSize=20, textColor=BLUE,        fontName='Helvetica-Bold', alignment=TA_CENTER)),
-         Paragraph(f'<b>{total_online}</b>',  sty(fontSize=20, textColor=XCIEN_GREEN, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-         Paragraph(f'<b>{total_offline}</b>', sty(fontSize=20, textColor=RED,         fontName='Helvetica-Bold', alignment=TA_CENTER)),
-         Paragraph(f'<b>{critical}</b>',      sty(fontSize=20, textColor=RED,         fontName='Helvetica-Bold', alignment=TA_CENTER)),
-         Paragraph(f'<b>{avg_score}</b>',     sty(fontSize=20, textColor=YELLOW,      fontName='Helvetica-Bold', alignment=TA_CENTER))],
-        [Paragraph('HOSTS',    sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-         Paragraph('ONLINE',   sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-         Paragraph('OFFLINE',  sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-         Paragraph('CRÍTICAS', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-         Paragraph('SCORE',    sty(fontSize=8, textColor=GREY, alignment=TA_CENTER))],
-    ]
-    kt = Table(kpi_data, colWidths=[1.35*inch]*5)
+    def hdr_tbl(style):
+        base = [
+            ('BACKGROUND', (0,0), (-1,0), GREEN),
+            ('TEXTCOLOR',  (0,0), (-1,0), WHITE),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0,0), (-1,-1), 8),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [WHITE, BGROW]),
+            ('INNERGRID',  (0,0), (-1,-1), 0.3, BORDER),
+            ('BOX',        (0,0), (-1,-1), 0.5, BORDER),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 7),
+        ]
+        base.extend(style)
+        return base
+
+    # ── KPIs NOC ───────────────────────────────────────────────────────────
+    elems.append(sec('RED — ESTADO ACTUAL DE INFRAESTRUCTURA'))
+    kpi_vals  = [str(total_hosts), str(total_online), str(total_offline),
+                 str(critical), str(warnings_n), f'{avg_score}%']
+    kpi_lbls  = ['HOSTS TOTALES', 'EN LÍNEA', 'CAÍDOS', 'CRÍTICAS', 'ALERTAS', 'SCORE PROM.']
+    kpi_clrs  = [BLACK, GREEN, RED, RED, ORANGE, GREEN]
+    kt = Table(
+        [[Paragraph(f'<b>{v}</b>', sty(fontSize=22, textColor=c, fontName='Helvetica-Bold', alignment=TA_CENTER))
+          for v, c in zip(kpi_vals, kpi_clrs)],
+         [Paragraph(l, sty(fontSize=7, textColor=GREY, alignment=TA_CENTER)) for l in kpi_lbls]],
+        colWidths=[1.12*inch]*6)
     kt.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), SURFACE),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('BACKGROUND', (0,0), (-1,-1), WHITE),
+        ('BOX',        (0,0), (-1,-1), 0.5, BORDER),
+        ('INNERGRID',  (0,0), (-1,-1), 0.3, BORDER),
+        ('LINEABOVE',  (0,0), (-1,0),  2.5, GREEN),
+        ('ALIGN',      (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('LINEABOVE', (0,0), (-1,0), 2, RED),
     ]))
     elems.append(kt)
-    elems.append(Spacer(1, 0.1*inch))
+    elems.append(Spacer(1, 0.12*inch))
 
-    # ── Sitios con fallas
-    offline_cities = sorted([c for c in cities if c['offline'] > 0],
-                            key=lambda x: -x['offline'])
+    # ── Ciudades con hosts caídos ──────────────────────────────────────────
+    offline_cities = sorted([c for c in cities if c['offline'] > 0], key=lambda x: -x['offline'])
     if offline_cities:
-        elems.append(section_title('CIUDADES CON HOSTS CAÍDOS'))
-        rows = [['Ciudad', 'Offline', 'Online', 'Score', 'Alertas']]
-        for c in offline_cities[:12]:
+        elems.append(sec('CIUDADES CON HOSTS CAÍDOS'))
+        rows = [['Ciudad', 'Caídos', 'En línea', 'Score', 'Alertas crit.']]
+        for c in offline_cities[:15]:
             rows.append([c['name'], str(c['offline']), str(c['online']),
                          f"{c['score']}%", str(c.get('alerts', 0))])
-        def rc(i):
-            return colors.HexColor('#1a0a10') if i > 0 and int(rows[i][1]) >= 3 else (SURFACE if i > 0 else DARK_BG)
-        tbl_data = [[Paragraph(str(cell), sty(fontSize=9, textColor=(XCIEN_GREEN if i == 0 else WHITE),
-                                               fontName='Helvetica-Bold' if i == 0 else 'Helvetica', leading=12))
-                     for cell in row] for i, row in enumerate(rows)]
-        t = Table(tbl_data, colWidths=[2*inch, 0.9*inch, 0.9*inch, 0.9*inch, 1.1*inch])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
-            *[('BACKGROUND', (0,i), (-1,i), rc(i)) for i in range(1, len(rows))],
-            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
-            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
-            ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-            ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ]))
+        tbl = [[Paragraph(str(cell),
+                          sty(fontSize=8, textColor=(WHITE if i==0 else (RED if (i>0 and cell.isdigit() and int(cell)>=3) else BLACK)),
+                              fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
+                for cell in row] for i, row in enumerate(rows)]
+        t = Table(tbl, colWidths=[2.3*inch, 0.85*inch, 0.85*inch, 0.85*inch, 1.35*inch])
+        t.setStyle(TableStyle(hdr_tbl([])))
         elems.append(t)
-        elems.append(Spacer(1, 0.1*inch))
+        elems.append(Spacer(1, 0.12*inch))
 
-    # ── Alertas críticas top
-    crit_alerts = [a for a in alerts if a.get('severity') == 'critical'][:10]
+    # ── Hosts offline — Detalle con ID de servicio + motivo ───────────────
+    # Extraer todos los hosts offline de las ciudades
+    offline_hosts = []
+    for city in cities:
+        for site in city.get('sites', []):
+            for h in site.get('hosts', []):
+                if h.get('status') == 'offline':
+                    offline_hosts.append({
+                        'service_id': str(h.get('id', '—')),
+                        'name':       (h.get('name') or h.get('ip') or '—')[:35],
+                        'ip':         h.get('ip', '—'),
+                        'city':       city.get('name', '—'),
+                        'site':       site.get('name', '—'),
+                        'lastSeen':   (h.get('lastSeen') or '')[:19] or '—',
+                    })
+
+    # Cruzar con alertas para obtener motivo / SOP
+    alert_by_ip = {}
+    for a in alerts:
+        ip = a.get('hostIp') or a.get('ip', '')
+        if ip and ip not in alert_by_ip:
+            alert_by_ip[ip] = a
+
+    if offline_hosts:
+        elems.append(sec(f'HOSTS OFFLINE — DETALLE ({len(offline_hosts)} equipos)'))
+        h_rows = [['ID Servicio', 'Host / IP', 'Ciudad · Sitio', 'Último contacto', 'Motivo / SOP']]
+        for h in offline_hosts[:25]:
+            al = alert_by_ip.get(h['ip'], {})
+            motivo = (al.get('message') or al.get('type') or 'Sin datos')[:40]
+            sop    = al.get('sopId', '')
+            motivo_txt = f"{motivo}  [{sop}]" if sop else motivo
+            h_rows.append([
+                h['service_id'],
+                h['name'],
+                f"{h['city']} · {h['site']}",
+                h['lastSeen'],
+                motivo_txt,
+            ])
+        h_data = [[Paragraph(str(cell),
+                             sty(fontSize=7, textColor=(WHITE if i==0 else BLACK),
+                                 fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=10))
+                   for cell in row] for i, row in enumerate(h_rows)]
+        ht = Table(h_data, colWidths=[0.85*inch, 1.4*inch, 1.45*inch, 1.1*inch, 2.45*inch])
+        ht.setStyle(TableStyle(hdr_tbl([
+            ('TEXTCOLOR', (4,1), (4,-1), GREY),
+        ])))
+        elems.append(ht)
+        elems.append(Spacer(1, 0.12*inch))
+
+    # ── Alertas críticas ───────────────────────────────────────────────────
+    crit_alerts = [a for a in alerts if a.get('severity') == 'critical'][:12]
     if crit_alerts:
-        elems.append(section_title(f'ALERTAS CRÍTICAS ACTIVAS — TOP {len(crit_alerts)}'))
-        a_rows = [['Ciudad', 'Host', 'Mensaje', 'Desde']]
+        elems.append(sec(f'ALERTAS CRÍTICAS ACTIVAS — {len(crit_alerts)} eventos'))
+        a_rows = [['Ciudad', 'Host / IP', 'Causa', 'Fecha/Hora', 'SOP']]
         for a in crit_alerts:
-            msg = (a.get('message') or a.get('type') or '')[:55]
-            host = (a.get('hostName') or a.get('hostIp') or '')[:28]
-            ts = (a.get('timestamp') or '')[:10]
-            a_rows.append([a.get('cityName','—'), host, msg, ts])
-        a_data = [[Paragraph(str(c), sty(fontSize=8, textColor=(XCIEN_GREEN if i==0 else (RED if i>0 else WHITE)),
-                                          fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
-                   for c in row] for i, row in enumerate(a_rows)]
-        at = Table(a_data, colWidths=[1.1*inch, 1.5*inch, 3.0*inch, 0.8*inch])
-        at.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#1a0a10'), SURFACE]*10),
-            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
-            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
-            ('TOPPADDING', (0,0), (-1,-1), 5), ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-            ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ]))
+            ts  = (a.get('timestamp') or '')[:19] or '—'
+            msg = (a.get('message') or a.get('type') or '—')[:45]
+            host = (a.get('hostName') or a.get('hostIp') or '—')[:25]
+            a_rows.append([a.get('cityName','—'), host, msg, ts, a.get('sopId','—')])
+        a_data = [[Paragraph(str(c),
+                             sty(fontSize=7, textColor=(WHITE if i==0 else (RED if (i>0 and j==2) else BLACK)),
+                                 fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=10))
+                   for j, c in enumerate(row)] for i, row in enumerate(a_rows)]
+        at = Table(a_data, colWidths=[1.0*inch, 1.35*inch, 2.5*inch, 1.1*inch, 0.8*inch])
+        at.setStyle(TableStyle(hdr_tbl([])))
         elems.append(at)
-        elems.append(Spacer(1, 0.15*inch))
+        elems.append(Spacer(1, 0.12*inch))
 
-    # ── WFM
-    elems.append(section_title('WFM — ÓRDENES DE SERVICIO'))
+    # ── WFM ────────────────────────────────────────────────────────────────
+    elems.append(sec('WFM — ÓRDENES DE SERVICIO'))
     estados = {}
     for o in wfm_orders:
-        est = o.get('estado', 'DESCONOCIDO')
+        est = o.get('estado', 'OTRO')
         estados[est] = estados.get(est, 0) + 1
 
-    wfm_kpi = [[
-        Paragraph(f'<b>{len(wfm_orders)}</b>', sty(fontSize=20, textColor=BLUE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-        Paragraph(f'<b>{estados.get("LISTO_INSTALACION", 0)}</b>', sty(fontSize=20, textColor=XCIEN_GREEN, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-        Paragraph(f'<b>{estados.get("BACKLOG", 0)}</b>', sty(fontSize=20, textColor=RED, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-        Paragraph(f'<b>{estados.get("EN_PROCESO", estados.get("PREVENTA", 0))}</b>', sty(fontSize=20, textColor=YELLOW, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-    ],[
-        Paragraph('TOTAL', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-        Paragraph('LISTAS', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-        Paragraph('BACKLOG', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-        Paragraph('EN PROCESO', sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)),
-    ]]
-    wt = Table(wfm_kpi, colWidths=[1.69*inch]*4)
+    wfm_vals = [str(len(wfm_orders)),
+                str(estados.get('LISTO_INSTALACION', 0)),
+                str(estados.get('BACKLOG', 0)),
+                str(estados.get('EN_PROCESO', estados.get('PREVENTA', 0)))]
+    wfm_lbls = ['TOTAL', 'LISTAS', 'BACKLOG', 'EN PROCESO']
+    wfm_clrs = [BLACK, GREEN, RED, ORANGE]
+    wt = Table(
+        [[Paragraph(f'<b>{v}</b>', sty(fontSize=22, textColor=c, fontName='Helvetica-Bold', alignment=TA_CENTER))
+          for v, c in zip(wfm_vals, wfm_clrs)],
+         [Paragraph(l, sty(fontSize=7, textColor=GREY, alignment=TA_CENTER)) for l in wfm_lbls]],
+        colWidths=[1.69*inch]*4)
     wt.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), SURFACE),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 10), ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('LINEABOVE', (0,0), (-1,0), 2, BLUE),
+        ('BACKGROUND', (0,0), (-1,-1), WHITE),
+        ('BOX',        (0,0), (-1,-1), 0.5, BORDER),
+        ('INNERGRID',  (0,0), (-1,-1), 0.3, BORDER),
+        ('LINEABOVE',  (0,0), (-1,0),  2.5, GREEN),
+        ('ALIGN',      (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
     ]))
     elems.append(wt)
     elems.append(Spacer(1, 0.1*inch))
 
-    # Tabla de órdenes recientes
     recent = sorted(wfm_orders, key=lambda x: x.get('fecha_creacion',''), reverse=True)[:10]
     if recent:
         o_rows = [['ID', 'Cliente', 'Servicio', 'Estado', 'Fecha']]
         for o in recent:
             o_rows.append([
-                o.get('id','')[-6:],
-                (o.get('cliente',''))[:22],
-                (o.get('servicio',''))[:28],
-                o.get('estado',''),
-                (o.get('fecha_creacion',''))[:10],
+                str(o.get('id',''))[-6:],
+                str(o.get('cliente',''))[:22],
+                str(o.get('servicio',''))[:28],
+                str(o.get('estado','')),
+                str(o.get('fecha_creacion',''))[:10],
             ])
-        o_data = [[Paragraph(str(c), sty(fontSize=8, textColor=(XCIEN_GREEN if i==0 else WHITE),
-                                          fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
+        o_data = [[Paragraph(str(c),
+                             sty(fontSize=8, textColor=(WHITE if i==0 else BLACK),
+                                 fontName='Helvetica-Bold' if i==0 else 'Helvetica', leading=11))
                    for c in row] for i, row in enumerate(o_rows)]
         ot = Table(o_data, colWidths=[0.65*inch, 1.7*inch, 2.1*inch, 1.3*inch, 0.9*inch])
-        ot.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), DARK_BG),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [SURFACE, colors.HexColor('#161F29')]*10),
-            ('INNERGRID', (0,0), (-1,-1), 0.3, colors.HexColor('#2A3F50')),
-            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2A3F50')),
-            ('LINEBELOW', (0,0), (-1,0), 1, XCIEN_GREEN),
-            ('TOPPADDING', (0,0), (-1,-1), 5), ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-            ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ]))
+        ot.setStyle(TableStyle(hdr_tbl([])))
         elems.append(ot)
 
-    # Footer
+    # ── Footer ─────────────────────────────────────────────────────────────
     elems.append(Spacer(1, 0.2*inch))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#2A3F50')))
-    elems.append(Spacer(1, 0.08*inch))
-    from datetime import datetime
+    elems.append(HRFlowable(width='100%', thickness=1, color=GREEN))
+    elems.append(Spacer(1, 0.06*inch))
     elems.append(Paragraph(
-        f'Generado por XCIEN NOC Command Center · {datetime.now().strftime("%Y-%m-%d %H:%M")} · Confidencial',
-        sty(fontSize=8, textColor=GREY, alignment=TA_CENTER)))
+        f'XCIEN Network Operations Center  ·  Folio: {folio}  ·  {generated_at}  ·  Confidencial',
+        sty(fontSize=7, textColor=GREY, alignment=TA_CENTER)))
 
-    def dark_page(canvas, doc):
-        canvas.saveState()
-        canvas.setFillColor(DARK_BG)
-        canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
-        canvas.restoreState()
-
-    doc.build(elems, onFirstPage=dark_page, onLaterPages=dark_page)
+    doc.build(elems)
     return buf.getvalue()
 
 

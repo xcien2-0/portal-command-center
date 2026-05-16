@@ -797,6 +797,7 @@ function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAler
   const [fechaInicio, setFechaInicio] = useState(fmt(monday));
   const [fechaFin, setFechaFin]       = useState(fmt(today));
   const [loading, setLoading]         = useState(false);
+  const [pdfError, setPdfError]       = useState('');
   const [wfmStats, setWfmStats]       = useState<{total:number;backlog:number;listo:number;proceso:number}>({total:0,backlog:0,listo:0,proceso:0});
 
   useEffect(() => {
@@ -842,7 +843,8 @@ function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAler
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      alert('Error generando PDF');
+      setPdfError('Error generando PDF — intenta de nuevo');
+      setTimeout(() => setPdfError(''), 4000);
     } finally { setLoading(false); }
   };
 
@@ -892,6 +894,12 @@ function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAler
             : <>📄 Descargar PDF</>}
         </button>
       </div>
+      {pdfError && (
+        <div style={{ background: 'rgba(214,40,40,0.12)', border: '1px solid rgba(214,40,40,0.4)',
+          borderRadius: 8, padding: '8px 14px', fontSize: 12, color: '#FF6B6B' }}>
+          ⚠️ {pdfError}
+        </div>
+      )}
 
       {/* Preview NOC */}
       <div>
