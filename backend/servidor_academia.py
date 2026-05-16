@@ -661,6 +661,24 @@ NOCBOARD_API_BASE = "http://localhost:9401/api"
 NOCBOARD_API_KEY  = "87a08190b801416392e944ab79c7e3c9"
 
 import requests
+import threading
+import subprocess as _sp
+
+def _nocboard_watchdog():
+    """Verifica cada 60s que NOCBoard esté activa; si no, la reabre."""
+    import time
+    while True:
+        try:
+            r = requests.get(f"{NOCBOARD_API_BASE}/hosts",
+                             headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=3)
+            if r.status_code != 200:
+                raise Exception("status != 200")
+        except Exception:
+            logger.warning("NOCBoard watchdog: puerto 9401 no responde — reabriendo app...")
+            _sp.Popen(["open", "-a", "NOCBoard"])
+        time.sleep(60)
+
+threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
 
 def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
