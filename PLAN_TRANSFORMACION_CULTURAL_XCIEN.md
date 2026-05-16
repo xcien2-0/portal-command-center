@@ -8,24 +8,24 @@
 
 ## ⚡ DIAGNÓSTICO INICIAL — EL PROBLEMA REAL
 
-Una empresa técnicamente competente puede ser destruida desde adentro por su propia cultura. XCIEN opera en un entorno de alta exigencia: ISP con 47 técnicos de campo en 6 plazas, operaciones 24/7, múltiples marcas (XCIEN, Wispi, Luminet WAN, Huus, Sandur). En ese contexto, **la cultura de chisme y toxicidad no es un problema de "ambiente" — es un riesgo operativo real.**
+Una empresa técnicamente competente puede ser destruida desde adentro por su propia cultura. XCIEN opera en un entorno de alta exigencia: ISP con 47 técnicos de campo en 6 plazas, operaciones 24/7, múltiples marcas (XCIEN, Wispi, Luminet WAN, Huus, Sandur). En ese contexto, **la cultura de desinformación y toxicidad no es un problema de "ambiente" — es un riesgo operativo real.**
 
 ### 🔴 Síntomas Identificados
 
 | Síntoma | Impacto Operativo |
 |---|---|
-| Chisme entre técnicos y áreas | Desconfianza → baja colaboración → tickets sin resolver |
+| Desinformación entre técnicos y áreas | Desconfianza → baja colaboración → tickets sin resolver |
 | Información circulando sin canal oficial | Decisiones basadas en rumores, no en datos |
 | Ausencia de retroalimentación directa | Los problemas no llegan arriba, llegan distorsionados |
 | Cultura de "quejarme con el compañero" | Conflictos sin resolver acumulados = renuncia o confrontación |
-| Liderazgos que toleran o participan en chisme | El equipo aprende que eso es lo normal |
+| Liderazgos que toleran o participan en desinformación | El equipo aprende que eso es lo normal |
 | Falta de estructura de escalamiento | "¿Con quién hablo?" → con el que está junto, no con el indicado |
 
 ### 🧬 La Raíz del Problema
 
-El chisme y la toxicidad **no surgen de personas malas**, surgen de:
+El fenómeno de la desinformación y la toxicidad **no surgen de personas malas**, surgen de:
 
-1. **Vacío de comunicación oficial** → Si no hay canal claro, el chisme llena el espacio
+1. **Vacío de comunicación oficial** → Si no hay canal claro, la desinformación llena el espacio
 2. **Falta de métricas individuales visibles** → Sin datos, la percepción subjetiva domina
 3. **Ausencia de consecuencias** → Comportamientos tóxicos sin corrección se normalizan
 4. **Líderes que no tienen conversaciones difíciles** → El problema se comenta, no se resuelve
@@ -35,7 +35,7 @@ El chisme y la toxicidad **no surgen de personas malas**, surgen de:
 
 ## 🎯 OBJETIVO DEL PLAN
 
-> **Transformar la cultura de XCIEN de una basada en chisme e informalidad hacia una cultura de alto rendimiento, basada en datos, comunicación directa y responsabilidad individual.**
+> **Transformar la cultura de XCIEN de una basada en desinformación e informalidad hacia una cultura de alto rendimiento, basada en datos, comunicación directa y responsabilidad individual.**
 
 Este plan no es una charla motivacional. Es un sistema operativo cultural con mecanismos concretos, medibles y sostenibles.
 
@@ -81,7 +81,7 @@ Un comentario sin datos es ruido. Un dato sin solución es queja. **Aquí se esp
 > *"El comportamiento que el líder tolera, lo convierte en estándar."*
 
 Los coordinadores y directores de XCIEN tienen prohibición explícita de:
-- Participar en conversaciones de chisme
+- Participar en conversaciones basadas en información distorsionada
 - Escuchar quejas sin redirigir al canal correcto
 - Tomar decisiones basadas en información de pasillo
 
@@ -106,7 +106,7 @@ La cultura cambia cuando las reglas se aplican por igual: al técnico de campo y
 **Acciones:**
 
 1. **Encuesta Anónima de Cultura** (obligatoria para todo el personal)
-   - ¿Cuán frecuente es el chisme en tu área? (1-5)
+   - ¿Cuán frecuente es la desinformación en tu área? (1-5)
    - ¿Has sido afectado por comentarios negativos de compañeros? (Sí/No/Cómo)
    - ¿Sabes a quién acudir si tienes un conflicto? (Sí/No)
    - ¿Tu jefe directo da retroalimentación directa o indirecta? (Abierta)
@@ -126,7 +126,7 @@ La cultura cambia cuando las reglas se aplican por igual: al técnico de campo y
 
 ### FASE 2: INSTALACIÓN DE PROTOCOLOS (Semanas 3-6)
 
-#### 🔧 Protocolo Anti-Chisme XCIEN
+#### 🔧 Protocolo Anti-Desinformación XCIEN
 
 **Cuando alguien habla negativamente de un compañero contigo:**
 
@@ -134,7 +134,7 @@ La cultura cambia cuando las reglas se aplican por igual: al técnico de campo y
 |---|---|---|
 | 1 | Cortar el circuito | *"¿Ya se lo dijiste directamente a él/ella?"* |
 | 2 | Redirigir | *"Si afecta el trabajo, hay que escalarlo con el coordinador."* |
-| 3 | No alimentar | No opinar, no agregar, no validar el chisme |
+| 3 | No alimentar | No opinar, no agregar, no validar información distorsionada |
 | 4 | Reportar patrón | Si el comportamiento es recurrente, notificarlo al área de RRHH/Coordinación |
 
 **Para líderes:**
@@ -200,8 +200,8 @@ Esta estructura se usa en **toda conversación de corrección**. Sin excepción.
 
 | Nivel | Comportamiento | Consecuencia |
 |---|---|---|
-| **Amarillo** | Primera incidencia de chisme o comentario negativo documentado | Conversación directa con coordinador, registro en expediente |
-| **Naranja** | Segunda incidencia o chisme que afectó operaciones | Reunión formal con RRHH, plan de mejora escrito con seguimiento |
+| **Amarillo** | Primera incidencia de desinformación o comentario negativo documentado | Conversación directa con coordinador, registro en expediente |
+| **Naranja** | Segunda incidencia o información distorsionada que afectó operaciones | Reunión formal con RRHH, plan de mejora escrito con seguimiento |
 | **Rojo** | Patrón sostenido, acoso laboral o sabotaje de compañeros | Proceso disciplinario formal, posible desvinculación |
 
 > **Importante:** El mismo sistema aplica para líderes. Un coordinador que tolere o participe en comportamientos tóxicos escala automáticamente al nivel naranja por omisión.
@@ -210,7 +210,7 @@ Esta estructura se usa en **toda conversación de corrección**. Sin excepción.
 
 ### FASE 4: CULTURA POSITIVA — LO QUE SÍ SE CONSTRUYE (Mes 3 en adelante)
 
-La erradicación del chisme crea un vacío. Ese vacío debe llenarse con algo mejor. Cultura positiva no es poner letreros motivacionales — es crear sistemas que recompensen el comportamiento correcto.
+La erradicación de la desinformación crea un vacío. Ese vacío debe llenarse con algo mejor. Cultura positiva no es poner letreros motivacionales — es crear sistemas que recompensen el comportamiento correcto.
 
 #### 🏆 Sistema de Reconocimiento Operativo
 
@@ -255,7 +255,7 @@ Certificación obligatoria para todos los coordinadores. Opcional (con incentivo
 | Conflictos interpersonales formalmente reportados | Mensual | Tendencia decreciente | < 2 por mes |
 | Tickets resueltos sin reescalamiento | Semanal | ≥ 80% | ≥ 90% |
 | Participación en módulos interpersonales | Mensual | ≥ 60% del equipo | 100% coordinadores |
-| Incidentes documentados de chisme/toxicidad | Mensual | Medición inicial → reducción 50% | Reducción 80% |
+| Incidentes documentados de desinformación/toxicidad | Mensual | Medición inicial → reducción 50% | Reducción 80% |
 | Retención de personal (rotación) | Trimestral | < 15% anual | < 10% anual |
 
 ---
@@ -287,7 +287,7 @@ Los coordinadores y directores son los vectores del cambio. Sin ellos, este plan
 Independientemente del desempeño técnico, las siguientes conductas son **inaceptables y no negociables:**
 
 1. **Acoso laboral o personal** — verbal, por escrito o en grupos de chat
-2. **Chisme que involucre información confidencial** de clientes, empleados o la empresa
+2. **Desinformación que involucre información confidencial** de clientes, empleados o la empresa
 3. **Sabotaje activo** — interferir deliberadamente con el trabajo de un compañero
 4. **Mentira a un superior** sobre la situación de un compañero
 5. **Participación de líderes** en cualquiera de los puntos anteriores
@@ -300,7 +300,7 @@ Independientemente del desempeño técnico, las siguientes conductas son **inace
 
 > *En XCIEN construimos redes que conectan a México. Para lograrlo, necesitamos un equipo que también esté conectado entre sí: con comunicación directa, respeto mutuo y datos como lenguaje común.*
 >
-> *Aquí no hay espacio para el chisme porque nuestro tiempo es demasiado valioso para desperdiciarlo en lo que no construye. Aquí hay espacio para el error honesto, la retroalimentación directa y el crecimiento real.*
+> *Aquí no hay espacio para la desinformación porque nuestro tiempo es demasiado valioso para desperdiciarlo en lo que no construye. Aquí hay espacio para el error honesto, la retroalimentación directa y el crecimiento real.*
 >
 > *Esta no es solo una empresa donde trabajas. Es el equipo que tú y yo estamos construyendo juntos.*
 >
@@ -341,7 +341,7 @@ MES 7-12
 | Antes | Después |
 |---|---|
 | Los problemas se comentan con compañeros | Los problemas se reportan por canal oficial |
-| El chisme llena el vacío de comunicación | La comunicación oficial llena ese espacio |
+| La desinformación llena el vacío de comunicación | La comunicación oficial llena ese espacio |
 | Los líderes escuchan quejas sin resolver | Los líderes generan conversaciones directas |
 | La reputación se construye en pasillos | La reputación se construye con métricas |
 | Las consecuencias son inconsistentes | Las consecuencias son iguales para todos |

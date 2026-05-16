@@ -9,6 +9,7 @@ python-multipart==0.0.9
 
 # IA
 anthropic==0.96.0
+google-generativeai
 
 # Configuración
 python-dotenv==1.0.1

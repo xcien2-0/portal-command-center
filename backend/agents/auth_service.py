@@ -22,7 +22,7 @@ TOKEN_EXPIRE = int(os.environ.get("TOKEN_EXPIRE_HOURS", "8"))  # horas
 
 USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db", "users.json")
 
-pwd_ctx   = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_ctx   = CryptContext(schemes=["sha256_crypt", "bcrypt"], default="sha256_crypt", deprecated="auto")
 bearer    = HTTPBearer(auto_error=False)
 
 # ── Roles del sistema ──────────────────────────────────────────────────────────

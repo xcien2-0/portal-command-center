@@ -1,6 +1,7 @@
 import os
 import json
 import anthropic
+import google.generativeai as genai
 from datetime import date
 from dotenv import load_dotenv
 
@@ -40,10 +41,20 @@ def _get_noc_summary():
 
 class DirectorGeneralV2:
     def __init__(self):
-        self.name = "Director General (Claude-Powered Antigravity)"
+        self.name = "Director General (Gemini-Powered)"
         self.contexto_maestro = self._cargar_contexto()
-        self.client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-        print(f"💎 [{self.name}] Sistema en línea. Motor Claude Haiku activado.")
+        
+        # Init Clients
+        self.anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        self.gemini_key = os.environ.get("GEMINI_API_KEY")
+        
+        if self.gemini_key:
+            genai.configure(api_key=self.gemini_key)
+            self.gemini_model = genai.GenerativeModel("gemini-1.5-flash") # Usando Gemini 1.5 Flash como base para "Gemini 3"
+            print(f"💎 [{self.name}] Sistema en línea. Motor GEMINI 3 activado.")
+        else:
+            self.client = anthropic.Anthropic(api_key=self.anthropic_key)
+            print(f"💎 [{self.name}] Sistema en línea. Motor CLAUDE activado (Fallback).")
 
     def _cargar_contexto(self):
         """Carga todos los estándares de Xcien_Docs para tener una base de conocimiento completa."""
@@ -92,22 +103,30 @@ Instrucciones:
 """
 
         try:
-            # 3. Llamada a Claude via SDK oficial
-            messages = []
-            for h in history[-6:]:
-                messages.append({"role": h["role"], "content": h["content"]})
-            messages.append({"role": "user", "content": instruccion_usuario})
+            if self.gemini_key:
+                # 3a. Llamada a Gemini
+                chat = self.gemini_model.start_chat(history=[])
+                # Formateamos historial si es necesario, pero Flash maneja bien el prompt directo
+                prompt_full = f"{system_prompt}\n\nHistorial Reciente:\n{json.dumps(history[-4:], indent=1)}\n\nUsuario: {instruccion_usuario}"
+                response = self.gemini_model.generate_content(prompt_full)
+                respuesta_final = response.text
+            else:
+                # 3b. Llamada a Claude via SDK oficial
+                messages = []
+                for h in history[-6:]:
+                    messages.append({"role": h["role"], "content": h["content"]})
+                messages.append({"role": "user", "content": instruccion_usuario})
 
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                system=system_prompt,
-                messages=messages
-            )
-            respuesta_final = response.content[0].text
+                response = self.client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=1024,
+                    system=system_prompt,
+                    messages=messages
+                )
+                respuesta_final = response.content[0].text
         except Exception as e:
-            print(f"❌ Error Comunicación Claude: {e}")
-            respuesta_final = f"**[Antigravity Engine]** Error de comunicación con el núcleo de inteligencia. Detalle: {str(e)}"
+            print(f"❌ Error Comunicación IA: {e}")
+            respuesta_final = f"**[Antigravity Engine]** Error de comunicación con el núcleo de inteligencia ({'Gemini' if self.gemini_key else 'Claude'}). Detalle: {str(e)}"
 
         # 4. Conexión con el Bridge (Antigravity IA Ejecutora) — via API, sin import circular
         inst = instruccion_usuario.lower()
