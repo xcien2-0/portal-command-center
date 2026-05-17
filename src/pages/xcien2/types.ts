@@ -408,6 +408,26 @@ export interface WFMOrder {
   historial: Array<{ fecha: string; accion: string; usuario: string }>;
 }
 
+// ── Field Service Ticket (Habilitaciones & Fallas desde Odoo helpdesk) ────────
+export interface FieldTicket {
+  id: string;             // "HD-155749"
+  odoo_id: number;
+  nombre: string;         // nombre del ticket en Odoo
+  cliente: string;
+  tecnico: string | null;
+  tipo: 'habilitacion' | 'falla';
+  tipo_label: string;     // "INSTALACION" | "Falla General" | etc.
+  prioridad: 'normal' | 'alta' | 'urgente' | 'crítica';
+  etapa_odoo: string;     // nombre de la etapa en Odoo
+  etapa_op_idx: number;   // 0=NOC, 1=Dispatch, 2=Almacén, 3=Operaciones, 4=NOC Cierra
+  etapa_op: string;
+  etapa_color: string;
+  fecha_creacion: string;
+  fecha_cierre: string | null;
+  cerrado: boolean;
+  kanban_state: 'normal' | 'done' | 'blocked';
+}
+
 // ── WFM mock data ─────────────────────────────────────────────────────────────
 export const WFM_TECHNICIANS: WFMTechnician[] = [
   { id: 't1', name: 'Carlos Mendoza',       zone: 'Nuevo León',  specialization: 'Instalación Fibra', skillPct: 92, status: 'Disponible' },

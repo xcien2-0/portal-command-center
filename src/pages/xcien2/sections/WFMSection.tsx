@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ThemeConfig, WFMOrder, WFMOrderState } from '../types';
+import { ThemeConfig, WFMOrder, WFMOrderState, FieldTicket } from '../types';
 
 import { API_BASE } from '../../../config';
 const G = '#00ff88';
@@ -36,6 +36,9 @@ function MatrixBackground() {
 }
 
 type WFMRole = 'comercial' | 'preventa' | 'almacen' | 'aprovisionamiento' | 'pm' | 'dispatch' | 'noc' | 'gerencia';
+
+// Roles visibles en XCIEN 2.0 — flujo operativo: NOC → Dispatch → [Almacén] → Operaciones → NOC cierra
+const VISIBLE_ROLES: WFMRole[] = ['noc', 'dispatch', 'almacen', 'pm'];
 type DispatchTab = 'bidrillas' | 'checklist' | 'pruebas' | 'evidencias';
 
 const ROLE_DATA: Record<WFMRole, { label: string; icon: string; color: string }> = {
@@ -1844,26 +1847,29 @@ function SLAEscalationBanner({ theme, orders, viewMode, onViewChange }: SLABanne
 }
 
 // ── Timeline View ─────────────────────────────────────────────────────────────
-const PIPELINE_STATES: WFMOrderState[] = [
-  'SOLICITUD_PREVENTA', 'ANTEPROYECTO', 'ORDEN_IMPLEMENTACION',
-  'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO',
-  'REVISION_PM', 'LISTO_INSTALACION', 'INSTALACION', 'NOC_VALIDACION',
-  'FACTURACION', 'CERRADO',
-];
-const STATE_INDEX = Object.fromEntries(PIPELINE_STATES.map((s, i) => [s, i]));
-const LANE_FOR: Partial<Record<WFMOrderState, { color: string; area: string }>> = {
-  SOLICITUD_PREVENTA:   { color: '#00B4D8', area: 'NOC' },
-  ANTEPROYECTO:         { color: '#00B4D8', area: 'NOC' },
-  ORDEN_IMPLEMENTACION: { color: '#FF4757', area: 'PM' },
-  ALMACEN_VALIDACION:   { color: '#FF4757', area: 'PM' },
-  ESPERA_INVENTARIO:    { color: '#FFB703', area: 'PM' },
-  APROVISIONAMIENTO:    { color: '#A855F7', area: 'PM' },
-  REVISION_PM:          { color: '#FF4757', area: 'PM' },
-  LISTO_INSTALACION:    { color: '#00ff88', area: 'Campo' },
-  INSTALACION:          { color: '#00ff88', area: 'Campo' },
-  NOC_VALIDACION:       { color: '#00B4D8', area: 'Campo' },
-  FACTURACION:          { color: '#00C896', area: 'Campo' },
-  CERRADO:              { color: '#00C896', area: 'Campo' },
+// Flujo operativo: NOC detecta → Dispatch → Almacén → Operaciones → NOC cierra
+const OP_STAGES = [
+  { id: 'noc_deteccion', label: 'NOC Detecta', short: 'NOC',      color: '#00B4D8' },
+  { id: 'dispatch',      label: 'Dispatch',    short: 'Dispatch', color: '#FF6B35' },
+  { id: 'almacen',       label: 'Almacén',     short: 'Almacén',  color: '#FFB703' },
+  { id: 'operaciones',   label: 'Operaciones', short: 'Campo',    color: '#00ff88' },
+  { id: 'noc_cierra',    label: 'NOC Cierra',  short: 'NOC ✓',    color: '#00C896' },
+] as const;
+
+// Map every WFMOrderState → operational stage index (0-4)
+const STATE_TO_OP_STAGE: Partial<Record<WFMOrderState, number>> = {
+  SOLICITUD_PREVENTA:   0,
+  ANTEPROYECTO:         0,
+  ORDEN_IMPLEMENTACION: 1,
+  LISTO_INSTALACION:    1,
+  ALMACEN_VALIDACION:   2,
+  ESPERA_INVENTARIO:    2,
+  APROVISIONAMIENTO:    2,
+  REVISION_PM:          3,
+  INSTALACION:          3,
+  NOC_VALIDACION:       4,
+  FACTURACION:          4,
+  CERRADO:              4,
 };
 
 function TimelineView({ theme, orders, onSelectOrder }: {
@@ -1889,7 +1895,7 @@ function TimelineView({ theme, orders, onSelectOrder }: {
     new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime()
   );
 
-  const stateStep = 100 / (PIPELINE_STATES.length - 1);
+  const stageStep = 100 / (OP_STAGES.length - 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1912,21 +1918,20 @@ function TimelineView({ theme, orders, onSelectOrder }: {
         <span style={{ marginLeft: 'auto', fontSize: 11, color: theme.dim }}>{sorted.length} órdenes</span>
       </div>
 
-      {/* Pipeline state header ruler */}
-      <div style={{ position: 'relative', height: 28, marginBottom: 4 }}>
+      {/* Operational stage header ruler */}
+      <div style={{ position: 'relative', height: 32, marginBottom: 4 }}>
         {/* Ruler line */}
-        <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-        {PIPELINE_STATES.map((s, i) => {
-          const pct = i * stateStep;
-          const meta = LANE_FOR[s];
+        <div style={{ position: 'absolute', top: 10, left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+        {OP_STAGES.map((stage, i) => {
+          const pct = i * stageStep;
           return (
-            <div key={s} style={{
+            <div key={stage.id} style={{
               position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: meta?.color ?? '#555', boxShadow: `0 0 4px ${meta?.color ?? '#555'}88` }} />
-              <span style={{ fontSize: 8, color: meta?.color ?? theme.dim, fontWeight: 700, whiteSpace: 'nowrap', writingMode: 'horizontal-tb' }}>
-                {(COLUMN_SHORT[s] ?? s).substring(0, 8)}
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color, boxShadow: `0 0 6px ${stage.color}88` }} />
+              <span style={{ fontSize: 9, color: stage.color, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {stage.short}
               </span>
             </div>
           );
@@ -1936,10 +1941,10 @@ function TimelineView({ theme, orders, onSelectOrder }: {
       {/* Order rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
         {sorted.map(order => {
-          const idx    = STATE_INDEX[order.estado] ?? 0;
-          const pct    = idx * stateStep;
-          const meta   = LANE_FOR[order.estado];
-          const col    = meta?.color ?? '#888';
+          const stageIdx = STATE_TO_OP_STAGE[order.estado] ?? 0;
+          const pct      = stageIdx * stageStep;
+          const stage    = OP_STAGES[stageIdx];
+          const col      = stage?.color ?? '#888';
           const days   = (now - new Date(order.fecha_creacion).getTime()) / 86_400_000;
           const daysStr = days >= 1 ? `${days.toFixed(1)}d` : `${Math.round(days * 24)}h`;
           const urgency = days > 7 ? '#FF4757' : days > 3 ? '#FFB703' : '#00C896';
@@ -2233,10 +2238,195 @@ function KanbanView({ theme, orders, onSelectOrder }: {
   );
 }
 
+// ── Field Service View (Habilitaciones & Fallas) ──────────────────────────────
+const FS_STAGES = [
+  { idx: 0, nombre: 'NOC',         icon: '📡', color: '#00B4D8' },
+  { idx: 1, nombre: 'Dispatch',    icon: '🚛', color: '#FF6B35' },
+  { idx: 2, nombre: 'Almacén',     icon: '📦', color: '#FFB703' },
+  { idx: 3, nombre: 'Operaciones', icon: '🔧', color: '#00ff88' },
+  { idx: 4, nombre: 'NOC Cierra',  icon: '✅', color: '#00C896' },
+];
+
+const PRIO_COLOR: Record<string, string> = {
+  normal: '#888', alta: '#FFB703', urgente: '#FF6B35', 'crítica': '#FF4757',
+};
+
+function FieldServiceView({ theme }: { theme: ThemeConfig }) {
+  const [tickets, setTickets]     = useState<FieldTicket[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState<'all' | 'habilitacion' | 'falla'>('all');
+  const [stageFilter, setStage]   = useState<number | null>(null);
+  const [summary, setSummary]     = useState<any>(null);
+  const now = Date.now();
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [res, sumRes] = await Promise.all([
+        fetch(`${API_BASE}/api/wfm/field-tickets?limit=200`),
+        fetch(`${API_BASE}/api/wfm/field-tickets/summary`),
+      ]);
+      if (res.ok)    { const d = await res.json(); setTickets(d.tickets ?? []); }
+      if (sumRes.ok) { const d = await sumRes.json(); setSummary(d); }
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const filtered = tickets.filter(t => {
+    if (filter === 'habilitacion' && t.tipo !== 'habilitacion') return false;
+    if (filter === 'falla'        && t.tipo !== 'falla')        return false;
+    if (stageFilter !== null      && t.etapa_op_idx !== stageFilter) return false;
+    return true;
+  });
+
+  const stageStep = 100 / (FS_STAGES.length - 1);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* KPI Strip */}
+      {summary && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Total',          val: summary.total,          color: theme.text },
+            { label: 'Abiertos',       val: summary.abiertos,       color: '#FF4757' },
+            { label: 'Habilitaciones', val: summary.habilitaciones, color: '#00B4D8' },
+            { label: 'Fallas',         val: summary.fallas,         color: '#FFB703' },
+          ].map(k => (
+            <div key={k.label} style={{ padding: '8px 16px', borderRadius: 10, background: theme.card, border: `1px solid ${theme.border}`, minWidth: 90 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.val}</div>
+              <div style={{ fontSize: 10, color: theme.dim, fontWeight: 700 }}>{k.label}</div>
+            </div>
+          ))}
+          {/* Stage pills */}
+          {summary.por_etapa?.map((s: any) => (
+            <div key={s.idx}
+              onClick={() => setStage(stageFilter === s.idx ? null : s.idx)}
+              style={{
+                padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                background: stageFilter === s.idx ? `${s.color}20` : theme.card,
+                border: `1px solid ${stageFilter === s.idx ? s.color : theme.border}`,
+                transition: 'all 0.15s',
+              }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.count}</div>
+              <div style={{ fontSize: 9, color: s.color, fontWeight: 700 }}>{s.nombre}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Type filter + refresh */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {(['all','habilitacion','falla'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: '4px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: filter === f ? 700 : 400,
+            background: filter === f ? 'rgba(0,180,216,0.15)' : 'rgba(255,255,255,0.04)',
+            color: filter === f ? '#00B4D8' : theme.dim,
+            boxShadow: filter === f ? '0 0 0 1px #00B4D850' : 'none',
+          }}>
+            {f === 'all' ? '📋 Todos' : f === 'habilitacion' ? '🔵 Habilitaciones' : '🔴 Fallas'}
+          </button>
+        ))}
+        <span style={{ fontSize: 11, color: theme.dim, marginLeft: 'auto' }}>{filtered.length} tickets</span>
+        <button onClick={fetchData} style={{ padding: '4px 12px', borderRadius: 8, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, fontSize: 11, cursor: 'pointer' }}>🔄 Actualizar</button>
+      </div>
+
+      {/* Stage ruler */}
+      <div style={{ position: 'relative', height: 36, marginBottom: 4 }}>
+        <div style={{ position: 'absolute', top: 12, left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+        {FS_STAGES.map((s, i) => (
+          <div key={s.idx} style={{
+            position: 'absolute', left: `${i * stageStep}%`, transform: 'translateX(-50%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, boxShadow: `0 0 8px ${s.color}88` }} />
+            <span style={{ fontSize: 9, color: s.color, fontWeight: 700, whiteSpace: 'nowrap' }}>{s.icon} {s.nombre}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Ticket rows */}
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: theme.dim }}>Cargando desde Odoo...</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+        {filtered.map(t => {
+          const pct     = t.etapa_op_idx * stageStep;
+          const col     = t.etapa_color;
+          const days    = (now - new Date(t.fecha_creacion).getTime()) / 86_400_000;
+          const daysStr = days >= 1 ? `${days.toFixed(1)}d` : `${Math.round(days * 24)}h`;
+          const urgency = days > 7 ? '#FF4757' : days > 3 ? '#FFB703' : '#00C896';
+          const prioCol = PRIO_COLOR[t.prioridad] ?? '#888';
+
+          return (
+            <div key={t.id} style={{
+              padding: '10px 14px', background: theme.card, borderRadius: 10,
+              border: `1px solid ${theme.border}`, opacity: t.cerrado ? 0.5 : 1,
+              transition: 'border-color 0.15s',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = col + '60')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = theme.border)}
+            >
+              {/* Row top */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
+                  background: t.tipo === 'habilitacion' ? '#00B4D820' : '#FF475720',
+                  color: t.tipo === 'habilitacion' ? '#00B4D8' : '#FF4757',
+                  border: `1px solid ${t.tipo === 'habilitacion' ? '#00B4D850' : '#FF475750'}`,
+                  flexShrink: 0,
+                }}>
+                  {t.tipo === 'habilitacion' ? '📶 HABILITACIÓN' : '⚠️ FALLA'}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: theme.accent, fontFamily: 'monospace', flexShrink: 0 }}>{t.id}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{t.nombre}</span>
+                <span style={{ fontSize: 9, color: theme.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120, flexShrink: 0 }}>{t.cliente}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 10,
+                  background: `${col}18`, color: col, border: `1px solid ${col}40`, flexShrink: 0,
+                }}>
+                  {t.etapa_odoo}
+                </span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: prioCol, flexShrink: 0, textTransform: 'uppercase' }}>{t.prioridad}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: urgency, flexShrink: 0 }}>{daysStr}</span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ position: 'relative', height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
+                <div style={{
+                  position: 'absolute', left: 0, width: `${pct}%`, height: '100%',
+                  background: `linear-gradient(90deg, #00B4D820, ${col}60)`,
+                  borderRadius: 3,
+                }} />
+                <div style={{
+                  position: 'absolute', top: '50%', left: `${pct}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: col, boxShadow: t.cerrado ? 'none' : `0 0 8px ${col}`,
+                  border: `2px solid ${theme.card}`,
+                }} />
+              </div>
+
+              {/* Técnico + etapa op */}
+              {t.tecnico && (
+                <div style={{ marginTop: 5, fontSize: 9, color: theme.dim }}>
+                  👷 {t.tecnico} · {t.etapa_op}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {!loading && filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: theme.dim }}>Sin tickets en este filtro</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ── Main Section ─────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 
 export default function WFMSection({ theme, activeThemeId }: Props) {
+  const [dataSource, setDataSource] = useState<'operacional' | 'comercial'>('operacional');
   const [role, setRole]           = useState<WFMRole>('comercial');
   const [orders, setOrders]       = useState<WFMOrder[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -2267,35 +2457,8 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         throw new Error("API response not OK");
       }
     } catch (e) {
-      console.error("Error fetching orders, using mocks", e);
-      setOrders([
-        { 
-          id: 'ODOO-1025', 
-          cliente: 'Xcien Corporativo', 
-          servicio: 'Enlace Dedicado 1GB', 
-          comercial: 'Jesús Morales', 
-          estado: 'SOLICITUD_PREVENTA', 
-          fecha_creacion: new Date().toISOString(), 
-          preventa: { analisis: null, factibilidad: null, tecnologia: null, equipos_sugeridos: [], anteproyecto_url: null }, 
-          almacen: { disponibilidad: false, equipos_asignados: [], esperando_inventario: false }, 
-          aprovisionamiento: { config_logica: null, parametros_red: {}, listo: false }, 
-          pm: { auditoria_ok: false, bloqueada: false, motivo_bloqueo: null, backlogs: [] }, 
-          historial: [{ fecha: new Date().toISOString(), accion: 'Creación de solicitud', usuario: 'Comercial' }] 
-        },
-        { 
-          id: 'ODOO-1026', 
-          cliente: 'Hospital Santa Engracia', 
-          servicio: 'Internet Simétrico 500MB', 
-          comercial: 'Ana Rodríguez', 
-          estado: 'LISTO_INSTALACION', 
-          fecha_creacion: new Date().toISOString(), 
-          preventa: { analisis: 'Factible', factibilidad: 'OK', tecnologia: 'Fibra', equipos_sugeridos: [], anteproyecto_url: '#' }, 
-          almacen: { disponibilidad: true, equipos_asignados: [], esperando_inventario: false }, 
-          aprovisionamiento: { config_logica: 'VLAN 400', parametros_red: {}, listo: true }, 
-          pm: { auditoria_ok: true, bloqueada: false, motivo_bloqueo: null, backlogs: [] }, 
-          historial: [{ fecha: new Date().toISOString(), accion: 'Aprovisionamiento completado', usuario: 'NOC' }] 
-        }
-      ]);
+      console.error("Error fetching orders from Odoo", e);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -2387,8 +2550,24 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0, position: 'relative' }}>
       {activeThemeId === 'matrix' && <MatrixBackground />}
 
+      {/* ── Source Toggle: Operacional / Comercial ── */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingBottom: 4 }}>
+        {([
+          ['operacional', '⚡ Habilitaciones & Fallas', '#FF4757'],
+          ['comercial',   '📋 Pipeline Comercial',      '#00B4D8'],
+        ] as const).map(([id, label, col]) => (
+          <button key={id} onClick={() => setDataSource(id)} style={{
+            padding: '6px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: dataSource === id ? 700 : 400,
+            background: dataSource === id ? `${col}20` : 'rgba(255,255,255,0.04)',
+            color: dataSource === id ? col : theme.dim,
+            boxShadow: dataSource === id ? `0 0 0 1.5px ${col}60` : 'none',
+            transition: 'all 0.15s',
+          }}>{label}</button>
+        ))}
+      </div>
+
       {/* ── SLA & Escalamiento en Vivo ── */}
-      {!loading && (
+      {!loading && dataSource === 'comercial' && (
         <SLAEscalationBanner
           theme={theme}
           orders={orders}
@@ -2397,11 +2576,18 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         />
       )}
 
-      <div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
+      {/* ── Vista Operacional (Habilitaciones & Fallas) ── */}
+      {dataSource === 'operacional' && (
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <FieldServiceView theme={theme} />
+        </div>
+      )}
+
+      {dataSource === 'comercial' && (<div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
       {/* Sidebar de Roles — hidden in kanban view */}
       {viewMode === 'roles' && <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Vistas por Rol</h3>
-        {(Object.keys(ROLE_DATA) as WFMRole[]).map(r => (
+        {(VISIBLE_ROLES).map(r => (
           <button
             key={r}
             onClick={() => setRole(r)}
@@ -2723,7 +2909,10 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         </div>}
 
       </div>
-      </div>
+
+    </div>)}
+
     </div>
   );
 }
+

@@ -1242,6 +1242,471 @@ async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):
     background_tasks.add_task(wfm_service._sync_with_odoo)
     return wfm_service.obtener_ordenes(estado)
 
+
+# ── Field Service: habilitaciones y fallas desde Odoo helpdesk ─────────────────
+CAST_TEAM_IDS   = [6, 39, 60, 41, 44, 48, 67]
+FS_TYPE_IDS     = [34, 8, 6, 4]   # INSTALACION, Falla General, Visita Técnica, Soporte
+
+# Mapeo etapa Odoo → etapa operativa (0=NOC, 1=Dispatch, 2=Almacén, 3=Operaciones, 4=NOC Cierra)
+STAGE_TO_OP = {
+    97:  0,   # Nuevo
+    24:  0,   # CAST Nvl:1
+    129: 0,   # CAST Nivel:1
+    119: 0,   # Nuevo
+    27:  0,   # Nuevo
+    25:  1,   # CAST Nvl:2
+    116: 1,   # Turnado
+    60:  1,   # CAE-Visita
+    68:  1,   # Acceso a Sitios
+    57:  3,   # COR Nvl:3
+    130: 3,   # CAST Nivel:3 Ingeniería On Site
+    132: 3,   # Nivel:3 PE Levantamiento
+    155: 4,   # COR Nivel 3 en Validación CAST
+    164: 4,   # COR N3 RES X VALID CAST
+    168: 4,   # TT VALIDADO SOL. MONITOREO
+    54:  4,   # CAST Nvl:1-Resuelto
+    101: 4,   # CAST Nvl:2-Resuelto
+    100: 4,   # CAE-Resuelto
+    121: 4,   # CAE-Resuelto
+    120: 4,   # CAST Nvl:2 Resuelto
+    69:  4,   # COR Resuelto
+    35:  4,   # Resuelto
+    51:  4,   # Solved
+}
+
+OP_STAGE_NAMES = ["NOC", "Dispatch", "Almacén", "Operaciones", "NOC Cierra"]
+OP_STAGE_COLORS = ["#00B4D8", "#FF6B35", "#FFB703", "#00ff88", "#00C896"]
+
+PRIORITY_MAP = {"0": "normal", "1": "alta", "2": "urgente", "3": "crítica"}
+
+@app.get("/api/wfm/field-tickets")
+def get_field_tickets(limit: int = 150, tipo: str = None, estado_op: int = None):
+    """
+    Retorna tickets de Field Service desde Odoo (CAST + INSTALACION/Fallas).
+    tipo: 'habilitacion' | 'falla' | None (todos)
+    estado_op: 0-4 para filtrar por etapa operativa
+    """
+    import xmlrpc.client as _xr
+
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB", "wispi17")
+    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+
+    try:
+        common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+        if not uid:
+            raise HTTPException(status_code=503, detail="No se pudo autenticar en Odoo")
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error conectando Odoo: {e}")
+
+    # Construir dominio
+    type_filter = [34, 8, 6]  # INSTALACION, Falla General, Visita Técnica
+    if tipo == "habilitacion":
+        type_filter = [34]
+    elif tipo == "falla":
+        type_filter = [8, 4]
+
+    domain = [
+        ["team_id", "in", CAST_TEAM_IDS],
+        ["ticket_type_id", "in", type_filter],
+    ]
+
+    fields = ["id", "name", "stage_id", "ticket_type_id", "priority",
+              "partner_id", "user_id", "create_date", "close_date", "kanban_state", "description"]
+
+    try:
+        raw = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket",
+                                "search_read", [domain],
+                                {"fields": fields, "limit": limit, "order": "id desc"})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error leyendo Odoo: {e}")
+
+    tickets = []
+    for r in raw:
+        stage_id   = r["stage_id"][0] if r["stage_id"] else 0
+        stage_name = r["stage_id"][1] if r["stage_id"] else "—"
+        op_idx     = STAGE_TO_OP.get(stage_id, 0)
+
+        # Determinar tipo operativo
+        type_id    = r["ticket_type_id"][0] if r["ticket_type_id"] else 0
+        op_type    = "habilitacion" if type_id == 34 else "falla"
+
+        t = {
+            "id":           f"HD-{r['id']}",
+            "odoo_id":      r["id"],
+            "nombre":       r["name"],
+            "cliente":      r["partner_id"][1] if r["partner_id"] else "—",
+            "tecnico":      r["user_id"][1]    if r["user_id"]    else None,
+            "tipo":         op_type,
+            "tipo_label":   r["ticket_type_id"][1] if r["ticket_type_id"] else "—",
+            "prioridad":    PRIORITY_MAP.get(r["priority"], "normal"),
+            "etapa_odoo":   stage_name,
+            "etapa_op_idx": op_idx,
+            "etapa_op":     OP_STAGE_NAMES[op_idx],
+            "etapa_color":  OP_STAGE_COLORS[op_idx],
+            "fecha_creacion": r["create_date"],
+            "fecha_cierre":   r["close_date"] or None,
+            "cerrado":       bool(r["close_date"]),
+            "kanban_state":  r["kanban_state"],
+        }
+        if estado_op is None or op_idx == estado_op:
+            tickets.append(t)
+
+    return {
+        "total": len(tickets),
+        "tickets": tickets,
+        "stages": [
+            {"idx": i, "nombre": n, "color": c}
+            for i, (n, c) in enumerate(zip(OP_STAGE_NAMES, OP_STAGE_COLORS))
+        ]
+    }
+
+
+@app.get("/api/wfm/field-tickets/summary")
+def get_field_tickets_summary():
+    """Conteo por etapa operativa para KPIs rápidos."""
+    data = get_field_tickets(limit=500)
+    tickets = data["tickets"]
+    by_stage = {i: 0 for i in range(5)}
+    by_type  = {"habilitacion": 0, "falla": 0}
+    open_count = 0
+    for t in tickets:
+        by_stage[t["etapa_op_idx"]] += 1
+        by_type[t["tipo"]] += 1
+        if not t["cerrado"]:
+            open_count += 1
+    return {
+        "total": len(tickets),
+        "abiertos": open_count,
+        "cerrados": len(tickets) - open_count,
+        "habilitaciones": by_type["habilitacion"],
+        "fallas": by_type["falla"],
+        "por_etapa": [
+            {"idx": i, "nombre": OP_STAGE_NAMES[i], "color": OP_STAGE_COLORS[i], "count": by_stage[i]}
+            for i in range(5)
+        ]
+    }
+
+@app.get("/api/wfm/bidrillas")
+def get_bidrillas():
+    """
+    Cuadrillas Field Service — todos los técnicos asignados en Odoo.
+    Descubre técnicos dinámicamente desde project.task / Field Service.
+    """
+    import xmlrpc.client as _xr
+
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB", "wispi17")
+    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+
+    CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed"}
+
+    try:
+        common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error Odoo: {e}")
+
+    # Todas las tareas Field Service con técnico asignado
+    tasks = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
+        [[["project_id.name", "ilike", "field"], ["user_ids", "!=", False]]],
+        {"fields": ["id", "name", "stage_id", "user_ids", "date_deadline",
+                    "create_date", "date_last_stage_update"],
+         "limit": 500, "order": "id desc"})
+
+    # Descubrir todos los user_ids únicos
+    all_user_ids = list({uid_val for t in tasks for uid_val in t["user_ids"]})
+
+    # Obtener nombres y roles desde hr.employee
+    employees = models.execute_kw(odoo_db, uid, odoo_pass, "hr.employee", "search_read",
+        [[["user_id", "in", all_user_ids]]],
+        {"fields": ["user_id", "name", "job_title"], "limit": 200})
+    emp_by_user = {e["user_id"][0]: e for e in employees if e["user_id"]}
+
+    # Nombres desde res.users como fallback
+    users = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
+        [all_user_ids], {"fields": ["id", "name"]})
+    user_names = {u["id"]: u["name"] for u in users}
+
+    result: dict = {}
+    for task in tasks:
+        stage_name = task["stage_id"][1] if task["stage_id"] else ""
+        is_closed  = any(kw in stage_name.lower() for kw in CLOSED_KW)
+
+        for uid_val in task["user_ids"]:
+            if uid_val not in result:
+                emp  = emp_by_user.get(uid_val, {})
+                nombre = emp.get("name") or user_names.get(uid_val, f"Usuario {uid_val}")
+                result[uid_val] = {
+                    "id":      f"FS-{uid_val}",
+                    "odoo_id": uid_val,
+                    "nombre":  nombre,
+                    "alias":   nombre.split()[0].capitalize() if nombre else f"Técnico {uid_val}",
+                    "rol":     emp.get("job_title") or "Field Service",
+                    "total": 0, "abiertos": 0, "cerrados": 0,
+                    "tareas": [],
+                }
+            r = result[uid_val]
+            r["total"] += 1
+            if is_closed:
+                r["cerrados"] += 1
+            else:
+                r["abiertos"] += 1
+                r["tareas"].append({
+                    "id":       task["id"],
+                    "nombre":   task["name"].replace("[S. E.] ", "").replace("[SE] ", ""),
+                    "etapa":    stage_name,
+                    "deadline": task["date_deadline"],
+                    "creado":   task["create_date"],
+                })
+
+    tecnicos = sorted(result.values(), key=lambda x: -x["total"])
+    for t in tecnicos:
+        total = t["total"] or 1
+        t["pct_resolucion"] = round((t["cerrados"] / total) * 100, 1)
+        t["tareas"] = sorted(t["tareas"], key=lambda x: x["deadline"] or "9999")[:5]
+
+    return {"total": len(tecnicos), "tecnicos": tecnicos}
+
+
+@app.get("/api/wfm/bidrillas/desempeno")
+def get_desempeno():
+    """
+    Dashboard de desempeño por técnico FO.
+    Score compuesto: Resolución (35%) + Documentación (35%) + Volumen (30%).
+    """
+    import xmlrpc.client as _xr
+    from collections import Counter
+
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB", "wispi17")
+    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+
+    CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed"}
+
+    try:
+        common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error Odoo: {e}")
+
+    # Todas las tareas Field Service
+    tasks = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
+        [[["project_id.name","ilike","field"],["user_ids","!=",False]]],
+        {"fields": ["id","stage_id","user_ids","date_deadline","date_last_stage_update"],
+         "limit": 500, "order": "id desc"})
+
+    # Descubrir todos los técnicos
+    all_user_ids = list({u for t in tasks for u in t["user_ids"]})
+
+    employees = models.execute_kw(odoo_db, uid, odoo_pass, "hr.employee", "search_read",
+        [[["user_id","in",all_user_ids]]],
+        {"fields": ["user_id","name","job_title"], "limit": 200})
+    emp_by_user = {e["user_id"][0]: e for e in employees if e["user_id"]}
+
+    users_raw = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
+        [all_user_ids], {"fields": ["id","name"]})
+    user_names = {u["id"]: u["name"] for u in users_raw}
+
+    # Inicializar stats y nombre→id para mensajes
+    stats: dict = {}
+    nombre_to_id: dict = {}
+    for u_id in all_user_ids:
+        emp    = emp_by_user.get(u_id, {})
+        nombre = emp.get("name") or user_names.get(u_id, f"Usuario {u_id}")
+        alias  = nombre.split()[0].capitalize()
+        stats[u_id] = {"total": 0, "cerradas": 0, "on_time": 0,
+                       "nombre": nombre, "alias": alias}
+        nombre_to_id[nombre] = u_id
+
+    for t in tasks:
+        stage = (t["stage_id"][1] if t["stage_id"] else "").lower()
+        is_closed = any(kw in stage for kw in CLOSED_KW)
+        dl      = t.get("date_deadline")
+        updated = t.get("date_last_stage_update")
+        for u_id in t["user_ids"]:
+            if u_id not in stats: continue
+            stats[u_id]["total"] += 1
+            if is_closed:
+                stats[u_id]["cerradas"] += 1
+                if dl and updated and updated <= dl:
+                    stats[u_id]["on_time"] += 1
+
+    # Mensajes por autor
+    task_ids = [t["id"] for t in tasks]
+    msgs_por_tecnico: dict = {k: 0 for k in all_user_ids}
+    if task_ids:
+        msgs = models.execute_kw(odoo_db, uid, odoo_pass, "mail.message", "search_read",
+            [[["res_id","in",task_ids],["model","=","project.task"],["message_type","=","comment"]]],
+            {"fields": ["author_id"], "limit": 5000})
+        for m in msgs:
+            if m["author_id"]:
+                u_id = nombre_to_id.get(m["author_id"][1])
+                if u_id:
+                    msgs_por_tecnico[u_id] += 1
+
+    max_cerradas = max((s["cerradas"] for s in stats.values()), default=1) or 1
+    max_msgs     = max(msgs_por_tecnico.values(), default=1) or 1
+
+    resultado = []
+    for u_id, s in stats.items():
+        if s["total"] == 0:
+            continue
+        cerr   = s["cerradas"]
+        msgs_n = msgs_por_tecnico.get(u_id, 0)
+        total  = s["total"] or 1
+
+        pct_resolucion = round((cerr / total) * 100, 1)
+        pct_vol        = (cerr / max_cerradas) * 100
+        pct_doc        = (msgs_n / max_msgs) * 100
+        pct_puntual    = round((s["on_time"] / cerr * 100) if cerr > 0 else 0, 1)
+
+        score = round(
+            (pct_resolucion * 0.35) +
+            (pct_doc        * 0.35) +
+            (pct_vol        * 0.30), 1
+        )
+
+        resultado.append({
+            "odoo_id":        u_id,
+            "alias":          s["alias"],
+            "nombre":         s["nombre"],
+            "total":          s["total"],
+            "cerradas":       cerr,
+            "abiertos":       s["total"] - cerr,
+            "on_time":        s["on_time"],
+            "mensajes":       msgs_n,
+            "pct_resolucion": pct_resolucion,
+            "pct_vol":        round(pct_vol, 1),
+            "pct_doc":        round(pct_doc, 1),
+            "pct_puntual":    pct_puntual,
+            "score":          score,
+            "detalle": {
+                "resolucion_pts": round(pct_resolucion * 0.35, 1),
+                "doc_pts":        round(pct_doc * 0.35, 1),
+                "volumen_pts":    round(pct_vol * 0.30, 1),
+            }
+        })
+
+    resultado.sort(key=lambda x: -x["score"])
+    # Asignar rank
+    for i, r in enumerate(resultado):
+        r["rank"] = i + 1
+
+    return {"tecnicos": resultado, "formula": "Score = Resolución×35% + Documentación×35% + Volumen×30%"}
+
+
+def _odoo_connect():
+    """Helper: devuelve (models, db, uid, password) ya autenticado."""
+    import xmlrpc.client as _xr
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB", "wispi17")
+    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+    uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+    if not uid:
+        raise HTTPException(status_code=503, detail="No se pudo autenticar en Odoo")
+    models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+    return models, odoo_db, uid, odoo_pass
+
+
+@app.get("/api/wfm/bidrillas/tarea/{task_id}")
+def get_tarea_detalle(task_id: int):
+    """Detalle completo de una tarea Field Service + chatter."""
+    import re
+    models, db, uid, pw = _odoo_connect()
+
+    tasks = models.execute_kw(db, uid, pw, "project.task", "read",
+        [[task_id]],
+        {"fields": ["id","name","description","stage_id","user_ids","date_deadline",
+                    "create_date","partner_id","project_id","priority","message_ids"]})
+    if not tasks:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    task = tasks[0]
+
+    msgs_raw = models.execute_kw(db, uid, pw, "mail.message", "search_read",
+        [[["res_id","=",task_id],["model","=","project.task"]]],
+        {"fields": ["id","body","author_id","date","message_type"], "limit": 30, "order": "date asc"})
+
+    def strip_html(html: str) -> str:
+        return re.sub(r'<[^>]+>', '', html or '').strip()
+
+    mensajes = []
+    for m in msgs_raw:
+        body = strip_html(m["body"])
+        if body:
+            mensajes.append({
+                "id":     m["id"],
+                "autor":  m["author_id"][1] if m["author_id"] else "Sistema",
+                "fecha":  m["date"],
+                "cuerpo": body,
+                "tipo":   m["message_type"],
+            })
+
+    user_ids = task["user_ids"] or []
+    users = []
+    if user_ids:
+        u_records = models.execute_kw(db, uid, pw, "res.users", "read",
+            [user_ids], {"fields": ["id","name"]})
+        users = [{"id": u["id"], "nombre": u["name"]} for u in u_records]
+
+    stages = models.execute_kw(db, uid, pw, "project.task.type", "search_read",
+        [[["project_ids","in",[task["project_id"][0]]]]],
+        {"fields": ["id","name","sequence"], "limit": 20, "order": "sequence asc"})
+
+    return {
+        "id":          task["id"],
+        "nombre":      task["name"].replace("[S. E.] ","").replace("[SE] ",""),
+        "descripcion": strip_html(task["description"] or ""),
+        "etapa_id":    task["stage_id"][0] if task["stage_id"] else None,
+        "etapa":       task["stage_id"][1] if task["stage_id"] else "—",
+        "tecnicos":    users,
+        "cliente":     task["partner_id"][1] if task["partner_id"] else None,
+        "proyecto":    task["project_id"][1] if task["project_id"] else None,
+        "prioridad":   "alta" if task["priority"] == "1" else "normal",
+        "deadline":    task["date_deadline"],
+        "creado":      task["create_date"],
+        "mensajes":    mensajes,
+        "etapas_disponibles": [{"id": s["id"], "nombre": s["name"]} for s in stages],
+    }
+
+
+class ComentarioRequest(BaseModel):
+    cuerpo: str
+    autor: str = "XCIEN 2.0"
+
+@app.post("/api/wfm/bidrillas/tarea/{task_id}/comentario")
+def post_comentario(task_id: int, req: ComentarioRequest):
+    """Publica un comentario en el chatter de Odoo."""
+    if not req.cuerpo.strip():
+        raise HTTPException(status_code=400, detail="El comentario no puede estar vacío")
+    models, db, uid, pw = _odoo_connect()
+    msg_id = models.execute_kw(db, uid, pw, "project.task", "message_post",
+        [[task_id]],
+        {"body": req.cuerpo, "message_type": "comment", "subtype_xmlid": "mail.mt_comment"})
+    return {"ok": True, "message_id": msg_id}
+
+
+class EtapaRequest(BaseModel):
+    etapa_id: int
+
+@app.put("/api/wfm/bidrillas/tarea/{task_id}/etapa")
+def update_etapa_tarea(task_id: int, req: EtapaRequest):
+    """Cambia la etapa de una tarea Field Service en Odoo."""
+    models, db, uid, pw = _odoo_connect()
+    ok = models.execute_kw(db, uid, pw, "project.task", "write",
+        [[task_id]], {"stage_id": req.etapa_id})
+    return {"ok": bool(ok)}
+
+
 @app.post("/api/wfm/comercial/solicitar")
 async def wfm_solicitar(req: WFMCreateRequest):
     return wfm_service.crear_solicitud_comercial(req.cliente, req.servicio, req.comercial)
