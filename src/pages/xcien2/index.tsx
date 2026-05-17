@@ -16,6 +16,7 @@ import DocsSection from './sections/DocsSection';
 import BackupSection from './sections/BackupSection';
 import InicioHoloSection from './sections/InicioHoloSection';
 import BidrillasSection from './sections/BidrillasSection';
+import AgentesSection from './sections/AgentesSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -58,6 +59,7 @@ const NAV: NavEntry[] = [
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Gestión de Usuarios', icon: '👥', group: 'Planeación' },
 
+  { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
   { id: 'bridge', label: 'Puente de Datos (IA)', icon: '⚡', group: 'Infraestructura' },
   { id: 'war-room', label: 'Comando Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
   { id: 'mobile', label: 'Terminal Móvil (QR)', icon: '📱', group: 'Infraestructura' },
@@ -88,6 +90,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   docs: 'Repositorio Documental',
   backup: 'Gestión de Migración y Redundancia',
   editor: 'Ajustes de Infraestructura',
+  agentes: 'Ecosistema de Agentes IA',
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -294,6 +297,7 @@ function Content({
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'bidrillas' && <BidrillasSection theme={theme} />}
+      {section === 'agentes'   && <AgentesSection   theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}

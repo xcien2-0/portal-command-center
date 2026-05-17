@@ -1113,6 +1113,146 @@ def webhook_odoo(payload: OdooWebhookPayload):
         raise HTTPException(status_code=400, detail=str(e))
 
 # ─── Inteligencia: Director General ──────────────────────────────────────────
+# ─── Centro de Agentes ───────────────────────────────────────────────────────
+import subprocess as _subprocess
+
+AGENTS_CATALOG = [
+    {"id": "director",   "nombre": "Director General",     "icon": "🧠", "color": "#00B4D8",
+     "rol": "Estrategia & Decisiones", "endpoint": "/api/director/chat",
+     "descripcion": "Análisis estratégico, reportes ejecutivos, orquestación de agentes",
+     "capacidades": ["Análisis FODA", "KPIs ejecutivos", "Decisiones operativas", "Reportes gerenciales"]},
+    {"id": "noc",        "nombre": "NOC Agent",             "icon": "📡", "color": "#00ff88",
+     "rol": "Monitoreo de Red", "endpoint": "/api/agentes/noc/chat",
+     "descripcion": "Diagnóstico de red, alertas, hosts offline, análisis de incidentes",
+     "capacidades": ["Diagnóstico de hosts", "Análisis de alertas", "Rutas de reparación", "SLA NOC"]},
+    {"id": "wfm",        "nombre": "WFM Agent",             "icon": "⚙️", "color": "#FF6B35",
+     "rol": "Control Operativo", "endpoint": "/api/agentes/wfm/chat",
+     "descripcion": "Gestión de fuerza de trabajo, tickets, instalaciones, asignaciones",
+     "capacidades": ["Optimizar flujo", "Asignar técnicos", "Estado de órdenes", "Backlog"]},
+    {"id": "academia",   "nombre": "Academia Agent",        "icon": "🎓", "color": "#FFB703",
+     "rol": "Certificación & Talento", "endpoint": "/api/agentes/academia/chat",
+     "descripcion": "Cursos, exámenes, escalafón técnico, certificaciones",
+     "capacidades": ["Progreso técnicos", "Examinar", "Escalafón", "Recomendaciones"]},
+    {"id": "finanzas",   "nombre": "Finanzas Agent",        "icon": "💰", "color": "#9B59B6",
+     "rol": "Finanzas & Facturación", "endpoint": "/api/agentes/finanzas/chat",
+     "descripcion": "Reportes financieros, transacciones, facturación Odoo",
+     "capacidades": ["Reportes financieros", "Transacciones", "Facturación", "KPIs financieros"]},
+    {"id": "inventario", "nombre": "Inventario Agent",      "icon": "📦", "color": "#1ABC9C",
+     "rol": "Stock & Activos", "endpoint": "/api/agentes/inventario/chat",
+     "descripcion": "Equipos, materiales, stock, activos de red",
+     "capacidades": ["Consultar stock", "Movimientos", "Activos", "Alertas inventario"]},
+    {"id": "devops",     "nombre": "DevOps/SRE Agent",      "icon": "🔧", "color": "#E74C3C",
+     "rol": "Infraestructura & Deploy", "endpoint": "/api/devops/chat",
+     "descripcion": "Monitoreo de servidores, deploys, diagnóstico de servicios",
+     "capacidades": ["Estado servidores", "Diagnóstico", "Deploy", "Logs"]},
+    {"id": "telegram",   "nombre": "Telegram Bot",          "icon": "✈️", "color": "#2CA5E0",
+     "rol": "Canal de Comunicación", "endpoint": None,
+     "descripcion": "Bot activo en Telegram — recibe órdenes y envía alertas en tiempo real",
+     "capacidades": ["Alertas NOC", "Comandos operativos", "Reportes express", "Notificaciones"]},
+]
+
+_agent_activity: dict = {}  # agent_id -> {"last_msg": str, "last_ts": str, "calls": int}
+
+def _agent_pm2_status(name: str) -> str:
+    try:
+        r = _subprocess.run(["pm2", "jlist"], capture_output=True, text=True, timeout=5)
+        procs = json.loads(r.stdout)
+        for p in procs:
+            if name in p.get("name", ""):
+                return p.get("pm2_env", {}).get("status", "stopped")
+    except Exception:
+        pass
+    return "unknown"
+
+@app.get("/api/agentes/status")
+def get_agentes_status():
+    """Estado actual de todos los agentes del ecosistema XCIEN."""
+    tg_status = _agent_pm2_status("xcien-telegram")
+    backend_ok = True  # si llegamos aquí el backend está vivo
+
+    result = []
+    for ag in AGENTS_CATALOG:
+        act = _agent_activity.get(ag["id"], {})
+        # Determinar status
+        if ag["id"] == "telegram":
+            status = "online" if tg_status == "online" else "offline"
+        elif ag["id"] in ("director", "devops", "noc", "wfm", "academia", "finanzas", "inventario"):
+            status = "online" if backend_ok else "offline"
+            if act.get("working"):
+                status = "busy"
+        else:
+            status = "online" if backend_ok else "offline"
+        result.append({
+            **ag,
+            "status": status,
+            "calls_today": act.get("calls", 0),
+            "last_msg": act.get("last_msg", ""),
+            "last_ts": act.get("last_ts", ""),
+        })
+    return {"agentes": result, "total": len(result)}
+
+class AgentChatRequest(BaseModel):
+    agente_id: str
+    message: str
+    history: list = []
+
+@app.post("/api/agentes/chat")
+def agentes_chat_unificado(req: AgentChatRequest):
+    """Chat unificado: enruta al agente correcto según agente_id."""
+    from agents.agent_noc import NOCAgent
+    from agents.agent_wfm import WFMAgent
+    from agents.agent_academia import AcademiaAgent
+    from agents.agent_finances import FinancesAgent
+    from agents.agent_inventory import InventoryAgent
+
+    aid = req.agente_id
+    now_str = datetime.datetime.now().strftime("%H:%M:%S")
+
+    # Registrar actividad
+    if aid not in _agent_activity:
+        _agent_activity[aid] = {"calls": 0, "working": False}
+    _agent_activity[aid]["calls"] += 1
+    _agent_activity[aid]["last_msg"] = req.message[:60]
+    _agent_activity[aid]["last_ts"] = now_str
+    _agent_activity[aid]["working"] = True
+
+    try:
+        if aid == "director":
+            resp = dg_agent.ejecutar_orden(req.message, req.history, {})
+        elif aid == "devops":
+            resp = sre_agent.analizar_y_responder(req.message, req.history)
+        elif aid == "noc":
+            agent = NOCAgent()
+            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
+                   agent.analyze_status([], [])
+        elif aid == "wfm":
+            agent = WFMAgent()
+            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
+                   agent.optimize_workflow([])
+        elif aid == "academia":
+            agent = AcademiaAgent()
+            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
+                   "Agente Academia activo. ¿Qué necesitas consultar?"
+        elif aid == "finanzas":
+            agent = FinancesAgent()
+            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
+                   "Agente Finanzas activo."
+        elif aid == "inventario":
+            agent = InventoryAgent()
+            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
+                   "Agente Inventario activo."
+        elif aid == "telegram":
+            resp = "El bot de Telegram está activo. Envía tus instrucciones directamente al chat."
+        else:
+            resp = f"Agente '{aid}' no reconocido."
+    except Exception as e:
+        resp = f"Error en agente {aid}: {str(e)}"
+    finally:
+        if aid in _agent_activity:
+            _agent_activity[aid]["working"] = False
+
+    return {"status": "success", "agente": aid, "response": resp}
+
 @app.post("/api/director/chat")
 def director_chat(request: ChatRequest):
     try:
@@ -1389,6 +1529,87 @@ def get_field_tickets_summary():
             for i in range(5)
         ]
     }
+
+class TicketComentarioReq(BaseModel):
+    mensaje: str
+
+@app.get("/api/wfm/field-tickets/{ticket_id}")
+def get_field_ticket_detalle(ticket_id: int):
+    """Detalle completo de un ticket helpdesk + chatter + etapas disponibles."""
+    uid, models = _odoo_connect()
+    tickets = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "search_read",
+        [[["id", "=", ticket_id]]],
+        {"fields": ["id","name","description","partner_id","stage_id","team_id",
+                    "ticket_type_id","priority","user_id","create_date",
+                    "date_last_stage_update","kanban_state"],
+         "limit": 1})
+    if not tickets:
+        raise HTTPException(404, "Ticket no encontrado")
+    t = tickets[0]
+
+    # Etapas disponibles para el equipo
+    team_id = t["team_id"][0] if t.get("team_id") else None
+    etapas = []
+    if team_id:
+        stages = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.stage", "search_read",
+            [[["team_ids", "in", [team_id]]]],
+            {"fields": ["id", "name"], "order": "sequence asc", "limit": 20})
+        etapas = [{"id": s["id"], "nombre": s["name"]} for s in stages]
+
+    # Chatter
+    msgs = models.execute_kw(odoo_db, uid, odoo_pass, "mail.message", "search_read",
+        [[["model", "=", "helpdesk.ticket"], ["res_id", "=", ticket_id],
+          ["message_type", "in", ["comment", "email"]]]],
+        {"fields": ["id", "author_id", "date", "body", "message_type"],
+         "order": "date asc", "limit": 50})
+    mensajes = []
+    for m in msgs:
+        body = (m.get("body") or "").replace("<br>", "\n").replace("</p>", "\n")
+        import re as _re
+        body = _re.sub(r"<[^>]+>", "", body).strip()
+        if body:
+            mensajes.append({
+                "id": m["id"],
+                "autor": m["author_id"][1] if m.get("author_id") else "Sistema",
+                "fecha": (m.get("date") or "")[:16],
+                "cuerpo": body,
+                "tipo": m.get("message_type", "comment"),
+            })
+
+    return {
+        "id": t["id"],
+        "nombre": t["name"],
+        "descripcion": (t.get("description") or "").replace("<br>","").replace("</p>","").strip()[:500],
+        "etapa_id": t["stage_id"][0] if t.get("stage_id") else None,
+        "etapa": t["stage_id"][1] if t.get("stage_id") else "",
+        "cliente": t["partner_id"][1] if t.get("partner_id") else None,
+        "equipo": t["team_id"][1] if t.get("team_id") else None,
+        "tipo": t["ticket_type_id"][1] if t.get("ticket_type_id") else None,
+        "prioridad": t.get("priority", "0"),
+        "tecnico": t["user_id"][1] if t.get("user_id") else None,
+        "creado": (t.get("create_date") or "")[:16],
+        "ultimo_cambio": (t.get("date_last_stage_update") or "")[:16],
+        "kanban_state": t.get("kanban_state", "normal"),
+        "mensajes": mensajes,
+        "etapas_disponibles": etapas,
+    }
+
+@app.post("/api/wfm/field-tickets/{ticket_id}/comentario")
+def post_field_ticket_comentario(ticket_id: int, req: TicketComentarioReq):
+    uid, models = _odoo_connect()
+    models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "message_post",
+        [[ticket_id]], {"body": req.mensaje, "message_type": "comment", "subtype_xmlid": "mail.mt_comment"})
+    return {"ok": True}
+
+@app.put("/api/wfm/field-tickets/{ticket_id}/etapa")
+def put_field_ticket_etapa(ticket_id: int, req: dict):
+    uid, models = _odoo_connect()
+    stage_id = req.get("stage_id")
+    if not stage_id:
+        raise HTTPException(400, "stage_id requerido")
+    models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "write",
+        [[ticket_id], {"stage_id": stage_id}])
+    return {"ok": True}
 
 @app.get("/api/wfm/bidrillas")
 def get_bidrillas():
