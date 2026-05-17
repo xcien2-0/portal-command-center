@@ -1536,8 +1536,28 @@ class TicketComentarioReq(BaseModel):
 @app.get("/api/wfm/field-tickets/{ticket_id}")
 def get_field_ticket_detalle(ticket_id: int):
     """Detalle completo de un ticket helpdesk + chatter + etapas disponibles."""
-    uid, models = _odoo_connect()
-    tickets = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "search_read",
+    import xmlrpc.client as _xr
+    import re as _re
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
+
+    _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB", "wispi17")
+    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+
+    try:
+        common = _xr.ServerProxy(f"{_url}/xmlrpc/2/common")
+        uid    = common.authenticate(_db, _user, _pw, {})
+        if not uid:
+            raise HTTPException(503, "No se pudo autenticar en Odoo")
+        models = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(503, f"Error conectando Odoo: {e}")
+
+    # Fetch ticket
+    tickets = models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "search_read",
         [[["id", "=", ticket_id]]],
         {"fields": ["id","name","description","partner_id","stage_id","team_id",
                     "ticket_type_id","priority","user_id","create_date",
@@ -1546,40 +1566,49 @@ def get_field_ticket_detalle(ticket_id: int):
     if not tickets:
         raise HTTPException(404, "Ticket no encontrado")
     t = tickets[0]
-
-    # Etapas disponibles para el equipo
     team_id = t["team_id"][0] if t.get("team_id") else None
-    etapas = []
-    if team_id:
-        stages = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.stage", "search_read",
+
+    # Fetch stages and chatter in parallel — each thread gets its own ServerProxy
+    def _get_stages():
+        if not team_id:
+            return []
+        _m = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
+        raw = _m.execute_kw(_db, uid, _pw, "helpdesk.stage", "search_read",
             [[["team_ids", "in", [team_id]]]],
             {"fields": ["id", "name"], "order": "sequence asc", "limit": 20})
-        etapas = [{"id": s["id"], "nombre": s["name"]} for s in stages]
+        return [{"id": s["id"], "nombre": s["name"]} for s in raw]
 
-    # Chatter
-    msgs = models.execute_kw(odoo_db, uid, odoo_pass, "mail.message", "search_read",
-        [[["model", "=", "helpdesk.ticket"], ["res_id", "=", ticket_id],
-          ["message_type", "in", ["comment", "email"]]]],
-        {"fields": ["id", "author_id", "date", "body", "message_type"],
-         "order": "date asc", "limit": 50})
-    mensajes = []
-    for m in msgs:
-        body = (m.get("body") or "").replace("<br>", "\n").replace("</p>", "\n")
-        import re as _re
-        body = _re.sub(r"<[^>]+>", "", body).strip()
-        if body:
-            mensajes.append({
-                "id": m["id"],
-                "autor": m["author_id"][1] if m.get("author_id") else "Sistema",
-                "fecha": (m.get("date") or "")[:16],
-                "cuerpo": body,
-                "tipo": m.get("message_type", "comment"),
-            })
+    def _get_chatter():
+        _m = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
+        msgs = _m.execute_kw(_db, uid, _pw, "mail.message", "search_read",
+            [[["model", "=", "helpdesk.ticket"], ["res_id", "=", ticket_id],
+              ["message_type", "in", ["comment", "email"]]]],
+            {"fields": ["id", "author_id", "date", "body", "message_type"],
+             "order": "date asc", "limit": 50})
+        result = []
+        for m in msgs:
+            body = (m.get("body") or "").replace("<br>", "\n").replace("</p>", "\n")
+            body = _re.sub(r"<[^>]+>", "", body).strip()
+            if body:
+                result.append({
+                    "id": m["id"],
+                    "autor": m["author_id"][1] if m.get("author_id") else "Sistema",
+                    "fecha": (m.get("date") or "")[:16],
+                    "cuerpo": body,
+                    "tipo": m.get("message_type", "comment"),
+                })
+        return result
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_stages  = pool.submit(_get_stages)
+        f_chatter = pool.submit(_get_chatter)
+        etapas   = f_stages.result()
+        mensajes = f_chatter.result()
 
     return {
         "id": t["id"],
         "nombre": t["name"],
-        "descripcion": (t.get("description") or "").replace("<br>","").replace("</p>","").strip()[:500],
+        "descripcion": _re.sub(r"<[^>]+>", "", (t.get("description") or "")).strip()[:500],
         "etapa_id": t["stage_id"][0] if t.get("stage_id") else None,
         "etapa": t["stage_id"][1] if t.get("stage_id") else "",
         "cliente": t["partner_id"][1] if t.get("partner_id") else None,
@@ -1596,18 +1625,32 @@ def get_field_ticket_detalle(ticket_id: int):
 
 @app.post("/api/wfm/field-tickets/{ticket_id}/comentario")
 def post_field_ticket_comentario(ticket_id: int, req: TicketComentarioReq):
-    uid, models = _odoo_connect()
-    models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "message_post",
+    import xmlrpc.client as _xr
+    _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB", "wispi17")
+    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    common = _xr.ServerProxy(f"{_url}/xmlrpc/2/common")
+    uid    = common.authenticate(_db, _user, _pw, {})
+    models = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
+    models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "message_post",
         [[ticket_id]], {"body": req.mensaje, "message_type": "comment", "subtype_xmlid": "mail.mt_comment"})
     return {"ok": True}
 
 @app.put("/api/wfm/field-tickets/{ticket_id}/etapa")
 def put_field_ticket_etapa(ticket_id: int, req: dict):
-    uid, models = _odoo_connect()
+    import xmlrpc.client as _xr
+    _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB", "wispi17")
+    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
     stage_id = req.get("stage_id")
     if not stage_id:
         raise HTTPException(400, "stage_id requerido")
-    models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "write",
+    common = _xr.ServerProxy(f"{_url}/xmlrpc/2/common")
+    uid    = common.authenticate(_db, _user, _pw, {})
+    models = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
+    models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "write",
         [[ticket_id], {"stage_id": stage_id}])
     return {"ok": True}
 
