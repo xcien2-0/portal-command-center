@@ -221,13 +221,78 @@ function TicketDrawer({ ticketId, theme, onClose, onUpdated }: {
   );
 }
 
+function TicketMiniCard({ t, theme, onClick }: { t: FieldTicket; theme: ThemeConfig; onClick: () => void }) {
+  const prioColor = PRIO_COLOR[t.prioridad] ?? '#888';
+  const tipoColor = t.tipo === 'falla' ? '#FF4757' : '#00B4D8';
+  const currentStage = FS_STAGES[t.etapa_op_idx];
+  return (
+    <div onClick={onClick}
+      style={{
+        background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14,
+        padding: '14px 16px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+        transition: 'border-color 0.15s, transform 0.1s',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = tipoColor + '50';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = theme.border;
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+      }}
+    >
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: tipoColor, borderRadius: '14px 0 0 14px' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, marginLeft: 6 }}>
+        <span style={{ fontSize: 10, color: theme.dim, fontWeight: 600 }}>{t.id}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: tipoColor }}>{t.tipo === 'falla' ? '🔴 Falla' : '⚡ Hab.'}</span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}30` }}>
+          {t.prioridad.toUpperCase()}
+        </span>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: theme.text, lineHeight: 1.35, marginBottom: 6, marginLeft: 6 }}>{t.nombre}</div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 10, marginLeft: 6, flexWrap: 'wrap' }}>
+        {t.cliente && <span style={{ fontSize: 11, color: theme.dim }}>👤 {t.cliente}</span>}
+        {t.tecnico && <span style={{ fontSize: 11, color: theme.dim }}>🔧 {t.tecnico}</span>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginLeft: 6, marginBottom: 10 }}>
+        {FS_STAGES.map((s, i) => (
+          <div key={s.idx} style={{ display: 'flex', alignItems: 'center', flex: i < FS_STAGES.length - 1 ? 1 : 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                background: t.etapa_op_idx >= s.idx ? s.color : 'rgba(255,255,255,0.08)',
+                boxShadow: t.etapa_op_idx === s.idx ? `0 0 10px ${s.color}` : 'none',
+                border: t.etapa_op_idx === s.idx ? `2px solid ${s.color}` : 'none',
+                transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9,
+              }} title={s.nombre}>{t.etapa_op_idx === s.idx ? s.icon : ''}</div>
+              <span style={{ fontSize: 8, color: t.etapa_op_idx === s.idx ? s.color : theme.dim, whiteSpace: 'nowrap' }}>{s.nombre}</span>
+            </div>
+            {i < FS_STAGES.length - 1 && (
+              <div style={{ flex: 1, height: 2, background: t.etapa_op_idx > s.idx ? s.color : 'rgba(255,255,255,0.07)', marginBottom: 14 }} />
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: 6 }}>
+        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: `${currentStage?.color ?? '#888'}15`, color: currentStage?.color ?? theme.dim, border: `1px solid ${currentStage?.color ?? '#888'}30` }}>
+          {t.etapa_odoo}
+        </span>
+        <span style={{ fontSize: 9, color: theme.dim }}>{t.fecha_creacion?.slice(0, 10)} · Ver detalle →</span>
+      </div>
+    </div>
+  );
+}
+
 function FieldServiceView({ theme }: { theme: ThemeConfig }) {
-  const [tickets, setTickets]         = useState<FieldTicket[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [filter, setFilter]           = useState<'all' | 'habilitacion' | 'falla'>('all');
-  const [stageFilter, setStage]       = useState<number | null>(null);
-  const [summary, setSummary]         = useState<any>(null);
-  const [selectedId, setSelectedId]   = useState<number | null>(null);
+  const [tickets, setTickets]       = useState<FieldTicket[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [filter, setFilter]         = useState<'all' | 'habilitacion' | 'falla'>('all');
+  const [stageFilter, setStage]     = useState<number | null>(null);
+  const [summary, setSummary]       = useState<any>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [viewMode, setViewMode]     = useState<'grid' | 'kanban' | 'carousel'>('grid');
+  const [carouselIdx, setCarousel]  = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
@@ -245,14 +310,24 @@ function FieldServiceView({ theme }: { theme: ThemeConfig }) {
   const filtered = tickets.filter(t => {
     if (filter === 'habilitacion' && t.tipo !== 'habilitacion') return false;
     if (filter === 'falla'        && t.tipo !== 'falla')        return false;
-    if (stageFilter !== null      && t.etapa_op_idx !== stageFilter) return false;
+    if (viewMode === 'grid' && stageFilter !== null && t.etapa_op_idx !== stageFilter) return false;
     return true;
   });
 
+  // Reset carousel index when filter changes
+  useEffect(() => { setCarousel(0); }, [filter, viewMode]);
+
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Conectando a CAST Odoo...</div>;
+
+  const VIEW_MODES = [
+    { id: 'grid',     icon: '▦',  label: 'Tarjetas' },
+    { id: 'kanban',   icon: '☰',  label: 'Kanban'   },
+    { id: 'carousel', icon: '▷',  label: 'Carrusel' },
+  ] as const;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
       {/* KPIs */}
       {summary && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -271,8 +346,8 @@ function FieldServiceView({ theme }: { theme: ThemeConfig }) {
         </div>
       )}
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Filtros + toggle de vista */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {(['all','habilitacion','falla'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11,
@@ -283,106 +358,290 @@ function FieldServiceView({ theme }: { theme: ThemeConfig }) {
             {f === 'all' ? 'Todos' : f === 'habilitacion' ? '⚡ Habilitaciones' : '🔴 Fallas'}
           </button>
         ))}
-        <div style={{ width: 1, background: theme.border, margin: '0 4px' }} />
-        {FS_STAGES.map(s => (
-          <button key={s.idx} onClick={() => setStage(stageFilter === s.idx ? null : s.idx)} style={{
-            padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 10,
-            background: stageFilter === s.idx ? `${s.color}20` : 'rgba(255,255,255,0.04)',
-            color: stageFilter === s.idx ? s.color : theme.dim,
-            boxShadow: stageFilter === s.idx ? `0 0 0 1px ${s.color}50` : 'none',
-          }}>
-            {s.icon} {s.nombre}
-          </button>
-        ))}
+
+        {viewMode === 'grid' && (
+          <>
+            <div style={{ width: 1, background: theme.border, margin: '0 4px', alignSelf: 'stretch' }} />
+            {FS_STAGES.map(s => (
+              <button key={s.idx} onClick={() => setStage(stageFilter === s.idx ? null : s.idx)} style={{
+                padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 10,
+                background: stageFilter === s.idx ? `${s.color}20` : 'rgba(255,255,255,0.04)',
+                color: stageFilter === s.idx ? s.color : theme.dim,
+                boxShadow: stageFilter === s.idx ? `0 0 0 1px ${s.color}50` : 'none',
+              }}>
+                {s.icon} {s.nombre}
+              </button>
+            ))}
+          </>
+        )}
+
+        <div style={{ flex: 1 }} />
+
+        {/* View mode toggle */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2 }}>
+          {VIEW_MODES.map(v => (
+            <button key={v.id} onClick={() => setViewMode(v.id)} title={v.label} style={{
+              padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
+              background: viewMode === v.id ? `${theme.accent}22` : 'transparent',
+              color: viewMode === v.id ? theme.accent : theme.dim,
+              boxShadow: viewMode === v.id ? `0 0 0 1px ${theme.accent}40` : 'none',
+              fontWeight: viewMode === v.id ? 700 : 400,
+              transition: 'all 0.15s',
+            }}>
+              {v.icon} {v.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Cards de tickets */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
-        {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: theme.dim, gridColumn: '1/-1' }}>Sin tickets en este filtro</div>}
-        {filtered.map(t => {
-          const prioColor = PRIO_COLOR[t.prioridad] ?? '#888';
-          const tipoColor = t.tipo === 'falla' ? '#FF4757' : '#00B4D8';
-          const currentStage = FS_STAGES[t.etapa_op_idx];
-          return (
-            <div key={t.id}
-              onClick={() => setSelectedId(t.odoo_id)}
-              style={{
-                background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14,
-                padding: '14px 16px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                transition: 'border-color 0.15s, transform 0.1s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = tipoColor + '50';
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = theme.border;
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-              }}
-            >
-              {/* Left accent */}
-              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: tipoColor, borderRadius: '14px 0 0 14px' }} />
+      {/* ── VISTA GRID ── */}
+      {viewMode === 'grid' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
+          {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: theme.dim, gridColumn: '1/-1' }}>Sin tickets en este filtro</div>}
+          {filtered.map(t => (
+            <TicketMiniCard key={t.id} t={t} theme={theme} onClick={() => setSelectedId(t.odoo_id)} />
+          ))}
+        </div>
+      )}
 
-              {/* Row 1: ID + tipo + prioridad */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, marginLeft: 6 }}>
-                <span style={{ fontSize: 10, color: theme.dim, fontWeight: 600 }}>{t.id}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: tipoColor }}>
-                  {t.tipo === 'falla' ? '🔴 Falla' : '⚡ Habilitación'}
-                </span>
-                <div style={{ flex: 1 }} />
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}30` }}>
-                  {t.prioridad.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Row 2: Nombre */}
-              <div style={{ fontSize: 13, fontWeight: 700, color: theme.text, lineHeight: 1.35, marginBottom: 6, marginLeft: 6 }}>
-                {t.nombre}
-              </div>
-
-              {/* Row 3: Cliente + técnico */}
-              <div style={{ display: 'flex', gap: 12, marginBottom: 10, marginLeft: 6, flexWrap: 'wrap' }}>
-                {t.cliente && <span style={{ fontSize: 11, color: theme.dim }}>👤 {t.cliente}</span>}
-                {t.tecnico && <span style={{ fontSize: 11, color: theme.dim }}>🔧 {t.tecnico}</span>}
-              </div>
-
-              {/* Row 4: Flujo de etapas */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginLeft: 6, marginBottom: 10 }}>
-                {FS_STAGES.map((s, i) => (
-                  <div key={s.idx} style={{ display: 'flex', alignItems: 'center', flex: i < FS_STAGES.length - 1 ? 1 : 0 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <div style={{
-                        width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                        background: t.etapa_op_idx >= s.idx ? s.color : 'rgba(255,255,255,0.08)',
-                        boxShadow: t.etapa_op_idx === s.idx ? `0 0 10px ${s.color}` : 'none',
-                        border: t.etapa_op_idx === s.idx ? `2px solid ${s.color}` : 'none',
-                        transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9,
-                      }} title={s.nombre}>
-                        {t.etapa_op_idx === s.idx ? s.icon : ''}
+      {/* ── VISTA KANBAN ── */}
+      {viewMode === 'kanban' && (
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
+          {FS_STAGES.map(stage => {
+            const col = filtered.filter(t => t.etapa_op_idx === stage.idx);
+            return (
+              <div key={stage.idx} style={{ minWidth: 260, flex: '0 0 260px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Column header */}
+                <div style={{
+                  padding: '10px 14px', borderRadius: 10,
+                  background: `${stage.color}12`, border: `1px solid ${stage.color}30`,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span style={{ fontSize: 16 }}>{stage.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: stage.color }}>{stage.nombre}</span>
+                  <div style={{ flex: 1 }} />
+                  <span style={{
+                    fontSize: 11, fontWeight: 800, minWidth: 22, textAlign: 'center',
+                    padding: '1px 7px', borderRadius: 20,
+                    background: col.length > 0 ? `${stage.color}25` : 'rgba(255,255,255,0.05)',
+                    color: col.length > 0 ? stage.color : theme.dim,
+                  }}>{col.length}</span>
+                </div>
+                {/* Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {col.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: theme.dim, fontSize: 11 }}>—</div>
+                  )}
+                  {col.map(t => {
+                    const tipoColor = t.tipo === 'falla' ? '#FF4757' : '#00B4D8';
+                    const prioColor = PRIO_COLOR[t.prioridad] ?? '#888';
+                    return (
+                      <div key={t.id} onClick={() => setSelectedId(t.odoo_id)}
+                        style={{
+                          background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10,
+                          padding: '10px 12px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                          transition: 'border-color 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = stage.color + '50'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = theme.border}
+                      >
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: tipoColor, borderRadius: '10px 10px 0 0' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, marginTop: 4 }}>
+                          <span style={{ fontSize: 9, color: theme.dim }}>{t.id}</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: `${prioColor}18`, color: prioColor }}>{t.prioridad.toUpperCase()}</span>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: theme.text, lineHeight: 1.3, marginBottom: 6 }}>{t.nombre}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {t.cliente && <span style={{ fontSize: 10, color: theme.dim }}>👤 {t.cliente}</span>}
+                          {t.tecnico && <span style={{ fontSize: 10, color: theme.dim }}>🔧 {t.tecnico}</span>}
+                        </div>
+                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: tipoColor }}>{t.tipo === 'falla' ? '🔴 Falla' : '⚡ Hab.'}</span>
+                          <span style={{ fontSize: 9, color: theme.dim }}>{t.fecha_creacion?.slice(0, 10)}</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: 8, color: t.etapa_op_idx === s.idx ? s.color : theme.dim, whiteSpace: 'nowrap' }}>{s.nombre}</span>
-                    </div>
-                    {i < FS_STAGES.length - 1 && (
-                      <div style={{ flex: 1, height: 2, background: t.etapa_op_idx > s.idx ? s.color : 'rgba(255,255,255,0.07)', marginBottom: 14, transition: 'background 0.3s' }} />
-                    )}
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Row 5: Etapa actual + fecha + click hint */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: 6 }}>
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: `${currentStage?.color ?? '#888'}15`, color: currentStage?.color ?? theme.dim, border: `1px solid ${currentStage?.color ?? '#888'}30` }}>
-                  {t.etapa_odoo}
-                </span>
-                <span style={{ fontSize: 9, color: theme.dim }}>{t.fecha_creacion?.slice(0, 10)} · Ver detalle →</span>
+      {/* ── VISTA CARRUSEL ── */}
+      {viewMode === 'carousel' && (() => {
+        if (filtered.length === 0) return (
+          <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Sin tickets en este filtro</div>
+        );
+        const idx = Math.min(carouselIdx, filtered.length - 1);
+        const t   = filtered[idx];
+        const tipoColor    = t.tipo === 'falla' ? '#FF4757' : '#00B4D8';
+        const prioColor    = PRIO_COLOR[t.prioridad] ?? '#888';
+        const currentStage = FS_STAGES[t.etapa_op_idx];
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+            {/* Counter */}
+            <div style={{ fontSize: 12, color: theme.dim }}>
+              <span style={{ fontWeight: 800, color: theme.text }}>{idx + 1}</span> / {filtered.length}
+            </div>
+
+            {/* Card grande */}
+            <div style={{
+              width: '100%', maxWidth: 600,
+              background: theme.card, borderRadius: 20,
+              border: `1px solid ${tipoColor}30`,
+              boxShadow: `0 0 40px ${tipoColor}10`,
+              overflow: 'hidden', position: 'relative',
+            }}>
+              {/* Top color bar */}
+              <div style={{ height: 5, background: `linear-gradient(90deg, ${tipoColor}, ${currentStage?.color ?? tipoColor})` }} />
+
+              <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: tipoColor }}>
+                        {t.tipo === 'falla' ? '🔴 FALLA' : '⚡ HABILITACIÓN'}
+                      </span>
+                      <span style={{ fontSize: 10, color: theme.dim }}>{t.id}</span>
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.3, maxWidth: 420 }}>
+                      {t.nombre}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 10,
+                    background: `${prioColor}18`, color: prioColor, border: `1px solid ${prioColor}40`, flexShrink: 0 }}>
+                    {t.prioridad.toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Cliente + técnico */}
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                  {t.cliente && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1 }}>Cliente</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>👤 {t.cliente}</span>
+                    </div>
+                  )}
+                  {t.tecnico && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1 }}>Técnico</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>🔧 {t.tecnico}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1 }}>Creado</span>
+                    <span style={{ fontSize: 13, color: theme.text }}>📅 {t.fecha_creacion?.slice(0, 10)}</span>
+                  </div>
+                </div>
+
+                {/* Flujo de etapas grande */}
+                <div>
+                  <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>Progreso</div>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {FS_STAGES.map((s, i) => (
+                      <div key={s.idx} style={{ display: 'flex', alignItems: 'center', flex: i < FS_STAGES.length - 1 ? 1 : 0 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: t.etapa_op_idx >= s.idx ? s.color : 'rgba(255,255,255,0.06)',
+                            boxShadow: t.etapa_op_idx === s.idx ? `0 0 16px ${s.color}80` : 'none',
+                            border: t.etapa_op_idx === s.idx ? `2px solid ${s.color}` : `2px solid rgba(255,255,255,0.08)`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: t.etapa_op_idx === s.idx ? 16 : 12,
+                            transition: 'all 0.3s',
+                          }}>
+                            {t.etapa_op_idx >= s.idx ? s.icon : ''}
+                          </div>
+                          <span style={{
+                            fontSize: 10, fontWeight: t.etapa_op_idx === s.idx ? 800 : 400,
+                            color: t.etapa_op_idx === s.idx ? s.color : theme.dim,
+                            whiteSpace: 'nowrap',
+                          }}>{s.nombre}</span>
+                        </div>
+                        {i < FS_STAGES.length - 1 && (
+                          <div style={{
+                            flex: 1, height: 3, marginBottom: 22, borderRadius: 2,
+                            background: t.etapa_op_idx > s.idx
+                              ? `linear-gradient(90deg, ${s.color}, ${FS_STAGES[i+1].color})`
+                              : 'rgba(255,255,255,0.06)',
+                            transition: 'background 0.3s',
+                          }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Etapa Odoo + botón detalle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8,
+                    background: `${currentStage?.color ?? '#888'}15`, color: currentStage?.color ?? theme.dim,
+                    border: `1px solid ${currentStage?.color ?? '#888'}30` }}>
+                    {t.etapa_odoo}
+                  </span>
+                  <button onClick={() => setSelectedId(t.odoo_id)} style={{
+                    padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: `${tipoColor}20`, color: tipoColor, fontWeight: 700, fontSize: 12,
+                    boxShadow: `0 0 0 1px ${tipoColor}40`,
+                  }}>
+                    Ver detalle →
+                  </button>
+                </div>
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Drawer */}
+            {/* Flechas navegación */}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <button
+                onClick={() => setCarousel(i => Math.max(0, i - 1))}
+                disabled={idx === 0}
+                style={{
+                  width: 48, height: 48, borderRadius: '50%', border: 'none', cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                  background: idx === 0 ? 'rgba(255,255,255,0.04)' : `${theme.accent}20`,
+                  color: idx === 0 ? theme.dim : theme.accent,
+                  fontSize: 20, fontWeight: 700,
+                  boxShadow: idx === 0 ? 'none' : `0 0 0 1px ${theme.accent}40`,
+                  transition: 'all 0.15s',
+                }}
+              >←</button>
+
+              {/* Dots */}
+              <div style={{ display: 'flex', gap: 5 }}>
+                {filtered.slice(Math.max(0, idx - 4), Math.min(filtered.length, idx + 5)).map((_, di) => {
+                  const realIdx = Math.max(0, idx - 4) + di;
+                  return (
+                    <div key={realIdx} onClick={() => setCarousel(realIdx)} style={{
+                      width: realIdx === idx ? 18 : 6, height: 6, borderRadius: 3,
+                      background: realIdx === idx ? theme.accent : 'rgba(255,255,255,0.15)',
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }} />
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setCarousel(i => Math.min(filtered.length - 1, i + 1))}
+                disabled={idx === filtered.length - 1}
+                style={{
+                  width: 48, height: 48, borderRadius: '50%', border: 'none',
+                  cursor: idx === filtered.length - 1 ? 'not-allowed' : 'pointer',
+                  background: idx === filtered.length - 1 ? 'rgba(255,255,255,0.04)' : `${theme.accent}20`,
+                  color: idx === filtered.length - 1 ? theme.dim : theme.accent,
+                  fontSize: 20, fontWeight: 700,
+                  boxShadow: idx === filtered.length - 1 ? 'none' : `0 0 0 1px ${theme.accent}40`,
+                  transition: 'all 0.15s',
+                }}
+              >→</button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Drawer — compartido en todas las vistas */}
       {selectedId !== null && (
         <TicketDrawer
           ticketId={selectedId}

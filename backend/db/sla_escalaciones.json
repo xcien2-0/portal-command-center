@@ -15884,10 +15884,10 @@
     "severity": "CRITICO",
     "dias_sla": 20.61,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15898,10 +15898,10 @@
     "severity": "CRITICO",
     "dias_sla": 20.61,
     "owner_node": "pm",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15912,10 +15912,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.43,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15926,10 +15926,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.62,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15940,10 +15940,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.63,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15954,10 +15954,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.64,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1636",
@@ -15968,10 +15968,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.76,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -15982,10 +15982,10 @@
     "severity": "CRITICO",
     "dias_sla": 9.79,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -15996,10 +15996,10 @@
     "severity": "CRITICO",
     "dias_sla": 11.5,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16010,10 +16010,10 @@
     "severity": "CRITICO",
     "dias_sla": 11.73,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16024,10 +16024,10 @@
     "severity": "CRITICO",
     "dias_sla": 12.47,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16038,10 +16038,10 @@
     "severity": "CRITICO",
     "dias_sla": 12.61,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16052,10 +16052,10 @@
     "severity": "CRITICO",
     "dias_sla": 12.67,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16066,10 +16066,10 @@
     "severity": "CRITICO",
     "dias_sla": 16.61,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16080,10 +16080,10 @@
     "severity": "CRITICO",
     "dias_sla": 17.43,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16094,10 +16094,10 @@
     "severity": "CRITICO",
     "dias_sla": 18.45,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16108,10 +16108,10 @@
     "severity": "CRITICO",
     "dias_sla": 18.46,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16122,10 +16122,10 @@
     "severity": "CRITICO",
     "dias_sla": 18.65,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16136,10 +16136,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.2,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16150,10 +16150,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.22,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16164,10 +16164,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.49,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16178,10 +16178,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.51,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16192,10 +16192,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.74,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16206,10 +16206,10 @@
     "severity": "CRITICO",
     "dias_sla": 19.77,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16220,10 +16220,10 @@
     "severity": "CRITICO",
     "dias_sla": 22.67,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16234,10 +16234,10 @@
     "severity": "CRITICO",
     "dias_sla": 22.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16248,10 +16248,10 @@
     "severity": "CRITICO",
     "dias_sla": 22.74,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16262,10 +16262,10 @@
     "severity": "CRITICO",
     "dias_sla": 23.45,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16276,10 +16276,10 @@
     "severity": "CRITICO",
     "dias_sla": 23.5,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16290,10 +16290,10 @@
     "severity": "CRITICO",
     "dias_sla": 24.34,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16304,10 +16304,10 @@
     "severity": "CRITICO",
     "dias_sla": 24.63,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16318,10 +16318,10 @@
     "severity": "CRITICO",
     "dias_sla": 24.66,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16332,10 +16332,10 @@
     "severity": "CRITICO",
     "dias_sla": 25.74,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16346,10 +16346,10 @@
     "severity": "CRITICO",
     "dias_sla": 26.29,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16360,10 +16360,10 @@
     "severity": "CRITICO",
     "dias_sla": 26.37,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16374,10 +16374,10 @@
     "severity": "CRITICO",
     "dias_sla": 26.41,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1637",
@@ -16388,10 +16388,10 @@
     "severity": "CRITICO",
     "dias_sla": 26.61,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16402,10 +16402,10 @@
     "severity": "CRITICO",
     "dias_sla": 29.64,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16416,10 +16416,10 @@
     "severity": "CRITICO",
     "dias_sla": 29.72,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16430,10 +16430,10 @@
     "severity": "CRITICO",
     "dias_sla": 29.74,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16444,10 +16444,10 @@
     "severity": "CRITICO",
     "dias_sla": 29.78,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16458,10 +16458,10 @@
     "severity": "CRITICO",
     "dias_sla": 30.46,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16472,10 +16472,10 @@
     "severity": "CRITICO",
     "dias_sla": 30.73,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16486,10 +16486,10 @@
     "severity": "CRITICO",
     "dias_sla": 30.73,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16500,10 +16500,10 @@
     "severity": "CRITICO",
     "dias_sla": 30.74,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16514,10 +16514,10 @@
     "severity": "CRITICO",
     "dias_sla": 31.77,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16528,10 +16528,10 @@
     "severity": "CRITICO",
     "dias_sla": 32.42,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16542,10 +16542,10 @@
     "severity": "CRITICO",
     "dias_sla": 32.62,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16556,10 +16556,10 @@
     "severity": "CRITICO",
     "dias_sla": 32.73,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16570,10 +16570,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.23,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16584,10 +16584,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.35,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16598,10 +16598,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.42,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16612,10 +16612,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.42,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16626,10 +16626,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.43,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16640,10 +16640,10 @@
     "severity": "CRITICO",
     "dias_sla": 33.76,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16654,10 +16654,10 @@
     "severity": "CRITICO",
     "dias_sla": 36.69,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16668,10 +16668,10 @@
     "severity": "CRITICO",
     "dias_sla": 37.54,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16682,10 +16682,10 @@
     "severity": "CRITICO",
     "dias_sla": 37.66,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16696,10 +16696,10 @@
     "severity": "CRITICO",
     "dias_sla": 38.61,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16710,10 +16710,10 @@
     "severity": "CRITICO",
     "dias_sla": 39.47,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16724,10 +16724,10 @@
     "severity": "CRITICO",
     "dias_sla": 39.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16738,10 +16738,10 @@
     "severity": "CRITICO",
     "dias_sla": 39.75,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16752,10 +16752,10 @@
     "severity": "CRITICO",
     "dias_sla": 40.23,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16766,10 +16766,10 @@
     "severity": "CRITICO",
     "dias_sla": 40.5,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16780,10 +16780,10 @@
     "severity": "CRITICO",
     "dias_sla": 40.69,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16794,10 +16794,10 @@
     "severity": "CRITICO",
     "dias_sla": 40.76,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16808,10 +16808,10 @@
     "severity": "CRITICO",
     "dias_sla": 42.47,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16822,10 +16822,10 @@
     "severity": "CRITICO",
     "dias_sla": 44.76,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16836,10 +16836,10 @@
     "severity": "CRITICO",
     "dias_sla": 44.78,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16850,10 +16850,10 @@
     "severity": "CRITICO",
     "dias_sla": 46.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1788",
@@ -16864,10 +16864,10 @@
     "severity": "CRITICO",
     "dias_sla": 47.41,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16878,10 +16878,10 @@
     "severity": "CRITICO",
     "dias_sla": 50.67,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16892,10 +16892,10 @@
     "severity": "CRITICO",
     "dias_sla": 50.67,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16906,10 +16906,10 @@
     "severity": "CRITICO",
     "dias_sla": 50.82,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16920,10 +16920,10 @@
     "severity": "CRITICO",
     "dias_sla": 52.58,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16934,10 +16934,10 @@
     "severity": "CRITICO",
     "dias_sla": 52.59,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16948,10 +16948,10 @@
     "severity": "CRITICO",
     "dias_sla": 52.67,
     "owner_node": "noc",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16962,10 +16962,10 @@
     "severity": "CRITICO",
     "dias_sla": 52.69,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16976,10 +16976,10 @@
     "severity": "CRITICO",
     "dias_sla": 53.46,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -16990,10 +16990,10 @@
     "severity": "CRITICO",
     "dias_sla": 53.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17004,10 +17004,10 @@
     "severity": "CRITICO",
     "dias_sla": 54.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17018,10 +17018,10 @@
     "severity": "CRITICO",
     "dias_sla": 54.75,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17032,10 +17032,10 @@
     "severity": "CRITICO",
     "dias_sla": 54.78,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17046,10 +17046,10 @@
     "severity": "CRITICO",
     "dias_sla": 55.21,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17060,10 +17060,10 @@
     "severity": "CRITICO",
     "dias_sla": 55.27,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17074,10 +17074,10 @@
     "severity": "CRITICO",
     "dias_sla": 5.74,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17088,10 +17088,10 @@
     "severity": "CRITICO",
     "dias_sla": 5.75,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17102,10 +17102,10 @@
     "severity": "CRITICO",
     "dias_sla": 5.78,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17116,10 +17116,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.72,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17130,10 +17130,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.75,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17144,10 +17144,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.68,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17158,10 +17158,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.68,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17172,10 +17172,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.73,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17186,10 +17186,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.23,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17200,10 +17200,10 @@
     "severity": "CRITICO",
     "dias_sla": 4.43,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17214,10 +17214,10 @@
     "severity": "CRITICO",
     "dias_sla": 3.64,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17228,10 +17228,10 @@
     "severity": "CRITICO",
     "dias_sla": 3.65,
     "owner_node": "ops",
-    "status": "ACTIVO",
-    "cleared_at": null,
-    "cleared_by": null,
-    "notas": "Escalación automática por SLA excedido"
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
   },
   {
     "esc_id": "ESC-20260517-1789",
@@ -17241,6 +17241,1378 @@
     "estado": "ANTEPROYECTO",
     "severity": "CRITICO",
     "dias_sla": 3.47,
+    "owner_node": "ops",
+    "status": "AUTO_CLEARED",
+    "cleared_at": "2026-05-17T10:35:12.677117",
+    "cleared_by": "SISTEMA",
+    "notas": "Escalación automática por SLA excedido | AUTO-CLEARED tras 56min sin atención"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.826080",
+    "order_id": "OI-5FDD5D",
+    "cliente": "Hospital San José",
+    "estado": "ESPERA_INVENTARIO",
+    "severity": "CRITICO",
+    "dias_sla": 20.65,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.864553",
+    "order_id": "OI-E5AF92",
+    "cliente": "cordilllera",
+    "estado": "REVISION_PM",
+    "severity": "CRITICO",
+    "dias_sla": 20.65,
+    "owner_node": "pm",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.897301",
+    "order_id": "ODOO-79777",
+    "cliente": "BECA TRADERS",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.47,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.930601",
+    "order_id": "ODOO-79761",
+    "cliente": "VILLAGON EXPRESS PACK",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.66,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.962023",
+    "order_id": "ODOO-79760",
+    "cliente": "EJE ELEMENTAL",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.67,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1390",
+    "triggered_at": "2026-05-17T10:35:12.991645",
+    "order_id": "ODOO-79758",
+    "cliente": "TRANSPORTES URGENTES NUEVO LEON",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.68,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.021016",
+    "order_id": "ODOO-79752",
+    "cliente": "EJE ELEMENTAL",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.8,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.049643",
+    "order_id": "ODOO-79748",
+    "cliente": "PRODUCTOS INDUSTRIALIZADOS DE SALTILLO",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 9.83,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.078256",
+    "order_id": "ODOO-79730",
+    "cliente": "JUAN ALFONSO RIVERA HERNANDEZ",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 11.54,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.107306",
+    "order_id": "ODOO-79720",
+    "cliente": "Rosendo Martinez Garcia",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 11.77,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.137286",
+    "order_id": "ODOO-79703",
+    "cliente": "TRGA TRANSPORTES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 12.51,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.167477",
+    "order_id": "ODOO-79699",
+    "cliente": "Red Servicios y Enlaces Internet México Sociedad por Acciones Simplificada de C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 12.65,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.197766",
+    "order_id": "ODOO-79696",
+    "cliente": "OSCAR ANTONIO URCIEL VILLANUEVA",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 12.71,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.227638",
+    "order_id": "ODOO-79684",
+    "cliente": "KIWI NETWORKS S.A.P.I. DE C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 16.65,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.257784",
+    "order_id": "ODOO-79666",
+    "cliente": "INNOVACION EN MADERAS ECOPLASTICAS",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 17.47,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.289955",
+    "order_id": "ODOO-79643",
+    "cliente": "SEYCVEL",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 18.49,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.319817",
+    "order_id": "ODOO-79642",
+    "cliente": "SEYCVEL",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 18.5,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.350452",
+    "order_id": "ODOO-79632",
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 18.69,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.379589",
+    "order_id": "ODOO-79623",
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 19.24,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.409900",
+    "order_id": "ODOO-79621",
+    "cliente": "BACKBONE TECHNOLOGIES",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 19.26,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.440153",
+    "order_id": "ODOO-79615",
+    "cliente": "FERRETERA INDUSTRIAL DEL NORTE",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 19.53,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.470896",
+    "order_id": "ODOO-79613",
+    "cliente": "MULLIGAN AMENITIES",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 19.55,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.501090",
+    "order_id": "ODOO-79594",
+    "cliente": "BACKBONE TECHNOLOGIES",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 19.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.531362",
+    "order_id": "ODOO-79591",
+    "cliente": "MICAHDREAM",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 19.81,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.562416",
+    "order_id": "ODOO-79561",
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 22.71,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.592443",
+    "order_id": "ODOO-79552",
+    "cliente": "EMPACADORA RANCHO LAS TRES G",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 22.76,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.622100",
+    "order_id": "ODOO-79550",
+    "cliente": "ACCION EN LA PISTA",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 22.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.652653",
+    "order_id": "ODOO-79542",
+    "cliente": "CUBIC 33 MEXICO",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 23.49,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.682682",
+    "order_id": "ODOO-79539",
+    "cliente": "JOMAR INDUSTRIAS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 23.54,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.713188",
+    "order_id": "ODOO-79530",
+    "cliente": "JUAN CARLOS IBARRA ORTA",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 24.38,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.744028",
+    "order_id": "ODOO-79515",
+    "cliente": "TRANSPORTES INTERNACIONALES TAMAULIPECOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 24.67,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.774367",
+    "order_id": "ODOO-79510",
+    "cliente": "MATERIALES ASESORIAS Y SERVICIOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 24.7,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.804141",
+    "order_id": "ODOO-79483",
+    "cliente": "SERI ENG",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 25.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.834002",
+    "order_id": "ODOO-79481",
+    "cliente": "[VIP 3] JOSE MARCOS SANCHEZ GONZALEZ",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 26.33,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.864182",
+    "order_id": "ODOO-79478",
+    "cliente": "INMOBILIARIA BOSQUES DEL SUR",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 26.4,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.895482",
+    "order_id": "ODOO-79477",
+    "cliente": "BACKBONE TECHNOLOGIES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 26.44,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.924679",
+    "order_id": "ODOO-79460",
+    "cliente": "GRUPO COSMIC",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 26.65,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.956288",
+    "order_id": "ODOO-79429",
+    "cliente": "TECNOLOGIA EN SISTEMAS Y ENLACES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 29.68,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1391",
+    "triggered_at": "2026-05-17T10:35:13.987078",
+    "order_id": "ODOO-79420",
+    "cliente": "CUBIC 33 MEXICO",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 29.76,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.017389",
+    "order_id": "ODOO-79418",
+    "cliente": "ALMA ARACELY GOMEZ RODRIGUEZ",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 29.78,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.047185",
+    "order_id": "ODOO-79417",
+    "cliente": "EVENTOS AKTUM",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 29.82,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.079635",
+    "order_id": "ODOO-79410",
+    "cliente": "CAPITAL REAL STATE PARTNERS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 30.5,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.110395",
+    "order_id": "ODOO-79384",
+    "cliente": "SEYCVEL",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 30.77,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.141078",
+    "order_id": "ODOO-79383",
+    "cliente": "SEYCVEL",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 30.77,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.171602",
+    "order_id": "ODOO-79381",
+    "cliente": "SEYCVEL",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 30.78,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.202090",
+    "order_id": "ODOO-79357",
+    "cliente": "Luis Francisco Reyes Rodriguez",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 31.81,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.232711",
+    "order_id": "ODOO-79353",
+    "cliente": "CENTRO DE MAQUINADOS Y EMBALATADOS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 32.46,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.263508",
+    "order_id": "ODOO-79345",
+    "cliente": "FIBRAS Y CEPILLOS",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 32.66,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.294218",
+    "order_id": "ODOO-79338",
+    "cliente": "HILDA SOCORRO VELAZQUEZ MACIAS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 32.77,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.324709",
+    "order_id": "ODOO-79334",
+    "cliente": "BACKBONE TECHNOLOGIES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 33.27,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.355483",
+    "order_id": "ODOO-79330",
+    "cliente": "KIWI NETWORKS S.A.P.I. DE C.V.",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 33.39,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.386748",
+    "order_id": "ODOO-79329",
+    "cliente": "ELECTRO CONSTRUCCIONES COAHUILA",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 33.46,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.417344",
+    "order_id": "ODOO-79328",
+    "cliente": "JULIO CESAR GARZA RIVAS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 33.46,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.446915",
+    "order_id": "ODOO-79327",
+    "cliente": "FERROS TRUCKING",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 33.47,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.477372",
+    "order_id": "ODOO-79310",
+    "cliente": "COORDINADORA DE FLETES AGUILERA",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 33.8,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.507714",
+    "order_id": "ODOO-79284",
+    "cliente": "GRUPO MASS COMUNICACIONES",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 36.73,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.538246",
+    "order_id": "ODOO-79268",
+    "cliente": "PEGAMENTOS GARZA",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 37.58,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.568998",
+    "order_id": "ODOO-79265",
+    "cliente": "GRUAS VIAJERAS MUNCK",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 37.7,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.600443",
+    "order_id": "ODOO-79229",
+    "cliente": "MIDFLIX SA DE CV",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 38.65,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.632260",
+    "order_id": "ODOO-79211",
+    "cliente": "O-WELL MEXICO COATINGS & ELECTRONICS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 39.51,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.663161",
+    "order_id": "ODOO-79193",
+    "cliente": "SONNAT CORPORATIVO",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 39.75,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.694806",
+    "order_id": "ODOO-79188",
+    "cliente": "Ruth Temblador",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 39.79,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.725605",
+    "order_id": "ODOO-79185",
+    "cliente": "GRUPO INDUSTRIAL CO-NOR, S.A DE C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 40.27,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.756681",
+    "order_id": "ODOO-79171",
+    "cliente": "W-SPORTS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 40.54,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.789229",
+    "order_id": "ODOO-79157",
+    "cliente": "G & R HARDSTONE TECHNOLOGY",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 40.73,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.819640",
+    "order_id": "ODOO-79151",
+    "cliente": "FWD FLETES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 40.8,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.850226",
+    "order_id": "ODOO-79139",
+    "cliente": "QUINTA LUPITAS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 42.51,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.880952",
+    "order_id": "ODOO-79137",
+    "cliente": "POWER-CAST SALES",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 44.8,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.912290",
+    "order_id": "ODOO-79136",
+    "cliente": "FLETES LOZ-MAR",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 44.82,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.945284",
+    "order_id": "ODOO-79105",
+    "cliente": "MARIA NAYELLI UCAN GRAJALES",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 46.76,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1392",
+    "triggered_at": "2026-05-17T10:35:14.977740",
+    "order_id": "ODOO-79100",
+    "cliente": "TRAMITES ADUANALES EXPRESS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 47.45,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.007527",
+    "order_id": "ODOO-79070",
+    "cliente": "CREATIVENET DE MEXICO",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 50.71,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.037481",
+    "order_id": "ODOO-79069",
+    "cliente": "CREATIVENET DE MEXICO",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 50.71,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.067973",
+    "order_id": "ODOO-79063",
+    "cliente": "EQUIPOS Y MULTISERVICIOS INDUSTRIALES MONTERREY",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 50.86,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.098267",
+    "order_id": "ODOO-79027",
+    "cliente": "FUNDACION DEL EMPRESARIO COAHUILENSE, A.C.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 52.62,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.132374",
+    "order_id": "ODOO-79024",
+    "cliente": "COLEGIO JOHN F KENNEDY",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 52.62,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.166535",
+    "order_id": "ODOO-79021",
+    "cliente": "TRANSPORTES URGENTES NUEVO LEON",
+    "estado": "APROVISIONAMIENTO",
+    "severity": "CRITICO",
+    "dias_sla": 52.71,
+    "owner_node": "noc",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.199406",
+    "order_id": "ODOO-79018",
+    "cliente": "TP 964 JARRIS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 52.72,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.233271",
+    "order_id": "ODOO-79001",
+    "cliente": "FRATERNA ADMINISTRADORA DE PROYECTOS",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 53.5,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.265992",
+    "order_id": "ODOO-78967",
+    "cliente": "SOLUCIONES CONSTRUCTIVAS HC3",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 53.75,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.298848",
+    "order_id": "ODOO-78933",
+    "cliente": "BIG SHOW",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 54.76,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.332361",
+    "order_id": "ODOO-78930",
+    "cliente": "BLACK EDGE",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 54.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.365419",
+    "order_id": "ODOO-78921",
+    "cliente": "IVAN MIRANDA RODRIGUEZ",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 54.82,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.398856",
+    "order_id": "ODOO-78920",
+    "cliente": "ACCESO ILIMITADO EN TELECOMUNICACIONES",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 55.25,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.433095",
+    "order_id": "ODOO-78916",
+    "cliente": "REPARTOVAN INTERNACIONAL, S.A. DE C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 55.31,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.465389",
+    "order_id": "ODOO-79798",
+    "cliente": "EXINSA",
+    "estado": "SOLICITUD_PREVENTA",
+    "severity": "CRITICO",
+    "dias_sla": 5.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.499268",
+    "order_id": "ODOO-79797",
+    "cliente": "BOTANA LA SILLA",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 5.78,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.531324",
+    "order_id": "ODOO-79795",
+    "cliente": "VILLAGON EXPRESS PACK",
+    "estado": "ALMACEN_VALIDACION",
+    "severity": "CRITICO",
+    "dias_sla": 5.81,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.566016",
+    "order_id": "ODOO-79833",
+    "cliente": "SPECIAL FRAME",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.76,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.598936",
+    "order_id": "ODOO-79823",
+    "cliente": "PROPLASTIKS MANUFACTURING",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.79,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.633003",
+    "order_id": "ODOO-79838",
+    "cliente": "SLW INDUSTRIAL ENGINEERING",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.71,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.666155",
+    "order_id": "ODOO-79837",
+    "cliente": "FRANCISCO JAVIER ORTEGA GARCIA",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.72,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.696904",
+    "order_id": "ODOO-79830",
+    "cliente": "FRANCO FLORES TECH",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.77,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.728876",
+    "order_id": "ODOO-79856",
+    "cliente": "Red Servicios y Enlaces Internet México Sociedad por Acciones Simplificada de C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.27,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.761307",
+    "order_id": "ODOO-79854",
+    "cliente": "DESARROLLO Y CONSTRUCCIONES URBANAS",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 4.47,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.792633",
+    "order_id": "ODOO-79870",
+    "cliente": "Sain Soyuk Yin Araiza",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 3.68,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.823528",
+    "order_id": "ODOO-79868",
+    "cliente": "Red Servicios y Enlaces Internet México Sociedad por Acciones Simplificada de C.V.",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 3.69,
+    "owner_node": "ops",
+    "status": "ACTIVO",
+    "cleared_at": null,
+    "cleared_by": null,
+    "notas": "Escalación automática por SLA excedido"
+  },
+  {
+    "esc_id": "ESC-20260517-1393",
+    "triggered_at": "2026-05-17T10:35:15.855095",
+    "order_id": "ODOO-79885",
+    "cliente": "Omar Ovalle",
+    "estado": "ANTEPROYECTO",
+    "severity": "CRITICO",
+    "dias_sla": 3.51,
     "owner_node": "ops",
     "status": "ACTIVO",
     "cleared_at": null,
