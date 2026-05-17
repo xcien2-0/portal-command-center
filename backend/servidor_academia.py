@@ -1731,6 +1731,104 @@ async def wfm_aprovisionar(req: WFMAproRequest):
 async def wfm_auditar(req: WFMAuditoriaRequest):
     return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
 
+# ─── GPS TN360 ───────────────────────────────────────────────────────────────
+import requests as _requests
+import threading as _threading
+
+TN360_API       = "https://api-latam.telematics.com/v1"
+TN360_AUTH_URL  = "https://id-mx.telematics.com/auth/realms/TN360DB/protocol/openid-connect/token"
+TN360_USER      = "hector.elizondo@xcien.com"
+TN360_PASS      = "Diciembre#05121980"
+
+_gps_cache: dict = {"data": [], "ts": 0, "token": None, "token_ts": 0}
+_gps_lock = _threading.Lock()
+
+def _tn360_token() -> str:
+    now = time.time()
+    if _gps_cache["token"] and now - _gps_cache["token_ts"] < 240:
+        return _gps_cache["token"]
+    resp = _requests.post(TN360_AUTH_URL, data={
+        "grant_type": "password", "client_id": "tn360ui",
+        "username": TN360_USER, "password": TN360_PASS
+    }, timeout=10)
+    resp.raise_for_status()
+    token = resp.json()["access_token"]
+    _gps_cache["token"] = token
+    _gps_cache["token_ts"] = now
+    return token
+
+def _fetch_gps_all() -> list:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    token   = _tn360_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    now_dt  = datetime.datetime.utcnow()
+    from_dt = (now_dt - datetime.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_dt   = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    vehicles_resp = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=headers, timeout=15)
+    vehicles = vehicles_resp.json() if vehicles_resp.ok else []
+
+    def _get_vehicle_gps(veh):
+        vid  = veh["id"]
+        name = veh.get("name", str(vid))
+        reg  = veh.get("registration", "")
+        try:
+            trips_resp = _requests.get(
+                f"{TN360_API}/trips?vehicleId={vid}&from={from_dt}&to={to_dt}&limit=1",
+                headers=headers, timeout=10
+            )
+            trips = trips_resp.json() if trips_resp.ok else []
+            if not isinstance(trips, list) or not trips:
+                return None
+            trip = trips[0]
+            gps  = trip.get("IgnOffGPS") or trip.get("IgnOnGPS")
+            if not gps or not gps.get("valid"):
+                return None
+            ts_ms  = gps.get("At", 0)
+            ts_iso = datetime.datetime.utcfromtimestamp(ts_ms / 1000).strftime("%Y-%m-%d %H:%M") if ts_ms else None
+            return {
+                "id":         vid,
+                "nombre":     name,
+                "placa":      reg,
+                "lat":        round(gps["Lat"], 6),
+                "lng":        round(gps["Lng"], 6),
+                "velocidad":  round(gps.get("Spd", 0), 1),
+                "direccion":  round(gps.get("Dir", 0), 0),
+                "ultima_vez": ts_iso,
+                "ubicacion":  trip.get("endLocation") or trip.get("startLocation") or "",
+                "activo":     gps.get("Spd", 0) > 2,
+            }
+        except Exception:
+            return None
+
+    result = []
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        futures = {pool.submit(_get_vehicle_gps, v): v for v in vehicles}
+        for fut in as_completed(futures):
+            item = fut.result()
+            if item:
+                result.append(item)
+    result.sort(key=lambda x: x["nombre"])
+    return result
+
+@app.get("/api/gps/vehiculos")
+def get_gps_vehiculos():
+    """Posiciones GPS en tiempo real de la flotilla TN360."""
+    with _gps_lock:
+        now = time.time()
+        if now - _gps_cache["ts"] < 90:
+            return {"vehiculos": _gps_cache["data"], "total": len(_gps_cache["data"]), "cached": True}
+        try:
+            data = _fetch_gps_all()
+            _gps_cache["data"] = data
+            _gps_cache["ts"]   = now
+            return {"vehiculos": data, "total": len(data), "cached": False}
+        except Exception as e:
+            logger.error(f"GPS TN360 error: {e}")
+            if _gps_cache["data"]:
+                return {"vehiculos": _gps_cache["data"], "total": len(_gps_cache["data"]), "cached": True, "stale": True}
+            raise HTTPException(500, f"Error GPS: {e}")
+
 # ─── Integraciones Externas ──────────────────────────────────────────────────
 
 @app.post("/api/integrations/execute")

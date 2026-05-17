@@ -1,6 +1,9 @@
 import { ThemeConfig } from '../types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_BASE } from '../../../config';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface TareaResumen {
   id: number;
@@ -423,9 +426,207 @@ function DesempenoTab({ theme }: { theme: ThemeConfig }) {
 }
 
 
+// ── GPS Interfaces ────────────────────────────────────────────────────────────
+interface Vehiculo {
+  id: number;
+  nombre: string;
+  placa: string;
+  lat: number;
+  lng: number;
+  velocidad: number;
+  direccion: number;
+  ultima_vez: string | null;
+  ubicacion: string;
+  activo: boolean;
+}
+
+function vehiculoIcon(activo: boolean) {
+  const color = activo ? '#00ff88' : '#00B4D8';
+  const svg = encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="14" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="2"/>
+      <circle cx="16" cy="16" r="6" fill="${color}"/>
+      ${activo ? `<circle cx="16" cy="16" r="14" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.5"/>` : ''}
+    </svg>`);
+  return L.divIcon({
+    html: `<img src="data:image/svg+xml,${svg}" width="32" height="32"/>`,
+    className: '', iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18],
+  });
+}
+
+function MapFitter({ vehiculos }: { vehiculos: Vehiculo[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (vehiculos.length === 0) return;
+    const bounds = L.latLngBounds(vehiculos.map(v => [v.lat, v.lng]));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+  }, [vehiculos.length]);
+  return null;
+}
+
+function GPSTab({ theme }: { theme: ThemeConfig }) {
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
+  const [selected, setSelected]   = useState<Vehiculo | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchGPS = useCallback(async () => {
+    try {
+      const res  = await fetch(`${API_BASE}/api/gps/vehiculos`);
+      const data = await res.json();
+      setVehiculos(data.vehiculos ?? []);
+      setLastUpdate(new Date().toLocaleTimeString('es-MX'));
+    } catch {
+      // silently keep stale data
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGPS();
+    intervalRef.current = setInterval(fetchGPS, 90_000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fetchGPS]);
+
+  const activos  = vehiculos.filter(v => v.activo).length;
+  const detenidos = vehiculos.length - activos;
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: 80, color: theme.dim }}>
+      Conectando a TN360...
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* KPI bar */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total unidades', val: vehiculos.length, col: theme.accent },
+          { label: 'En movimiento',  val: activos,           col: '#00ff88'  },
+          { label: 'Detenidas',      val: detenidos,         col: '#FFB703'  },
+        ].map(k => (
+          <div key={k.label} style={{ flex: 1, minWidth: 100, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '12px 16px' }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.col }}>{k.val}</div>
+            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2 }}>{k.label}</div>
+          </div>
+        ))}
+        <div style={{ flex: 1, minWidth: 100, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ fontSize: 10, color: theme.dim }}>Última actualización</div>
+          <div style={{ fontSize: 13, color: theme.text, fontWeight: 600, marginTop: 2 }}>{lastUpdate}</div>
+          <div style={{ fontSize: 9, color: theme.dim, marginTop: 2 }}>Refresco cada 90 seg</div>
+        </div>
+      </div>
+
+      {/* Mapa + lista lado a lado */}
+      <div style={{ display: 'flex', gap: 16, height: 480 }}>
+        {/* Mapa */}
+        <div style={{ flex: 1, borderRadius: 16, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
+          {vehiculos.length > 0 && (
+            <MapContainer
+              center={[vehiculos[0].lat, vehiculos[0].lng]}
+              zoom={10}
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={true}
+            >
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              />
+              <MapFitter vehiculos={vehiculos} />
+              {vehiculos.map(v => (
+                <Marker
+                  key={v.id}
+                  position={[v.lat, v.lng]}
+                  icon={vehiculoIcon(v.activo)}
+                  eventHandlers={{ click: () => setSelected(v) }}
+                >
+                  <Popup>
+                    <div style={{ fontFamily: 'sans-serif', fontSize: 12, minWidth: 160 }}>
+                      <b style={{ fontSize: 14 }}>{v.nombre}</b><br/>
+                      <span style={{ color: '#666' }}>{v.placa}</span><br/>
+                      <span style={{ color: v.activo ? '#00C896' : '#888' }}>
+                        {v.activo ? '🟢 En movimiento' : '🔵 Detenido'}
+                      </span><br/>
+                      <b>{v.velocidad} km/h</b><br/>
+                      <span style={{ color: '#666', fontSize: 10 }}>{v.ubicacion}</span><br/>
+                      <span style={{ color: '#aaa', fontSize: 10 }}>{v.ultima_vez}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          )}
+          {vehiculos.length === 0 && (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.dim }}>
+              Sin datos de GPS disponibles
+            </div>
+          )}
+        </div>
+
+        {/* Lista de vehículos */}
+        <div style={{ width: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {vehiculos.map(v => (
+            <div
+              key={v.id}
+              onClick={() => setSelected(v)}
+              style={{
+                padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                background: selected?.id === v.id ? `${theme.accent}15` : theme.card,
+                border: `1px solid ${selected?.id === v.id ? theme.accent + '60' : theme.border}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>{v.nombre}</span>
+                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: v.activo ? '#00ff8820' : '#00B4D820', color: v.activo ? '#00ff88' : '#00B4D8' }}>
+                  {v.activo ? '▶ mov' : '⏸ det'}
+                </span>
+              </div>
+              <div style={{ fontSize: 10, color: theme.dim, marginTop: 3 }}>{v.placa}</div>
+              <div style={{ fontSize: 10, color: theme.dim, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.ubicacion}</div>
+              <div style={{ fontSize: 11, color: v.activo ? '#00ff88' : theme.dim, marginTop: 2, fontWeight: v.activo ? 700 : 400 }}>
+                {v.velocidad > 0 ? `${v.velocidad} km/h` : 'Detenido'}
+                <span style={{ color: theme.dim, fontWeight: 400 }}> · {v.ultima_vez}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Detalle seleccionado */}
+      {selected && (
+        <div style={{ background: theme.card, border: `1px solid ${theme.accent}40`, borderRadius: 12, padding: 16, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim }}>UNIDAD</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: theme.text }}>{selected.nombre}</div>
+            <div style={{ fontSize: 11, color: theme.dim }}>{selected.placa}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim }}>VELOCIDAD</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: selected.activo ? '#00ff88' : theme.accent }}>{selected.velocidad} <span style={{ fontSize: 12 }}>km/h</span></div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: theme.dim }}>RUMBO</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: theme.text }}>{selected.direccion}°</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, color: theme.dim }}>ÚLTIMA UBICACIÓN</div>
+            <div style={{ fontSize: 12, color: theme.text, marginTop: 2 }}>{selected.ubicacion || '—'}</div>
+            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2 }}>{selected.ultima_vez}</div>
+          </div>
+          <button onClick={() => setSelected(null)} style={{ alignSelf: 'flex-start', padding: '4px 10px', borderRadius: 6, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, cursor: 'pointer', fontSize: 11 }}>✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Section ──────────────────────────────────────────────────────────────
 export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
-  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno'>('cuadrillas');
+  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno' | 'gps'>('cuadrillas');
   const [tecnicos, setTecnicos]       = useState<Tecnico[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -480,6 +681,7 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
         {([
           ['cuadrillas', '👷 Cuadrillas',   theme.accent],
           ['desempeno',  '🏆 Desempeño',    '#FFD700'],
+          ['gps',        '🗺 GPS en Vivo',  '#00ff88'],
         ] as const).map(([id, label, col]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === id ? 700 : 400,
@@ -493,6 +695,9 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
 
       {/* Desempeño tab */}
       {tab === 'desempeno' && <DesempenoTab theme={theme} />}
+
+      {/* GPS tab */}
+      {tab === 'gps' && <GPSTab theme={theme} />}
 
       {loading && tab === 'cuadrillas' && <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Conectando a Odoo Field Service...</div>}
       {error   && tab === 'cuadrillas' && <div style={{ padding: 16, borderRadius: 8, background: '#FF475710', color: '#FF4757', fontSize: 12 }}>Error: {error}</div>}
@@ -595,8 +800,8 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
 
       {/* Nota */}
       <div style={{ background: 'rgba(0,180,216,0.05)', border: `1px solid ${theme.border}`, borderRadius: 12, padding: 20, fontSize: 12, color: theme.dim }}>
-        🔦 <b style={{ color: theme.text }}>Bidrilla Fibra Óptica</b> — Iván y Marroquín. Datos en vivo desde <b>Odoo Field Service</b>.
-        Haz clic en cualquier tarea para ver el detalle, comentar o cambiar etapa.
+        🔦 <b style={{ color: theme.text }}>Cuadrillas Fibra Óptica</b> — Datos en vivo desde <b>Odoo Field Service</b>.
+        Haz clic en cualquier tarea para ver detalle, comentar o cambiar etapa. GPS en vivo vía <b>TN360</b>.
       </div>
 
       {/* Task Drawer */}
