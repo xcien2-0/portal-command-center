@@ -158,6 +158,172 @@ function EmpresaBadge({ name }: { name: string }) {
   );
 }
 
+// ── Nueva Transacción Form ────────────────────────────────────────────────────
+const EMPTY_FORM = {
+  empresa_origen: '', empresa_destino: '',
+  area_origen: '',    area_destino: '',
+  concepto: '',
+  precio_mercado: '',
+  precio_preferencial: '',
+  responsable: '',
+};
+
+function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
+  theme: ThemeConfig; accent: string;
+  onSuccess: () => void; onClose: () => void;
+}) {
+  const [form, setForm]       = useState({ ...EMPTY_FORM });
+  const [enviando, setEnviar] = useState(false);
+  const [error, setError]     = useState('');
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const mercado  = parseFloat(form.precio_mercado)      || 0;
+  const pref     = parseFloat(form.precio_preferencial) || 0;
+  const descuento = mercado > 0 && pref > 0 ? Math.round((1 - pref / mercado) * 100) : 0;
+  const tokens    = pref > 0 ? Math.round(pref) : 0;
+
+  const enviar = async () => {
+    const required = ['empresa_origen','empresa_destino','area_origen','area_destino','concepto','precio_preferencial'];
+    if (required.some(k => !form[k as keyof typeof form])) { setError('Completa todos los campos obligatorios.'); return; }
+    if (form.empresa_origen === form.empresa_destino) { setError('Origen y destino deben ser empresas distintas.'); return; }
+    setError(''); setEnviar(true);
+    try {
+      const res = await fetch(`${API}/api/transacciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          precio_mercado:      parseFloat(form.precio_mercado)      || 0,
+          precio_preferencial: parseFloat(form.precio_preferencial) || 0,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); setError(d.detail || 'Error al registrar.'); return; }
+      onSuccess();
+      onClose();
+    } catch { setError('No se pudo conectar al servidor.'); }
+    finally   { setEnviar(false); }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: theme.bg, border: `1px solid ${theme.border}`,
+    borderRadius: 8, padding: '8px 12px', fontSize: 13, color: theme.text,
+    outline: 'none', boxSizing: 'border-box',
+  };
+  const selectStyle = { ...inputStyle };
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: theme.dim, marginBottom: 4, display: 'block' };
+  const field = (label: string, node: React.ReactNode) => (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <label style={labelStyle}>{label}</label>
+      {node}
+    </div>
+  );
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: theme.card, border: `1px solid ${theme.border}`,
+        borderRadius: 16, padding: 28, width: 560, maxWidth: '95vw',
+        maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20,
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nueva Transacción Intragrupo</h3>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: theme.dim }}>Registra el flujo de servicio entre empresas</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.dim, fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Empresas */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {field('Empresa origen *',
+            <select style={selectStyle} value={form.empresa_origen} onChange={e => set('empresa_origen', e.target.value)}>
+              <option value="">Selecciona…</option>
+              {EMPRESAS.map(e => <option key={e} value={e}>{e.toUpperCase()}</option>)}
+            </select>
+          )}
+          {field('Empresa destino *',
+            <select style={selectStyle} value={form.empresa_destino} onChange={e => set('empresa_destino', e.target.value)}>
+              <option value="">Selecciona…</option>
+              {EMPRESAS.map(e => <option key={e} value={e}>{e.toUpperCase()}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Áreas */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {field('Área origen *',
+            <select style={selectStyle} value={form.area_origen} onChange={e => set('area_origen', e.target.value)}>
+              <option value="">Selecciona…</option>
+              {Object.keys(AREA_ICON).map(a => <option key={a} value={a}>{AREA_ICON[a]} {a}</option>)}
+            </select>
+          )}
+          {field('Área destino *',
+            <select style={selectStyle} value={form.area_destino} onChange={e => set('area_destino', e.target.value)}>
+              <option value="">Selecciona…</option>
+              {Object.keys(AREA_ICON).map(a => <option key={a} value={a}>{AREA_ICON[a]} {a}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Concepto */}
+        {field('Concepto / servicio *',
+          <input style={inputStyle} placeholder="Ej: Soporte técnico NOC, Renta de equipo…"
+            value={form.concepto} onChange={e => set('concepto', e.target.value)} />
+        )}
+
+        {/* Precios */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {field('Precio de mercado',
+            <input style={inputStyle} type="number" placeholder="0.00" min={0}
+              value={form.precio_mercado} onChange={e => set('precio_mercado', e.target.value)} />
+          )}
+          {field('Precio preferencial *',
+            <input style={inputStyle} type="number" placeholder="0.00" min={0}
+              value={form.precio_preferencial} onChange={e => set('precio_preferencial', e.target.value)} />
+          )}
+        </div>
+
+        {/* Preview */}
+        {pref > 0 && (
+          <div style={{ background: `${accent}10`, border: `1px solid ${accent}30`, borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 24 }}>
+            {descuento > 0 && <div><div style={{ fontSize: 18, fontWeight: 700, color: '#00C896' }}>-{descuento}%</div><div style={{ fontSize: 10, color: theme.dim }}>descuento</div></div>}
+            {descuento > 0 && <div><div style={{ fontSize: 18, fontWeight: 700, color: accent }}>{fmt(mercado - pref)}</div><div style={{ fontSize: 10, color: theme.dim }}>ahorro</div></div>}
+            <div><div style={{ fontSize: 18, fontWeight: 700, color: '#FFB703' }}>{tokens.toLocaleString('es-MX')} 🪙</div><div style={{ fontSize: 10, color: theme.dim }}>tokens a emitir</div></div>
+          </div>
+        )}
+
+        {/* Responsable */}
+        {field('Responsable',
+          <input style={inputStyle} placeholder="Nombre del responsable"
+            value={form.responsable} onChange={e => set('responsable', e.target.value)} />
+        )}
+
+        {error && <div style={{ fontSize: 12, color: '#FF4757', background: 'rgba(255,71,87,0.1)', padding: '8px 12px', borderRadius: 8 }}>{error}</div>}
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 20px', borderRadius: 8, border: `1px solid ${theme.border}`, background: 'none', color: theme.dim, cursor: 'pointer', fontSize: 13 }}>
+            Cancelar
+          </button>
+          <button onClick={enviar} disabled={enviando} style={{
+            padding: '8px 24px', borderRadius: 8, border: 'none',
+            background: enviando ? theme.border : accent, color: '#fff',
+            cursor: enviando ? 'default' : 'pointer', fontWeight: 600, fontSize: 13,
+          }}>
+            {enviando ? 'Registrando…' : 'Registrar transacción'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tokens View ───────────────────────────────────────────────────────────────
 function TokensView({ theme, accent }: { theme: ThemeConfig; accent: string }) {
   const [data, setData]       = useState<TokensResumen | null>(null);
@@ -280,8 +446,9 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   const [backendOnline, setOnline]  = useState(false);
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [vista, setVista]           = useState<'tablero' | 'lista' | 'tokens'>('tablero');
+  const [showForm, setShowForm]     = useState(false);
 
-  useEffect(() => {
+  const cargarDatos = () => {
     Promise.all([
       fetch(`${API}/api/transacciones/resumen`).then(r => r.json()),
       fetch(`${API}/api/transacciones`).then(r => r.json()),
@@ -289,7 +456,9 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
       if (res.total_tx !== undefined) { setResumen(res); setOnline(true); }
       if (Array.isArray(lista)) setTxs(lista);
     }).catch(() => setOnline(false));
-  }, []);
+  };
+
+  useEffect(() => { cargarDatos(); }, []);
 
   const txsFiltradas = (txs.length > 0 ? txs : resumen.recientes).filter(t =>
     filtroEmp === 'todas' || t.empresa_origen === filtroEmp || t.empresa_destino === filtroEmp
@@ -311,6 +480,14 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
       {activeThemeId === 'matrix' && <MatrixBackground />}
 
+      {showForm && (
+        <NuevaTxForm
+          theme={theme} accent={accent}
+          onClose={() => setShowForm(false)}
+          onSuccess={() => { cargarDatos(); setVista('lista'); }}
+        />
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
@@ -318,10 +495,16 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
           <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Flujo de servicios y recursos entre empresas del grupo · precio preferencial</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button style={tabStyle(vista === 'tablero')} onClick={() => setVista('tablero')}>Tablero</button>
             <button style={tabStyle(vista === 'lista')}   onClick={() => setVista('lista')}>Transacciones</button>
             <button style={tabStyle(vista === 'tokens')}  onClick={() => setVista('tokens')}>🪙 Tokens</button>
+            <button
+              onClick={() => setShowForm(true)}
+              style={{ padding: '5px 14px', borderRadius: 20, border: 'none', background: accent, color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}
+            >
+              + Nueva
+            </button>
           </div>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: backendOnline ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: backendOnline ? '#00C896' : '#FF4757', border: `1px solid ${backendOnline ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
             {backendOnline ? '● En vivo' : '● Demo'}
