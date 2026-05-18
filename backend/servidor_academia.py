@@ -961,6 +961,13 @@ def listar_transacciones(empresa_origen: str = None, empresa_destino: str = None
 def resumen_transacciones():
     return transacciones_service.resumen()
 
+@app.delete("/api/transacciones/{tx_id}")
+def eliminar_transaccion(tx_id: str):
+    ok = transacciones_service.eliminar(tx_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Transacción no encontrada")
+    return {"ok": True}
+
 @app.get("/api/transacciones/catalogos")
 def catalogos_transacciones():
     return {"empresas": transacciones_service.EMPRESAS, "areas": transacciones_service.AREAS}

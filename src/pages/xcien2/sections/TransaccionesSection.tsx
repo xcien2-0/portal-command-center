@@ -447,6 +447,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [vista, setVista]           = useState<'tablero' | 'lista' | 'tokens'>('tablero');
   const [showForm, setShowForm]     = useState(false);
+  const [eliminando, setEliminando] = useState<string | null>(null);
 
   const cargarDatos = () => {
     Promise.all([
@@ -459,6 +460,15 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   };
 
   useEffect(() => { cargarDatos(); }, []);
+
+  const eliminarTx = async (tx_id: string) => {
+    if (!confirm(`¿Eliminar transacción ${tx_id}?`)) return;
+    setEliminando(tx_id);
+    try {
+      await fetch(`${API}/api/transacciones/${tx_id}`, { method: 'DELETE' });
+      cargarDatos();
+    } finally { setEliminando(null); }
+  };
 
   const txsFiltradas = (txs.length > 0 ? txs : resumen.recientes).filter(t =>
     filtroEmp === 'todas' || t.empresa_origen === filtroEmp || t.empresa_destino === filtroEmp
@@ -624,9 +634,16 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
                       <span style={{ fontSize: 11, color: '#FFB703' }}>-{tx.descuento_pct}%</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ fontSize: 10, fontFamily: 'monospace', color: theme.dim }}>{tx.tx_id}</span>
                     <span style={{ fontSize: 11, color: theme.dim }}>{fmtDate(tx.fecha)}</span>
+                    <button
+                      onClick={() => eliminarTx(tx.tx_id)}
+                      disabled={eliminando === tx.tx_id}
+                      style={{ fontSize: 10, padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(255,71,87,0.3)', background: 'rgba(255,71,87,0.08)', color: '#FF4757', cursor: 'pointer' }}
+                    >
+                      {eliminando === tx.tx_id ? '…' : 'Eliminar'}
+                    </button>
                   </div>
                 </div>
               ))}

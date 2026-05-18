@@ -103,6 +103,22 @@ def listar(empresa_origen: str = None, empresa_destino: str = None, area: str = 
     return data
 
 
+def eliminar(tx_id: str) -> bool:
+    data = _cargar()
+    nueva = [t for t in data if t.get("tx_id") != tx_id]
+    if len(nueva) == len(data):
+        return False
+    _guardar(nueva)
+    # Eliminar token de área asociado
+    try:
+        from agents import token_service
+        tokens = token_service._cargar_tx_tokens()
+        token_service._guardar_tx_tokens([t for t in tokens if t.get("tx_id") != tx_id])
+    except Exception:
+        pass
+    return True
+
+
 def resumen() -> dict:
     data = _cargar()
     if not data:
