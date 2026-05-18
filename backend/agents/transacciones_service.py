@@ -103,6 +103,50 @@ def listar(empresa_origen: str = None, empresa_destino: str = None, area: str = 
     return data
 
 
+def actualizar(tx_id: str, cambios: dict) -> dict | None:
+    data = _cargar()
+    idx  = next((i for i, t in enumerate(data) if t.get("tx_id") == tx_id), None)
+    if idx is None:
+        return None
+
+    tx = data[idx]
+    campos_editables = ['empresa_origen','empresa_destino','area_origen','area_destino',
+                        'concepto','precio_mercado','precio_preferencial','responsable','notas']
+    for k, v in cambios.items():
+        if k in campos_editables and v is not None:
+            tx[k] = v
+
+    # Recalcular derived fields
+    pm   = tx.get('precio_mercado', 0) or 0
+    pp   = tx.get('precio_preferencial', 0) or 0
+    tx['descuento_pct'] = round((1 - pp / pm) * 100, 1) if pm > 0 else 0
+    tx['ahorro']        = round(pm - pp, 2)
+    tx['firma']         = _firmar({k: v for k, v in tx.items() if k != 'firma'})
+
+    data[idx] = tx
+    _guardar(data)
+
+    # Actualizar token de área asociado
+    try:
+        from agents import token_service
+        tokens = token_service._cargar_tx_tokens()
+        for t in tokens:
+            if t.get('tx_id') == tx_id:
+                t['area_origen']     = tx.get('area_origen', t['area_origen'])
+                t['area_destino']    = tx.get('area_destino', t['area_destino'])
+                t['empresa_origen']  = tx.get('empresa_origen', t['empresa_origen'])
+                t['empresa_destino'] = tx.get('empresa_destino', t['empresa_destino'])
+                t['concepto']        = tx.get('concepto', t['concepto'])
+                t['valor_pesos']     = pp
+                t['tokens']          = max(1, round(pp * token_service.TOKEN_POR_PESO))
+                t['firma']           = token_service._firmar({k: v for k, v in t.items() if k != 'firma'})
+        token_service._guardar_tx_tokens(tokens)
+    except Exception:
+        pass
+
+    return tx
+
+
 def eliminar(tx_id: str) -> bool:
     data = _cargar()
     nueva = [t for t in data if t.get("tx_id") != tx_id]

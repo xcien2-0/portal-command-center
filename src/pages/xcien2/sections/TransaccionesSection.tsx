@@ -168,11 +168,21 @@ const EMPTY_FORM = {
   responsable: '',
 };
 
-function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
+function NuevaTxForm({ theme, accent, onSuccess, onClose, editTx }: {
   theme: ThemeConfig; accent: string;
   onSuccess: () => void; onClose: () => void;
+  editTx?: Transaccion;
 }) {
-  const [form, setForm]       = useState({ ...EMPTY_FORM });
+  const [form, setForm]       = useState(editTx ? {
+    empresa_origen:      editTx.empresa_origen,
+    empresa_destino:     editTx.empresa_destino,
+    area_origen:         editTx.area_origen,
+    area_destino:        editTx.area_destino,
+    concepto:            editTx.concepto,
+    precio_mercado:      String(editTx.precio_mercado),
+    precio_preferencial: String(editTx.precio_preferencial),
+    responsable:         editTx.responsable ?? '',
+  } : { ...EMPTY_FORM });
   const [enviando, setEnviar] = useState(false);
   const [error, setError]     = useState('');
 
@@ -189,8 +199,10 @@ function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
     if (form.empresa_origen === form.empresa_destino) { setError('Origen y destino deben ser empresas distintas.'); return; }
     setError(''); setEnviar(true);
     try {
-      const res = await fetch(`${API}/api/transacciones`, {
-        method: 'POST',
+      const url    = editTx ? `${API}/api/transacciones/${editTx.tx_id}` : `${API}/api/transacciones`;
+      const method = editTx ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
@@ -198,7 +210,7 @@ function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
           precio_preferencial: parseFloat(form.precio_preferencial) || 0,
         }),
       });
-      if (!res.ok) { const d = await res.json(); setError(d.detail || 'Error al registrar.'); return; }
+      if (!res.ok) { const d = await res.json(); setError(d.detail || 'Error al guardar.'); return; }
       onSuccess();
       onClose();
     } catch { setError('No se pudo conectar al servidor.'); }
@@ -233,8 +245,8 @@ function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nueva Transacción Intragrupo</h3>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: theme.dim }}>Registra el flujo de servicio entre empresas</p>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editTx ? 'Editar Transacción' : 'Nueva Transacción Intragrupo'}</h3>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: theme.dim }}>{editTx ? editTx.tx_id : 'Registra el flujo de servicio entre empresas'}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.dim, fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
@@ -316,7 +328,7 @@ function NuevaTxForm({ theme, accent, onSuccess, onClose }: {
             background: enviando ? theme.border : accent, color: '#fff',
             cursor: enviando ? 'default' : 'pointer', fontWeight: 600, fontSize: 13,
           }}>
-            {enviando ? 'Registrando…' : 'Registrar transacción'}
+            {enviando ? 'Guardando…' : editTx ? 'Guardar cambios' : 'Registrar transacción'}
           </button>
         </div>
       </div>
@@ -447,6 +459,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [vista, setVista]           = useState<'tablero' | 'lista' | 'tokens'>('tablero');
   const [showForm, setShowForm]     = useState(false);
+  const [editTx, setEditTx]         = useState<Transaccion | undefined>(undefined);
   const [eliminando, setEliminando] = useState<string | null>(null);
 
   const cargarDatos = () => {
@@ -493,7 +506,8 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
       {showForm && (
         <NuevaTxForm
           theme={theme} accent={accent}
-          onClose={() => setShowForm(false)}
+          editTx={editTx}
+          onClose={() => { setShowForm(false); setEditTx(undefined); }}
           onSuccess={() => { cargarDatos(); setVista('lista'); }}
         />
       )}
@@ -637,13 +651,21 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', gap: 6 }}>
                     <span style={{ fontSize: 10, fontFamily: 'monospace', color: theme.dim }}>{tx.tx_id}</span>
                     <span style={{ fontSize: 11, color: theme.dim }}>{fmtDate(tx.fecha)}</span>
-                    <button
-                      onClick={() => eliminarTx(tx.tx_id)}
-                      disabled={eliminando === tx.tx_id}
-                      style={{ fontSize: 10, padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(255,71,87,0.3)', background: 'rgba(255,71,87,0.08)', color: '#FF4757', cursor: 'pointer' }}
-                    >
-                      {eliminando === tx.tx_id ? '…' : 'Eliminar'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => { setEditTx(tx); setShowForm(true); }}
+                        style={{ fontSize: 10, padding: '3px 10px', borderRadius: 6, border: `1px solid ${accent}40`, background: `${accent}10`, color: accent, cursor: 'pointer' }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => eliminarTx(tx.tx_id)}
+                        disabled={eliminando === tx.tx_id}
+                        style={{ fontSize: 10, padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(255,71,87,0.3)', background: 'rgba(255,71,87,0.08)', color: '#FF4757', cursor: 'pointer' }}
+                      >
+                        {eliminando === tx.tx_id ? '…' : 'Eliminar'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

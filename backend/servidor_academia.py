@@ -272,6 +272,17 @@ class TransaccionRequest(BaseModel):
     referencia: str = ""
     notas: str = ""
 
+class TransaccionUpdateRequest(BaseModel):
+    empresa_origen: str = None
+    empresa_destino: str = None
+    area_origen: str = None
+    area_destino: str = None
+    concepto: str = None
+    precio_mercado: float = None
+    precio_preferencial: float = None
+    responsable: str = None
+    notas: str = None
+
 class ActivoRequest(BaseModel):
     nombre: str
     categoria: str
@@ -960,6 +971,13 @@ def listar_transacciones(empresa_origen: str = None, empresa_destino: str = None
 @app.get("/api/transacciones/resumen")
 def resumen_transacciones():
     return transacciones_service.resumen()
+
+@app.put("/api/transacciones/{tx_id}")
+def actualizar_transaccion(tx_id: str, req: TransaccionUpdateRequest):
+    tx = transacciones_service.actualizar(tx_id, req.dict(exclude_none=True))
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transacción no encontrada")
+    return tx
 
 @app.delete("/api/transacciones/{tx_id}")
 def eliminar_transaccion(tx_id: str):
