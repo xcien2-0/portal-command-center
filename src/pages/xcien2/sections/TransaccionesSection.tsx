@@ -110,26 +110,9 @@ const AREA_ICON: Record<string, string> = {
 const EMPRESAS = ['xcien', 'luminet', 'wispi', 'huus'];
 
 const DEMO: Resumen = {
-  total_tx: 8, valor_total: 37100, ahorro_total: 36600,
-  matriz: {
-    'xcien→luminet':  { count: 3, valor: 8000 },
-    'xcien→wispi':    { count: 2, valor: 5600 },
-    'xcien→huus':     { count: 1, valor: 2000 },
-    'luminet→xcien':  { count: 2, valor: 13200 },
-    'luminet→wispi':  { count: 1, valor: 7500 },
-    'wispi→xcien':    { count: 1, valor: 3200 },
-    'huus→luminet':   { count: 1, valor: 6000 },
-  },
-  por_area: {
-    noc:             { count: 3, como_origen: 2, como_destino: 1, valor: 14000 },
-    campo:           { count: 3, como_origen: 1, como_destino: 2, valor: 13100 },
-    infraestructura: { count: 2, como_origen: 2, como_destino: 0, valor: 17500 },
-    almacen:         { count: 2, como_origen: 1, como_destino: 1, valor: 5200 },
-    admin:           { count: 2, como_origen: 0, como_destino: 2, valor: 8000 },
-    finanzas:        { count: 1, como_origen: 1, como_destino: 0, valor: 6000 },
-    comercial:       { count: 1, como_origen: 1, como_destino: 0, valor: 2000 },
-    academia:        { count: 1, como_origen: 1, como_destino: 0, valor: 2400 },
-  },
+  total_tx: 0, valor_total: 0, ahorro_total: 0,
+  matriz: {},
+  por_area: {},
   recientes: [],
 };
 
