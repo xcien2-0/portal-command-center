@@ -965,6 +965,14 @@ def resumen_transacciones():
 def catalogos_transacciones():
     return {"empresas": transacciones_service.EMPRESAS, "areas": transacciones_service.AREAS}
 
+@app.get("/api/transacciones/tokens")
+def tokens_areas():
+    return token_service.saldos_areas()
+
+@app.get("/api/transacciones/tokens/{token_id}/verificar")
+def verificar_token_area(token_id: str):
+    return token_service.verificar_tx_token(token_id)
+
 # ─── Etiquetas & Comprobantes ─────────────────────────────────────────────────
 from fastapi.responses import HTMLResponse
 

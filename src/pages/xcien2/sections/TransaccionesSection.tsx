@@ -58,6 +58,36 @@ interface Resumen {
   recientes: Transaccion[];
 }
 
+interface AreaToken {
+  area: string;
+  ganados: number;
+  gastados: number;
+  saldo: number;
+  valor_generado: number;
+  valor_consumido: number;
+  txs: number;
+}
+
+interface TokenHistorial {
+  token_id: string;
+  tx_id: string;
+  area_origen: string;
+  area_destino: string;
+  empresa_origen: string;
+  empresa_destino: string;
+  concepto: string;
+  valor_pesos: number;
+  tokens: number;
+  emitido_en: string;
+}
+
+interface TokensResumen {
+  areas: AreaToken[];
+  total_tokens_emitidos: number;
+  total_txs: number;
+  historial: TokenHistorial[];
+}
+
 // ── Colores ───────────────────────────────────────────────────────────────────
 const EMPRESA_COLOR: Record<string, string> = {
   xcien:   '#00C896',
@@ -128,6 +158,119 @@ function EmpresaBadge({ name }: { name: string }) {
   );
 }
 
+// ── Tokens View ───────────────────────────────────────────────────────────────
+function TokensView({ theme, accent }: { theme: ThemeConfig; accent: string }) {
+  const [data, setData]       = useState<TokensResumen | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/transacciones/tokens`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Cargando tokens…</div>;
+
+  const areas = data?.areas ?? [];
+  const maxAbs = Math.max(1, ...areas.map(a => Math.max(a.ganados, a.gastados)));
+
+  if (areas.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>🪙</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 6 }}>Sin tokens emitidos aún</div>
+      <div style={{ fontSize: 12 }}>Los tokens se generan automáticamente al registrar una transacción intragrupo.</div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+        {[
+          { label: 'Tokens en circulación', value: (data?.total_tokens_emitidos ?? 0).toLocaleString('es-MX'), color: '#FFB703' },
+          { label: 'Transacciones tokenizadas', value: String(data?.total_txs ?? 0), color: accent },
+          { label: 'Áreas activas', value: String(areas.length), color: '#00C896' },
+        ].map(k => (
+          <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px 18px' }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 11, color: theme.dim, marginTop: 6 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Ranking de áreas */}
+      <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, overflow: 'hidden' }}>
+        <div style={{ padding: '14px 18px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Saldo de tokens por área</span>
+          <span style={{ fontSize: 11, color: theme.dim }}>🟢 Proveedora &nbsp;🔴 Consumidora</span>
+        </div>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {areas.map(a => {
+            const positivo = a.saldo >= 0;
+            const pctGanado  = (a.ganados  / maxAbs) * 100;
+            const pctGastado = (a.gastados / maxAbs) * 100;
+            return (
+              <div key={a.area}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>{AREA_ICON[a.area] || '📌'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}>{a.area}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: '#00C896' }}>+{a.ganados} 🪙</span>
+                    <span style={{ fontSize: 10, color: '#FF4757' }}>-{a.gastados} 🪙</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: positivo ? '#00C896' : '#FF4757', minWidth: 60, textAlign: 'right' }}>
+                      {positivo ? '+' : ''}{a.saldo} 🪙
+                    </span>
+                  </div>
+                </div>
+                {/* Barra doble: ganados (verde) y gastados (rojo) */}
+                <div style={{ height: 6, background: theme.border, borderRadius: 3, overflow: 'hidden', display: 'flex', gap: 2 }}>
+                  <div style={{ width: `${pctGanado}%`, background: '#00C896', borderRadius: 3, transition: 'width .4s' }} />
+                  <div style={{ width: `${pctGastado}%`, background: '#FF4757', borderRadius: 3, transition: 'width .4s' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Historial reciente */}
+      {(data?.historial ?? []).length > 0 && (
+        <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${theme.border}` }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Historial de emisiones</span>
+          </div>
+          <div style={{ padding: '8px 0' }}>
+            {data!.historial.map(t => (
+              <div key={t.token_id} style={{ padding: '10px 18px', borderBottom: `1px solid ${theme.border}`, display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>{t.area_origen}</span>
+                    <span style={{ fontSize: 10, color: theme.dim }}>→</span>
+                    <span style={{ fontSize: 11, textTransform: 'capitalize', color: theme.dim }}>{t.area_destino}</span>
+                    <span style={{ fontSize: 10, color: theme.dim }}>·</span>
+                    <EmpresaBadge name={t.empresa_origen} />
+                    <span style={{ fontSize: 10, color: theme.dim }}>→</span>
+                    <EmpresaBadge name={t.empresa_destino} />
+                  </div>
+                  <div style={{ fontSize: 11, color: theme.dim }}>{t.concepto}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#FFB703' }}>+{t.tokens} 🪙</span>
+                  <span style={{ fontSize: 10, color: theme.dim }}>{fmt(t.valor_pesos)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 
@@ -136,7 +279,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   const [txs, setTxs]               = useState<Transaccion[]>([]);
   const [backendOnline, setOnline]  = useState(false);
   const [filtroEmp, setFiltroEmp]   = useState('todas');
-  const [vista, setVista]           = useState<'tablero' | 'lista'>('tablero');
+  const [vista, setVista]           = useState<'tablero' | 'lista' | 'tokens'>('tablero');
 
   useEffect(() => {
     Promise.all([
@@ -178,6 +321,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
           <div style={{ display: 'flex', gap: 6 }}>
             <button style={tabStyle(vista === 'tablero')} onClick={() => setVista('tablero')}>Tablero</button>
             <button style={tabStyle(vista === 'lista')}   onClick={() => setVista('lista')}>Transacciones</button>
+            <button style={tabStyle(vista === 'tokens')}  onClick={() => setVista('tokens')}>🪙 Tokens</button>
           </div>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: backendOnline ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: backendOnline ? '#00C896' : '#FF4757', border: `1px solid ${backendOnline ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
             {backendOnline ? '● En vivo' : '● Demo'}
@@ -307,6 +451,8 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
           )}
         </div>
       )}
+
+      {vista === 'tokens' && <TokensView theme={theme} accent={accent} />}
     </div>
   );
 }

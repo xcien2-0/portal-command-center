@@ -5,6 +5,7 @@ import hmac
 import hashlib
 import uuid
 from datetime import datetime, timezone
+from agents import token_service
 
 _SECRET   = os.environ.get("TOKEN_SECRET", "xcien-secret-2026")
 _DB_PATH  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "db", "transacciones.json")
@@ -72,6 +73,21 @@ def registrar(
     data = _cargar()
     data.append(payload)
     _guardar(data)
+
+    # Emitir token de área automáticamente
+    try:
+        token_service.emitir_tx_area(
+            tx_id=payload["tx_id"],
+            area_origen=area_origen,
+            area_destino=area_destino,
+            empresa_origen=empresa_origen,
+            empresa_destino=empresa_destino,
+            concepto=concepto,
+            valor_pesos=precio_preferencial,
+        )
+    except Exception as e:
+        print(f"⚠️ Token área no emitido: {e}")
+
     print(f"✅ TX registrada: {payload['tx_id']} | {empresa_origen.upper()} → {empresa_destino.upper()} | ${precio_preferencial:,.0f}")
     return payload
 
