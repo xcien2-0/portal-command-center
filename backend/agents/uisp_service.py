@@ -76,28 +76,74 @@ async def get_devices() -> list[dict]:
     return devices
 
 
+def _infer_frequency(model: str, channel_width) -> str:
+    """Infiere la frecuencia de un enlace a partir del modelo y ancho de canal."""
+    m = (model or "").upper()
+    if any(x in m for x in ["AF60", "AIRFIBER 60", "WAVE", "60G"]):
+        return "60 GHz"
+    if any(x in m for x in ["AF24", "AIRFIBER 24"]):
+        return "24 GHz"
+    if any(x in m for x in ["AF5", "AIRFIBER 5", "AIRFIBER8"]):
+        return "5 GHz"
+    if channel_width and channel_width >= 1000:
+        return "60 GHz"
+    # airMax: casi siempre 5 GHz
+    return "5 GHz"
+
+
+def _link_quality(link_score, signal) -> str:
+    """Calidad del enlace en palabras."""
+    if link_score is not None:
+        pct = round(link_score * 100)
+        if pct >= 80: return f"Excelente ({pct}%)"
+        if pct >= 60: return f"Buena ({pct}%)"
+        if pct >= 40: return f"Regular ({pct}%)"
+        return f"Mala ({pct}%)"
+    if signal is not None:
+        if signal >= -60: return "Excelente"
+        if signal >= -70: return "Buena"
+        if signal >= -80: return "Regular"
+        return "Mala"
+    return "Desconocida"
+
+
 async def get_data_links() -> list[dict]:
     """Conexiones entre dispositivos para la topología."""
     raw = await _get("/data-links")
     links = []
     for lnk in raw:
-        from_dev = lnk.get("from", {}).get("device", {})
-        to_dev = lnk.get("to", {}).get("device", {})
+        from_dev  = lnk.get("from", {}).get("device", {})
+        to_dev    = lnk.get("to", {}).get("device", {})
         from_site = lnk.get("from", {}).get("site", {})
-        to_site = lnk.get("to", {}).get("site", {})
+        to_site   = lnk.get("to", {}).get("site", {})
 
         from_id = from_dev.get("identification", {}).get("id") if from_dev else None
-        to_id = to_dev.get("identification", {}).get("id") if to_dev else None
+        to_id   = to_dev.get("identification", {}).get("id") if to_dev else None
 
         if not from_id or not to_id:
             continue
 
+        from_ov    = (from_dev.get("overview") or {}) if from_dev else {}
+        from_ident = (from_dev.get("identification") or {}) if from_dev else {}
+        model      = from_ident.get("modelName") or from_ident.get("model") or ""
+        ch_width   = from_ov.get("channelWidth")
+        signal     = from_ov.get("signal")
+        link_score = (from_ov.get("linkScore") or {}).get("linkScore")
+        mode       = from_ov.get("wirelessMode", "")
+
         links.append({
             "id": lnk.get("id"),
             "from_device_id": from_id,
-            "to_device_id": to_id,
+            "to_device_id":   to_id,
             "from_site": from_site.get("identification", {}).get("name") if from_site else None,
-            "to_site": to_site.get("identification", {}).get("name") if to_site else None,
+            "to_site":   to_site.get("identification", {}).get("name")   if to_site   else None,
+            "model":       model,
+            "frequency":   _infer_frequency(model, ch_width),
+            "channel_width": ch_width,
+            "signal":      signal,
+            "link_score":  round(link_score * 100) if link_score is not None else None,
+            "quality":     _link_quality(link_score, signal),
+            "mode":        mode,
         })
     return links
 
@@ -180,13 +226,20 @@ async def get_topology_geo() -> list[dict]:
         tc = sites_coords.get(ts)
         if fc and tc and fs != ts:
             uisp_links.append({
-                "id": lnk["id"],
-                "vendor": "Ubiquiti",
-                "from_site": fs,
-                "to_site": ts,
-                "from_lat": fc["lat"], "from_lng": fc["lng"],
-                "to_lat": tc["lat"],   "to_lng": tc["lng"],
-                "status": "active",
+                "id":          lnk["id"],
+                "vendor":      "Ubiquiti",
+                "from_site":   fs,
+                "to_site":     ts,
+                "from_lat":    fc["lat"], "from_lng": fc["lng"],
+                "to_lat":      tc["lat"], "to_lng":   tc["lng"],
+                "status":      "active",
+                "frequency":   lnk.get("frequency",   "5 GHz"),
+                "channel_width": lnk.get("channel_width"),
+                "signal":      lnk.get("signal"),
+                "link_score":  lnk.get("link_score"),
+                "quality":     lnk.get("quality", "Desconocida"),
+                "mode":        lnk.get("mode", ""),
+                "model":       lnk.get("model", ""),
             })
 
     # ── NOCBoard MU→RU inter-city links ───────────────────────────────────────

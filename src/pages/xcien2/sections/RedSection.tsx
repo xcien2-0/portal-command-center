@@ -54,6 +54,13 @@ interface TopoLink {
   from_lat: number; from_lng: number;
   to_lat: number; to_lng: number;
   status: string;
+  frequency?: string;
+  channel_width?: number;
+  signal?: number;
+  link_score?: number;
+  quality?: string;
+  mode?: string;
+  model?: string;
 }
 
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
@@ -489,18 +496,44 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
       : topoLinks.filter(l => vendorFilter.includes(l.vendor));
 
     filtered.forEach(link => {
-      const vc     = VENDOR_COLORS[link.vendor] || '#6b7280';
-      const isUp   = link.status === 'active' || link.status === 'online';
-      const color  = isUp ? vc : COLOR_OFFLINE;
-      const weight = isUp ? 2 : 1.5;
-      const opacity = isUp ? 0.7 : 0.4;
+      const vc    = VENDOR_COLORS[link.vendor] || '#6b7280';
+      const isUp  = link.status === 'active' || link.status === 'online';
+      const score = link.link_score;
+      const lineColor = !isUp ? COLOR_OFFLINE
+        : score == null ? vc
+        : score >= 80 ? COLOR_ONLINE
+        : score >= 60 ? COLOR_WARN
+        : COLOR_OFFLINE;
+      const weight  = isUp ? 2.5 : 1.5;
+      const opacity = isUp ? 0.8 : 0.35;
+
+      const freqBadge = link.frequency
+        ? `<span style="background:${vc}33;color:${vc};padding:1px 6px;border-radius:8px;font-size:10px">${link.frequency}</span>`
+        : '';
+      const bwBadge = link.channel_width
+        ? `<span style="color:rgba(255,255,255,0.4);font-size:10px">BW: ${link.channel_width} MHz</span>`
+        : '';
+      const qualityColor = !score ? '#6b7280' : score >= 80 ? COLOR_ONLINE : score >= 60 ? COLOR_WARN : COLOR_OFFLINE;
+      const qualityLine = link.quality
+        ? `<div style="margin-top:4px">Calidad: <span style="color:${qualityColor};font-weight:700">${link.quality}</span></div>`
+        : '';
+      const signalLine = link.signal != null
+        ? `<div style="color:rgba(255,255,255,0.5);font-size:11px">Señal: ${link.signal} dBm</div>`
+        : '';
+      const modeLine = link.mode
+        ? `<div style="color:rgba(255,255,255,0.4);font-size:10px">${link.mode}${link.model ? ` · ${link.model}` : ''}</div>`
+        : '';
 
       L.polyline(
         [[link.from_lat, link.from_lng], [link.to_lat, link.to_lng]],
-        { color, weight, opacity, dashArray: isUp ? undefined : '6,4' }
+        { color: lineColor, weight, opacity, dashArray: isUp ? undefined : '6,4' }
       ).bindTooltip(
-        `<div style="color:${vc};font-weight:700">${link.vendor}</div>
-         <div>${link.from_site} → ${link.to_site}</div>`,
+        `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+           <span style="color:${vc};font-weight:700">${link.vendor}</span>
+           ${freqBadge}
+         </div>
+         <div style="font-weight:600;color:rgba(255,255,255,0.8)">${link.from_site} → ${link.to_site}</div>
+         ${qualityLine}${signalLine}${bwBadge ? `<div>${bwBadge}</div>` : ''}${modeLine}`,
         { className: 'noc-tooltip' }
       ).addTo(topoLayer.current);
     });

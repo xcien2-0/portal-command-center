@@ -3439,11 +3439,11 @@
   {
     "id": "ODOO-79418",
     "odoo_id": 79418,
-    "odoo_stage_id": 8,
+    "odoo_stage_id": 9,
     "cliente": "ALMA ARACELY GOMEZ RODRIGUEZ",
     "servicio": "Sandur, SIDP-20, ALMA ARACELY GOMEZ RODRIGUEZ, SITIO: PLANTA AVANTE Monterrey Industrial Park",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "APROVISIONAMIENTO",
+    "estado": "FACTURACION",
     "estado_fuente": "odoo",
     "revenue": 2100.0,
     "fecha_deadline": "2026-05-29",
@@ -3511,6 +3511,11 @@
       {
         "fecha": "2026-05-12T08:37:18.933713",
         "accion": "Odoo sync: stage \u2192 > Habilitacion (APROVISIONAMIENTO)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-18T14:17:52.999780",
+        "accion": "Odoo sync: stage \u2192 > Facturacion (FACTURACION)",
         "usuario": "Sistema"
       }
     ]
@@ -7703,7 +7708,7 @@
   {
     "id": "ODOO-79838",
     "odoo_id": 79838,
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 7,
     "cliente": "SLW INDUSTRIAL ENGINEERING",
     "servicio": "Luminet, SIMP-20, SLW INDUSTRIAL ENGINEERING, SITIO: PRISCILLA MENDOZA // FASE 3 BLINDAJE",
     "comercial": "DAVID LEONARDO RODRIGUEZ LARA",
@@ -7765,6 +7770,11 @@
       {
         "fecha": "2026-05-12T12:35:02.509418",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-18T08:16:45.251496",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
@@ -8601,7 +8611,7 @@
   {
     "id": "ODOO-79932",
     "odoo_id": 79932,
-    "odoo_stage_id": 7,
+    "odoo_stage_id": 63,
     "cliente": "Eduardo Cepeda",
     "servicio": "Sandur, SIMP-20, Eduardo Cepeda, Sitio: Bioma",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
@@ -8669,13 +8679,18 @@
         "fecha": "2026-05-15T17:36:14.150060",
         "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-18T12:04:05.113855",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
       }
     ]
   },
   {
     "id": "ODOO-79928",
     "odoo_id": 79928,
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 7,
     "cliente": "Elvin Tadeo Moreno Bocanegra",
     "servicio": "Sandur, SVOZ-P3, Elvin Tadeo Moreno Bocanegra, Sitio:Purisima",
     "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
@@ -8737,6 +8752,11 @@
       {
         "fecha": "2026-05-15T15:54:24.088026",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-18T12:04:05.113892",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
       }
     ]
