@@ -337,11 +337,13 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [showTopo, setShowTopo]         = useState(false);
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
+  const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
 
   const mapRef    = useRef<any>(null);
   const leafRef   = useRef<any>(null);
   const layerRef  = useRef<any>(null);
   const topoLayer = useRef<any>(null);
+  const tileRef   = useRef<any>(null);
 
   // ── Cargar datos ─────────────────────────────────────────────────────────────
   const cargar = useCallback(async () => {
@@ -398,14 +400,38 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         center: [23.5, -102.5], zoom: 5, zoomControl: true,
         attributionControl: false, minZoom: 4,
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      const tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd', maxZoom: 18,
       }).addTo(map);
+      tileRef.current = tile;
       leafRef.current = L;
       mapRef.current  = map;
     });
     return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
   }, []);
+
+  // ── Cambiar capa de mapa ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current || !tileRef.current) return;
+    const L   = leafRef.current;
+    const map = mapRef.current;
+
+    // Quitar tile actual
+    map.removeLayer(tileRef.current);
+
+    // Agregar nuevo tile
+    const URLS: Record<string, [string, object]> = {
+      dark:      ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 18 }],
+      satellite: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
+      topo:      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
+    };
+    const [url, opts] = URLS[mapLayer];
+    tileRef.current = L.tileLayer(url, opts).addTo(map);
+
+    // Re-agregar overlay layers encima del tile nuevo
+    if (topoLayer.current) { map.removeLayer(topoLayer.current); topoLayer.current.addTo(map); }
+    if (layerRef.current)  { map.removeLayer(layerRef.current);  layerRef.current.addTo(map);  }
+  }, [mapLayer]);
 
   // ── Renderizar marcadores ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -550,6 +576,22 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         padding: '8px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
       }}>
+        {/* Selector de capa */}
+        {([
+          { id: 'dark',      label: '🌑 Oscuro'   },
+          { id: 'satellite', label: '🛰 Satélite'  },
+          { id: 'topo',      label: '🗻 Relieve'   },
+        ] as const).map(opt => (
+          <button key={opt.id} onClick={() => setMapLayer(opt.id)} style={{
+            padding: '3px 11px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+            background: mapLayer === opt.id ? 'rgba(255,255,255,0.12)' : 'transparent',
+            border: `1px solid ${mapLayer === opt.id ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            color: mapLayer === opt.id ? 'white' : 'rgba(255,255,255,0.35)',
+          }}>{opt.label}</button>
+        ))}
+
+        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
         <Filter size={12} color="rgba(255,255,255,0.3)" />
         <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>Marca:</span>
         <button
