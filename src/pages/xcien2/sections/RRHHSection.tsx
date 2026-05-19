@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { API_BASE } from '../../../config';
 import { ThemeConfig } from '../types';
+import OrgTreeView from './OrgTreeView';
 
 interface Empleado {
   id: number;
@@ -284,7 +285,7 @@ export default function RRHHSection({ theme }: Props) {
   const [filterCompany, setFilterCompany] = useState('');
   const [view, setView] = useState<'cards' | 'list'>('cards');
   const [selectedEmp, setSelectedEmp] = useState<Empleado | null>(null);
-  const [activeTab, setActiveTab] = useState<'directorio' | 'organigrama' | 'estadisticas'>('organigrama');
+  const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas'>('arbol');
 
   useEffect(() => {
     const load = async () => {
@@ -374,6 +375,7 @@ export default function RRHHSection({ theme }: Props) {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${border}` }}>
           {([
+            { id: 'arbol',        label: '🕸️ Árbol' },
             { id: 'organigrama',  label: '🏢 Organigrama' },
             { id: 'directorio',   label: '👥 Directorio'  },
             { id: 'estadisticas', label: '📊 Estadísticas' },
@@ -419,6 +421,13 @@ export default function RRHHSection({ theme }: Props) {
 
       {/* ── Content ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 24px' }}>
+
+        {/* ÁRBOL */}
+        {activeTab === 'arbol' && (
+          <div style={{ height: 'calc(100vh - 260px)', minHeight: 480 }}>
+            <OrgTreeView empleados={empleados} theme={theme} />
+          </div>
+        )}
 
         {/* ORGANIGRAMA */}
         {activeTab === 'organigrama' && <OrgChart empleados={empleados} theme={theme} />}
