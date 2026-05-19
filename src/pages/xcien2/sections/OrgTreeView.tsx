@@ -170,6 +170,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
   const [selectedEmp, setSelectedEmp] = useState<Empleado | null>(null);
   const [empDetail, setEmpDetail]     = useState<EmpDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [crumbs, setCrumbs] = useState([{id:'root',label:'XCIEN'}]);
   const { accent, bg, card, border, text, dim } = theme;
 
@@ -242,6 +243,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
     setSelectedEmp(emp);
     setEmpDetail(null);
     setDetailLoading(true);
+    setPhotoFailed(false);
     fetch(`${API_BASE}/api/rrhh/empleado/${emp.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setEmpDetail(d); setDetailLoading(false); })
@@ -291,7 +293,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
     (svg as any).call(zoom);
 
     // Click on background closes detail panel
-    svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); });
+    svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); });
 
     // Initial draw
     expand('root', 'XCIEN');
@@ -418,7 +420,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
         {crumbs.map((b,i)=>(
           <div key={b.id} style={{display:'flex',alignItems:'center',gap:4}}>
             {i>0 && <span style={{color:dim,fontSize:11}}>›</span>}
-            <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); expand(b.id,b.label); }} style={{
+            <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); expand(b.id,b.label); }} style={{
               background: i===crumbs.length-1 ? `${accent}20`:'transparent',
               border:`1px solid ${i===crumbs.length-1?accent+'50':'transparent'}`,
               color: i===crumbs.length-1 ? accent : dim,
@@ -454,13 +456,18 @@ export default function OrgTreeView({ empleados, theme }: Props) {
             <div style={{ background:`${empColor}12`, borderBottom:`1px solid ${empColor}25`, padding:'16px 16px 12px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:empColor, letterSpacing:'0.5px' }}>PERFIL DE EMPLEADO</div>
-                <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); }} style={{ background:'transparent', border:'none', color:dim, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
+                <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); }} style={{ background:'transparent', border:'none', color:dim, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
               </div>
 
               {/* Avatar */}
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                {detail?.avatar
-                  ? <img src={detail.avatar} alt="" style={{ width:56, height:56, borderRadius:'50%', objectFit:'cover', border:`3px solid ${empColor}` }} />
+                {!photoFailed
+                  ? <img
+                      src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
+                      alt=""
+                      onError={() => setPhotoFailed(true)}
+                      style={{ width:56, height:56, borderRadius:'50%', objectFit:'cover', border:`3px solid ${empColor}`, background:`${empColor}20` }}
+                    />
                   : (
                     <div style={{ width:56, height:56, borderRadius:'50%', background:`${empColor}20`, border:`3px solid ${empColor}50`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:empColor, flexShrink:0 }}>
                       {initials(selectedEmp.name)}
