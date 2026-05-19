@@ -1,11 +1,12 @@
 /**
- * OrgTreeView.tsx — Vista de árbol estilo "The Brain"
- * Grafo interactivo con nodo central navegable y física D3
- * Empresas → Departamentos → Empleados
+ * OrgTreeView.tsx — Vista árbol estilo The Brain
+ * Grafo D3 navegable. La navegación es 100% imperativa dentro de D3
+ * para evitar re-renders de React que destruyen el SVG.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import { API_BASE } from '../../../config';
 
 interface Empleado {
   id: number;
@@ -18,6 +19,26 @@ interface Empleado {
   manager: string | null;
 }
 
+interface EmpDetail {
+  id: number;
+  name: string;
+  job_title: string;
+  department: string;
+  company: string;
+  email: string;
+  phone: string;
+  manager: string | null;
+  location: string;
+  schedule: string;
+  avatar: string | null;
+  subordinates_count: number;
+  birthday: string | null;
+  gender: string | null;
+  marital: string | null;
+  study_field: string | null;
+  study_school: string | null;
+}
+
 interface Props {
   empleados: Empleado[];
   theme: {
@@ -26,162 +47,114 @@ interface Props {
   };
 }
 
-// ── Node types & colors ────────────────────────────────────────────────────────
-
 type NodeType = 'root' | 'company' | 'department' | 'employee';
 
-interface GraphNode extends d3.SimulationNodeDatum {
+interface GNode extends d3.SimulationNodeDatum {
   id: string;
   label: string;
-  sublabel?: string;
+  sublabel: string;
   type: NodeType;
   color: string;
-  radius: number;
+  r: number;
   data?: Empleado;
-  expanded?: boolean;
 }
 
-interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
-  source: string | GraphNode;
-  target: string | GraphNode;
+interface GLink extends d3.SimulationLinkDatum<GNode> {
+  source: string | GNode;
+  target: string | GNode;
 }
 
-const COMPANY_COLOR: Record<string, string> = {
-  'SERVICIOS CORPORATIVOS WISPI':                  '#00A859',
-  'LUMINET WAN':                                   '#00B4D8',
-  'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR':'#8B5CF6',
-  'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':   '#8B5CF6',
-  'MATERIALES ASESORIAS Y SERVICIOS':              '#F97316',
-  'SENEL':                                         '#EC4899',
-  'HUUS VAS':                                      '#EAB308',
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CO_COLOR: Record<string, string> = {
+  'SERVICIOS CORPORATIVOS WISPI':                   '#00A859',
+  'LUMINET WAN':                                    '#00B4D8',
+  'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR': '#8B5CF6',
+  'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':    '#8B5CF6',
+  'MATERIALES ASESORIAS Y SERVICIOS':               '#F97316',
+  'SENEL':                                          '#EC4899',
+  'HUUS VAS':                                       '#EAB308',
 };
 
-const COMPANY_SHORT: Record<string, string> = {
-  'SERVICIOS CORPORATIVOS WISPI':                  'WISPI',
-  'LUMINET WAN':                                   'LUMINET',
-  'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR':'SANDUR',
-  'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':   'SANDUR',
-  'MATERIALES ASESORIAS Y SERVICIOS':              'MAS',
-  'SENEL':                                         'SENEL',
-  'HUUS VAS':                                      'HUUS',
+const CO_SHORT: Record<string, string> = {
+  'SERVICIOS CORPORATIVOS WISPI':                   'WISPI',
+  'LUMINET WAN':                                    'LUMINET',
+  'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR': 'SANDUR',
+  'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':    'SANDUR',
+  'MATERIALES ASESORIAS Y SERVICIOS':               'MAS',
+  'SENEL':                                          'SENEL',
+  'HUUS VAS':                                       'HUUS',
 };
 
-function shortDept(dept: string): string {
-  const parts = dept.split('/');
-  return parts[parts.length - 1].trim();
-}
+function coColor(c: string) { return CO_COLOR[c] || '#888'; }
+function coShort(c: string) { return CO_SHORT[c] || c.split(' ')[0]; }
+function shortDept(d: string) { return d.split('/').pop()!.trim(); }
+function shortName(n: string) { const p = n.trim().split(/\s+/); return p.length <= 2 ? n : `${p[0]} ${p[1]}`; }
+function initials(n: string) { return n.trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase(); }
 
-function shortName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length <= 2) return name;
-  return `${parts[0]} ${parts[1]}`;
-}
+// ── Build nodes & links from current focus ────────────────────────────────────
 
-function companyColor(company: string): string {
-  return COMPANY_COLOR[company] || '#666';
-}
+function buildGraph(
+  empleados: Empleado[],
+  focusId: string,
+  posCache: Record<string, {x:number;y:number}>,
+  W: number,
+  H: number,
+): { nodes: GNode[]; links: GLink[] } {
+  const nodes: GNode[] = [];
+  const links: GLink[] = [];
+  const seen = new Set<string>();
 
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
-}
-
-// ── Build graph from employees ─────────────────────────────────────────────────
-
-function buildGraph(empleados: Empleado[], focusId: string): { nodes: GraphNode[]; links: GraphLink[] } {
-  const nodes: GraphNode[] = [];
-  const links: GraphLink[] = [];
-  const nodeSet = new Set<string>();
-
-  const addNode = (n: GraphNode) => {
-    if (!nodeSet.has(n.id)) {
-      nodeSet.add(n.id);
-      nodes.push(n);
-    }
+  const add = (n: GNode) => {
+    if (seen.has(n.id)) return;
+    seen.add(n.id);
+    const cached = posCache[n.id];
+    if (cached) { n.x = cached.x; n.y = cached.y; }
+    nodes.push(n);
   };
 
-  // Root
-  addNode({
-    id: 'root',
-    label: 'XCIEN',
-    sublabel: 'Grupo Empresarial',
-    type: 'root',
-    color: '#00A859',
-    radius: 36,
-    x: 0, y: 0,
-  });
-
-  // Group by company → department
+  // group employees
   const structure: Record<string, Record<string, Empleado[]>> = {};
-  for (const emp of empleados) {
-    const co = emp.company || 'Sin empresa';
-    const dept = shortDept(emp.department || 'Sin departamento');
-    if (!structure[co]) structure[co] = {};
+  for (const e of empleados) {
+    const co   = e.company || 'Sin empresa';
+    const dept = shortDept(e.department || 'Sin departamento');
+    if (!structure[co])      structure[co] = {};
     if (!structure[co][dept]) structure[co][dept] = [];
-    structure[co][dept].push(emp);
+    structure[co][dept].push(e);
   }
 
-  const isFocusCompany = Object.keys(structure).some(co => `co::${co}` === focusId);
-  const isFocusDept = Object.keys(structure).some(co =>
-    Object.keys(structure[co]).some(dept => `dept::${co}::${dept}` === focusId)
-  );
+  // root
+  add({ id:'root', label:'XCIEN', sublabel:'Grupo Empresarial', type:'root', color:'#00A859', r:36, x:W/2, y:H/2 });
 
-  for (const [company, depts] of Object.entries(structure)) {
-    const coId = `co::${company}`;
-    const coColor = companyColor(company);
-    const short = COMPANY_SHORT[company] || company.split(' ')[0];
-    const totalEmps = Object.values(depts).reduce((a, b) => a + b.length, 0);
+  for (const [co, depts] of Object.entries(structure)) {
+    const coId    = `co::${co}`;
+    const color   = coColor(co);
+    const total   = Object.values(depts).reduce((a,b)=>a+b.length,0);
+    const empInCo = empleados.some(e=>`emp::${e.id}`===focusId && e.company===co);
+    const deptInCo= Object.keys(depts).some(d=>`dept::${co}::${d}`===focusId);
 
-    // Show company if: focus is root, or focus is this company, or focus is a dept in this company
-    const showCompany = focusId === 'root' || focusId === coId ||
-      Object.keys(depts).some(dept => `dept::${co}::${dept}` === focusId) ||
-      empleados.some(e => `emp::${e.id}` === focusId && e.company === company);
+    const showCo = focusId==='root' || focusId===coId || deptInCo || empInCo;
+    if (!showCo) continue;
 
-    if (!showCompany) continue;
-
-    addNode({
-      id: coId,
-      label: short,
-      sublabel: `${totalEmps} personas`,
-      type: 'company',
-      color: coColor,
-      radius: 28,
-    });
-    links.push({ source: 'root', target: coId });
+    add({ id:coId, label:coShort(co), sublabel:`${total} personas`, type:'company', color, r:28 });
+    links.push({ source:'root', target:coId });
 
     for (const [dept, emps] of Object.entries(depts)) {
-      const deptId = `dept::${company}::${dept}`;
+      const deptId = `dept::${co}::${dept}`;
+      const empInDept = emps.some(e=>`emp::${e.id}`===focusId);
 
-      // Show dept if: focus is root/company, or this is the focused dept, or a child employee
-      const showDept = focusId === 'root' || focusId === coId || focusId === deptId ||
-        emps.some(e => `emp::${e.id}` === focusId);
-
+      const showDept = focusId==='root' || focusId===coId || focusId===deptId || empInDept;
       if (!showDept) continue;
 
-      addNode({
-        id: deptId,
-        label: dept,
-        sublabel: `${emps.length} personas`,
-        type: 'department',
-        color: coColor,
-        radius: 20,
-      });
-      links.push({ source: coId, target: deptId });
+      add({ id:deptId, label:dept, sublabel:`${emps.length} personas`, type:'department', color, r:20 });
+      links.push({ source:coId, target:deptId });
 
-      // Show employees only when dept or employee is focused
-      const showEmps = focusId === deptId || emps.some(e => `emp::${e.id}` === focusId);
+      const showEmps = focusId===deptId || empInDept;
       if (showEmps) {
         for (const emp of emps) {
           const empId = `emp::${emp.id}`;
-          addNode({
-            id: empId,
-            label: shortName(emp.name),
-            sublabel: emp.job_title || '',
-            type: 'employee',
-            color: coColor,
-            radius: 14,
-            data: emp,
-          });
-          links.push({ source: deptId, target: empId });
+          add({ id:empId, label:shortName(emp.name), sublabel:emp.job_title||'', type:'employee', color, r:14, data:emp });
+          links.push({ source:deptId, target:empId });
         }
       }
     }
@@ -190,316 +163,388 @@ function buildGraph(empleados: Empleado[], focusId: string): { nodes: GraphNode[
   return { nodes, links };
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function OrgTreeView({ empleados, theme }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const simRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
-  const [focusId, setFocusId] = useState('root');
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GraphNode } | null>(null);
-  const [breadcrumb, setBreadcrumb] = useState<{ id: string; label: string }[]>([{ id: 'root', label: 'XCIEN' }]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedEmp, setSelectedEmp] = useState<Empleado | null>(null);
+  const [empDetail, setEmpDetail]     = useState<EmpDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [crumbs, setCrumbs] = useState([{id:'root',label:'XCIEN'}]);
   const { accent, bg, card, border, text, dim } = theme;
 
-  const navigate = useCallback((node: GraphNode) => {
-    if (node.type === 'employee') {
-      setTooltip(null);
-      return; // employees don't expand further
+  // All mutable D3 state lives in refs — never causes re-renders
+  const stateRef = useRef({
+    focusId:  'root',
+    posCache: {} as Record<string,{x:number;y:number}>,
+    sim:      null as d3.Simulation<GNode,GLink>|null,
+    svg:      null as d3.Selection<SVGSVGElement,unknown,null,undefined>|null,
+    g:        null as d3.Selection<SVGGElement,unknown,null,undefined>|null,
+    linkSel:  null as d3.Selection<SVGLineElement,GLink,SVGGElement,unknown>|null,
+    nodeSel:  null as d3.Selection<SVGGElement,GNode,SVGGElement,unknown>|null,
+    W: 900, H: 600,
+  });
+
+  // Called imperatively — no React state change, no re-render
+  const expand = (nodeId: string, label: string) => {
+    const s = stateRef.current;
+    if (!s.svg || !s.g) return;
+
+    // Save current positions
+    if (s.sim) {
+      s.sim.nodes().forEach(n => {
+        if (n.x!=null && n.y!=null) s.posCache[n.id] = {x:n.x, y:n.y};
+      });
+      s.sim.stop();
     }
-    setFocusId(node.id);
-    setBreadcrumb(prev => {
-      const idx = prev.findIndex(b => b.id === node.id);
+
+    s.focusId = nodeId;
+
+    // Update breadcrumb via React (display only — doesn't affect D3)
+    setCrumbs(prev => {
+      const idx = prev.findIndex(b => b.id === nodeId);
       if (idx >= 0) return prev.slice(0, idx + 1);
-      return [...prev, { id: node.id, label: node.label }];
+      return [...prev, { id: nodeId, label }];
     });
-  }, []);
 
-  useEffect(() => {
-    if (!svgRef.current || empleados.length === 0) return;
+    const { nodes, links } = buildGraph(empleados, nodeId, s.posCache, s.W, s.H);
 
-    const svg = d3.select(svgRef.current);
-    const W = svgRef.current.clientWidth || 900;
-    const H = svgRef.current.clientHeight || 600;
+    // Fix root
+    const root = nodes.find(n=>n.id==='root');
+    if (root) { root.fx = s.W/2; root.fy = s.H/2; }
 
-    svg.selectAll('*').remove();
-
-    const { nodes, links } = buildGraph(empleados, focusId);
-
-    // Container with zoom
-    const g = svg.append('g');
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 3])
-      .on('zoom', e => g.attr('transform', e.transform.toString()));
-    svg.call(zoom);
-
-    // Defs: glow filter + gradients
-    const defs = svg.append('defs');
-    const filter = defs.append('filter').attr('id', 'glow');
-    filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
-    const feMerge = filter.append('feMerge');
-    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
-    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
-
-    // Simulation
-    const sim = d3.forceSimulation<GraphNode>(nodes)
-      .force('link', d3.forceLink<GraphNode, GraphLink>(links)
-        .id(d => d.id)
+    // Restart simulation with new data
+    const sim = d3.forceSimulation<GNode>(nodes)
+      .alpha(0.5).alphaDecay(0.025)
+      .force('link', d3.forceLink<GNode,GLink>(links).id(d=>d.id)
         .distance(d => {
-          const s = d.source as GraphNode;
-          const t = d.target as GraphNode;
-          if (t.type === 'company') return 160;
-          if (t.type === 'department') return 120;
-          return 80;
-        })
-        .strength(0.6)
-      )
-      .force('charge', d3.forceManyBody().strength(d => {
-        if (d.type === 'root') return -800;
-        if (d.type === 'company') return -500;
-        if (d.type === 'department') return -300;
-        return -120;
-      }))
-      .force('center', d3.forceCenter(W / 2, H / 2))
-      .force('collision', d3.forceCollide<GraphNode>(d => d.radius + 18));
+          const t = d.target as GNode;
+          return t.type==='company' ? 160 : t.type==='department' ? 120 : 75;
+        }).strength(0.5))
+      .force('charge', d3.forceManyBody().strength(d =>
+        d.type==='root'?-800 : d.type==='company'?-480 : d.type==='department'?-260 : -90))
+      .force('center', d3.forceCenter(s.W/2, s.H/2).strength(0.04))
+      .force('collision', d3.forceCollide<GNode>(d=>d.r+14));
 
-    simRef.current = sim;
+    s.sim = sim;
 
-    // Fix root at center
-    const rootNode = nodes.find(n => n.id === 'root');
-    if (rootNode) { rootNode.fx = W / 2; rootNode.fy = H / 2; }
+    // Rebuild visual elements in place
+    redraw(s.g!, sim, nodes, links, s.W, s.H);
 
-    // Links
-    const linkSel = g.append('g').selectAll('line')
-      .data(links)
-      .join('line')
-      .attr('stroke', d => {
-        const t = d.target as GraphNode;
-        return t.color || accent;
-      })
-      .attr('stroke-opacity', 0.3)
+    sim.on('tick', () => tick(s.g!));
+    sim.on('end', () => {
+      sim.nodes().forEach(n => { if (n.x!=null && n.y!=null) s.posCache[n.id]={x:n.x,y:n.y}; });
+    });
+  };
+
+  // ── Open employee detail panel ────────────────────────────────────────────
+  const openDetail = (emp: Empleado) => {
+    setSelectedEmp(emp);
+    setEmpDetail(null);
+    setDetailLoading(true);
+    fetch(`${API_BASE}/api/rrhh/empleado/${emp.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setEmpDetail(d); setDetailLoading(false); })
+      .catch(() => setDetailLoading(false));
+  };
+
+  // ── Initial mount ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!containerRef.current || empleados.length === 0) return;
+
+    const s = stateRef.current;
+    s.W = containerRef.current.clientWidth  || 900;
+    s.H = containerRef.current.clientHeight || 600;
+
+    // Clear old svg if any
+    d3.select(containerRef.current).select('svg').remove();
+
+    const svg = d3.select(containerRef.current)
+      .append('svg')
+      .attr('width','100%').attr('height','100%')
+      .style('cursor','grab');
+
+    s.svg = svg as any;
+
+    // Defs
+    const defs = svg.append('defs');
+    const f = defs.append('filter').attr('id','glow-tree');
+    f.append('feGaussianBlur').attr('stdDeviation','3').attr('result','blur');
+    const fm = f.append('feMerge');
+    fm.append('feMergeNode').attr('in','blur');
+    fm.append('feMergeNode').attr('in','SourceGraphic');
+
+    // Grid dots background
+    defs.append('pattern').attr('id','grid-dots').attr('x',0).attr('y',0)
+      .attr('width',28).attr('height',28).attr('patternUnits','userSpaceOnUse')
+      .append('circle').attr('cx',1).attr('cy',1).attr('r',0.8)
+      .attr('fill', dim + '25');
+    svg.append('rect').attr('width','100%').attr('height','100%').attr('fill','url(#grid-dots)');
+
+    const g = svg.append('g');
+    s.g = g as any;
+
+    // Zoom
+    const zoom = d3.zoom<SVGSVGElement,unknown>()
+      .scaleExtent([0.15,4])
+      .on('zoom', e => (g as any).attr('transform', e.transform.toString()));
+    (svg as any).call(zoom);
+
+    // Click on background closes detail panel
+    svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); });
+
+    // Initial draw
+    expand('root', 'XCIEN');
+
+  }, [empleados]); // only when data loads — never on click
+
+  // ── Redraw (called imperatively) ───────────────────────────────────────────
+
+  function redraw(
+    g: d3.Selection<SVGGElement,unknown,null,undefined>,
+    sim: d3.Simulation<GNode,GLink>,
+    nodes: GNode[],
+    links: GLink[],
+    W: number, H: number,
+  ) {
+    g.selectAll('*').remove();
+
+    // Links layer
+    const linkG = g.append('g');
+    const linkSel = linkG.selectAll<SVGLineElement,GLink>('line')
+      .data(links).join('line')
+      .attr('stroke', d => ((d.target as GNode).color || accent) + '50')
       .attr('stroke-width', d => {
-        const t = d.target as GraphNode;
-        if (t.type === 'company') return 2;
-        if (t.type === 'department') return 1.5;
-        return 1;
+        const t = d.target as GNode;
+        return t.type==='company'?2.5 : t.type==='department'?1.8 : 1;
       });
 
-    // Node groups
-    const nodeSel = g.append('g').selectAll<SVGGElement, GraphNode>('g')
-      .data(nodes)
-      .join('g')
-      .attr('cursor', d => d.type === 'employee' ? 'default' : 'pointer')
-      .call(d3.drag<SVGGElement, GraphNode>()
-        .on('start', (event, d) => {
-          if (!event.active) sim.alphaTarget(0.3).restart();
-          d.fx = d.x; d.fy = d.y;
-        })
-        .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
-        .on('end', (event, d) => {
-          if (!event.active) sim.alphaTarget(0);
-          if (d.type !== 'root') { d.fx = null; d.fy = null; }
-        })
+    // Nodes layer
+    const nodeG = g.append('g');
+    const nodeSel = nodeG.selectAll<SVGGElement,GNode>('g')
+      .data(nodes, d=>d.id).join('g')
+      .attr('cursor', d => d.type==='employee' ? 'pointer' : 'pointer')
+      .call(
+        d3.drag<SVGGElement,GNode>()
+          .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.2).restart(); d.fx=d.x; d.fy=d.y; })
+          .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+          .on('end',   (e,d) => { if(!e.active) sim.alphaTarget(0); if(d.type!=='root'){d.fx=null;d.fy=null;} })
       )
       .on('click', (event, d) => {
         event.stopPropagation();
-        if (d.type === 'employee') {
-          const rect = svgRef.current!.getBoundingClientRect();
-          setTooltip({ x: event.clientX - rect.left, y: event.clientY - rect.top, node: d });
-        } else {
-          navigate(d);
+        if (d.type === 'employee' && d.data) {
+          event.stopPropagation();
+          openDetail(d.data);
+        } else if (d.type !== 'employee') {
+          setSelectedEmp(null);
+          setEmpDetail(null);
+          expand(d.id, d.label);
         }
       })
-      .on('mouseover', function(_, d) {
-        d3.select(this).select('circle').attr('filter', 'url(#glow)');
-      })
-      .on('mouseout', function() {
-        d3.select(this).select('circle').attr('filter', null);
-      });
+      .on('mouseover', function(_,d) { d3.select(this).select('circle').attr('filter','url(#glow-tree)'); })
+      .on('mouseout',  function()    { d3.select(this).select('circle').attr('filter',null); });
 
-    // Outer pulse ring for root
-    nodeSel.filter(d => d.type === 'root')
-      .append('circle')
-      .attr('r', d => d.radius + 10)
-      .attr('fill', 'none')
-      .attr('stroke', d => d.color)
-      .attr('stroke-opacity', 0.2)
-      .attr('stroke-width', 8);
+    // Pulse ring for root
+    nodeSel.filter(d=>d.type==='root')
+      .append('circle').attr('r', d=>d.r+12)
+      .attr('fill','none').attr('stroke', d=>d.color)
+      .attr('stroke-opacity',0.15).attr('stroke-width',10);
 
     // Main circle
-    nodeSel.append('circle')
-      .attr('r', d => d.radius)
-      .attr('fill', d => {
-        if (d.type === 'root') return d.color;
-        if (d.type === 'company') return `${d.color}22`;
-        if (d.type === 'department') return `${d.color}15`;
-        return `${d.color}10`;
-      })
-      .attr('stroke', d => d.color)
-      .attr('stroke-width', d => {
-        if (d.type === 'root') return 0;
-        if (d.type === 'company') return 2;
-        if (d.type === 'department') return 1.5;
-        return 1;
-      })
-      .attr('stroke-opacity', d => d.type === 'employee' ? 0.4 : 0.8);
+    nodeSel.append('circle').attr('r', d=>d.r)
+      .attr('fill', d => d.type==='root' ? d.color : `${d.color}18`)
+      .attr('stroke', d=>d.color)
+      .attr('stroke-width', d => d.type==='root'?0 : d.type==='company'?2.5 : d.type==='department'?2 : 1.2)
+      .attr('stroke-opacity', d => d.type==='employee' ? 0.5 : 0.9);
 
-    // Initials for employees
-    nodeSel.filter(d => d.type === 'employee')
-      .append('text')
-      .text(d => initials(d.label))
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'central')
-      .attr('font-size', 8)
-      .attr('font-weight', 800)
-      .attr('fill', d => d.color)
-      .attr('pointer-events', 'none');
+    // Icon / initials
+    nodeSel.filter(d=>d.type!=='employee').append('text')
+      .text(d => d.type==='root'?'🏢' : d.type==='company'?'🏛':'📁')
+      .attr('text-anchor','middle').attr('dominant-baseline','central')
+      .attr('font-size', d=>d.type==='root'?18 : d.type==='company'?14:10)
+      .attr('pointer-events','none');
 
-    // Icon for root/company/dept
-    nodeSel.filter(d => d.type !== 'employee')
-      .append('text')
-      .text(d => d.type === 'root' ? '🏢' : d.type === 'company' ? '🏛' : '📁')
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'central')
-      .attr('font-size', d => d.type === 'root' ? 18 : d.type === 'company' ? 14 : 10)
-      .attr('pointer-events', 'none');
+    nodeSel.filter(d=>d.type==='employee').append('text')
+      .text(d=>initials(d.label))
+      .attr('text-anchor','middle').attr('dominant-baseline','central')
+      .attr('font-size',8).attr('font-weight',800)
+      .attr('fill',d=>d.color).attr('pointer-events','none');
 
-    // Label below node
+    // Label
     nodeSel.append('text')
-      .text(d => d.label.length > 16 ? d.label.slice(0, 14) + '…' : d.label)
-      .attr('text-anchor', 'middle')
-      .attr('dy', d => d.radius + 14)
-      .attr('font-size', d => d.type === 'root' ? 12 : d.type === 'company' ? 11 : d.type === 'department' ? 10 : 9)
-      .attr('font-weight', d => d.type === 'root' ? 800 : d.type === 'company' ? 700 : 500)
-      .attr('fill', text)
-      .attr('pointer-events', 'none');
+      .text(d=>d.label.length>18?d.label.slice(0,16)+'…':d.label)
+      .attr('text-anchor','middle')
+      .attr('dy', d=>d.r+14)
+      .attr('font-size', d=>d.type==='root'?12 : d.type==='company'?11 : d.type==='department'?10:9)
+      .attr('font-weight', d=>d.type==='root'?800 : d.type==='company'?700:500)
+      .attr('fill', text).attr('pointer-events','none');
 
     // Sublabel
-    nodeSel.filter(d => !!d.sublabel && d.type !== 'employee')
-      .append('text')
-      .text(d => d.sublabel!)
-      .attr('text-anchor', 'middle')
-      .attr('dy', d => d.radius + 26)
-      .attr('font-size', 8)
-      .attr('fill', dim)
-      .attr('pointer-events', 'none');
+    nodeSel.filter(d=>!!d.sublabel && d.type!=='employee').append('text')
+      .text(d=>d.sublabel)
+      .attr('text-anchor','middle').attr('dy',d=>d.r+26)
+      .attr('font-size',8).attr('fill',dim).attr('pointer-events','none');
 
-    // Tick
-    sim.on('tick', () => {
-      linkSel
-        .attr('x1', d => (d.source as GraphNode).x!)
-        .attr('y1', d => (d.source as GraphNode).y!)
-        .attr('x2', d => (d.target as GraphNode).x!)
-        .attr('y2', d => (d.target as GraphNode).y!);
-      nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
+    // Store selections for tick
+    stateRef.current.linkSel = linkSel as any;
+    stateRef.current.nodeSel = nodeSel as any;
+  }
 
-    // Click background to dismiss tooltip
-    svg.on('click', () => setTooltip(null));
+  function tick(g: d3.Selection<SVGGElement,unknown,null,undefined>) {
+    const s = stateRef.current;
+    if (!s.linkSel || !s.nodeSel) return;
+    (s.linkSel as any)
+      .attr('x1', (d:GLink) => (d.source as GNode).x!)
+      .attr('y1', (d:GLink) => (d.source as GNode).y!)
+      .attr('x2', (d:GLink) => (d.target as GNode).x!)
+      .attr('y2', (d:GLink) => (d.target as GNode).y!);
+    (s.nodeSel as any)
+      .attr('transform', (d:GNode) => `translate(${d.x??0},${d.y??0})`);
+  }
 
-    return () => { sim.stop(); };
-  }, [empleados, focusId, accent, bg, text, dim, navigate]);
+  // ── Render ─────────────────────────────────────────────────────────────────
+  const detail = empDetail || (selectedEmp ? { ...selectedEmp, location:'', schedule:'', avatar:null, subordinates_count:0, birthday:null, gender:null, marital:null, study_field:null, study_school:null } as EmpDetail : null);
+  const empColor = detail ? (CO_COLOR[detail.company] || accent) : accent;
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  const GENDER_LABEL: Record<string,string> = { male:'Masculino', female:'Femenino', other:'Otro' };
+  const MARITAL_LABEL: Record<string,string> = { single:'Soltero/a', married:'Casado/a', cohabitant:'Unión libre', widower:'Viudo/a', divorced:'Divorciado/a' };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
 
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 0 12px', flexShrink: 0 }}>
-        {/* Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, flexWrap: 'wrap' }}>
-          {breadcrumb.map((b, i) => (
-            <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {i > 0 && <span style={{ color: dim, fontSize: 11 }}>›</span>}
-              <button
-                onClick={() => {
-                  setFocusId(b.id);
-                  setBreadcrumb(prev => prev.slice(0, i + 1));
-                }}
-                style={{
-                  background: i === breadcrumb.length - 1 ? `${accent}20` : 'transparent',
-                  border: `1px solid ${i === breadcrumb.length - 1 ? accent + '50' : 'transparent'}`,
-                  color: i === breadcrumb.length - 1 ? accent : dim,
-                  padding: '3px 10px', borderRadius: 6, fontSize: 11,
-                  fontWeight: i === breadcrumb.length - 1 ? 700 : 500,
-                  cursor: 'pointer',
-                }}
-              >{b.label}</button>
-            </div>
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: 12, fontSize: 10, color: dim }}>
-          {[
-            { icon: '🏢', label: 'Grupo' },
-            { icon: '🏛', label: 'Empresa' },
-            { icon: '📁', label: 'Depto' },
-            { icon: '●',  label: 'Empleado', color: accent },
-          ].map(l => (
-            <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ color: l.color }}>{l.icon}</span> {l.label}
-            </span>
-          ))}
-        </div>
-
-        <div style={{ fontSize: 10, color: dim, flexShrink: 0 }}>
-          Clic en nodo para expandir · Arrastra para mover
-        </div>
+      {/* Breadcrumb */}
+      <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:10, flexWrap:'wrap', flexShrink:0 }}>
+        <span style={{fontSize:11,color:dim}}>Vista:</span>
+        {crumbs.map((b,i)=>(
+          <div key={b.id} style={{display:'flex',alignItems:'center',gap:4}}>
+            {i>0 && <span style={{color:dim,fontSize:11}}>›</span>}
+            <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); expand(b.id,b.label); }} style={{
+              background: i===crumbs.length-1 ? `${accent}20`:'transparent',
+              border:`1px solid ${i===crumbs.length-1?accent+'50':'transparent'}`,
+              color: i===crumbs.length-1 ? accent : dim,
+              padding:'3px 10px', borderRadius:6, fontSize:11,
+              fontWeight: i===crumbs.length-1?700:500, cursor:'pointer',
+            }}>{b.label}</button>
+          </div>
+        ))}
+        <span style={{marginLeft:'auto',fontSize:10,color:dim+'80'}}>
+          Click empleado para ver detalle · Click depto/empresa para expandir · Scroll zoom
+        </span>
       </div>
 
-      {/* Canvas */}
-      <div style={{ flex: 1, position: 'relative', background: `${bg}`, border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
-        {/* Grid dots background */}
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-          <defs>
-            <pattern id="dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.8" fill={`${dim}30`} />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
+      {/* Main area: canvas + detail panel side by side */}
+      <div style={{ flex:1, display:'flex', gap:12, minHeight:0 }}>
 
-        <svg ref={svgRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
-
-        {/* Help hint */}
-        <div style={{ position: 'absolute', bottom: 12, left: 12, fontSize: 10, color: `${dim}70`, pointerEvents: 'none' }}>
-          🖱 Scroll para zoom · Click nodo para explorar · Click empleado para ver detalle
-        </div>
-      </div>
-
-      {/* Employee tooltip */}
-      {tooltip && tooltip.node.data && (
+        {/* D3 canvas */}
         <div
-          style={{
-            position: 'absolute',
-            left: Math.min(tooltip.x + 12, (svgRef.current?.clientWidth || 800) - 260),
-            top: Math.min(tooltip.y - 20, (svgRef.current?.clientHeight || 600) - 180),
-            background: card, border: `1px solid ${tooltip.node.color}60`,
-            borderRadius: 10, padding: '12px 14px', width: 240,
-            boxShadow: `0 4px 20px ${tooltip.node.color}20`,
-            zIndex: 10, pointerEvents: 'none',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-              background: `${tooltip.node.color}20`, border: `2px solid ${tooltip.node.color}50`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 800, color: tooltip.node.color,
-            }}>
-              {initials(tooltip.node.data!.name)}
+          ref={containerRef}
+          style={{ flex:1, border:`1px solid ${border}`, borderRadius:12, overflow:'hidden', position:'relative', background:bg, minHeight:400 }}
+        />
+
+        {/* Employee Detail Panel */}
+        {selectedEmp && (
+          <div style={{
+            width:280, flexShrink:0,
+            background:card, border:`1px solid ${empColor}40`,
+            borderRadius:12, overflowY:'auto',
+            boxShadow:`0 0 24px ${empColor}15`,
+            display:'flex', flexDirection:'column',
+          }}>
+            {/* Header */}
+            <div style={{ background:`${empColor}12`, borderBottom:`1px solid ${empColor}25`, padding:'16px 16px 12px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:empColor, letterSpacing:'0.5px' }}>PERFIL DE EMPLEADO</div>
+                <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); }} style={{ background:'transparent', border:'none', color:dim, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
+              </div>
+
+              {/* Avatar */}
+              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                {detail?.avatar
+                  ? <img src={detail.avatar} alt="" style={{ width:56, height:56, borderRadius:'50%', objectFit:'cover', border:`3px solid ${empColor}` }} />
+                  : (
+                    <div style={{ width:56, height:56, borderRadius:'50%', background:`${empColor}20`, border:`3px solid ${empColor}50`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:empColor, flexShrink:0 }}>
+                      {initials(selectedEmp.name)}
+                    </div>
+                  )
+                }
+                <div>
+                  <div style={{ fontWeight:800, fontSize:14, color:text, lineHeight:1.3 }}>{selectedEmp.name}</div>
+                  <div style={{ fontSize:11, color:empColor, marginTop:3 }}>{selectedEmp.job_title || '—'}</div>
+                  <div style={{ marginTop:5, background:`${empColor}18`, color:empColor, border:`1px solid ${empColor}35`, padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:700, display:'inline-block' }}>
+                    {CO_SHORT[selectedEmp.company] || selectedEmp.company.split(' ')[0]}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: text }}>{shortName(tooltip.node.data!.name)}</div>
-              <div style={{ fontSize: 10, color: tooltip.node.color }}>{tooltip.node.data!.job_title || '—'}</div>
-            </div>
+
+            {/* Loading spinner */}
+            {detailLoading && (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:20, gap:8 }}>
+                <div style={{ width:16, height:16, border:`2px solid ${empColor}`, borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                <span style={{ fontSize:11, color:dim }}>Cargando…</span>
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+              </div>
+            )}
+
+            {/* Details */}
+            {!detailLoading && detail && (
+              <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:0 }}>
+
+                {/* Contacto */}
+                <Section label="Contacto" color={empColor}>
+                  <Row icon="✉️" label="Email"    value={detail.email || '—'} dim={dim} text={text} />
+                  <Row icon="📱" label="Teléfono" value={detail.phone || '—'} dim={dim} text={text} />
+                </Section>
+
+                {/* Organización */}
+                <Section label="Organización" color={empColor}>
+                  <Row icon="🏢" label="Empresa"    value={detail.company || '—'} dim={dim} text={text} />
+                  <Row icon="🗂️" label="Depto"      value={shortDept(detail.department || '—')} dim={dim} text={text} />
+                  <Row icon="👤" label="Reporta a"  value={detail.manager ? shortName(detail.manager) : '—'} dim={dim} text={text} />
+                  {detail.subordinates_count > 0 && (
+                    <Row icon="👥" label="Subordinados" value={`${detail.subordinates_count} personas`} dim={dim} text={text} color={empColor} />
+                  )}
+                  <Row icon="📍" label="Sede"       value={detail.location || '—'} dim={dim} text={text} />
+                  <Row icon="🕐" label="Horario"    value={detail.schedule || '—'} dim={dim} text={text} />
+                </Section>
+
+                {/* Personal */}
+                {(detail.birthday || detail.gender || detail.marital || detail.study_field) && (
+                  <Section label="Información Personal" color={empColor}>
+                    {detail.birthday && <Row icon="🎂" label="Nacimiento" value={detail.birthday} dim={dim} text={text} />}
+                    {detail.gender   && <Row icon="👤" label="Género"     value={GENDER_LABEL[detail.gender] || detail.gender} dim={dim} text={text} />}
+                    {detail.marital  && <Row icon="💍" label="Estado civil" value={MARITAL_LABEL[detail.marital] || detail.marital} dim={dim} text={text} />}
+                    {detail.study_field  && <Row icon="📚" label="Área estudio" value={detail.study_field} dim={dim} text={text} />}
+                    {detail.study_school && <Row icon="🎓" label="Institución" value={detail.study_school} dim={dim} text={text} />}
+                  </Section>
+                )}
+
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11 }}>
-            {tooltip.node.data!.email && <span style={{ color: dim }}>✉️ {tooltip.node.data!.email}</span>}
-            {tooltip.node.data!.phone && <span style={{ color: dim }}>📱 {tooltip.node.data!.phone}</span>}
-            {tooltip.node.data!.manager && <span style={{ color: dim }}>👤 {shortName(tooltip.node.data!.manager)}</span>}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Small helpers ──────────────────────────────────────────────────────────────
+
+function Section({ label, color, children }: { label:string; color:string; children:React.ReactNode }) {
+  return (
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:9, fontWeight:800, color, letterSpacing:'0.8px', textTransform:'uppercase', marginBottom:6, marginTop:4 }}>{label}</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:1 }}>{children}</div>
+    </div>
+  );
+}
+
+function Row({ icon, label, value, dim, text, color }: { icon:string; label:string; value:string; dim:string; text:string; color?:string }) {
+  return (
+    <div style={{ display:'flex', gap:6, alignItems:'flex-start', padding:'4px 0', borderBottom:`1px solid ${dim}10` }}>
+      <span style={{ fontSize:11, flexShrink:0, width:18 }}>{icon}</span>
+      <span style={{ fontSize:10, color:dim, flexShrink:0, width:76 }}>{label}</span>
+      <span style={{ fontSize:11, color: color || text, fontWeight:500, wordBreak:'break-word', flex:1 }}>{value}</span>
     </div>
   );
 }
