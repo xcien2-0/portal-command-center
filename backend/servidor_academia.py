@@ -451,15 +451,16 @@ def api_rrhh_stats():
 
 @app.get("/api/rrhh/empleado/{emp_id}")
 def api_rrhh_empleado_detalle(emp_id: int):
-    """Detalle completo de un empleado."""
+    """Detalle de un empleado incluyendo foto."""
+    # Solo campos accesibles con el perfil actual (sin campos HR Officer)
     fields = [
         'name', 'job_title', 'job_id', 'department_id', 'company_id',
         'work_email', 'mobile_phone', 'work_phone', 'parent_id',
-        'child_ids', 'image_256', 'work_location_id',
-        'resource_calendar_id', 'birthday', 'gender', 'marital',
-        'study_field', 'study_school', 'country_id',
+        'child_ids', 'work_location_id', 'resource_calendar_id',
     ]
     raw = odoo_conn.execute('hr.employee', 'search_read', [['id', '=', emp_id]], fields=fields, limit=1)
+    if raw is None:
+        raise HTTPException(status_code=500, detail="Error conectando con Odoo")
     if not raw:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
     e = raw[0]
@@ -474,13 +475,8 @@ def api_rrhh_empleado_detalle(emp_id: int):
         "manager": e["parent_id"][1] if e.get("parent_id") else None,
         "location": e["work_location_id"][1] if e.get("work_location_id") else "",
         "schedule": e["resource_calendar_id"][1] if e.get("resource_calendar_id") else "",
-        "avatar": f"data:image/png;base64,{e['image_256']}" if e.get("image_256") else None,
+        "avatar": None,
         "subordinates_count": len(e.get("child_ids") or []),
-        "birthday": e.get("birthday") or None,
-        "gender": e.get("gender") or None,
-        "marital": e.get("marital") or None,
-        "study_field": e.get("study_field") or None,
-        "study_school": e.get("study_school") or None,
     }
 
 
