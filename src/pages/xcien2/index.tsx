@@ -17,6 +17,7 @@ import BackupSection from './sections/BackupSection';
 import InicioHoloSection from './sections/InicioHoloSection';
 import BidrillasSection from './sections/BidrillasSection';
 import AgentesSection from './sections/AgentesSection';
+import RedSection from './sections/RedSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -44,6 +45,7 @@ const NAV: NavEntry[] = [
   { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
 
   { id: 'noc', label: 'Red en Vivo', icon: '📡', group: 'Operaciones' },
+  { id: 'red', label: 'Mapa de Red', icon: '🗺️', group: 'Operaciones' },
   { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
   { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
   { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
@@ -71,6 +73,7 @@ const NAV: NavEntry[] = [
 const SECTION_TITLE: Record<SectionId, string> = {
   inicio: 'Hub Principal',
   noc: 'Red en Vivo',
+  red: 'Mapa de Red — Dispositivos por Marca',
   wfm: 'Control Operativo — WFM',
   bidrillas: 'Gestión de Bidrillas 2026',
   call: 'Centro de Atención (Call Center)',
@@ -281,8 +284,14 @@ function Content({
   cities, alerts, activeTenantId, onTenantChange, bridgeData, backendStatus, onSelect
 }: ContentProps & { backendStatus: 'online' | 'offline', onSelect: (id: SectionId) => void }) {
   const padding = theme.compact ? 20 : 32;
+  const isFullHeight = section === 'red';
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding, background: theme.bg, minWidth: 0 }}>
+    <div style={{
+      flex: 1, overflowY: isFullHeight ? 'hidden' : 'auto',
+      padding: isFullHeight ? 0 : padding,
+      background: theme.bg, minWidth: 0,
+      display: 'flex', flexDirection: 'column',
+    }}>
       {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} onSelect={onSelect} />}
       {section === 'noc' && (
         <NocSection 
@@ -294,6 +303,7 @@ function Content({
           onTenantChange={onTenantChange} 
         />
       )}
+      {section === 'red'      && <RedSection      theme={theme} />}
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'bidrillas' && <BidrillasSection theme={theme} />}

@@ -46,6 +46,7 @@ from agents.odoo_connector import odoo_conn
 from agents.devops_agent import DevOpsAgent
 from agents import auth_service
 from agents.auth_service import get_current_user, require_rol
+from agents import uisp_service
 
 # Instanciar el Director General y el SRE
 dg_agent = DirectorGeneralV2()
@@ -3253,6 +3254,96 @@ async def get_integrations_status():
         "net2phone": {"connected": True, "calls_active": 0},
         "ai_agents": {"active": True, "model": "Director General v2"}
     }
+
+
+# ============================================================
+# UISP — Mapa de red y estado de dispositivos
+# ============================================================
+
+@app.get("/api/red/resumen")
+async def red_resumen():
+    """KPIs generales de la red UISP."""
+    return await uisp_service.get_summary()
+
+
+@app.get("/api/red/dispositivos")
+async def red_dispositivos():
+    """Lista de todos los dispositivos con estado."""
+    return await uisp_service.get_devices()
+
+
+@app.get("/api/red/topologia")
+async def red_topologia():
+    """Nodos + edges para React Flow."""
+    return await uisp_service.get_topology()
+
+
+@app.get("/api/red/links")
+async def red_links():
+    """Conexiones (data-links) entre dispositivos."""
+    return await uisp_service.get_data_links()
+
+
+@app.get("/api/red/topologia-geo")
+async def red_topologia_geo():
+    """Links con coordenadas geográficas para dibujar en el mapa."""
+    return await uisp_service.get_topology_geo()
+
+
+@app.get("/api/red/host/{host_id}")
+async def red_host_detalle(host_id: str):
+    """Detalle completo de un host: NOCBoard + UISP si es Ubiquiti."""
+    import httpx
+
+    NOCBOARD_API_BASE = "http://localhost:9401/api"
+    NOCBOARD_API_KEY  = "87a08190b801416392e944ab79c7e3c9"
+
+    # Buscar en NOCBoard
+    host = None
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(
+                f"{NOCBOARD_API_BASE}/hosts",
+                headers={"X-API-Key": NOCBOARD_API_KEY}
+            )
+            hosts = r.json()
+            if isinstance(hosts, dict):
+                hosts = hosts.get("hosts", [])
+            host = next((h for h in hosts if h.get("id") == host_id), None)
+    except Exception as e:
+        logger.warning(f"NOCBoard host detail error: {e}")
+
+    if not host:
+        raise HTTPException(status_code=404, detail="Host no encontrado")
+
+    result = dict(host)
+
+    # Enriquecer con UISP si es Ubiquiti
+    if host.get("vendor") == "Ubiquiti":
+        try:
+            devices = await uisp_service.get_devices()
+            # Intentar match por nombre o IP
+            uisp_dev = next(
+                (d for d in devices if d.get("name") == host.get("name")), None
+            )
+            if not uisp_dev:
+                uisp_dev = next(
+                    (d for d in devices if host.get("ip") and d.get("mac") and
+                     host.get("name","").lower() in (d.get("name","").lower())), None
+                )
+            if uisp_dev:
+                result["uisp"] = {
+                    "signal":        uisp_dev.get("signal"),
+                    "uplink_util":   uisp_dev.get("uplink_utilization"),
+                    "downlink_util": uisp_dev.get("downlink_utilization"),
+                    "stations":      uisp_dev.get("stations_count"),
+                    "can_upgrade":   uisp_dev.get("can_upgrade"),
+                    "firmware":      uisp_dev.get("firmware"),
+                }
+        except Exception as e:
+            logger.warning(f"UISP enrich error: {e}")
+
+    return result
 
 
 @app.get("/{full_path:path}")
