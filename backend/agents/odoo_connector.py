@@ -45,6 +45,15 @@ class OdooConnector:
             return self.models.execute_kw(self.db, self.uid, self.password, model, method, args, kwargs)
         except Exception as e:
             logger.error(f"Error ejecutando {method} en {model}: {e}")
+            # Resetear conexión para que el próximo request reconecte
+            self.uid = None
+            self.models = None
+            # Reintentar una vez
+            try:
+                if self._connect():
+                    return self.models.execute_kw(self.db, self.uid, self.password, model, method, args, kwargs)
+            except Exception as e2:
+                logger.error(f"Reintento fallido {method} en {model}: {e2}")
             return None
 
     # --- Métodos de Conveniencia ---

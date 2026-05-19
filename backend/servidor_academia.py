@@ -391,6 +391,99 @@ def api_odoo_execute(req: OdooActionRequest):
         raise HTTPException(status_code=500, detail="Error en la ejecución de Odoo")
     return {"status": "success", "data": result}
 
+# ─── RRHH Endpoints ───────────────────────────────────────────────────────────
+
+@app.get("/api/rrhh/empleados")
+def api_rrhh_empleados():
+    """Lista completa de empleados desde Odoo."""
+    fields = [
+        'name', 'job_title', 'job_id', 'department_id', 'company_id',
+        'work_email', 'mobile_phone', 'work_phone',
+        'parent_id', 'active',
+        'work_location_id', 'resource_calendar_id',
+    ]
+    # Usamos execute directamente para pasar fields/limit como kwargs (el conector tiene un bug con search_read)
+    raw = odoo_conn.execute('hr.employee', 'search_read', [['active', '=', True]], fields=fields, limit=500)
+    if raw is None:
+        raise HTTPException(status_code=500, detail="Error conectando con Odoo")
+
+    employees = []
+    for e in raw:
+        employees.append({
+            "id": e.get("id"),
+            "name": e.get("name", ""),
+            "job_title": e.get("job_title") or (e["job_id"][1] if e.get("job_id") else ""),
+            "department": e["department_id"][1] if e.get("department_id") else "Sin departamento",
+            "department_id": e["department_id"][0] if e.get("department_id") else None,
+            "company": e["company_id"][1] if e.get("company_id") else "",
+            "company_id": e["company_id"][0] if e.get("company_id") else None,
+            "email": e.get("work_email") or "",
+            "phone": e.get("mobile_phone") or e.get("work_phone") or "",
+            "manager": e["parent_id"][1] if e.get("parent_id") else None,
+            "manager_id": e["parent_id"][0] if e.get("parent_id") else None,
+            "location": e["work_location_id"][1] if e.get("work_location_id") else "",
+            "schedule": e["resource_calendar_id"][1] if e.get("resource_calendar_id") else "",
+            "avatar": None,  # loaded on demand via /api/rrhh/empleado/{id}
+        })
+    return employees
+
+
+@app.get("/api/rrhh/stats")
+def api_rrhh_stats():
+    """Estadísticas globales de RRHH."""
+    try:
+        employees = api_rrhh_empleados()
+    except Exception:
+        employees = []
+
+    from collections import Counter
+    by_dept = Counter(e["department"] for e in employees)
+    by_company = Counter(e["company"] for e in employees)
+    by_location = Counter(e["location"] for e in employees if e["location"])
+
+    return {
+        "total": len(employees),
+        "by_department": [{"name": k, "count": v} for k, v in by_dept.most_common(20)],
+        "by_company": [{"name": k, "count": v} for k, v in by_company.most_common()],
+        "by_location": [{"name": k, "count": v} for k, v in by_location.most_common(10)],
+    }
+
+
+@app.get("/api/rrhh/empleado/{emp_id}")
+def api_rrhh_empleado_detalle(emp_id: int):
+    """Detalle completo de un empleado."""
+    fields = [
+        'name', 'job_title', 'job_id', 'department_id', 'company_id',
+        'work_email', 'mobile_phone', 'work_phone', 'parent_id',
+        'child_ids', 'image_256', 'work_location_id',
+        'resource_calendar_id', 'birthday', 'gender', 'marital',
+        'study_field', 'study_school', 'country_id',
+    ]
+    raw = odoo_conn.execute('hr.employee', 'search_read', [['id', '=', emp_id]], fields=fields, limit=1)
+    if not raw:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    e = raw[0]
+    return {
+        "id": e.get("id"),
+        "name": e.get("name", ""),
+        "job_title": e.get("job_title") or (e["job_id"][1] if e.get("job_id") else ""),
+        "department": e["department_id"][1] if e.get("department_id") else "",
+        "company": e["company_id"][1] if e.get("company_id") else "",
+        "email": e.get("work_email") or "",
+        "phone": e.get("mobile_phone") or e.get("work_phone") or "",
+        "manager": e["parent_id"][1] if e.get("parent_id") else None,
+        "location": e["work_location_id"][1] if e.get("work_location_id") else "",
+        "schedule": e["resource_calendar_id"][1] if e.get("resource_calendar_id") else "",
+        "avatar": f"data:image/png;base64,{e['image_256']}" if e.get("image_256") else None,
+        "subordinates_count": len(e.get("child_ids") or []),
+        "birthday": e.get("birthday") or None,
+        "gender": e.get("gender") or None,
+        "marital": e.get("marital") or None,
+        "study_field": e.get("study_field") or None,
+        "study_school": e.get("study_school") or None,
+    }
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/api/docs")
