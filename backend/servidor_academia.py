@@ -451,8 +451,7 @@ def api_rrhh_stats():
 
 @app.get("/api/rrhh/empleado/{emp_id}")
 def api_rrhh_empleado_detalle(emp_id: int):
-    """Detalle de un empleado incluyendo foto."""
-    # Solo campos accesibles con el perfil actual (sin campos HR Officer)
+    """Detalle de un empleado."""
     fields = [
         'name', 'job_title', 'job_id', 'department_id', 'company_id',
         'work_email', 'mobile_phone', 'work_phone', 'parent_id',
@@ -478,6 +477,23 @@ def api_rrhh_empleado_detalle(emp_id: int):
         "avatar": None,
         "subordinates_count": len(e.get("child_ids") or []),
     }
+
+
+@app.get("/api/rrhh/empleado/{emp_id}/foto")
+def api_rrhh_empleado_foto(emp_id: int):
+    """Devuelve la foto del empleado como imagen PNG. Usa hr.employee.public para acceso sin privilegios HR."""
+    import base64
+    # hr.employee.public expone image_128 sin requerir grupo HR Officer
+    raw = odoo_conn.execute('hr.employee.public', 'search_read', [['id', '=', emp_id]], fields=['image_128'], limit=1)
+    if raw and raw[0].get('image_128'):
+        img_bytes = base64.b64decode(raw[0]['image_128'])
+        return Response(content=img_bytes, media_type="image/png")
+    # Fallback: intentar hr.employee con image_128 directamente
+    raw2 = odoo_conn.execute('hr.employee', 'search_read', [['id', '=', emp_id]], fields=['image_128'], limit=1)
+    if raw2 and raw2[0].get('image_128'):
+        img_bytes = base64.b64decode(raw2[0]['image_128'])
+        return Response(content=img_bytes, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Foto no disponible")
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────

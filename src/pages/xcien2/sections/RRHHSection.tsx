@@ -285,7 +285,21 @@ export default function RRHHSection({ theme }: Props) {
   const [filterCompany, setFilterCompany] = useState('');
   const [view, setView] = useState<'cards' | 'list'>('cards');
   const [selectedEmp, setSelectedEmp] = useState<Empleado | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas'>('arbol');
+
+  const openEmp = (emp: Empleado) => {
+    setSelectedEmp(emp);
+    setSelectedDetail(null);
+    setDetailLoading(true);
+    setPhotoFailed(false);
+    fetch(`${API_BASE}/api/rrhh/empleado/${emp.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setSelectedDetail(d); setDetailLoading(false); })
+      .catch(() => setDetailLoading(false));
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -438,7 +452,7 @@ export default function RRHHSection({ theme }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
               {filtered.map(emp => (
                 <div key={emp.id}
-                  onClick={() => setSelectedEmp(emp)}
+                  onClick={() => openEmp(emp)}
                   style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, padding: 16, cursor: 'pointer', transition: 'border-color 0.2s' }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}60`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = border)}
@@ -479,7 +493,7 @@ export default function RRHHSection({ theme }: Props) {
               <tbody>
                 {filtered.map(emp => (
                   <tr key={emp.id}
-                    onClick={() => setSelectedEmp(emp)}
+                    onClick={() => openEmp(emp)}
                     style={{ borderBottom: `1px solid ${border}`, cursor: 'pointer', transition: 'background 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = `${accent}08`)}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -574,38 +588,99 @@ export default function RRHHSection({ theme }: Props) {
 
       {/* ── Employee Detail Modal ── */}
       {selectedEmp && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setSelectedEmp(null)}>
-          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: 28, width: 380, maxWidth: '90vw', position: 'relative' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); }}>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, width: 420, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', position: 'relative', boxShadow: `0 20px 60px rgba(0,0,0,0.5)` }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedEmp(null)} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', color: dim, fontSize: 20, cursor: 'pointer' }}>✕</button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <Avatar emp={selectedEmp} size={64} />
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: text }}>{selectedEmp.name}</div>
-                <div style={{ fontSize: 12, color: accent, marginTop: 3 }}>{selectedEmp.job_title || '—'}</div>
-                <div style={{ marginTop: 6 }}><CompanyBadge company={selectedEmp.company} accent={accent} /></div>
+
+            {/* Header con foto */}
+            <div style={{ background: `${accent}10`, borderBottom: `1px solid ${border}`, padding: '20px 20px 16px', position: 'relative' }}>
+              <button onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', color: dim, fontSize: 20, cursor: 'pointer' }}>✕</button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                {/* Foto o avatar */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {!photoFailed
+                    ? <img
+                        src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
+                        alt={selectedEmp.name}
+                        onError={() => setPhotoFailed(true)}
+                        style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${accent}`, display: 'block', background: `${avatarColor(selectedEmp.name)}20` }}
+                      />
+                    : (
+                      <div style={{ width: 76, height: 76, borderRadius: '50%', background: `${avatarColor(selectedEmp.name)}20`, border: `3px solid ${avatarColor(selectedEmp.name)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: avatarColor(selectedEmp.name) }}>
+                        {initials(selectedEmp.name)}
+                      </div>
+                    )
+                  }
+                  {detailLoading && (
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 20, height: 20, border: `2px solid ${accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: text, lineHeight: 1.2 }}>{selectedEmp.name}</div>
+                  <div style={{ fontSize: 12, color: accent, marginTop: 4 }}>{selectedEmp.job_title || '—'}</div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <CompanyBadge company={selectedEmp.company} accent={accent} />
+                  </div>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { icon: '🏢', label: 'Departamento', value: shortDept(selectedEmp.department) },
-                { icon: '📍', label: 'Ubicación',    value: selectedEmp.location || '—' },
-                { icon: '👤', label: 'Reporta a',    value: selectedEmp.manager || '—' },
-                { icon: '✉️', label: 'Email',         value: selectedEmp.email || '—' },
-                { icon: '📱', label: 'Teléfono',      value: selectedEmp.phone || '—' },
-                { icon: '🕐', label: 'Horario',       value: selectedEmp.schedule || '—' },
-              ].map(row => (
-                <div key={row.label} style={{ display: 'flex', gap: 10, fontSize: 12 }}>
-                  <span style={{ flexShrink: 0 }}>{row.icon}</span>
-                  <span style={{ color: dim, width: 90, flexShrink: 0 }}>{row.label}</span>
-                  <span style={{ color: text, fontWeight: 500, wordBreak: 'break-all' }}>{row.value}</span>
+
+            {/* Detalles */}
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+
+              {/* Organización */}
+              <ModalSection label="Organización">
+                <ModalRow icon="🏢" label="Empresa"     value={selectedEmp.company} />
+                <ModalRow icon="🗂️" label="Departamento" value={shortDept(selectedEmp.department)} />
+                <ModalRow icon="👤" label="Reporta a"   value={selectedEmp.manager || '—'} />
+                {selectedDetail?.subordinates_count > 0 && (
+                  <ModalRow icon="👥" label="Subordinados" value={`${selectedDetail.subordinates_count} personas`} highlight={accent} />
+                )}
+                <ModalRow icon="📍" label="Sede"        value={(selectedDetail?.location) || selectedEmp.location || '—'} />
+                <ModalRow icon="🕐" label="Horario"     value={(selectedDetail?.schedule) || selectedEmp.schedule || '—'} />
+              </ModalSection>
+
+              {/* Contacto */}
+              <ModalSection label="Contacto">
+                <ModalRow icon="✉️" label="Email"    value={selectedEmp.email || '—'} />
+                <ModalRow icon="📱" label="Teléfono" value={selectedEmp.phone || '—'} />
+              </ModalSection>
+
+              {/* Subordinados destacados */}
+              {selectedDetail?.subordinates_count > 0 && (
+                <div style={{ background: `${accent}10`, border: `1px solid ${accent}25`, borderRadius: 8, padding: '8px 12px', marginTop: 4 }}>
+                  <span style={{ fontSize: 12, color: accent, fontWeight: 700 }}>👥 {selectedDetail.subordinates_count} persona{selectedDetail.subordinates_count !== 1 ? 's' : ''} a su cargo</span>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ModalSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 9, fontWeight: 800, color: '#888', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>{children}</div>
+    </div>
+  );
+}
+
+function ModalRow({ icon, label, value, highlight }: { icon: string; label: string; value: string; highlight?: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <span style={{ fontSize: 12, flexShrink: 0, width: 20 }}>{icon}</span>
+      <span style={{ fontSize: 11, color: '#888', flexShrink: 0, width: 96 }}>{label}</span>
+      <span style={{ fontSize: 12, color: highlight || '#f0f0f0', fontWeight: highlight ? 700 : 500, wordBreak: 'break-word', flex: 1 }}>{value}</span>
     </div>
   );
 }
