@@ -941,6 +941,7 @@ def post_token_operativo(req: Dict[str, Any]):
             detalle=req.get("detalle"),
             empresa=req.get("empresa", "xcien")
         )
+        _hook_token_operativo({**req, **token} if isinstance(token, dict) else {**req})
         return {"status": "success", "token": token}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1139,6 +1140,7 @@ def create_ticket(req: TicketCreateRequest):
     }
     data["tickets"].append(new_ticket)
     _save_wfm(data)
+    _hook_wfm_ticket(new_ticket, action="created")
     return new_ticket
 
 @app.put("/api/wfm/tickets/{ticket_id}/status")
@@ -1150,6 +1152,7 @@ def update_ticket_status(ticket_id: str, req: TicketUpdateStatusRequest):
             if req.asignado is not None:
                 t["asignado"] = req.asignado
             _save_wfm(data)
+            _hook_wfm_ticket(t, action="updated")
             return {"status": "updated", "ticket": t}
     raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
@@ -1450,7 +1453,9 @@ def get_noc_summary():
 @app.post("/api/transacciones")
 def registrar_transaccion(req: TransaccionRequest):
     try:
-        return transacciones_service.registrar(**req.dict())
+        tx = transacciones_service.registrar(**req.dict())
+        _hook_transaccion(tx)
+        return tx
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -4006,8 +4011,10 @@ from xcien_tokens import (
     create_token as xt_create, get_token as xt_get,
     list_tokens as xt_list, transition_token as xt_transition,
     get_token_events as xt_events, get_stats as xt_stats,
+    auto_emit, verify_chain, subscribe as xt_subscribe, unsubscribe as xt_unsubscribe,
     DOMAINS, ENTITIES,
 )
+from fastapi.responses import StreamingResponse
 
 @app.post("/api/xtokens/", status_code=201)
 def api_xt_create(data: TokenCreate):
@@ -4057,6 +4064,102 @@ def api_xt_transition(token_id: str, req: TransitionRequest):
         return xt_transition(token_id, req).model_dump()
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+@app.get("/api/xtokens/chain/verify")
+def api_xt_verify():
+    return verify_chain()
+
+@app.get("/api/xtokens/stream")
+async def api_xt_stream():
+    """SSE — transmite cada evento de token en tiempo real."""
+    q = xt_subscribe()
+    async def event_generator():
+        try:
+            # Heartbeat inicial
+            yield "data: {\"type\":\"connected\"}\n\n"
+            while True:
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=20.0)
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    yield "data: {\"type\":\"ping\"}\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            xt_unsubscribe(q)
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ─── Auto-emit hooks — se disparan en los endpoints de acción existentes ───────
+
+def _hook_transaccion(tx: dict):
+    """Emite token finanzas cuando se registra una transacción inter-empresa."""
+    try:
+        auto_emit(
+            domain="finanzas", entity=tx.get("empresa_origen", "xcien"),
+            payload={k: v for k, v in tx.items() if k != "firma"},
+            created_by=tx.get("responsable", "sistema"),
+            notes=tx.get("concepto", ""),
+            ext_ref=tx.get("tx_id"), ext_system="transacciones_api",
+        )
+    except Exception:
+        pass
+
+def _hook_token_operativo(data: dict):
+    """Emite token rrhh/academia cuando se crea un token operativo."""
+    tipo = data.get("tipo", "")
+    domain = "academia" if tipo in ("certificacion",) else "rrhh"
+    try:
+        auto_emit(
+            domain=domain, entity=data.get("empresa", "xcien"),
+            payload={**data, "tipo_original": tipo},
+            created_by=data.get("nombre") or data.get("agente") or "sistema",
+            notes=data.get("detalle", ""),
+            ext_system="tokens_operativo",
+        )
+    except Exception:
+        pass
+
+def _hook_wfm_ticket(ticket: dict, action: str = "created"):
+    """Emite token field_service cuando se crea o actualiza un ticket WFM."""
+    state_map = {
+        "created": "created", "Abierto": "created",
+        "Agendado": "assigned", "En Sitio": "in_progress",
+        "Cerrado": "completed", "Cancelado": "cancelled",
+    }
+    state = state_map.get(ticket.get("status", "created"), "created")
+    try:
+        # Si ya existe un token para este ticket, transicionarlo
+        existing = xt_list(domain="field_service", search=ticket.get("id", ""), limit=1)
+        if existing and action != "created":
+            allowed = DOMAINS["field_service"]["transitions"].get(existing[0].state, [])
+            if state in allowed:
+                xt_transition(existing[0].token_id, TransitionRequest(
+                    new_state=state, transitioned_by="wfm_sistema",
+                    notes=f"Status WFM: {ticket.get('status')}",
+                ))
+            return
+        auto_emit(
+            domain="field_service", entity="xcien",
+            payload={
+                "tecnico": ticket.get("asignado"),
+                "cliente": ticket.get("client"),
+                "sitio": ticket.get("location"),
+                "tipo_servicio": ticket.get("tipo"),
+                "zona": ticket.get("zona"),
+                "priority": ticket.get("priority"),
+                "ticket_id": ticket.get("id"),
+            },
+            created_by="wfm_sistema",
+            notes=ticket.get("description", ""),
+            ext_ref=ticket.get("id"), ext_system="wfm",
+        )
+    except Exception:
+        pass
 
 
 @app.get("/{full_path:path}")

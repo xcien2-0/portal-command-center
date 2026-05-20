@@ -35,8 +35,9 @@ import sqlite3
 import hashlib
 import json
 import uuid
+import asyncio
 from datetime import datetime, timezone
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Callable
 from pathlib import Path
 from pydantic import BaseModel, Field
 
@@ -239,8 +240,11 @@ def init_db():
             by_user     TEXT,
             notes       TEXT,
             occurred_at TEXT NOT NULL,
+            prev_hash   TEXT,
+            event_hash  TEXT,
             FOREIGN KEY (token_id) REFERENCES xcien_tokens(token_id)
         );
+
 
         CREATE TABLE IF NOT EXISTS token_seq (
             key   TEXT PRIMARY KEY,
@@ -249,6 +253,56 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+
+
+# ─── SSE event bus ────────────────────────────────────────────────────────────
+# Cola asyncio para transmitir eventos en tiempo real a los clientes SSE.
+# Los listeners se registran llamando subscribe() y se eliminan con unsubscribe().
+
+_sse_listeners: list[asyncio.Queue] = []
+
+def _broadcast(event: dict):
+    """Publica un evento a todos los listeners SSE activos (thread-safe)."""
+    dead = []
+    for q in _sse_listeners:
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            dead.append(q)
+    for q in dead:
+        try:
+            _sse_listeners.remove(q)
+        except ValueError:
+            pass
+
+def subscribe() -> asyncio.Queue:
+    q: asyncio.Queue = asyncio.Queue(maxsize=100)
+    _sse_listeners.append(q)
+    return q
+
+def unsubscribe(q: asyncio.Queue):
+    try:
+        _sse_listeners.remove(q)
+    except ValueError:
+        pass
+
+
+# ─── Merkle helpers ───────────────────────────────────────────────────────────
+
+def _event_hash(event_id: str, token_id: str, from_state: Optional[str],
+                to_state: str, by_user: Optional[str], occurred_at: str,
+                prev_hash: Optional[str]) -> str:
+    """Hash encadenado — incluye el hash del evento anterior (Merkle chain)."""
+    raw = f"{event_id}:{token_id}:{from_state}:{to_state}:{by_user}:{occurred_at}:{prev_hash or 'GENESIS'}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _get_chain_head(conn: sqlite3.Connection) -> Optional[str]:
+    """Retorna el event_hash del último evento en la cadena."""
+    row = conn.execute(
+        "SELECT event_hash FROM token_events WHERE event_hash IS NOT NULL ORDER BY occurred_at DESC LIMIT 1"
+    ).fetchone()
+    return row["event_hash"] if row else None
 
 
 def _sign(token_id: str, domain: str, entity: str, state: str, payload: dict, created_at: str) -> str:
@@ -301,14 +355,27 @@ def create_token(data: TokenCreate) -> Token:
             data.ext_ref, data.ext_system, sig,
         ))
 
-        # Log event
+        # Merkle-chained event
+        ev_id = str(uuid.uuid4())
+        prev_h = _get_chain_head(conn)
+        ev_h = _event_hash(ev_id, token_id, None, initial_state, data.created_by, now, prev_h)
         conn.execute("""
-            INSERT INTO token_events (event_id, token_id, from_state, to_state, by_user, notes, occurred_at)
-            VALUES (?,?,?,?,?,?,?)
-        """, (str(uuid.uuid4()), token_id, None, initial_state, data.created_by, "Token creado", now))
+            INSERT INTO token_events
+            (event_id, token_id, from_state, to_state, by_user, notes, occurred_at, prev_hash, event_hash)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, (ev_id, token_id, None, initial_state, data.created_by, "Token creado", now, prev_h, ev_h))
 
         conn.commit()
-        return get_token(token_id, conn=conn)
+        token = get_token(token_id, conn=conn)
+        _broadcast({
+            "type": "token_created",
+            "token_id": token_id, "token_name": token_name,
+            "domain": data.domain, "entity": data.entity,
+            "state": initial_state, "by": data.created_by,
+            "event_hash": ev_h, "prev_hash": prev_h,
+            "ts": now,
+        })
+        return token
     finally:
         conn.close()
 
@@ -379,12 +446,25 @@ def transition_token(token_id: str, req: TransitionRequest) -> Token:
             WHERE token_id=?
         """, (req.new_state, now, closed, new_sig, token_id))
 
+        ev_id2 = str(uuid.uuid4())
+        prev_h2 = _get_chain_head(conn)
+        ev_h2 = _event_hash(ev_id2, token_id, token.state, req.new_state, req.transitioned_by, now, prev_h2)
         conn.execute("""
-            INSERT INTO token_events (event_id, token_id, from_state, to_state, by_user, notes, occurred_at)
-            VALUES (?,?,?,?,?,?,?)
-        """, (str(uuid.uuid4()), token_id, token.state, req.new_state, req.transitioned_by, req.notes, now))
+            INSERT INTO token_events
+            (event_id, token_id, from_state, to_state, by_user, notes, occurred_at, prev_hash, event_hash)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, (ev_id2, token_id, token.state, req.new_state, req.transitioned_by, req.notes, now, prev_h2, ev_h2))
 
         conn.commit()
+        _broadcast({
+            "type": "token_transition",
+            "token_id": token_id, "token_name": token.token_name,
+            "domain": token.domain, "entity": token.entity,
+            "from_state": token.state, "to_state": req.new_state,
+            "by": req.transitioned_by,
+            "event_hash": ev_h2, "prev_hash": prev_h2,
+            "ts": now,
+        })
         return get_token(token_id, conn=conn)
     finally:
         conn.close()
@@ -398,6 +478,41 @@ def get_token_events(token_id: str) -> list:
             (token_id,)
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def auto_emit(domain: str, entity: str, payload: dict, created_by: str = "sistema",
+              notes: str = "", ext_ref: str = None, ext_system: str = None) -> Token:
+    """
+    Emite un token automáticamente desde cualquier parte del sistema.
+    Llamar desde hooks en los endpoints existentes.
+    """
+    return create_token(TokenCreate(
+        domain=domain, entity=entity, payload=payload,
+        created_by=created_by, notes=notes,
+        ext_ref=ext_ref, ext_system=ext_system,
+    ))
+
+
+def verify_chain() -> dict:
+    """
+    Verifica la integridad de la Merkle chain de eventos.
+    Retorna: {'valid': bool, 'total': int, 'broken_at': event_id | None}
+    """
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM token_events WHERE event_hash IS NOT NULL ORDER BY occurred_at ASC"
+        ).fetchall()
+        for i, row in enumerate(rows):
+            expected = _event_hash(
+                row["event_id"], row["token_id"], row["from_state"],
+                row["to_state"], row["by_user"], row["occurred_at"], row["prev_hash"]
+            )
+            if expected != row["event_hash"]:
+                return {"valid": False, "total": len(rows), "broken_at": row["event_id"], "index": i}
+        return {"valid": True, "total": len(rows), "broken_at": None}
     finally:
         conn.close()
 

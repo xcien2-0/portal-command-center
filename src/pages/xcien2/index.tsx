@@ -25,6 +25,7 @@ import { NOCCity, NOCAlert } from '@/types/noc';
 
 import InventarioTransfersSection from './sections/InventarioTransfersSection';
 import XcienTokensSection from './sections/XcienTokensSection';
+import MerkleFeedSection from './sections/MerkleFeedSection';
 
 // Bridge imports for classic components
 import CallCenter from '../CallCenter';
@@ -60,6 +61,7 @@ const NAV: NavEntry[] = [
   { id: 'academia', label: 'Dashboard Academia', icon: '🎓', group: 'Certificación & Academia' },
 
   { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
+  { id: 'merkle', label: 'Merkle Feed — En Vivo', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
   { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
@@ -494,6 +496,7 @@ function Content({
       {section === 'backup' && <BackupSection theme={theme} />}
       {section === 'transacciones' && <XcienTokensSection theme={theme} />}
       {section === 'tokens'        && <XcienTokensSection theme={theme} />}
+      {section === 'merkle'        && <MerkleFeedSection theme={theme} />}
       {section === 'editor' && (
         <DevPanel
           theme={theme}
