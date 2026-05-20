@@ -8192,11 +8192,11 @@
   {
     "id": "ODOO-79868",
     "odoo_id": 79868,
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 67,
     "cliente": "Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V.",
     "servicio": "Sandur, [SIN PRODUCTO], Red Servicios y Enlaces Internet M\u00e9xico Sociedad por Acciones Simplificada de C.V., [SIN SITIO]",
     "comercial": "FELIPE DE JESUS CAZARES VARELA",
-    "estado": "ANTEPROYECTO",
+    "estado": "SOLICITUD_PREVENTA",
     "estado_fuente": "odoo",
     "revenue": 25000.0,
     "fecha_deadline": false,
@@ -8259,6 +8259,11 @@
       {
         "fecha": "2026-05-13T17:27:23.332854",
         "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-19T23:43:39.219826",
+        "accion": "Odoo sync: stage \u2192 Borrador (SOLICITUD_PREVENTA)",
         "usuario": "Sistema"
       }
     ]

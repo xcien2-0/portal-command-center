@@ -250,6 +250,8 @@ class WFMNocAprobarRequest(BaseModel):
 class SkillResult(BaseModel):
     nombre_tecnico: str
     resultados: dict  # {pilar: score}
+    modulo: Optional[str] = None
+    empresa: Optional[str] = "xcien"
 
 class TicketCreateRequest(BaseModel):
     client: str
@@ -1001,6 +1003,29 @@ def save_skill_result(result: SkillResult):
 
     with open(SKILLS_DB, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+    # Auto-emit token academia por cada resultado guardado
+    scores = result.resultados or {}
+    global_score = scores.get("Global") or (sum(scores.values()) / len(scores) if scores else 0)
+    approved = global_score >= 70
+    try:
+        auto_emit(
+            domain="academia",
+            entity=result.empresa or "xcien",
+            payload={
+                "tecnico": result.nombre_tecnico,
+                "modulo": result.modulo or "Evaluación técnica",
+                "score": round(global_score, 1),
+                "pilares": scores,
+                "aprobado": approved,
+                "nivel": "Aprobado" if approved else "No aprobado",
+            },
+            created_by=result.nombre_tecnico or "sistema",
+            notes=f"{'✅ Aprobado' if approved else '❌ No aprobado'} — {round(global_score, 1)}%",
+            ext_system="save_skill_result",
+        )
+    except Exception:
+        pass
 
     return {"status": "success", "message": f"Matriz actualizada para {result.nombre_tecnico}"}
 
