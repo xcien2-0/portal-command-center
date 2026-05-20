@@ -17,8 +17,14 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const isSandurDomain = typeof window !== 'undefined' &&
+    (window.location.hostname.includes('sandur') || window.location.hostname.includes('cliente'));
   const portalParam = searchParams.get('portal');
-  const portal: Portal = portalParam === 'cliente' ? 'cliente' : 'empleado';
+  const portal: Portal = portalParam === 'cliente'
+    ? 'cliente'
+    : portalParam === 'empleado'
+    ? 'empleado'
+    : isSandurDomain ? 'cliente' : 'empleado';
 
   const isCliente = portal === 'cliente';
   const accentColor = isCliente ? '#FB923C' : '#00B4D8';
