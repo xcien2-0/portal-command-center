@@ -1,22 +1,23 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import type { PortalType } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
-  requiredPortal: 'empleado' | 'cliente';
+  requiredPortal: PortalType;
 }
 
-export default function ProtectedRoute({ requiredPortal }: ProtectedRouteProps) {
+export function ProtectedRoute({ requiredPortal }: ProtectedRouteProps) {
   const { user, portalType, loading } = useAuth();
 
   if (loading) {
     return (
       <div
-        style={{ backgroundColor: '#0a1628' }}
         className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: '#0a1628' }}
       >
         <div className="flex flex-col items-center gap-4">
           <div
-            className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+            className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
             style={{ borderColor: '#00B4D8', borderTopColor: 'transparent' }}
           />
           <p className="text-sm" style={{ color: '#94a3b8' }}>

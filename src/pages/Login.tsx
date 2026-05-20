@@ -3,191 +3,195 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+
+type Portal = 'empleado' | 'cliente';
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const isCliente = searchParams.get('portal') === 'cliente';
-  const portal = isCliente ? 'cliente' : 'empleado';
+  const navigate = useNavigate();
+  const { signIn, user, portalType, loading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { signIn, user, portalType, loading } = useAuth();
-  const navigate = useNavigate();
+  const portalParam = searchParams.get('portal');
+  const portal: Portal = portalParam === 'cliente' ? 'cliente' : 'empleado';
 
-  // If already logged in, redirect
+  const isCliente = portal === 'cliente';
+  const accentColor = isCliente ? '#FB923C' : '#00B4D8';
+  const accentColorDim = isCliente ? 'rgba(251,146,60,0.15)' : 'rgba(0,180,216,0.15)';
+
+  // Redirect if already logged in
   useEffect(() => {
     if (!loading && user && portalType) {
-      navigate(portalType === 'cliente' ? '/cliente' : '/', { replace: true });
+      if (portalType === 'cliente') {
+        navigate('/cliente', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [user, portalType, loading, navigate]);
 
-  const accentColor = isCliente ? '#FB923C' : '#00B4D8';
-  const accentColorMuted = isCliente ? 'rgba(251,146,60,0.15)' : 'rgba(0,180,216,0.15)';
-  const accentBorder = isCliente ? 'rgba(251,146,60,0.4)' : 'rgba(0,180,216,0.4)';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSubmitting(true);
+    setError('');
 
-    const { error } = await signIn(email, password);
-
-    if (error) {
-      setSubmitting(false);
-      const msg = error.message.toLowerCase();
-      if (msg.includes('invalid login credentials') || msg.includes('invalid') || msg.includes('wrong')) {
-        setErrorMsg('Correo o contraseña incorrectos.');
-      } else if (msg.includes('email not confirmed')) {
-        setErrorMsg('Por favor confirma tu correo electrónico antes de iniciar sesión.');
-      } else if (msg.includes('too many requests')) {
-        setErrorMsg('Demasiados intentos. Espera un momento e inténtalo de nuevo.');
-      } else {
-        setErrorMsg('Error al iniciar sesión. Inténtalo de nuevo.');
-      }
+    if (!email.trim()) {
+      setError('El correo electrónico es requerido.');
+      return;
     }
-    // On success, the useEffect above will handle redirect
+    if (!password) {
+      setError('La contraseña es requerida.');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error: signInError } = await signIn(email.trim(), password);
+    setSubmitting(false);
+
+    if (signInError) {
+      const msg = signInError.message.toLowerCase();
+      if (msg.includes('invalid') || msg.includes('credentials') || msg.includes('password')) {
+        setError('Correo o contraseña incorrectos. Inténtalo de nuevo.');
+      } else if (msg.includes('email not confirmed')) {
+        setError('Por favor confirma tu correo electrónico antes de iniciar sesión.');
+      } else {
+        setError('Ocurrió un error al iniciar sesión. Inténtalo de nuevo.');
+      }
+      return;
+    }
+
+    // After sign-in, auth state change listener in AuthContext will update portalType.
+    // The useEffect above will redirect based on portalType.
   };
 
-  const switchPortalUrl = isCliente ? '/login' : '/login?portal=cliente';
-  const switchPortalLabel = isCliente
-    ? '¿Eres empleado XCIEN? Ingresa aquí'
-    : '¿Eres cliente Sandur? Ingresa aquí';
+  const otherPortal: Portal = isCliente ? 'empleado' : 'cliente';
+  const otherLabel = isCliente ? 'Portal XCIEN (Empleados)' : 'Portal Sandur (Clientes)';
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-screen flex items-center justify-center p-4"
       style={{ backgroundColor: '#0a1628' }}
     >
-      {/* Background subtle glow */}
+      {/* Background gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: isCliente
-            ? 'radial-gradient(ellipse at 50% 30%, rgba(251,146,60,0.08) 0%, transparent 60%)'
-            : 'radial-gradient(ellipse at 50% 30%, rgba(0,180,216,0.08) 0%, transparent 60%)',
+          background: `radial-gradient(ellipse at center top, ${accentColorDim} 0%, transparent 60%)`,
         }}
       />
 
       <div
-        className="relative w-full max-w-md rounded-2xl border p-8 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl p-8 shadow-2xl"
         style={{
-          backgroundColor: 'rgba(15, 28, 52, 0.95)',
-          borderColor: accentBorder,
-          boxShadow: `0 0 40px ${accentColorMuted}`,
+          backgroundColor: '#0f1f38',
+          border: `1px solid ${accentColor}30`,
+          boxShadow: `0 0 40px ${accentColor}15`,
         }}
       >
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        {/* Logo / Brand */}
+        <div className="text-center mb-8">
           {isCliente ? (
-            <div className="mb-4">
-              <span
-                className="text-4xl font-bold tracking-wider"
-                style={{ color: accentColor, fontFamily: 'Inter, sans-serif', letterSpacing: '0.12em' }}
+            <div>
+              <div
+                className="text-4xl font-bold tracking-widest mb-1"
+                style={{ color: accentColor, fontFamily: 'Inter, sans-serif' }}
               >
                 SANDUR
-              </span>
-              <p className="text-center text-sm mt-1" style={{ color: '#64748b' }}>
+              </div>
+              <div className="text-xs tracking-widest uppercase" style={{ color: '#64748b' }}>
                 Portal de Clientes
-              </p>
+              </div>
             </div>
           ) : (
-            <div className="mb-4 flex flex-col items-center">
+            <div>
               <img
                 src="/xcien.png"
                 alt="XCIEN"
-                className="h-16 w-auto object-contain mb-2"
+                className="h-14 mx-auto mb-2 object-contain"
                 onError={(e) => {
+                  // Fallback to text if image not found
                   (e.target as HTMLImageElement).style.display = 'none';
+                  const sibling = (e.target as HTMLImageElement).nextElementSibling;
+                  if (sibling) (sibling as HTMLElement).style.display = 'block';
                 }}
               />
-              <span
-                className="text-2xl font-bold tracking-widest"
+              <div
+                className="text-3xl font-bold tracking-widest hidden"
                 style={{ color: accentColor }}
               >
                 XCIEN
-              </span>
-              <p className="text-center text-sm mt-1" style={{ color: '#64748b' }}>
+              </div>
+              <div className="text-xs tracking-widest uppercase mt-1" style={{ color: '#64748b' }}>
                 Portal de Empleados
-              </p>
+              </div>
             </div>
           )}
-
-          <div
-            className="w-12 h-px"
-            style={{ backgroundColor: accentBorder }}
-          />
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium" style={{ color: '#94a3b8' }}>
+            <Label htmlFor="email" style={{ color: '#94a3b8' }}>
               Correo electrónico
-            </label>
+            </Label>
             <Input
+              id="email"
               type="email"
-              placeholder="usuario@empresa.com"
+              placeholder="usuario@xcien.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               autoComplete="email"
-              className="border-0"
+              disabled={submitting}
               style={{
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: '#0a1628',
+                borderColor: `${accentColor}40`,
                 color: '#e2e8f0',
               }}
+              className="focus-visible:ring-0 focus-visible:border-current placeholder:text-slate-600"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium" style={{ color: '#94a3b8' }}>
+            <Label htmlFor="password" style={{ color: '#94a3b8' }}>
               Contraseña
-            </label>
+            </Label>
             <Input
+              id="password"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               autoComplete="current-password"
+              disabled={submitting}
               style={{
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: '#0a1628',
+                borderColor: `${accentColor}40`,
                 color: '#e2e8f0',
               }}
+              className="focus-visible:ring-0 focus-visible:border-current placeholder:text-slate-600"
             />
           </div>
 
-          {errorMsg && (
+          {error && (
             <div
               className="rounded-lg px-4 py-3 text-sm"
-              style={{
-                backgroundColor: 'rgba(239,68,68,0.1)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(239,68,68,0.3)',
-                color: '#fca5a5',
-              }}
+              style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}
             >
-              {errorMsg}
+              {error}
             </div>
           )}
 
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full font-semibold py-5 transition-all"
+            className="w-full font-semibold tracking-wide transition-all duration-200"
             style={{
               backgroundColor: accentColor,
-              color: '#fff',
+              color: isCliente ? '#1a0a00' : '#001a26',
               border: 'none',
               opacity: submitting ? 0.7 : 1,
             }}
@@ -196,15 +200,18 @@ export default function Login() {
           </Button>
         </form>
 
-        {/* Switch portal */}
+        {/* Portal toggle */}
         <div className="mt-6 text-center">
-          <Link
-            to={switchPortalUrl}
-            className="text-sm transition-colors hover:underline"
-            style={{ color: accentColor }}
-          >
-            {switchPortalLabel}
-          </Link>
+          <p className="text-xs" style={{ color: '#475569' }}>
+            ¿Acceder al otro portal?{' '}
+            <Link
+              to={`/login?portal=${otherPortal}`}
+              className="underline transition-colors duration-150"
+              style={{ color: accentColor }}
+            >
+              {otherLabel}
+            </Link>
+          </p>
         </div>
       </div>
     </div>

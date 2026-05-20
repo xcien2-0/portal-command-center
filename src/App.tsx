@@ -25,6 +25,18 @@ import Docs from "./pages/Docs.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
 import InvitePage from "./pages/InvitePage.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
+import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
+import { AuthProvider } from "./contexts/AuthContext.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
+import Login from "./pages/Login.tsx";
+import AccesoDenegado from "./pages/AccesoDenegado.tsx";
+import ClienteLayout from "./pages/cliente/ClienteLayout.tsx";
+import ClienteHome from "./pages/cliente/ClienteHome.tsx";
+import ClienteTickets from "./pages/cliente/ClienteTickets.tsx";
+import ClienteSLA from "./pages/cliente/ClienteSLA.tsx";
+import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
+import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
+import { useAuth } from "./contexts/AuthContext.tsx";
 
 function HeaderActions() {
   const { mode, toggleMode } = useViewMode();
@@ -43,10 +55,6 @@ function HeaderActions() {
   );
 }
 
-import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
-import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
-import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
-
 const queryClient = new QueryClient();
 
 const getGlobalTheme = () => {
@@ -59,59 +67,85 @@ const getGlobalTheme = () => {
 const App = () => (
   <ViewModeProvider>
     <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Main Hub (Classic Entry) */}
-          <Route path="/" element={<Index />} />
-          <Route path="/xcien2" element={<Xcien2Page />} />
-          <Route path="/invite" element={<InvitePage />} />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/acceso-denegado" element={<AccesoDenegado />} />
 
-          {/* Legacy/Classic routes can stay for now but without double sidebar */}
-          <Route path="/gerencia" element={<Gerencia />} />
-          <Route path="/scan" element={<Scan />} />
-          <Route path="/noc" element={<NOC />} />
-          <Route path="/dispatch" element={<Dispatch />} />
-          <Route path="/academia" element={<AcademiaLayout />}>
-            <Route index element={<AcademiaDashboard />} />
-            <Route path="modulos" element={<AcademiaModulos />} />
-            <Route path="examenes" element={<AcademiaExamenes />} />
-            <Route path="perfil" element={<AcademiaPerfil />} />
-            <Route path="leaderboard" element={<AcademiaLeaderboard />} />
-            <Route path="admin" element={<AcademiaAdmin />} />
-          </Route>
+              {/* Cliente portal — protected */}
+              <Route element={<ProtectedRoute requiredPortal="cliente" />}>
+                <Route path="/cliente" element={<ClienteLayout />}>
+                  <Route index element={<ClienteHome />} />
+                  <Route path="tickets" element={<ClienteTickets />} />
+                  <Route path="sla" element={<ClienteSLA />} />
+                  {/* Placeholder routes for nav items */}
+                  <Route path="servicio" element={<ClienteHome />} />
+                  <Route path="soporte" element={<ClienteTickets />} />
+                </Route>
+              </Route>
 
-          {/* Fallback for classic shell modules */}
-          <Route path="*" element={
-            <SidebarProvider>
-              <div className="min-h-screen flex w-full">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col min-w-0">
-                  <header className="h-10 flex items-center border-b border-border bg-background px-2">
-                    <SidebarTrigger />
-                    <HeaderActions />
-                  </header>
-                  <main className="flex-1">
-                    <Routes>
-                      <Route path="/call-center" element={<CallCenter />} />
-                      <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
-                      <Route path="/reporte-impacto" element={<ReporteImpacto />} />
-                      <Route path="/docs" element={<Docs />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                </div>
-              </div>
-            </SidebarProvider>
-          } />
-        </Routes>
-      </BrowserRouter>
-      <FloatingChat theme={getGlobalTheme()} />
-    </TooltipProvider>
-  </QueryClientProvider>
+              {/* Empleado portal — all existing routes wrapped */}
+              <Route element={<ProtectedRoute requiredPortal="empleado" />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/xcien2" element={<Xcien2Page />} />
+                <Route path="/invite" element={<InvitePage />} />
+                <Route path="/gerencia" element={<Gerencia />} />
+                <Route path="/scan" element={<Scan />} />
+                <Route path="/noc" element={<NOC />} />
+                <Route path="/dispatch" element={<Dispatch />} />
+                <Route path="/academia" element={<AcademiaLayout />}>
+                  <Route index element={<AcademiaDashboard />} />
+                  <Route path="modulos" element={<AcademiaModulos />} />
+                  <Route path="examenes" element={<AcademiaExamenes />} />
+                  <Route path="perfil" element={<AcademiaPerfil />} />
+                  <Route path="leaderboard" element={<AcademiaLeaderboard />} />
+                  <Route path="admin" element={<AcademiaAdmin />} />
+                </Route>
+
+                {/* Fallback for classic shell modules */}
+                <Route path="*" element={
+                  <SidebarProvider>
+                    <div className="min-h-screen flex w-full">
+                      <AppSidebar />
+                      <div className="flex-1 flex flex-col min-w-0">
+                        <header className="h-10 flex items-center border-b border-border bg-background px-2">
+                          <SidebarTrigger />
+                          <HeaderActions />
+                        </header>
+                        <main className="flex-1">
+                          <Routes>
+                            <Route path="/call-center" element={<CallCenter />} />
+                            <Route path="/reportes-gobierno" element={<ReportesGobierno />} />
+                            <Route path="/reporte-impacto" element={<ReporteImpacto />} />
+                            <Route path="/docs" element={<Docs />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </div>
+                  </SidebarProvider>
+                } />
+              </Route>
+            </Routes>
+            <FloatingChatConditional />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   </ViewModeProvider>
 );
+
+// Only show FloatingChat for empleados
+function FloatingChatConditional() {
+  const theme = getGlobalTheme();
+  const { portalType } = useAuth();
+  if (portalType === 'cliente') return null;
+  return <FloatingChat theme={theme} />;
+}
 
 export default App;
