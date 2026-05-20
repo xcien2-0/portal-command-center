@@ -1,0 +1,45 @@
+{
+  "name": "XCIEN 2.0 — Portal de Operaciones",
+  "short_name": "XCIEN",
+  "description": "Portal de operaciones, NOC y campo para XCIEN",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#00B4D8",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "es-MX",
+  "categories": ["business", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/xcien.png",
+      "sizes": "205x119",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "NOC en Vivo",
+      "url": "/xcien2?section=noc",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dispatch",
+      "url": "/xcien2?section=wfm",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">XCIEN Operaciones</string>
+    <string name="title_activity_main">XCIEN Operaciones</string>
+    <string name="package_name">mx.xcien.operaciones</string>
+    <string name="custom_url_scheme">mx.xcien.operaciones</string>
+</resources>
