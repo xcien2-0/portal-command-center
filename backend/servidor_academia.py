@@ -1521,39 +1521,36 @@ def comprobante_tx(tx_id: str):
 @app.get("/api/inventario/odoo/productos")
 def api_odoo_productos(
     search: str = '',
-    categoria: str = '',
     tipo: str = '',
     offset: int = 0,
     limit: int = 50
 ):
-    """Lista productos de Odoo con stock disponible."""
+    """Lista productos de Odoo."""
     try:
-        domain = []
-        if search:
-            domain.append('|')
-            domain.append(['name', 'ilike', search])
-            domain.append(['default_code', 'ilike', search])
-        if tipo:
-            domain.append(['type', '=', tipo])
-        # Solo productos con stock o almacenables
-        if not tipo:
-            domain.append(['type', 'in', ['product', 'consu']])
+        # Construir dominio sin usar operador 'in' (falla en XML-RPC de este Odoo)
+        if search and tipo:
+            domain = ['&', '|',
+                      ['name', 'ilike', search],
+                      ['default_code', 'ilike', search],
+                      ['type', '=', tipo]]
+        elif search:
+            domain = ['|',
+                      ['name', 'ilike', search],
+                      ['default_code', 'ilike', search]]
+        elif tipo:
+            domain = [['type', '=', tipo]]
+        else:
+            domain = []   # todos los productos
 
         fields = ['id', 'name', 'default_code', 'categ_id', 'type',
-                  'qty_available', 'virtual_available', 'uom_id', 'active']
+                  'qty_available', 'virtual_available', 'uom_id']
         result = odoo_conn.execute('product.product', 'search_read',
-                                   [domain], fields=fields,
+                                   domain, fields=fields,
                                    limit=limit, offset=offset,
                                    order='qty_available desc, name asc')
+        total = odoo_conn.execute('product.product', 'search_count', domain)
 
-        # Filtrar por categoría después si se especifica
-        if categoria:
-            result = [p for p in result
-                      if categoria.lower() in (p.get('categ_id') or ['',''])[1].lower()]
-
-        total = odoo_conn.execute('product.product', 'search_count', [domain])
-
-        return {"productos": result, "total": total, "offset": offset, "limit": limit}
+        return {"productos": result or [], "total": total or 0, "offset": offset, "limit": limit}
     except Exception as e:
         logger.error(f"odoo productos error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1564,20 +1561,8 @@ def api_odoo_categorias():
     """Árbol de categorías de productos Odoo."""
     try:
         cats = odoo_conn.execute('product.category', 'search_read',
-                                  [[]], fields=['id', 'name', 'complete_name', 'parent_id'])
-        return {"categorias": cats}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/inventario/odoo/ubicaciones")
-def api_odoo_ubicaciones():
-    """Ubicaciones de almacén Odoo."""
-    try:
-        locs = odoo_conn.execute('stock.location', 'search_read',
-                                  [[['usage', 'in', ['internal', 'transit']], ['active', '=', True]]],
-                                  fields=['id', 'name', 'complete_name', 'usage'])
-        return {"ubicaciones": locs}
+                                  [], fields=['id', 'name', 'complete_name', 'parent_id'])
+        return {"categorias": cats or []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1587,10 +1572,10 @@ def api_odoo_stock_ubicacion(product_id: int):
     """Stock de un producto desglosado por ubicación."""
     try:
         quants = odoo_conn.execute('stock.quant', 'search_read',
-                                    [[['product_id', '=', product_id],
-                                      ['location_id.usage', '=', 'internal']]],
-                                    fields=['location_id', 'quantity', 'reserved_quantity'])
-        return {"quants": quants}
+                                    [['product_id', '=', product_id]],
+                                    fields=['location_id', 'quantity', 'reserved_quantity'],
+                                    limit=20)
+        return {"quants": quants or []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1599,16 +1584,15 @@ def api_odoo_stock_ubicacion(product_id: int):
 def api_odoo_resumen():
     """Resumen estadístico del inventario Odoo."""
     try:
-        total_prods    = odoo_conn.execute('product.product', 'search_count',
-                                            [[['type', 'in', ['product', 'consu']]]])
+        total_prods    = odoo_conn.execute('product.product', 'search_count', []) or 0
         con_stock      = odoo_conn.execute('product.product', 'search_count',
-                                            [[['qty_available', '>', 0]]])
+                                            [['qty_available', '>', 0]]) or 0
         sin_stock      = odoo_conn.execute('product.product', 'search_count',
-                                            [[['type', '=', 'product'], ['qty_available', '<=', 0]]])
-        total_cats     = odoo_conn.execute('product.category', 'search_count', [[]])
+                                            [['qty_available', '<=', 0]]) or 0
+        total_cats     = odoo_conn.execute('product.category', 'search_count', []) or 0
         total_pickings = odoo_conn.execute('stock.picking', 'search_count',
-                                            [[['state', '=', 'done'],
-                                              ['date_done', '>=', '2026-01-01']]])
+                                            [['state', '=', 'done'],
+                                             ['date_done', '>=', '2026-01-01']]) or 0
         return {
             "total_productos": total_prods,
             "con_stock": con_stock,
