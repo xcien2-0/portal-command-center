@@ -288,6 +288,7 @@ export default function RRHHSection({ theme }: Props) {
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
+  const [photoZoom,   setPhotoZoom]   = useState(false);
   const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas'>('arbol');
 
   const openEmp = (emp: Empleado) => {
@@ -295,6 +296,7 @@ export default function RRHHSection({ theme }: Props) {
     setSelectedDetail(null);
     setDetailLoading(true);
     setPhotoFailed(false);
+    setPhotoZoom(false);
     fetch(`${API_BASE}/api/rrhh/empleado/${emp.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setSelectedDetail(d); setDetailLoading(false); })
@@ -589,13 +591,13 @@ export default function RRHHSection({ theme }: Props) {
       {/* ── Employee Detail Modal ── */}
       {selectedEmp && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); }}>
+          onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); setPhotoZoom(false); }}>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, width: 420, maxWidth: '92vw', maxHeight: '85vh', overflowY: 'auto', position: 'relative', boxShadow: `0 20px 60px rgba(0,0,0,0.5)` }}
             onClick={e => e.stopPropagation()}>
 
             {/* Header con foto */}
             <div style={{ background: `${accent}10`, borderBottom: `1px solid ${border}`, padding: '20px 20px 16px', position: 'relative' }}>
-              <button onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', color: dim, fontSize: 20, cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setSelectedEmp(null); setSelectedDetail(null); setPhotoFailed(false); setPhotoZoom(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', color: dim, fontSize: 20, cursor: 'pointer' }}>✕</button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 {/* Foto o avatar */}
@@ -605,7 +607,8 @@ export default function RRHHSection({ theme }: Props) {
                         src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
                         alt={selectedEmp.name}
                         onError={() => setPhotoFailed(true)}
-                        style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${accent}`, display: 'block', background: `${avatarColor(selectedEmp.name)}20` }}
+                        onClick={() => setPhotoZoom(true)}
+                        style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${accent}`, display: 'block', background: `${avatarColor(selectedEmp.name)}20`, cursor: 'zoom-in' }}
                       />
                     : (
                       <div style={{ width: 76, height: 76, borderRadius: '50%', background: `${avatarColor(selectedEmp.name)}20`, border: `3px solid ${avatarColor(selectedEmp.name)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: avatarColor(selectedEmp.name) }}>
@@ -660,6 +663,36 @@ export default function RRHHSection({ theme }: Props) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox — foto ampliada */}
+      {photoZoom && selectedEmp && !photoFailed && (
+        <div
+          onClick={() => setPhotoZoom(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 400,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 16,
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
+            alt={selectedEmp.name}
+            style={{
+              maxWidth: '80vw', maxHeight: '75vh',
+              borderRadius: 16, objectFit: 'contain',
+              border: `3px solid ${avatarColor(selectedEmp.name)}`,
+              boxShadow: `0 0 60px ${avatarColor(selectedEmp.name)}40`,
+            }}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>{selectedEmp.name}</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4 }}>{selectedEmp.job_title}</div>
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Clic para cerrar</div>
         </div>
       )}
     </div>

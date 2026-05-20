@@ -171,6 +171,9 @@ export default function OrgTreeView({ empleados, theme }: Props) {
   const [empDetail, setEmpDetail]     = useState<EmpDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
+  const [photoZoom,   setPhotoZoom]   = useState(false);
+  const [searchQ,     setSearchQ]     = useState('');
+  const [searchRes,   setSearchRes]   = useState<Empleado[]>([]);
   const [crumbs, setCrumbs] = useState([{id:'root',label:'XCIEN'}]);
   const { accent, bg, card, border, text, dim } = theme;
 
@@ -244,6 +247,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
     setEmpDetail(null);
     setDetailLoading(true);
     setPhotoFailed(false);
+    setPhotoZoom(false);
     fetch(`${API_BASE}/api/rrhh/empleado/${emp.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setEmpDetail(d); setDetailLoading(false); })
@@ -293,7 +297,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
     (svg as any).call(zoom);
 
     // Click on background closes detail panel
-    svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); });
+    svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); setPhotoZoom(false); });
 
     // Initial draw
     expand('root', 'XCIEN');
@@ -420,7 +424,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
         {crumbs.map((b,i)=>(
           <div key={b.id} style={{display:'flex',alignItems:'center',gap:4}}>
             {i>0 && <span style={{color:dim,fontSize:11}}>›</span>}
-            <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); expand(b.id,b.label); }} style={{
+            <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); setPhotoZoom(false); expand(b.id,b.label); }} style={{
               background: i===crumbs.length-1 ? `${accent}20`:'transparent',
               border:`1px solid ${i===crumbs.length-1?accent+'50':'transparent'}`,
               color: i===crumbs.length-1 ? accent : dim,
@@ -429,9 +433,51 @@ export default function OrgTreeView({ empleados, theme }: Props) {
             }}>{b.label}</button>
           </div>
         ))}
-        <span style={{marginLeft:'auto',fontSize:10,color:dim+'80'}}>
-          Click empleado para ver detalle · Click depto/empresa para expandir · Scroll zoom
-        </span>
+        {/* Search */}
+        <div style={{ marginLeft:'auto', position:'relative' }}>
+          <input
+            type="text"
+            placeholder="🔍 Buscar empleado…"
+            value={searchQ}
+            onChange={e => {
+              const q = e.target.value;
+              setSearchQ(q);
+              if (q.trim().length < 2) { setSearchRes([]); return; }
+              const ql = q.toLowerCase();
+              setSearchRes(empleados.filter(emp =>
+                emp.name.toLowerCase().includes(ql) ||
+                emp.job_title.toLowerCase().includes(ql)
+              ).slice(0, 8));
+            }}
+            onBlur={() => setTimeout(() => setSearchRes([]), 200)}
+            style={{
+              padding:'4px 10px', background:'rgba(255,255,255,0.07)',
+              border:`1px solid ${accent}30`, borderRadius:8,
+              color:'rgba(255,255,255,0.8)', fontSize:11, outline:'none', width:180,
+            }}
+          />
+          {searchRes.length > 0 && (
+            <div style={{
+              position:'absolute', top:'110%', right:0,
+              background:'rgba(5,15,10,0.98)', border:`1px solid ${accent}30`,
+              borderRadius:10, zIndex:50, minWidth:240,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.5)', overflow:'hidden',
+            }}>
+              {searchRes.map(emp => (
+                <div
+                  key={emp.id}
+                  onMouseDown={() => { openDetail(emp); setSearchQ(''); setSearchRes([]); }}
+                  style={{ padding:'8px 12px', cursor:'pointer', borderBottom:'1px solid rgba(255,255,255,0.05)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = `${accent}15`)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.9)' }}>{emp.name}</div>
+                  {emp.job_title && <div style={{ fontSize:10, color:dim, marginTop:1 }}>{emp.job_title}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main area: canvas + detail panel side by side */}
@@ -456,7 +502,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
             <div style={{ background:`${empColor}12`, borderBottom:`1px solid ${empColor}25`, padding:'16px 16px 12px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:empColor, letterSpacing:'0.5px' }}>PERFIL DE EMPLEADO</div>
-                <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); }} style={{ background:'transparent', border:'none', color:dim, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
+                <button onClick={()=>{ setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); setPhotoZoom(false); }} style={{ background:'transparent', border:'none', color:dim, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
               </div>
 
               {/* Avatar */}
@@ -466,7 +512,8 @@ export default function OrgTreeView({ empleados, theme }: Props) {
                       src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
                       alt=""
                       onError={() => setPhotoFailed(true)}
-                      style={{ width:56, height:56, borderRadius:'50%', objectFit:'cover', border:`3px solid ${empColor}`, background:`${empColor}20` }}
+                      onClick={() => setPhotoZoom(true)}
+                      style={{ width:56, height:56, borderRadius:'50%', objectFit:'cover', border:`3px solid ${empColor}`, background:`${empColor}20`, cursor:'zoom-in' }}
                     />
                   : (
                     <div style={{ width:56, height:56, borderRadius:'50%', background:`${empColor}20`, border:`3px solid ${empColor}50`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:empColor, flexShrink:0 }}>
@@ -531,6 +578,36 @@ export default function OrgTreeView({ empleados, theme }: Props) {
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {photoZoom && selectedEmp && !photoFailed && (
+        <div
+          onClick={() => setPhotoZoom(false)}
+          style={{
+            position:'fixed', inset:0, zIndex:400,
+            background:'rgba(0,0,0,0.92)',
+            display:'flex', flexDirection:'column',
+            alignItems:'center', justifyContent:'center', gap:16,
+            cursor:'zoom-out',
+          }}
+        >
+          <img
+            src={`${API_BASE}/api/rrhh/empleado/${selectedEmp.id}/foto`}
+            alt={selectedEmp.name}
+            style={{
+              maxWidth:'80vw', maxHeight:'75vh',
+              borderRadius:16, objectFit:'contain',
+              border:`3px solid ${CO_COLOR[selectedEmp.company] || accent}`,
+              boxShadow:`0 0 60px ${CO_COLOR[selectedEmp.company] || accent}40`,
+            }}
+          />
+          <div style={{ textAlign:'center' }}>
+            <div style={{ color:'#fff', fontWeight:800, fontSize:18 }}>{selectedEmp.name}</div>
+            <div style={{ color:'rgba(255,255,255,0.5)', fontSize:13, marginTop:4 }}>{selectedEmp.job_title}</div>
+          </div>
+          <div style={{ color:'rgba(255,255,255,0.25)', fontSize:12 }}>Clic para cerrar</div>
+        </div>
+      )}
     </div>
   );
 }

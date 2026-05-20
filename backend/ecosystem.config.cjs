@@ -6,7 +6,7 @@ module.exports = {
     cwd: '/Users/mesquite/Antigravity/backend',
     env_file: '/Users/mesquite/Antigravity/backend/.env',
     env: {
-      PORT: 8000,
+      PORT: 8002,
       NODE_ENV: 'production',
     },
     watch: false,

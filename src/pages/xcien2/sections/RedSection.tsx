@@ -25,6 +25,10 @@ const VENDOR_ICONS: Record<string, string> = {
   Unknown:  '❓',
 };
 
+// ── Tipos KMZ ─────────────────────────────────────────────────────────────────
+interface KmzLayer  { id: string; name: string; }
+interface KmzGroup  { id: string; label: string; color: string; layers: KmzLayer[]; }
+
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface NOCHost {
   id: string;
@@ -346,11 +350,16 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
   const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
 
+  const [kmzGroups,  setKmzGroups]  = useState<KmzGroup[]>([]);
+  const [kmzActive,  setKmzActive]  = useState<Record<string, boolean>>({});
+
   const mapRef    = useRef<any>(null);
   const leafRef   = useRef<any>(null);
   const layerRef  = useRef<any>(null);
   const topoLayer = useRef<any>(null);
   const tileRef   = useRef<any>(null);
+  const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
+  const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
 
   // ── Cargar datos ─────────────────────────────────────────────────────────────
   const cargar = useCallback(async () => {
@@ -376,6 +385,19 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     const t = setInterval(cargar, 30_000);
     return () => clearInterval(t);
   }, [cargar]);
+
+  // ── Cargar índice KMZ ────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/kmz-capas`)
+      .then(r => r.ok ? r.json() : [])
+      .then((groups: KmzGroup[]) => {
+        setKmzGroups(groups);
+        const active: Record<string, boolean> = {};
+        groups.forEach(g => { active[g.id] = false; });
+        setKmzActive(active);
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Agrupar por ciudad ────────────────────────────────────────────────────────
   const cities: CityGroup[] = (() => {
@@ -539,6 +561,55 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     });
   }, [showTopo, topoLinks, vendorFilter]);
 
+  // ── Toggle KMZ group ─────────────────────────────────────────────────────────
+  const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+    const map = mapRef.current;
+    const turning_on = !kmzActive[group.id];
+    setKmzActive(prev => ({ ...prev, [group.id]: turning_on }));
+
+    if (!turning_on) {
+      // Remove all layers of this group
+      (kmzLayers.current[group.id] || []).forEach((lyr: any) => map.removeLayer(lyr));
+      kmzLayers.current[group.id] = [];
+      return;
+    }
+
+    // Fetch all layers in parallel (cached after first load)
+    const geojsons = await Promise.all(
+      group.layers.map(async (l) => {
+        if (!kmzCache.current[l.id]) {
+          try {
+            const res = await fetch(`${API_BASE}/api/red/kmz/${l.id}`);
+            kmzCache.current[l.id] = res.ok ? await res.json() : null;
+          } catch { kmzCache.current[l.id] = null; }
+        }
+        return { id: l.id, name: l.name, geojson: kmzCache.current[l.id] };
+      })
+    );
+
+    const c = group.color;
+    const added: any[] = [];
+    geojsons.forEach(({ name, geojson }) => {
+      if (!geojson) return;
+      const lyr = L.geoJSON(geojson, {
+        style: () => ({ color: c, weight: 2.5, opacity: 0.85, fillColor: c, fillOpacity: 0.25 }),
+        pointToLayer: (_: any, latlng: any) =>
+          L.circleMarker(latlng, { radius: 4, fillColor: c, color: '#fff', weight: 1, opacity: 0.9, fillOpacity: 0.85 }),
+        onEachFeature: (feat: any, layer: any) => {
+          const fname = feat.properties?.name || name;
+          if (fname) layer.bindTooltip(
+            `<span style="font-size:11px;color:${c};font-weight:600">🔌 ${fname}</span>`,
+            { className: 'noc-tooltip', sticky: true }
+          );
+        },
+      }).addTo(map);
+      added.push(lyr);
+    });
+    kmzLayers.current[group.id] = added;
+  }, [kmzActive]);
+
   // ── Toggle vendor ─────────────────────────────────────────────────────────────
   const toggleVendor = (v: string) => {
     setSelectedCity(null); setSelectedHost(null);
@@ -589,6 +660,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         >
           <GitBranch size={13} /> Topología
         </button>
+
 
         {/* Refresh */}
         <button
@@ -655,6 +727,31 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             </button>
           );
         })}
+
+        {/* KMZ Fiber groups — same pill style */}
+        {kmzGroups.length > 0 && (
+          <>
+            <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+            <Zap size={12} color="rgba(255,200,50,0.5)" />
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>Fibra:</span>
+            {kmzGroups.map(g => {
+              const on = kmzActive[g.id];
+              return (
+                <button key={g.id} onClick={() => toggleKmzGroup(g)} style={{
+                  padding: '3px 11px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                  background: on ? `${g.color}22` : 'transparent',
+                  border: `1px solid ${on ? g.color : `${g.color}33`}`,
+                  color: on ? g.color : `${g.color}77`,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}>
+                  <span>🔌</span>
+                  <span>{g.label}</span>
+                  <span style={{ background: `${g.color}22`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>{g.layers.length}</span>
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
 
       {/* Mapa */}
@@ -679,22 +776,48 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           />
         )}
 
-        {/* Leyenda topología */}
-        {showTopo && topoLinks.length > 0 && (
+        {/* Leyenda — topología + fibra activas */}
+        {(showTopo && topoLinks.length > 0) || kmzGroups.some(g => kmzActive[g.id]) ? (
           <div style={{
             position: 'absolute', bottom: 24, left: 16, zIndex: 999,
-            background: 'rgba(5,15,10,0.9)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 10, padding: '8px 12px',
+            background: 'rgba(5,15,10,0.92)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12, padding: '10px 14px', minWidth: 160,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           }}>
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginBottom: 6 }}>TOPOLOGÍA</div>
-            {[...new Set(topoLinks.map(l => l.vendor))].map(v => (
-              <div key={v} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                <div style={{ width: 24, height: 2, background: VENDOR_COLORS[v] || '#6b7280', borderRadius: 2 }} />
-                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{v} ({topoLinks.filter(l => l.vendor === v).length})</span>
+
+            {/* Topología */}
+            {showTopo && topoLinks.length > 0 && (
+              <div style={{ marginBottom: kmzGroups.some(g => kmzActive[g.id]) ? 10 : 0 }}>
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>Topología</div>
+                {[...new Set(topoLinks.map(l => l.vendor))].map(v => (
+                  <div key={v} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{ width: 22, height: 2, background: VENDOR_COLORS[v] || '#6b7280', borderRadius: 2, flexShrink: 0 }} />
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{v}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginLeft: 'auto' }}>{topoLinks.filter(l => l.vendor === v).length}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Fibra óptica activa */}
+            {kmzGroups.some(g => kmzActive[g.id]) && (
+              <div>
+                {showTopo && topoLinks.length > 0 && (
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '0 0 8px' }} />
+                )}
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>Fibra Óptica</div>
+                {kmzGroups.filter(g => kmzActive[g.id]).map(g => (
+                  <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{ width: 22, height: 3, background: g.color, borderRadius: 2, flexShrink: 0 }} />
+                    <span style={{ color: g.color, fontSize: 11, fontWeight: 600 }}>{g.label}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginLeft: 'auto' }}>{g.layers.length}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
           </div>
-        )}
+        ) : null}
 
         {/* Loading overlay */}
         {loading && (

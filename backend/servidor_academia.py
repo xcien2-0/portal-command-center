@@ -496,6 +496,375 @@ def api_rrhh_empleado_foto(emp_id: int):
     raise HTTPException(status_code=404, detail="Foto no disponible")
 
 
+# ─── KMZ / Fibra Óptica Layers ────────────────────────────────────────────────
+
+import zipfile as _zipfile
+import xml.etree.ElementTree as _ET
+
+_KMZ_DIR = os.path.join(BASE_DIR, "data", "kmz")
+
+_KMZ_GROUPS = [
+    {"id": "podi",     "label": "Fibra PODI · Cristales", "color": "#FF6B35", "subdir": "KMZ FIBRA PODI A CRISTALES 72 Y SUS DERIBACIONES"},
+    {"id": "alpha",    "label": "Fibras Alpha",            "color": "#00B4D8", "subdir": "KMZ FIBRAS ALPHA"},
+    {"id": "negras",   "label": "Piedras Negras",          "color": "#8B5CF6", "subdir": "KMZ PIEDRAS NEGRAS"},
+    {"id": "saltillo", "label": "Saltillo",                "color": "#00A859", "subdir": "KMZ SALTILLO"},
+]
+
+def _kmz_to_geojson(kmz_path: str) -> dict:
+    """Convierte un archivo KMZ a GeoJSON usando solo stdlib."""
+    features = []
+    try:
+        with _zipfile.ZipFile(kmz_path, 'r') as z:
+            kml_files = [f for f in z.namelist() if f.lower().endswith('.kml')]
+            if not kml_files:
+                return {"type": "FeatureCollection", "features": []}
+            kml_data = z.read(kml_files[0]).decode('utf-8', errors='replace')
+    except Exception as e:
+        logger.error(f"KMZ read error {kmz_path}: {e}")
+        return {"type": "FeatureCollection", "features": []}
+
+    try:
+        root = _ET.fromstring(kml_data)
+    except Exception as e:
+        logger.error(f"KML parse error {kmz_path}: {e}")
+        return {"type": "FeatureCollection", "features": []}
+
+    # Detectar namespace
+    ns = root.tag.split('}')[0].lstrip('{') if '}' in root.tag else ''
+    def tag(name): return f'{{{ns}}}{name}' if ns else name
+
+    def parse_coords(text: str):
+        pts = []
+        for token in text.strip().split():
+            parts = token.split(',')
+            if len(parts) >= 2:
+                try: pts.append([float(parts[0]), float(parts[1])])
+                except: pass
+        return pts
+
+    for pm in root.iter(tag('Placemark')):
+        name_el = pm.find(tag('name'))
+        name = (name_el.text or '').strip() if name_el is not None else ''
+
+        for ls in pm.iter(tag('LineString')):
+            c = ls.find(tag('coordinates'))
+            if c is not None and c.text:
+                coords = parse_coords(c.text)
+                if len(coords) >= 2:
+                    features.append({"type": "Feature", "geometry": {"type": "LineString", "coordinates": coords}, "properties": {"name": name}})
+
+        for pt in pm.iter(tag('Point')):
+            c = pt.find(tag('coordinates'))
+            if c is not None and c.text:
+                parts = c.text.strip().split(',')
+                if len(parts) >= 2:
+                    try: features.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [float(parts[0]), float(parts[1])]}, "properties": {"name": name}})
+                    except: pass
+
+        for poly in pm.iter(tag('Polygon')):
+            outer = poly.find(f'.//{tag("outerBoundaryIs")}/{tag("LinearRing")}/{tag("coordinates")}')
+            if outer is not None and outer.text:
+                coords = parse_coords(outer.text)
+                if len(coords) >= 3:
+                    features.append({"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [coords]}, "properties": {"name": name}})
+
+    return {"type": "FeatureCollection", "features": features}
+
+# Cache en memoria (cargado al primer request)
+_kmz_cache: dict = {}
+_kmz_index: list = []
+
+def _ensure_kmz():
+    global _kmz_cache, _kmz_index
+    if _kmz_cache:
+        return
+    groups_out = []
+    for grp in _KMZ_GROUPS:
+        group_dir = os.path.join(_KMZ_DIR, grp["subdir"])
+        if not os.path.isdir(group_dir):
+            continue
+        layers = []
+        for fname in sorted(os.listdir(group_dir)):
+            if not fname.lower().endswith('.kmz'):
+                continue
+            layer_id = f"{grp['id']}_{fname[:-4].replace(' ', '_').replace('/', '-')}"
+            fpath = os.path.join(group_dir, fname)
+            _kmz_cache[layer_id] = {"path": fpath, "geojson": None}  # lazy
+            layers.append({"id": layer_id, "name": fname[:-4]})
+        if layers:
+            groups_out.append({"id": grp["id"], "label": grp["label"], "color": grp["color"], "layers": layers})
+    _kmz_index = groups_out
+    logger.info(f"KMZ index built: {sum(len(g['layers']) for g in groups_out)} layers in {len(groups_out)} groups")
+
+@app.get("/api/red/kmz-capas")
+def api_red_kmz_capas():
+    """Lista de grupos y capas KMZ disponibles."""
+    _ensure_kmz()
+    return _kmz_index
+
+@app.get("/api/red/kmz/{layer_id:path}")
+def api_red_kmz_geojson(layer_id: str):
+    """GeoJSON de una capa KMZ específica (con caché en memoria)."""
+    _ensure_kmz()
+    entry = _kmz_cache.get(layer_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Capa no encontrada")
+    if entry["geojson"] is None:
+        entry["geojson"] = _kmz_to_geojson(entry["path"])
+    return entry["geojson"]
+
+# ─── Sala de Juntas / Calendario ──────────────────────────────────────────────
+
+import urllib.request as _urllib_req
+import re as _re
+
+def _parse_ical(text: str) -> list:
+    """Parser iCal manual — extrae VEVENT sin dependencias externas."""
+    events = []
+    for block in _re.split(r'BEGIN:VEVENT', text)[1:]:
+        end = block.find('END:VEVENT')
+        block = block[:end] if end != -1 else block
+
+        def field(name):
+            # Handles multi-line folded values
+            pattern = rf'(?:^|\n){name}(?:;[^\n:]*)?\:([^\n]*)(?:\n[ \t]([^\n]*))*'
+            m = _re.search(pattern, block, _re.MULTILINE)
+            if not m: return ''
+            val = m.group(1) or ''
+            # Unfold continuation lines
+            val = _re.sub(r'\n[ \t]', '', val)
+            return val.strip()
+
+        def parse_dt(val: str) -> str:
+            """Normaliza datetime iCal a ISO8601 (YYYYMMDDTHHMMSSZ → YYYY-MM-DDTHH:MM:SS)."""
+            val = val.split(';')[-1]  # quitar TZID=...
+            val = val.replace('Z', '')
+            if 'T' in val:
+                d, t = val.split('T')
+                return f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}"
+            return f"{val[:4]}-{val[4:6]}-{val[6:8]}T00:00:00"
+
+        uid     = field('UID')
+        summary = field('SUMMARY').replace('\\n', ' ').replace('\\,', ',')
+        desc    = field('DESCRIPTION').replace('\\n', '\n').replace('\\,', ',')
+        loc     = field('LOCATION').replace('\\,', ',')
+        dtstart = field('DTSTART')
+        dtend   = field('DTEND')
+
+        if not summary or not dtstart:
+            continue
+        try:
+            start = parse_dt(dtstart)
+            end_  = parse_dt(dtend) if dtend else start
+        except:
+            continue
+
+        events.append({
+            'id':       uid or summary + start,
+            'title':    summary,
+            'start':    start,
+            'end':      end_,
+            'location': loc,
+            'desc':     desc[:300] if desc else '',
+            'source':   'gcal',
+        })
+    return events
+
+
+@app.get("/api/calendario/eventos")
+def api_calendario_eventos(start: str = '', end: str = ''):
+    """Eventos Odoo: calendar.event + hr.leave aprobadas."""
+    results = []
+
+    # Dominio de fechas
+    domain_cal: list = []
+    domain_leave: list = []
+    if start:
+        domain_cal.append(['start', '>=', start])
+        domain_leave.append(['date_from', '>=', start])
+    if end:
+        domain_cal.append(['stop', '<=', end])
+        domain_leave.append(['date_to', '<=', end])
+
+    # calendar.event
+    raw_cal = odoo_conn.execute('calendar.event', 'search_read', domain_cal,
+        fields=['name','start','stop','partner_ids','user_id','location','description'],
+        limit=200) or []
+
+    for e in raw_cal:
+        results.append({
+            'id':       f"odoo_cal_{e['id']}",
+            'title':    e.get('name', ''),
+            'start':    (e.get('start') or '').replace(' ', 'T'),
+            'end':      (e.get('stop')  or '').replace(' ', 'T'),
+            'location': e.get('location') or '',
+            'desc':     (e.get('description') or '')[:300],
+            'owner':    e['user_id'][1] if e.get('user_id') else '',
+            'source':   'odoo_meeting',
+        })
+
+    # hr.leave (ausencias aprobadas)
+    raw_leave = odoo_conn.execute('hr.leave', 'search_read',
+        domain_leave + [['state', '=', 'validate']],
+        fields=['name','date_from','date_to','employee_id','holiday_status_id','number_of_days'],
+        limit=200) or []
+
+    for e in raw_leave:
+        emp = e['employee_id'][1] if e.get('employee_id') else ''
+        tipo = e['holiday_status_id'][1] if e.get('holiday_status_id') else 'Ausencia'
+        results.append({
+            'id':     f"odoo_leave_{e['id']}",
+            'title':  f"{emp} — {tipo}",
+            'start':  (e.get('date_from') or '').replace(' ', 'T'),
+            'end':    (e.get('date_to')   or '').replace(' ', 'T'),
+            'days':   e.get('number_of_days', 1),
+            'source': 'odoo_leave',
+        })
+
+    return results
+
+
+_GCAL_TOKEN_FILE   = os.path.join(BASE_DIR, "data", "gcal_token.json")
+_GCAL_SCOPES       = ["https://www.googleapis.com/auth/calendar.readonly"]
+_GCAL_REDIRECT_URI = "http://localhost:8000/api/calendario/auth/callback"
+_gcal_flow         = None   # guardamos el flow entre /auth y /callback
+
+def _gcal_creds():
+    """Devuelve credenciales válidas o None si no hay token."""
+    if not os.path.exists(_GCAL_TOKEN_FILE):
+        return None
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request as GRequest
+        creds = Credentials.from_authorized_user_file(_GCAL_TOKEN_FILE, _GCAL_SCOPES)
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(GRequest())
+            with open(_GCAL_TOKEN_FILE, "w") as f:
+                f.write(creds.to_json())
+        return creds if creds and creds.valid else None
+    except Exception as e:
+        logger.error(f"gcal_creds error: {e}")
+        return None
+
+@app.get("/api/calendario/auth/status")
+def api_gcal_auth_status():
+    """¿Está conectado Google Calendar?"""
+    creds = _gcal_creds()
+    return {"connected": creds is not None}
+
+@app.get("/api/calendario/auth")
+def api_gcal_auth():
+    """Inicia el flujo OAuth de Google Calendar. Devuelve la URL de autorización."""
+    global _gcal_flow
+    client_id     = os.environ.get("GOOGLE_CLIENT_ID")
+    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=503, detail="GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET no configurados en .env")
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from google_auth_oauthlib.flow import Flow
+        _gcal_flow = Flow.from_client_config(
+            {"web": {"client_id": client_id, "client_secret": client_secret,
+                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                     "token_uri": "https://oauth2.googleapis.com/token"}},
+            scopes=_GCAL_SCOPES, redirect_uri=_GCAL_REDIRECT_URI,
+        )
+        auth_url, _ = _gcal_flow.authorization_url(prompt="consent", access_type="offline")
+        return {"url": auth_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/calendario/auth/callback")
+def api_gcal_callback(code: str = '', error: str = ''):
+    """Callback OAuth — guarda el token y redirige al portal."""
+    global _gcal_flow
+    if error or not code:
+        return RedirectResponse("/?gcal=error")
+    try:
+        _gcal_flow.fetch_token(code=code)
+        creds = _gcal_flow.credentials
+        os.makedirs(os.path.dirname(_GCAL_TOKEN_FILE), exist_ok=True)
+        with open(_GCAL_TOKEN_FILE, "w") as f:
+            f.write(creds.to_json())
+        return RedirectResponse("/?gcal=ok")
+    except Exception as e:
+        logger.error(f"gcal callback error: {e}")
+        return RedirectResponse("/?gcal=error")
+
+@app.get("/api/calendario/auth/disconnect")
+def api_gcal_disconnect():
+    """Desconecta Google Calendar eliminando el token."""
+    if os.path.exists(_GCAL_TOKEN_FILE):
+        os.remove(_GCAL_TOKEN_FILE)
+    return {"status": "disconnected"}
+
+@app.get("/api/calendario/gcal-calendarios")
+def api_gcal_calendarios():
+    """Lista los calendarios disponibles en la cuenta de Google."""
+    creds = _gcal_creds()
+    if not creds:
+        raise HTTPException(status_code=401, detail="Google Calendar no conectado")
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from googleapiclient.discovery import build
+        service = build("calendar", "v3", credentials=creds)
+        items = service.calendarList().list().execute().get("items", [])
+        return [{"id": c["id"], "name": c.get("summary",""), "color": c.get("backgroundColor","#4285F4"), "primary": c.get("primary", False)} for c in items]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/calendario/gcal-eventos")
+def api_gcal_eventos(start: str = '', end: str = '', calendars: str = ''):
+    """Eventos de Google Calendar en rango de fechas. calendars = IDs separados por coma."""
+    creds = _gcal_creds()
+    if not creds:
+        raise HTTPException(status_code=401, detail="Google Calendar no conectado")
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from googleapiclient.discovery import build
+        service = build("calendar", "v3", credentials=creds)
+
+        cal_ids = [c.strip() for c in calendars.split(",")] if calendars else ["primary"]
+        all_events = []
+
+        time_min = f"{start}T00:00:00Z" if start else None
+        time_max = f"{end}T23:59:59Z"   if end   else None
+
+        for cal_id in cal_ids:
+            params: dict = {"calendarId": cal_id, "singleEvents": True,
+                            "orderBy": "startTime", "maxResults": 250}
+            if time_min: params["timeMin"] = time_min
+            if time_max: params["timeMax"] = time_max
+            items = service.events().list(**params).execute().get("items", [])
+            for e in items:
+                s = e.get("start", {})
+                en = e.get("end", {})
+                all_events.append({
+                    "id":       e.get("id", ""),
+                    "title":    e.get("summary", "(Sin título)"),
+                    "start":    s.get("dateTime", s.get("date", "")),
+                    "end":      en.get("dateTime", en.get("date", "")),
+                    "location": e.get("location", ""),
+                    "desc":     (e.get("description") or "")[:300],
+                    "calendar": cal_id,
+                    "source":   "gcal",
+                    "allDay":   "date" in s and "dateTime" not in s,
+                })
+        return all_events
+    except Exception as e:
+        logger.error(f"gcal eventos error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/api/docs")
@@ -3554,5 +3923,5 @@ def listar_roles(user: dict = Depends(get_current_user)):
 # ─── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 XCIEN 2.0 Backend iniciando en puerto 8000...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("🚀 XCIEN 2.0 Backend iniciando en puerto 8002...")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8002)))

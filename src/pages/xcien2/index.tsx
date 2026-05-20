@@ -19,6 +19,7 @@ import BidrillasSection from './sections/BidrillasSection';
 import AgentesSection from './sections/AgentesSection';
 import RedSection from './sections/RedSection';
 import RRHHSection from './sections/RRHHSection';
+import SalaJuntasSection from './sections/SalaJuntasSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -62,6 +63,7 @@ const NAV: NavEntry[] = [
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Gestión de Usuarios', icon: '👥', group: 'Planeación' },
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
+  { id: 'sala_juntas', label: 'Sala de Juntas', icon: '📅', group: 'Administración' },
 
   { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
   { id: 'bridge', label: 'Puente de Datos (IA)', icon: '⚡', group: 'Infraestructura' },
@@ -94,6 +96,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   telegram: 'Monitor de Alarmas (Telegram)',
   docs: 'Repositorio Documental',
   rrhh: 'Recursos Humanos — Directorio',
+  sala_juntas: 'Sala de Juntas — Calendarios',
   backup: 'Gestión de Migración y Redundancia',
   editor: 'Ajustes de Infraestructura',
   agentes: 'Ecosistema de Agentes IA',
@@ -311,6 +314,7 @@ function Content({
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'bidrillas' && <BidrillasSection theme={theme} />}
       {section === 'rrhh'      && <RRHHSection      theme={theme} />}
+      {section === 'sala_juntas' && <SalaJuntasSection theme={theme} />}
       {section === 'agentes'   && <AgentesSection   theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
