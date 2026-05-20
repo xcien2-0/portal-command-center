@@ -64,7 +64,7 @@ _claude_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY")
 def ask_claude(prompt: str) -> str:
     try:
         msg = _claude_client.messages.create(
-            model="claude-sonnet-4-6", # Actualizado a modelo estable
+            model="claude-sonnet-4-6",
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -72,6 +72,19 @@ def ask_claude(prompt: str) -> str:
     except Exception as e:
         logger.error(f"Error en comunicación con Claude: {e}")
         return '{"titulo": "Error de Conexión", "preguntas": []}'
+
+def ask_claude_with_system(system: str, prompt: str) -> str:
+    try:
+        msg = _claude_client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return msg.content[0].text
+    except Exception as e:
+        logger.error(f"Error en ask_claude_with_system: {e}")
+        return f"No se pudo procesar la consulta: {str(e)}"
 
 from fastapi import BackgroundTasks
 
@@ -108,6 +121,8 @@ app.add_middleware(
         "http://127.0.0.1:8080",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "http://localhost:8002",
+        "http://127.0.0.1:8002",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -726,7 +741,7 @@ def api_calendario_eventos(start: str = '', end: str = ''):
 
 _GCAL_TOKEN_FILE   = os.path.join(BASE_DIR, "data", "gcal_token.json")
 _GCAL_SCOPES       = ["https://www.googleapis.com/auth/calendar.readonly"]
-_GCAL_REDIRECT_URI = "http://localhost:8000/api/calendario/auth/callback"
+_GCAL_REDIRECT_URI = "http://localhost:8002/api/calendario/auth/callback"
 _gcal_flow         = None   # guardamos el flow entre /auth y /callback
 
 def _gcal_creds():
@@ -1501,6 +1516,110 @@ def comprobante_tx(tx_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─── Inventario Odoo ─────────────────────────────────────────────────────────
+
+@app.get("/api/inventario/odoo/productos")
+def api_odoo_productos(
+    search: str = '',
+    categoria: str = '',
+    tipo: str = '',
+    offset: int = 0,
+    limit: int = 50
+):
+    """Lista productos de Odoo con stock disponible."""
+    try:
+        domain = []
+        if search:
+            domain.append('|')
+            domain.append(['name', 'ilike', search])
+            domain.append(['default_code', 'ilike', search])
+        if tipo:
+            domain.append(['type', '=', tipo])
+        # Solo productos con stock o almacenables
+        if not tipo:
+            domain.append(['type', 'in', ['product', 'consu']])
+
+        fields = ['id', 'name', 'default_code', 'categ_id', 'type',
+                  'qty_available', 'virtual_available', 'uom_id', 'active']
+        result = odoo_conn.execute('product.product', 'search_read',
+                                   [domain], fields=fields,
+                                   limit=limit, offset=offset,
+                                   order='qty_available desc, name asc')
+
+        # Filtrar por categoría después si se especifica
+        if categoria:
+            result = [p for p in result
+                      if categoria.lower() in (p.get('categ_id') or ['',''])[1].lower()]
+
+        total = odoo_conn.execute('product.product', 'search_count', [domain])
+
+        return {"productos": result, "total": total, "offset": offset, "limit": limit}
+    except Exception as e:
+        logger.error(f"odoo productos error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventario/odoo/categorias")
+def api_odoo_categorias():
+    """Árbol de categorías de productos Odoo."""
+    try:
+        cats = odoo_conn.execute('product.category', 'search_read',
+                                  [[]], fields=['id', 'name', 'complete_name', 'parent_id'])
+        return {"categorias": cats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventario/odoo/ubicaciones")
+def api_odoo_ubicaciones():
+    """Ubicaciones de almacén Odoo."""
+    try:
+        locs = odoo_conn.execute('stock.location', 'search_read',
+                                  [[['usage', 'in', ['internal', 'transit']], ['active', '=', True]]],
+                                  fields=['id', 'name', 'complete_name', 'usage'])
+        return {"ubicaciones": locs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventario/odoo/stock-por-ubicacion/{product_id}")
+def api_odoo_stock_ubicacion(product_id: int):
+    """Stock de un producto desglosado por ubicación."""
+    try:
+        quants = odoo_conn.execute('stock.quant', 'search_read',
+                                    [[['product_id', '=', product_id],
+                                      ['location_id.usage', '=', 'internal']]],
+                                    fields=['location_id', 'quantity', 'reserved_quantity'])
+        return {"quants": quants}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventario/odoo/resumen")
+def api_odoo_resumen():
+    """Resumen estadístico del inventario Odoo."""
+    try:
+        total_prods    = odoo_conn.execute('product.product', 'search_count',
+                                            [[['type', 'in', ['product', 'consu']]]])
+        con_stock      = odoo_conn.execute('product.product', 'search_count',
+                                            [[['qty_available', '>', 0]]])
+        sin_stock      = odoo_conn.execute('product.product', 'search_count',
+                                            [[['type', '=', 'product'], ['qty_available', '<=', 0]]])
+        total_cats     = odoo_conn.execute('product.category', 'search_count', [[]])
+        total_pickings = odoo_conn.execute('stock.picking', 'search_count',
+                                            [[['state', '=', 'done'],
+                                              ['date_done', '>=', '2026-01-01']]])
+        return {
+            "total_productos": total_prods,
+            "con_stock": con_stock,
+            "sin_stock": sin_stock,
+            "total_categorias": total_cats,
+            "movimientos_2026": total_pickings,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ─── Activos / Inventario ────────────────────────────────────────────────────
 from fastapi.responses import StreamingResponse, Response
 import io
@@ -1710,7 +1829,7 @@ def agentes_chat_unificado(req: AgentChatRequest):
     from agents.agent_noc import NOCAgent
     from agents.agent_wfm import WFMAgent
     from agents.agent_academia import AcademiaAgent
-    from agents.agent_finances import FinancesAgent
+    from agents.agent_finances import FinanceAgent
     from agents.agent_inventory import InventoryAgent
 
     aid = req.agente_id
@@ -1724,31 +1843,27 @@ def agentes_chat_unificado(req: AgentChatRequest):
     _agent_activity[aid]["last_ts"] = now_str
     _agent_activity[aid]["working"] = True
 
+    _AGENT_PROMPTS = {
+        "noc":       "Eres el Agente NOC de XCIEN. Eres experto en monitoreo de red, diagnóstico de hosts, análisis de alertas Zabbix, latencia, pérdida de paquetes y mantenimiento de infraestructura de telecomunicaciones. Responde en español de forma técnica y concisa.",
+        "wfm":       "Eres el Agente WFM de XCIEN. Experto en gestión de fuerza de trabajo, órdenes de servicio, asignación de técnicos de campo, instalaciones, mantenimientos y optimización operativa. Responde en español.",
+        "academia":  "Eres el Agente Academia de XCIEN. Experto en cursos de certificación, progreso de técnicos, exámenes, escalafón técnico y desarrollo de talento en telecomunicaciones. Responde en español.",
+        "finanzas":  "Eres el Agente Finanzas de XCIEN. Experto en reportes financieros, facturación Odoo, transacciones, tokens de servicio, KPIs financieros y control presupuestal. Responde en español.",
+        "inventario":"Eres el Agente Inventario de XCIEN. Experto en gestión de equipos, activos de red, stock de materiales, movimientos de almacén y auditoría de activos. Responde en español.",
+    }
+
     try:
         if aid == "director":
             resp = dg_agent.ejecutar_orden(req.message, req.history, {})
         elif aid == "devops":
             resp = sre_agent.analizar_y_responder(req.message, req.history)
-        elif aid == "noc":
-            agent = NOCAgent()
-            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
-                   agent.analyze_status([], [])
-        elif aid == "wfm":
-            agent = WFMAgent()
-            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
-                   agent.optimize_workflow([])
-        elif aid == "academia":
-            agent = AcademiaAgent()
-            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
-                   "Agente Academia activo. ¿Qué necesitas consultar?"
-        elif aid == "finanzas":
-            agent = FinancesAgent()
-            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
-                   "Agente Finanzas activo."
-        elif aid == "inventario":
-            agent = InventoryAgent()
-            resp = agent.responder(req.message) if hasattr(agent, "responder") else \
-                   "Agente Inventario activo."
+        elif aid in _AGENT_PROMPTS:
+            # Construir historial para Claude
+            history_text = ""
+            for m in (req.history or [])[-6:]:
+                role_label = "Usuario" if m.get("role") == "user" else "Asistente"
+                history_text += f"{role_label}: {m.get('content','')}\n"
+            full_prompt = f"{history_text}Usuario: {req.message}"
+            resp = ask_claude_with_system(_AGENT_PROMPTS[aid], full_prompt)
         elif aid == "telegram":
             resp = "El bot de Telegram está activo. Envía tus instrucciones directamente al chat."
         else:

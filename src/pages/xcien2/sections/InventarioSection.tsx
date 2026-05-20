@@ -729,8 +729,215 @@ function EtiquetasTab() {
   );
 }
 
+// ── Odoo Inventario Tab ───────────────────────────────────────────────────────
+interface OdooProducto {
+  id: number; name: string; default_code: string | false;
+  categ_id: [number, string] | false; type: string;
+  qty_available: number; virtual_available: number;
+  uom_id: [number, string] | false;
+}
+interface OdooResumen {
+  total_productos: number; con_stock: number; sin_stock: number;
+  total_categorias: number; movimientos_2026: number;
+}
+
+function OdooInventarioTab() {
+  const [resumen, setResumen]         = useState<OdooResumen | null>(null);
+  const [productos, setProductos]     = useState<OdooProducto[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [search, setSearch]           = useState('');
+  const [offset, setOffset]           = useState(0);
+  const [loading, setLoading]         = useState(false);
+  const [selected, setSelected]       = useState<OdooProducto | null>(null);
+  const [quants, setQuants]           = useState<any[]>([]);
+  const LIMIT = 50;
+
+  const loadResumen = async () => {
+    try {
+      const r = await fetch(`${API}/api/inventario/odoo/resumen`);
+      if (r.ok) setResumen(await r.json());
+    } catch {}
+  };
+
+  const loadProductos = async (q: string, off: number) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ search: q, offset: String(off), limit: String(LIMIT) });
+      const r = await fetch(`${API}/api/inventario/odoo/productos?${params}`);
+      if (r.ok) {
+        const data = await r.json();
+        setProductos(data.productos || []);
+        setTotal(data.total || 0);
+      }
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => { loadResumen(); loadProductos('', 0); }, []);
+
+  const handleSearch = (v: string) => {
+    setSearch(v); setOffset(0);
+    loadProductos(v, 0);
+  };
+
+  const selectProducto = async (p: OdooProducto) => {
+    setSelected(p);
+    try {
+      const r = await fetch(`${API}/api/inventario/odoo/stock-por-ubicacion/${p.id}`);
+      if (r.ok) { const d = await r.json(); setQuants(d.quants || []); }
+    } catch { setQuants([]); }
+  };
+
+  const tipoLabel: Record<string, string> = { product: 'Almacenable', consu: 'Consumible', service: 'Servicio' };
+  const tipoColor: Record<string, string> = { product: T.teal, consu: T.yellow, service: T.blue };
+
+  return (
+    <div style={{ display: 'flex', gap: 16, height: '100%', overflow: 'hidden' }}>
+
+      {/* Left panel */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
+
+        {/* Resumen cards */}
+        {resumen && (
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+            {[
+              { label: 'Total productos', value: resumen.total_productos, color: T.blue },
+              { label: 'Con stock',       value: resumen.con_stock,       color: T.teal },
+              { label: 'Sin stock',       value: resumen.sin_stock,       color: T.red },
+              { label: 'Movimientos 2026',value: resumen.movimientos_2026, color: T.yellow },
+            ].map(c => (
+              <div key={c.label} style={{ flex: 1, background: T.card, border: `1px solid ${c.color}33`, borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value.toLocaleString()}</div>
+                <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>{c.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '8px 14px', flexShrink: 0 }}>
+          <Search size={14} color={T.dim} />
+          <input value={search} onChange={e => handleSearch(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: T.text, fontSize: 13 }} />
+          {search && <button onClick={() => handleSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.dim, display: 'flex' }}><X size={13} /></button>}
+        </div>
+
+        {/* Table */}
+        <div style={{ flex: 1, overflowY: 'auto', borderRadius: 10, border: `1px solid ${T.border}` }}>
+          {loading ? (
+            <div style={{ padding: 40, textAlign: 'center', color: T.dim }}>Cargando inventario Odoo...</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: T.card, position: 'sticky', top: 0 }}>
+                  {['Código','Nombre','Categoría','Tipo','Disponible','Unidad'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: T.dim, fontWeight: 600, borderBottom: `1px solid ${T.border}`, fontSize: 11 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {productos.map(p => (
+                  <tr key={p.id} onClick={() => selectProducto(p)}
+                    style={{ borderBottom: `1px solid ${T.border}20`, cursor: 'pointer',
+                      background: selected?.id === p.id ? `${T.teal}10` : 'transparent',
+                      transition: 'background 0.15s' }}>
+                    <td style={{ padding: '8px 12px', color: T.dim, fontFamily: 'monospace', fontSize: 11 }}>{p.default_code || '—'}</td>
+                    <td style={{ padding: '8px 12px', color: T.text, maxWidth: 200 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                    </td>
+                    <td style={{ padding: '8px 12px', color: T.dim, fontSize: 10 }}>
+                      {p.categ_id ? (p.categ_id[1] || '').split(' / ').pop() : '—'}
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <span style={{ background: `${tipoColor[p.type] || T.dim}22`, color: tipoColor[p.type] || T.dim, borderRadius: 6, padding: '2px 7px', fontSize: 10 }}>
+                        {tipoLabel[p.type] || p.type}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', color: p.qty_available > 0 ? T.teal : T.red, fontWeight: 700 }}>
+                      {p.qty_available.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: T.dim, fontSize: 10 }}>
+                      {p.uom_id ? p.uom_id[1] : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, color: T.dim, fontSize: 11 }}>
+          <span>{total.toLocaleString()} productos totales · mostrando {offset + 1}–{Math.min(offset + LIMIT, total)}</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button disabled={offset === 0} onClick={() => { const o = Math.max(0, offset - LIMIT); setOffset(o); loadProductos(search, o); }}
+              style={{ background: T.card, border: `1px solid ${T.border}`, color: offset === 0 ? T.border : T.dim, borderRadius: 6, padding: '4px 10px', cursor: offset === 0 ? 'default' : 'pointer', fontSize: 11 }}>← Anterior</button>
+            <button disabled={offset + LIMIT >= total} onClick={() => { const o = offset + LIMIT; setOffset(o); loadProductos(search, o); }}
+              style={{ background: T.card, border: `1px solid ${T.border}`, color: offset + LIMIT >= total ? T.border : T.dim, borderRadius: 6, padding: '4px 10px', cursor: offset + LIMIT >= total ? 'default' : 'pointer', fontSize: 11 }}>Siguiente →</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right detail panel */}
+      {selected && (
+        <div style={{ width: 300, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 11, background: `${tipoColor[selected.type] || T.dim}22`, color: tipoColor[selected.type] || T.dim, borderRadius: 6, padding: '3px 8px' }}>
+              {tipoLabel[selected.type] || selected.type}
+            </span>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: T.dim, cursor: 'pointer', display: 'flex' }}><X size={14} /></button>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.text, lineHeight: 1.4 }}>{selected.name}</div>
+            {selected.default_code && <div style={{ fontSize: 11, color: T.dim, marginTop: 4, fontFamily: 'monospace' }}>{selected.default_code}</div>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ background: T.surface, borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: T.teal }}>{selected.qty_available.toLocaleString()}</div>
+              <div style={{ fontSize: 10, color: T.dim }}>Disponible</div>
+            </div>
+            <div style={{ background: T.surface, borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: T.yellow }}>{selected.virtual_available.toLocaleString()}</div>
+              <div style={{ fontSize: 10, color: T.dim }}>Pronosticado</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: T.dim }}>
+            <div style={{ marginBottom: 4 }}>Categoría</div>
+            <div style={{ color: T.text }}>{selected.categ_id ? selected.categ_id[1] : '—'}</div>
+          </div>
+
+          {selected.uom_id && (
+            <div style={{ fontSize: 11, color: T.dim }}>
+              <div style={{ marginBottom: 4 }}>Unidad de medida</div>
+              <div style={{ color: T.text }}>{selected.uom_id[1]}</div>
+            </div>
+          )}
+
+          {quants.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: T.dim, marginBottom: 8 }}>Stock por ubicación</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {quants.map((q, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: T.surface, borderRadius: 6, padding: '6px 10px' }}>
+                    <span style={{ fontSize: 10, color: T.dim, flex: 1 }}>{q.location_id?.[1] || 'Ubicación'}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: T.teal }}>{q.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
-type TabId = 'inventario' | 'scanner' | 'etiquetas';
+type TabId = 'inventario' | 'scanner' | 'etiquetas' | 'odoo';
 interface Props { theme?: any; initialTab?: TabId }
 
 export default function InventarioSection({ initialTab = 'inventario' }: Props) {
@@ -753,9 +960,10 @@ export default function InventarioSection({ initialTab = 'inventario' }: Props) 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.surface, padding: 4, borderRadius: 12, alignSelf: 'flex-start' }}>
         {([
-          ['inventario', 'Inventario',  Layers],
-          ['scanner',    'Scanner',     ScanLine],
-          ['etiquetas',  'Etiquetas',   Printer],
+          ['inventario', 'Inventario Privado', Layers],
+          ['odoo',       'Inventario Odoo',    Tag],
+          ['scanner',    'Scanner',            ScanLine],
+          ['etiquetas',  'Etiquetas',          Printer],
         ] as [TabId, string, any][]).map(([id, label, Icon]) => (
           <button key={id} onClick={() => { setTab(id); if (id !== 'scanner') setSelectedActivo(null); }} style={{
             display: 'flex', alignItems: 'center', gap: 7,
@@ -785,6 +993,7 @@ export default function InventarioSection({ initialTab = 'inventario' }: Props) 
           </div>
         )}
 
+        {tab === 'odoo' && <OdooInventarioTab />}
         {tab === 'etiquetas' && <EtiquetasTab />}
       </div>
     </div>
