@@ -17,16 +17,39 @@ from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-                                  TableStyle, HRFlowable, Image, KeepTogether)
+                                  TableStyle, HRFlowable, Image, KeepTogether,
+                                  CondPageBreak, PageBreak)
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
 
 # ── Paleta ────────────────────────────────────────────────────────────────────
 BLACK  = colors.HexColor('#0D0D0D')
+NAVY   = colors.HexColor('#1A3A5C')
+BLUE   = colors.HexColor('#1976D2')
 MID    = colors.HexColor('#555555')
 LIGHT  = colors.HexColor('#888888')
 RULE   = colors.HexColor('#CCCCCC')
-OFFWHT = colors.HexColor('#F7F7F7')
+OFFWHT = colors.HexColor('#F0F4F8')
+ACCENT = colors.HexColor('#E65100')
 WHITE  = colors.white
+
+# Paleta matplotlib para gráficas
+C = {
+    'azul_oscuro': '#1A3A5C',
+    'azul':        '#1976D2',
+    'azul_claro':  '#64B5F6',
+    'verde':       '#2E7D32',
+    'verde_claro': '#81C784',
+    'naranja':     '#E65100',
+    'naranja_cl':  '#FFAB76',
+    'rojo':        '#C62828',
+    'rojo_claro':  '#EF9A9A',
+    'morado':      '#6A1B9A',
+    'teal':        '#00695C',
+    'gris':        '#78909C',
+    'gris_claro':  '#CFD8DC',
+}
+CAT7 = [C['azul_oscuro'], C['naranja'], C['verde'], C['morado'],
+        C['teal'], C['rojo'], C['gris']]
 
 OUTPUT = os.path.join(os.path.dirname(__file__), '..', 'graficas_inventario_2026.pdf')
 NOW    = datetime.datetime.now()
@@ -43,7 +66,7 @@ def P(text, style):
     return Paragraph(text, style)
 
 def rule():
-    return HRFlowable(width='100%', thickness=1.5, color=BLACK, spaceAfter=0, spaceBefore=0)
+    return HRFlowable(width='100%', thickness=1.5, color=NAVY, spaceAfter=0, spaceBefore=0)
 
 def thin():
     return HRFlowable(width='100%', thickness=0.3, color=RULE, spaceAfter=0, spaceBefore=0)
@@ -115,17 +138,17 @@ def fig_to_image(fig, width_in, height_in):
 def chart_donut_estado():
     """Dona: Con stock / Sin stock / Servicios+Consumibles"""
     mpl_style()
-    fig, ax = plt.subplots(figsize=(4.5, 3.2))
+    fig, ax = plt.subplots(figsize=(3.8, 3.0))
     sizes  = [2502, 1663, 2080]
     labels = ['Con stock\n2,502 (40.1%)', 'Sin stock\n1,663 (26.6%)', 'Servicios/Consumibles\n2,080 (33.3%)']
-    colors_bw = ['#0D0D0D', '#888888', '#D0D0D0']
-    wedges, _ = ax.pie(sizes, colors=colors_bw, startangle=90,
+    clrs = [C['verde'], C['rojo'], C['gris_claro']]
+    wedges, _ = ax.pie(sizes, colors=clrs, startangle=90,
                         wedgeprops=dict(width=0.55, edgecolor='white', linewidth=2))
     ax.set_title('Estado del Catálogo (6,245 productos)', pad=14)
-    ax.legend(wedges, labels, loc='center left', bbox_to_anchor=(0.95, 0.5),
-              frameon=False, fontsize=7.5)
+    ax.legend(wedges, labels, loc='center left', bbox_to_anchor=(0.88, 0.5),
+              frameon=False, fontsize=7)
     fig.tight_layout()
-    return fig_to_image(fig, 5.2, 3.4)
+    return fig_to_image(fig, 3.8, 3.2)
 
 
 def chart_barras_sin_stock():
@@ -145,10 +168,13 @@ def chart_barras_sin_stock():
     ]
     valores = [568, 406, 255, 145, 44, 31, 31, 16, 14, 113]
     y = np.arange(len(categorias))
+    # Gradient: más alto = más oscuro/rojo
+    import matplotlib.cm as cm
+    norm = plt.Normalize(min(valores), max(valores))
+    clrs = [cm.RdYlGn_r(norm(v)) for v in valores]
 
     fig, ax = plt.subplots(figsize=(6.2, 3.8))
-    bars = ax.barh(y, valores, color='#0D0D0D', edgecolor='white', linewidth=0.5, height=0.6)
-    # valor en barra
+    bars = ax.barh(y, valores, color=clrs, edgecolor='white', linewidth=0.5, height=0.6)
     for bar, val in zip(bars, valores):
         ax.text(bar.get_width() + 8, bar.get_y() + bar.get_height()/2,
                 f'{val:,}', va='center', ha='left', fontsize=7, color='#333333')
@@ -173,8 +199,8 @@ def chart_tipo_producto():
     pcts   = [82.9, 15.1, 2.0]
     x      = np.arange(len(tipos))
 
-    fig, ax = plt.subplots(figsize=(4.0, 3.0))
-    bars = ax.bar(x, vals, color=['#0D0D0D', '#555555', '#AAAAAA'],
+    fig, ax = plt.subplots(figsize=(3.6, 3.0))
+    bars = ax.bar(x, vals, color=[C['azul_oscuro'], C['gris'], C['gris_claro']],
                   edgecolor='white', linewidth=0.5, width=0.55)
     for bar, val, pct in zip(bars, vals, pcts):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 30,
@@ -182,12 +208,12 @@ def chart_tipo_producto():
     ax.set_xticks(x)
     ax.set_xticklabels(tipos)
     ax.set_ylabel('Número de productos')
-    ax.set_title('Distribución por Tipo de Producto')
+    ax.set_title('Distribución por Tipo')
     ax.set_ylim(0, 4500)
     ax.spines['bottom'].set_visible(False)
     ax.tick_params(bottom=False)
     fig.tight_layout()
-    return fig_to_image(fig, 4.2, 3.2)
+    return fig_to_image(fig, 3.6, 3.2)
 
 
 def chart_movimientos():
@@ -203,11 +229,12 @@ def chart_movimientos():
         'Otros 28\ntipos',
     ]
     vals = [1723, 214, 161, 42, 32, 23, 189]
-    grises = ['#0D0D0D', '#333333', '#555555', '#777777', '#888888', '#999999', '#BBBBBB']
+    clrs_mov = [C['azul_oscuro'], C['azul'], C['teal'], C['verde'],
+                C['naranja'], C['rojo'], C['gris']]
     x = np.arange(len(tipos))
 
     fig, ax = plt.subplots(figsize=(6.5, 3.2))
-    bars = ax.bar(x, vals, color=grises, edgecolor='white', linewidth=0.5, width=0.65)
+    bars = ax.bar(x, vals, color=clrs_mov, edgecolor='white', linewidth=0.5, width=0.65)
     for bar, val in zip(bars, vals):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 15,
                 f'{val:,}', ha='center', va='bottom', fontsize=7, color='#222222')
@@ -239,11 +266,11 @@ def chart_calidad_datos():
     conteos = [1007, 1663, 707, 80, 312]
     total   = 6245
     pcts    = [c/total*100 for c in conteos]
-    grises  = ['#0D0D0D', '#2D2D2D', '#555555', '#888888', '#AAAAAA']
+    clrs_cal = [C['rojo'], C['rojo_claro'], C['naranja'], C['naranja_cl'], C['gris_claro']]
     x = np.arange(len(problemas))
 
     fig, ax = plt.subplots(figsize=(6.0, 3.0))
-    bars = ax.bar(x, pcts, color=grises, edgecolor='white', linewidth=0.5, width=0.6)
+    bars = ax.bar(x, pcts, color=clrs_cal, edgecolor='white', linewidth=0.5, width=0.6)
     for bar, pct, cnt in zip(bars, pcts, conteos):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
                 f'{pct:.1f}%\n({cnt:,})', ha='center', va='bottom', fontsize=7, color='#222222')
@@ -267,18 +294,20 @@ def chart_top_stock():
         'Tuerca Hexagonal 3/8" ANCLO',
         'Backhaul Mimosa B5c',
         'Protector PoE Mimosa',
-        'Tubo con cople PG 1-1/2"',
+        'Herramientas MSA (varios)',
         'CCR1009-7G-1C-1S+',
+        'Tubo con cople PG 1-1/2"',
         'RouterBoard RB951Ui-2HnD',
         'B5LITE MIMO 750Mbps',
-        'Herramientas MSA (varios)',
     ]
-    stock = [137, 118, 97, 47, 45, 9, 16, 7, 7, 21]
+    stock = [137, 118, 97, 47, 45, 21, 16, 9, 7, 7]
     y = np.arange(len(productos))
 
     fig, ax = plt.subplots(figsize=(6.2, 3.6))
-    grises = ['#0D0D0D' if s == max(stock) else '#444444' if s > 50 else '#777777' for s in stock]
-    bars = ax.barh(y, stock, color=grises, edgecolor='white', linewidth=0.5, height=0.6)
+    import matplotlib.cm as cm
+    norm2 = plt.Normalize(min(stock), max(stock))
+    clrs_stock = [cm.Blues(0.3 + 0.7 * norm2(s)) for s in stock]
+    bars = ax.barh(y, stock, color=clrs_stock, edgecolor='white', linewidth=0.5, height=0.6)
     for bar, val in zip(bars, stock):
         ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
                 str(val), va='center', ha='left', fontsize=7.5, color='#333333')
@@ -307,8 +336,8 @@ def chart_radar_almacenes():
     fig, ax1 = plt.subplots(figsize=(5.8, 3.0))
     ax2 = ax1.twinx()
 
-    b1 = ax1.bar(x - w/2, ubicaciones, width=w, color='#0D0D0D', label='Ubicaciones', edgecolor='white')
-    b2 = ax2.bar(x + w/2, movimientos, width=w, color='#888888', label='Movimientos 2026', edgecolor='white')
+    b1 = ax1.bar(x - w/2, ubicaciones, width=w, color=C['azul_oscuro'], label='Ubicaciones', edgecolor='white')
+    b2 = ax2.bar(x + w/2, movimientos, width=w, color=C['naranja'], label='Movimientos 2026', edgecolor='white')
 
     ax1.set_xticks(x)
     ax1.set_xticklabels(ciudades)
@@ -320,8 +349,8 @@ def chart_radar_almacenes():
     ax1.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)
 
-    lines = [mpatches.Patch(color='#0D0D0D', label='Ubicaciones activas'),
-             mpatches.Patch(color='#888888', label='Movimientos 2026')]
+    lines = [mpatches.Patch(color=C['azul_oscuro'], label='Ubicaciones activas'),
+             mpatches.Patch(color=C['naranja'], label='Movimientos 2026')]
     ax1.legend(handles=lines, loc='upper right', fontsize=7)
     fig.tight_layout()
     return fig_to_image(fig, 6.0, 3.2)
@@ -346,8 +375,8 @@ def chart_valor_categorias():
     y = np.arange(len(categorias))
 
     fig, ax = plt.subplots(figsize=(6.2, 3.8))
-    grises = ['#0D0D0D' if v > 5 else '#333333' if v > 1 else '#555555' if v > 0.1 else '#888888' for v in valores_m]
-    bars = ax.barh(y, valores_m, color=grises, edgecolor='white', linewidth=0.5, height=0.6)
+    clrs_cat = [CAT7[i % len(CAT7)] for i in range(len(categorias))]
+    bars = ax.barh(y, valores_m, color=clrs_cat, edgecolor='white', linewidth=0.5, height=0.6)
     for bar, val in zip(bars, valores_m):
         lbl = f'${val:.2f}M' if val >= 1 else f'${val*1000:.0f}K'
         ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,
@@ -382,10 +411,12 @@ def chart_top_productos_valor():
     ]
     valores = [0.912, 0.899, 0.697, 0.459, 0.450, 0.415, 0.400, 0.388, 0.344, 0.289]
     x = np.arange(len(productos))
-    grises = ['#0D0D0D' if i < 3 else '#333333' if i < 6 else '#666666' for i in range(len(productos))]
+    import matplotlib.cm as cm
+    norm3 = plt.Normalize(min(valores), max(valores))
+    clrs_top = [cm.YlOrRd(0.3 + 0.7 * norm3(v)) for v in valores]
 
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
-    bars = ax.bar(x, valores, color=grises, edgecolor='white', linewidth=0.5, width=0.65)
+    bars = ax.bar(x, valores, color=clrs_top, edgecolor='white', linewidth=0.5, width=0.65)
     for bar, val in zip(bars, valores):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.008,
                 f'${val:.3f}M', ha='center', va='bottom', fontsize=6.2, color='#222222')
@@ -412,15 +443,13 @@ def chart_gauge_cobertura():
 
     fig, axes = plt.subplots(1, 4, figsize=(6.5, 2.2))
     for ax, (label, val, target) in zip(axes, metricas):
-        # fondo gris
+        # fondo
         ax.barh([0], [100], color='#EEEEEE', height=0.5, edgecolor='none')
-        # objetivo
-        ax.barh([0], [target], color='#CCCCCC', height=0.5, edgecolor='none')
-        # valor actual
-        color = '#0D0D0D' if val >= target * 0.9 else '#555555' if val >= target * 0.7 else '#888888'
-        ax.barh([0], [val], color=color, height=0.5, edgecolor='none')
-        # línea objetivo
-        ax.axvline(target, color='#333333', linewidth=1.2, linestyle='--', alpha=0.6)
+        ax.barh([0], [target], color='#BBDEFB', height=0.5, edgecolor='none')
+        # valor actual con color semáforo
+        bar_color = C['verde'] if val >= target * 0.9 else C['naranja'] if val >= target * 0.7 else C['rojo']
+        ax.barh([0], [val], color=bar_color, height=0.5, edgecolor='none')
+        ax.axvline(target, color=C['azul'], linewidth=1.2, linestyle='--', alpha=0.8)
 
         ax.set_xlim(0, 110)
         ax.set_ylim(-0.6, 0.9)
@@ -428,8 +457,7 @@ def chart_gauge_cobertura():
         ax.text(50, 0.45, label, ha='center', va='bottom', fontsize=6.2,
                 color='#444444', multialignment='center')
         ax.text(val/2, 0, f'{val:.0f}%', ha='center', va='center',
-                fontsize=8, fontweight='bold',
-                color='white' if val > 20 else '#333333')
+                fontsize=8, fontweight='bold', color='white')
 
     fig.suptitle('Indicadores de Gestión de Inventario vs. Objetivo', fontsize=8.5,
                  fontweight='bold', y=1.02)
@@ -468,17 +496,17 @@ def make_charts_pdf():
     def callout(text, label='LECTURA'):
         inner = [
             P(label, S(f'cl_{label[:3]}', fontSize=6.5, fontName='Helvetica-Bold',
-                       textColor=colors.HexColor('#888888'), spaceAfter=2)),
+                       textColor=BLUE, spaceAfter=2)),
             P(text, styles['insight']),
         ]
         t = Table([[inner]], colWidths=[PW])
         t.setStyle(TableStyle([
-            ('BACKGROUND',    (0,0), (-1,-1), colors.HexColor('#F7F7F7')),
+            ('BACKGROUND',    (0,0), (-1,-1), OFFWHT),
             ('LEFTPADDING',   (0,0), (-1,-1), 14),
             ('RIGHTPADDING',  (0,0), (-1,-1), 14),
             ('TOPPADDING',    (0,0), (-1,-1), 9),
             ('BOTTOMPADDING', (0,0), (-1,-1), 9),
-            ('LINEBEFORE',    (0,0), (0,-1),  3, colors.HexColor('#0D0D0D')),
+            ('LINEBEFORE',    (0,0), (0,-1),  3, NAVY),
         ]))
         return t
 
@@ -527,8 +555,8 @@ def make_charts_pdf():
         ('BOTTOMPADDING', (0,0), (-1,-1), 14),
         ('LEFTPADDING',   (0,0), (-1,-1), 20),
         ('SPAN',          (0,1), (1,1)),
-        ('BACKGROUND',    (0,0), (-1,-1), colors.HexColor('#F7F7F7')),
-        ('LINEBEFORE',    (0,0), (0,-1),  4, colors.HexColor('#0D0D0D')),
+        ('BACKGROUND',    (0,0), (-1,-1), OFFWHT),
+        ('LINEBEFORE',    (0,0), (0,-1),  5, NAVY),
     ]))
     story += [kpi_val, sp(12)]
 
@@ -538,16 +566,16 @@ def make_charts_pdf():
     img_donut = chart_donut_estado()
     img_tipo  = chart_tipo_producto()
 
-    row = Table([[img_donut, sp(10), img_tipo]],
-                colWidths=[5.2*inch, 0.2*inch, 4.2*inch - 0.2*inch])
+    row = Table([[img_donut, Spacer(0.2*inch, 1), img_tipo]],
+                colWidths=[3.8*inch, 0.2*inch, 3.6*inch])
     row.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LEFTPADDING', (0,0), (-1,-1), 0),
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
     ]))
-    story += [row]
     story += [
-        P('Fig. 1 — Distribución del catálogo por estado de stock.',
+        row,
+        P('Fig. 1 — Distribución del catálogo por estado de stock y tipo.',
           styles['caption']),
         callout('El 40% del catálogo tiene stock físico disponible. '
                 'El 26.6% (1,663 productos) son almacenables con existencia cero. '
@@ -584,7 +612,7 @@ def make_charts_pdf():
     story.append(section(4, 'Actividad por Ciudad', styles))
     story.append(chart_radar_almacenes())
     story += [
-        P('Fig. 4 — Número de ubicaciones activas vs. movimientos registrados por ciudad.',
+        P('Fig. 4 — Ubicaciones activas vs. movimientos por ciudad.',
           styles['caption']),
         callout('MTY Independencia concentra la mayor actividad en ambas métricas. '
                 'Ciudades como Querétaro, Saltillo y CDMX tienen pocas ubicaciones y '
@@ -597,7 +625,7 @@ def make_charts_pdf():
     story.append(section(5, 'Productos con Mayor Stock Disponible', styles))
     story.append(chart_top_stock())
     story += [
-        P('Fig. 5 — Top 10 SKUs con mayor cantidad disponible en todos los almacenes.',
+        P('Fig. 5 — Top 10 SKUs con mayor cantidad disponible en almacenes internos.',
           styles['caption']),
         callout('El stock máximo es de 137 piezas (Mikrotik RB2011). Los niveles son '
                 'extremadamente bajos para una empresa de telecomunicaciones con operaciones '
@@ -606,13 +634,13 @@ def make_charts_pdf():
         sp(8),
     ]
 
-    # ── SECCIÓN 5b: VALOR POR CATEGORÍA ──────────────────────────────────────
+    # ── SECCIÓN 6: VALOR POR CATEGORÍA ───────────────────────────────────────
+    story.append(CondPageBreak(5.5 * inch))
     story.append(section(6, 'Valorización del Inventario', styles))
     story.append(chart_valor_categorias())
     story += [
-        P('Fig. 6 — Valor a precio de costo estándar por categoría. '
-          'Total verificado: $23,741,798 MXN · 1,697 SKUs · 70,461 unidades. '
-          'Fuente: stock.quant (ubicaciones internas, qty > 0).',
+        P('Fig. 6 — Valor verificado por categoría. Total: $23,741,798 MXN · '
+          'Fuente: stock.quant (ubicaciones internas, qty > 0) × standard_price.',
           styles['caption']),
         callout('Equipo de Comunicación AF ($11.5M, 48.6%) y Equipo CV ($8.2M, 34.6%) '
                 'concentran el 83.2% del valor real en almacén. Son los activos '
@@ -621,10 +649,12 @@ def make_charts_pdf():
         sp(8),
     ]
 
+    # ── SECCIÓN 7: TOP PRODUCTOS POR VALOR ────────────────────────────────────
+    story.append(CondPageBreak(5 * inch))
     story.append(section(7, 'Top 10 Productos por Valor', styles))
     story.append(chart_top_productos_valor())
     story += [
-        P('Fig. 7 — Los 10 productos con mayor valor en almacenes internos (stock.quant × standard_price). '
+        P('Fig. 7 — Top 10 por valor en almacenes internos. '
           'Datos verificados — excluye ubicaciones virtuales y equipo en campo.',
           styles['caption']),
         callout('El Radio C5x (444 uds, $912K) y el C5C (272 uds, $899K) son los dos activos '
@@ -635,10 +665,11 @@ def make_charts_pdf():
     ]
 
     # ── SECCIÓN 8: CALIDAD DE DATOS ───────────────────────────────────────────
+    story.append(CondPageBreak(4.5 * inch))
     story.append(section(8, 'Indicadores de Calidad de Datos', styles))
     story.append(chart_calidad_datos())
     story += [
-        P('Fig. 8 — Problemas de calidad de datos como porcentaje del catálogo total.',
+        P('Fig. 8 — Problemas de calidad de datos como % del catálogo total.',
           styles['caption']),
         callout('El problema más crítico es que 1,007 productos (16.1%) no tienen '
                 'código interno asignable. Sin SKU único no es posible digitalizar '
@@ -651,8 +682,7 @@ def make_charts_pdf():
     story.append(section(9, 'Indicadores de Gestión vs. Objetivo', styles))
     story.append(chart_gauge_cobertura())
     story += [
-        P('Fig. 9 — Estado actual de cada indicador clave vs. valor objetivo. '
-          'La línea punteada indica la meta.',
+        P('Fig. 9 — Estado actual vs. valor objetivo. La línea punteada indica la meta.',
           styles['caption']),
         callout('La cobertura de stock (64.5%) y la calidad de SKUs (83.9%) son los dos '
                 'indicadores más alejados del objetivo. Con el plan de mejora propuesto '

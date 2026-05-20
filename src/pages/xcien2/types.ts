@@ -249,7 +249,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas';
+export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers';
 
 export interface NavItem {
   id: SectionId;

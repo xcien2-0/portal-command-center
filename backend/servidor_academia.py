@@ -3919,6 +3919,146 @@ async def red_host_detalle(host_id: str):
     return result
 
 
+# ─── Inventario Transfers (tokens de inventario entre almacenes) ───────────────
+import inventario_tokens as inv_tk
+from inventario_tokens import (
+    InventoryTokenCreate, TokenLine,
+    create_token, get_token, list_tokens,
+    confirm_token, ship_token, receive_token, cancel_token,
+    get_virtual_stock, WAREHOUSES, STATES,
+)
+
+@app.post("/api/inv-transfers/", status_code=201)
+def api_inv_create(data: InventoryTokenCreate):
+    try:
+        return create_token(data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/api/inv-transfers/")
+def api_inv_list(
+    state: str = None,
+    warehouse: str = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    return list_tokens(state=state, warehouse=warehouse, limit=limit, offset=offset)
+
+@app.get("/api/inv-transfers/{token_id}")
+def api_inv_get(token_id: str):
+    t = get_token(token_id)
+    if not t:
+        raise HTTPException(404, "Token no encontrado")
+    return t
+
+@app.patch("/api/inv-transfers/{token_id}/confirm")
+def api_inv_confirm(token_id: str):
+    try:
+        return confirm_token(token_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.patch("/api/inv-transfers/{token_id}/ship")
+def api_inv_ship(token_id: str):
+    try:
+        return ship_token(token_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.patch("/api/inv-transfers/{token_id}/receive")
+def api_inv_receive(token_id: str):
+    try:
+        return receive_token(token_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.patch("/api/inv-transfers/{token_id}/cancel")
+def api_inv_cancel(token_id: str):
+    try:
+        return cancel_token(token_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/api/inv-transfers/stock/{warehouse}")
+def api_inv_stock(warehouse: str):
+    if warehouse not in WAREHOUSES:
+        raise HTTPException(400, f"Almacén inválido: {list(WAREHOUSES.keys())}")
+    return get_virtual_stock(warehouse)
+
+@app.get("/api/inv-transfers/warehouses/all")
+def api_inv_warehouses():
+    return [
+        {
+            "code": code,
+            "name": cfg["name"],
+            "city": cfg["city"],
+            "odoo_location_code": cfg["odoo_location_code"],
+            "odoo_connected": cfg["odoo_location_id"] is not None,
+        }
+        for code, cfg in WAREHOUSES.items()
+    ]
+
+
+# ─── XCIEN Tokens Unificados ──────────────────────────────────────────────────
+import xcien_tokens as xt
+from xcien_tokens import (
+    Token, TokenCreate, TransitionRequest,
+    create_token as xt_create, get_token as xt_get,
+    list_tokens as xt_list, transition_token as xt_transition,
+    get_token_events as xt_events, get_stats as xt_stats,
+    DOMAINS, ENTITIES,
+)
+
+@app.post("/api/xtokens/", status_code=201)
+def api_xt_create(data: TokenCreate):
+    try:
+        return xt_create(data).model_dump()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/api/xtokens/")
+def api_xt_list(
+    domain: str = None, entity: str = None, state: str = None,
+    limit: int = 100, offset: int = 0, search: str = None,
+):
+    return [t.model_dump() for t in xt_list(domain=domain, entity=entity, state=state, limit=limit, offset=offset, search=search)]
+
+@app.get("/api/xtokens/stats")
+def api_xt_stats():
+    return xt_stats()
+
+@app.get("/api/xtokens/schema")
+def api_xt_schema():
+    return {
+        "domains": {k: {
+            "label": v["label"], "icon": v["icon"], "color": v["color"],
+            "initial": v["initial"],
+            "states": list(v["transitions"].keys()),
+            "state_labels": v["state_labels"],
+            "transitions": v["transitions"],
+        } for k, v in DOMAINS.items()},
+        "entities": ENTITIES,
+    }
+
+@app.get("/api/xtokens/{token_id}")
+def api_xt_get(token_id: str):
+    t = xt_get(token_id)
+    if not t:
+        raise HTTPException(404, "Token no encontrado")
+    return t.model_dump()
+
+@app.get("/api/xtokens/{token_id}/events")
+def api_xt_events(token_id: str):
+    return xt_events(token_id)
+
+@app.post("/api/xtokens/{token_id}/transition")
+def api_xt_transition(token_id: str, req: TransitionRequest):
+    try:
+        return xt_transition(token_id, req).model_dump()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/{full_path:path}")
 async def spa_fallback(full_path: str):
     """Maneja el enrutamiento de React (SPA) para cualquier ruta no definida en la API."""

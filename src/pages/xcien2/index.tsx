@@ -23,6 +23,9 @@ import SalaJuntasSection from './sections/SalaJuntasSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
+import InventarioTransfersSection from './sections/InventarioTransfersSection';
+import XcienTokensSection from './sections/XcienTokensSection';
+
 // Bridge imports for classic components
 import CallCenter from '../CallCenter';
 import InventarioSection from './sections/InventarioSection';
@@ -52,10 +55,11 @@ const NAV: NavEntry[] = [
   { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
   { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
   { id: 'scan', label: 'Inventario & Scanner', icon: '🔍', group: 'Operaciones' },
+  { id: 'inv-transfers', label: 'Transferencias de Inventario', icon: '🏷️', group: 'Operaciones' },
 
   { id: 'academia', label: 'Dashboard Academia', icon: '🎓', group: 'Certificación & Academia' },
 
-  { id: 'transacciones', label: 'Transacciones & Tokens', icon: '🔄', group: 'Administración' },
+  { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
   { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
   { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
@@ -319,8 +323,9 @@ function Content({
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
-      {section === 'scan'      && <InventarioSection theme={theme} />}
-      {section === 'etiquetas' && <InventarioSection theme={theme} initialTab="etiquetas" />}
+      {section === 'scan'          && <InventarioSection theme={theme} />}
+      {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
+      {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'reports' && <ReportesGobierno />}
 
@@ -487,8 +492,8 @@ function Content({
       {section === 'telegram' && <TelegramBotSection theme={theme} />}
       {section === 'docs' && <DocsSection theme={theme} />}
       {section === 'backup' && <BackupSection theme={theme} />}
-      {section === 'transacciones' && <FinanzasSection theme={theme} activeThemeId={activeThemeId} />}
-      {section === 'tokens'        && <FinanzasSection theme={theme} activeThemeId={activeThemeId} initialTab="tokens" />}
+      {section === 'transacciones' && <XcienTokensSection theme={theme} />}
+      {section === 'tokens'        && <XcienTokensSection theme={theme} />}
       {section === 'editor' && (
         <DevPanel
           theme={theme}
