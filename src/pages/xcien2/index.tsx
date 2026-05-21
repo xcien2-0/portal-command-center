@@ -1,5 +1,12 @@
 import { useState, useReducer, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Home, Radio, Map, Settings, Truck, Phone, Package, ArrowLeftRight,
+  GraduationCap, Link2, GitBranch, BarChart2, FileText, BookOpen,
+  Shield, Users, User, Calendar, Bot, Zap, Swords, Smartphone, Bell,
+  Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
+  Activity, Network, Layers, AlertTriangle,
+} from 'lucide-react';
 import { API_BASE } from '../../config';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import FloatingChat from './sections/FloatingChat';
@@ -56,56 +63,101 @@ const NAV: NavEntry[] = [
   { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
   { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
   { id: 'scan', label: 'Inventario & Scanner', icon: '🔍', group: 'Operaciones' },
-  { id: 'inv-transfers', label: 'Transferencias de Inventario', icon: '🏷️', group: 'Operaciones' },
+  { id: 'inv-transfers', label: 'Transferencias', icon: '🏷️', group: 'Operaciones' },
 
-  { id: 'academia', label: 'Dashboard Academia', icon: '🎓', group: 'Certificación & Academia' },
+  { id: 'academia', label: 'Academia', icon: '🎓', group: 'Certificación' },
 
   { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
-  { id: 'merkle', label: 'Merkle Feed — En Vivo', icon: '⛓️', group: 'Administración' },
-  { id: 'gerencia', label: 'Dashboard Gerencial', icon: '📊', group: 'Administración' },
-  { id: 'reports', label: 'Reportes & Gobierno', icon: '📋', group: 'Administración' },
-  { id: 'docs', label: 'Biblioteca Documental', icon: '📚', group: 'Administración' },
-
-  { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
-  { id: 'adopcion', label: 'Gestión de Usuarios', icon: '👥', group: 'Planeación' },
+  { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
+  { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
+  { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
+  { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
   { id: 'sala_juntas', label: 'Sala de Juntas', icon: '📅', group: 'Administración' },
 
+  { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
+  { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
+
   { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
-  { id: 'bridge', label: 'Puente de Datos (IA)', icon: '⚡', group: 'Infraestructura' },
-  { id: 'war-room', label: 'Comando Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
-  { id: 'mobile', label: 'Terminal Móvil (QR)', icon: '📱', group: 'Infraestructura' },
-  { id: 'telegram', label: 'Monitor de Alarmas Bot', icon: '🤖', group: 'Infraestructura' },
-  { id: 'backup', label: 'Migración & Redundancia', icon: '💾', group: 'Sistema' },
-  { id: 'editor', label: 'Configuración Matriz', icon: '🎨', group: 'Sistema' },
+  { id: 'bridge', label: 'Data Bridge', icon: '⚡', group: 'Infraestructura' },
+  { id: 'war-room', label: 'Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
+  { id: 'mobile', label: 'Terminal Móvil', icon: '📱', group: 'Infraestructura' },
+  { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
+  { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
+  { id: 'editor', label: 'Configuración', icon: '🎨', group: 'Sistema' },
 ];
+
+// ── Lucide icon map ───────────────────────────────────────────────────────────
+const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  inicio: Home,
+  noc: Radio,
+  red: Network,
+  wfm: Settings,
+  bidrillas: Truck,
+  call: Phone,
+  scan: Package,
+  'inv-transfers': ArrowLeftRight,
+  academia: GraduationCap,
+  transacciones: Link2,
+  merkle: GitBranch,
+  gerencia: BarChart2,
+  reports: FileText,
+  docs: BookOpen,
+  rrhh: User,
+  sala_juntas: Calendar,
+  foda: Shield,
+  adopcion: Users,
+  agentes: Bot,
+  bridge: Zap,
+  'war-room': Swords,
+  mobile: Smartphone,
+  telegram: Bell,
+  backup: Database,
+  editor: Settings2,
+  tokens: Link2,
+  etiquetas: Package,
+};
 
 const SECTION_TITLE: Record<SectionId, string> = {
   inicio: 'Hub Principal',
   noc: 'Red en Vivo',
-  red: 'Mapa de Red — Dispositivos por Marca',
-  wfm: 'Control Operativo — WFM',
-  bidrillas: 'Gestión de Bidrillas 2026',
-  call: 'Centro de Atención (Call Center)',
-  scan: 'Inventario & Scanner QR',
+  red: 'Mapa de Red',
+  wfm: 'Control Operativo',
+  bidrillas: 'Equipos de Campo',
+  call: 'Call Center',
+  scan: 'Inventario & Scanner',
   tokens: 'Transacciones & Tokens',
-  transacciones: 'Transacciones & Tokens',
-  etiquetas: 'Creación de Etiquetas & Comprobantes',
-  foda: 'Análisis de Riesgos y Oportunidades',
-  adopcion: 'Adopción y Gestión de Usuarios',
+  transacciones: 'Tokens Unificados',
+  etiquetas: 'Etiquetas & Comprobantes',
+  foda: 'Análisis Estratégico',
+  adopcion: 'Gestión de Usuarios',
   academia: 'XCIEN Academia',
-  gerencia: 'Control Gerencial',
-  reports: 'Gobierno de Datos',
+  gerencia: 'Dashboard Gerencial',
+  reports: 'Reportes & Gobierno',
   bridge: 'Antigravity Data Bridge',
-  'war-room': 'Centro de Comando Multi-Agente',
-  mobile: 'Acceso Remoto Móvil',
-  telegram: 'Monitor de Alarmas (Telegram)',
-  docs: 'Repositorio Documental',
-  rrhh: 'Recursos Humanos — Directorio',
-  sala_juntas: 'Sala de Juntas — Calendarios',
-  backup: 'Gestión de Migración y Redundancia',
-  editor: 'Ajustes de Infraestructura',
-  agentes: 'Ecosistema de Agentes IA',
+  'war-room': 'Comando Multi-Agente',
+  mobile: 'Terminal Móvil',
+  telegram: 'Monitor de Alarmas',
+  docs: 'Biblioteca Documental',
+  rrhh: 'Recursos Humanos',
+  sala_juntas: 'Sala de Juntas',
+  backup: 'Migración & Redundancia',
+  editor: 'Configuración',
+  agentes: 'Agentes IA',
+};
+
+// ── UISP color constants ──────────────────────────────────────────────────────
+const U = {
+  bg: '#0d1117',
+  sidebar: '#141921',
+  header: '#0f1520',
+  accent: '#00aff0',
+  border: 'rgba(255,255,255,0.06)',
+  text: '#e2e8f0',
+  dim: '#64748b',
+  muted: '#94a3b8',
+  card: '#1a2234',
+  active: 'rgba(0,175,240,0.08)',
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -113,55 +165,16 @@ interface SidebarProps {
   active: SectionId;
   onSelect: (id: SectionId) => void;
   theme: ThemeConfig;
+  backendStatus: 'online' | 'offline';
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-function NavButton({ item, active, onSelect, theme, sub = false }: { item: NavEntry, active: SectionId, onSelect: (id: SectionId) => void, theme: ThemeConfig, sub?: boolean }) {
-  const isActive = active === item.id;
-  const accent = theme.accent;
-
-  return (
-    <button
-      onClick={() => onSelect(item.id)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: sub ? '8px 12px' : (theme.compact ? '7px 12px' : '10px 12px'),
-        background: isActive ? `${accent}20` : 'transparent',
-        color: isActive ? accent : (sub ? theme.dim : theme.text),
-        border: 'none', borderRadius: 8, cursor: 'pointer',
-        transition: 'all 0.2s', fontSize: sub ? '0.85rem' : '0.9rem',
-        fontWeight: isActive ? 600 : 500,
-        width: '100%', textAlign: 'left',
-      }}
-    >
-      <span style={{ fontSize: sub ? '1rem' : '1.1rem', opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-      <span style={{ flex: 1 }}>{item.label}</span>
-      {isActive && (
-        <div style={{ width: 4, height: 16, background: accent, borderRadius: 2 }} />
-      )}
-    </button>
-  );
-}
-
-function Sidebar({ active, onSelect, theme, backendStatus }: SidebarProps) {
-  const [now, setNow] = useState(new Date());
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Operaciones', 'Certificación & Academia', 'Administración', 'Planeación', 'Infraestructura', 'Sistema']);
-
-  useEffect(() => {
-    const timeId = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timeId);
-  }, []);
-
-  const toggleGroup = (label: string) => {
-    setExpandedGroups(prev =>
-      prev.includes(label) ? prev.filter(g => g !== label) : [...prev, label]
-    );
-  };
-
+function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse }: SidebarProps) {
   const groups = useMemo(() => {
     const grouped: { label: string | null; items: NavEntry[] }[] = [];
     let current: NavEntry[] = [];
     let currentLabel: string | null = null;
-
     for (const entry of NAV) {
       if (entry.group !== currentLabel) {
         if (current.length) grouped.push({ label: currentLabel, items: current });
@@ -174,103 +187,167 @@ function Sidebar({ active, onSelect, theme, backendStatus }: SidebarProps) {
     return grouped;
   }, []);
 
-  const accent = theme.accent;
-
   return (
     <div style={{
-      width: theme.sidebarWidth, flexShrink: 0,
-      background: theme.id === 'holo' ? 'rgba(2, 10, 4, 0.85)' : theme.sidebar,
-      backdropFilter: theme.id === 'holo' ? 'blur(12px)' : 'none',
-      borderRight: `1px solid ${theme.border}`,
-      display: 'flex', flexDirection: 'column', transition: 'width 0.2s',
+      width: collapsed ? 56 : 220,
+      flexShrink: 0,
+      background: U.sidebar,
+      borderRight: `1px solid ${U.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+      overflow: 'hidden',
+      position: 'relative',
+      zIndex: 200,
     }}>
-      {/* Logo */}
-      <div style={{ padding: 24, borderBottom: `1px solid ${theme.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/xcien.png" alt="XCIEN" style={{ height: 28, objectFit: 'contain' }} />
-          <div>
-            <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: -0.5, color: theme.text }}>XCIEN</span>
-            <span style={{ color: accent, fontSize: '0.7rem', background: `${accent}20`, padding: '2px 6px', borderRadius: 4, marginLeft: 6 }}>2.0</span>
+      {/* Logo bar */}
+      <div style={{
+        height: 56,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '0 16px',
+        borderBottom: `1px solid ${U.border}`,
+        flexShrink: 0,
+        overflow: 'hidden',
+      }}>
+        <img src="/xcien.png" alt="XCIEN" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
+        {!collapsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: U.text, letterSpacing: -0.3 }}>XCIEN</span>
+            <span style={{
+              color: U.accent, fontSize: 9, fontWeight: 700,
+              background: 'rgba(0,175,240,0.12)',
+              padding: '2px 5px', borderRadius: 3, letterSpacing: 0.5,
+            }}>2.0</span>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-          <div style={{ fontFamily: 'monospace', fontSize: 10, color: theme.dim }}>
-            {now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: backendStatus === 'online' ? '#00ff88' : '#ff3366' }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: backendStatus === 'online' ? '#00ff88' : '#ff3366', boxShadow: backendStatus === 'online' ? '0 0 8px #00ff88' : 'none' }} />
-            {backendStatus.toUpperCase()}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
-        {groups.map(({ label, items }) => {
-          if (!label) {
-            return items.map(item => (
-              <NavButton key={item.id} item={item} active={active} onSelect={onSelect} theme={theme} />
-            ));
-          }
+      {/* Nav items */}
+      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '6px 0' }}>
+        {groups.map(({ label, items }) => (
+          <div key={label ?? '__root__'}>
+            {/* Group separator / label */}
+            {label && (
+              collapsed
+                ? <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', margin: '6px 8px' }} />
+                : <div style={{
+                    padding: '10px 16px 3px',
+                    fontSize: 9, fontWeight: 700,
+                    letterSpacing: 1.5,
+                    color: U.dim,
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                  }}>{label}</div>
+            )}
 
-          const isExpanded = expandedGroups.includes(label);
-          const hasActive = items.some(it => it.id === active);
-
-          return (
-            <div key={label} style={{ marginBottom: 4 }}>
-              <button
-                onClick={() => toggleGroup(label)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 12px', borderRadius: 8, cursor: 'pointer', border: 'none', background: 'transparent',
-                  color: hasActive ? theme.text : theme.dim, transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase' }}>{label}</span>
-                </div>
-                <span style={{ fontSize: 10, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none', opacity: 0.5 }}>▼</span>
-              </button>
-
-              <div style={{
-                maxHeight: isExpanded ? 500 : 0, overflow: 'hidden', transition: 'all 0.3s cubic-bezier(0, 1, 0, 1)',
-                paddingLeft: 8, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 2
-              }}>
-                {items.map(item => (
-                  <NavButton key={item.id} item={item} active={active} onSelect={onSelect} theme={theme} sub />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            {items.map(item => {
+              const Icon = NAV_ICONS[item.id] || LayoutGrid;
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onSelect(item.id)}
+                  title={collapsed ? item.label : undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    gap: 10,
+                    width: '100%',
+                    padding: collapsed ? '10px 0' : '8px 14px',
+                    background: isActive ? U.active : 'transparent',
+                    borderTop: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderLeft: isActive ? `2px solid ${U.accent}` : '2px solid transparent',
+                    color: isActive ? U.accent : U.muted,
+                    fontSize: 12,
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    letterSpacing: 0.1,
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }}
+                >
+                  <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
+                  {!collapsed && (
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Footer user pill & Settings */}
-      <div style={{ padding: 20, borderTop: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <button
-          onClick={() => onSelect('editor')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 12px',
-            background: active === 'editor' ? `${theme.accent}20` : 'transparent',
-            border: active === 'editor' ? `1px solid ${theme.accent}30` : '1px solid transparent',
-            color: active === 'editor' ? theme.text : theme.dim,
-            fontSize: 12, fontWeight: 600, cursor: 'pointer', borderRadius: 8, transition: 'all 0.15s',
-          }}
-        >
-          <span>⚙️</span>
-          <span>Ajustes del Portal</span>
-        </button>
+      {/* Footer */}
+      <div style={{ borderTop: `1px solid ${U.border}`, flexShrink: 0 }}>
+        {/* User */}
+        {!collapsed && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px',
+            borderBottom: `1px solid ${U.border}`,
+          }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: U.accent,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 10, color: '#0d1117', flexShrink: 0,
+            }}>JM</div>
+            <div style={{ overflow: 'hidden', minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: U.text, whiteSpace: 'nowrap' }}>Admin XCIEN</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: backendStatus === 'online' ? '#22c55e' : '#ef4444',
+                }} />
+                <span style={{ fontSize: 9, color: U.dim }}>
+                  {backendStatus === 'online' ? 'Conectado' : 'Sin conexión'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: theme.card, padding: 10, borderRadius: theme.radius }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', color: '#fff', flexShrink: 0 }}>
-            JM
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Admin XCIEN</div>
-            <div style={{ fontSize: '0.7rem', color: theme.dim }}>Director General</div>
-          </div>
-        </div>
+        {/* Collapse toggle */}
+        <button
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-end',
+            gap: 6,
+            width: '100%',
+            padding: collapsed ? '12px 0' : '10px 14px',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: U.dim,
+            fontSize: 11,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = U.text}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = U.dim}
+        >
+          {collapsed
+            ? <ChevronRight size={15} />
+            : <><span>Colapsar</span><ChevronLeft size={15} /></>
+          }
+        </button>
       </div>
     </div>
   );
@@ -306,13 +383,13 @@ function Content({
     }}>
       {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} onSelect={onSelect} />}
       {section === 'noc' && (
-        <NocSection 
-          theme={theme} 
+        <NocSection
+          theme={theme}
           activeThemeId={activeThemeId}
-          cities={cities} 
-          alerts={alerts} 
-          activeTenantId={activeTenantId} 
-          onTenantChange={onTenantChange} 
+          cities={cities}
+          alerts={alerts}
+          activeTenantId={activeTenantId}
+          onTenantChange={onTenantChange}
         />
       )}
       {section === 'red'      && <RedSection      theme={theme} />}
@@ -462,6 +539,7 @@ function Content({
           </div>
         </div>
       )}
+
       {section === 'mobile' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 32 }}>
           <div style={{ textAlign: 'center', maxWidth: 400 }}>
@@ -513,6 +591,7 @@ function Content({
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Xcien2Page() {
   const navigate = useNavigate();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
   const [section, setSection] = useState<SectionId>(() => {
@@ -546,7 +625,6 @@ export default function Xcien2Page() {
     return () => clearInterval(id);
   }, []);
 
-  // Sync section with URL search params
   const [theme, dispatch] = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
       const saved = localStorage.getItem('xcien2_theme');
@@ -581,7 +659,6 @@ export default function Xcien2Page() {
     setActiveThemeId(preset.id);
   }, []);
 
-  // Apply CSS variables globally for uniformity
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--xcien-accent', theme.accent);
@@ -592,8 +669,6 @@ export default function Xcien2Page() {
     root.style.setProperty('--xcien-dim', theme.dim);
     root.style.setProperty('--xcien-radius', `${theme.radius}px`);
     root.style.setProperty('--xcien-font', `${theme.baseFontSize}px`);
-
-    // Update body background to match theme
     document.body.style.background = theme.bg;
   }, [theme]);
 
@@ -602,11 +677,8 @@ export default function Xcien2Page() {
     const params = new URLSearchParams(location.search);
     const id = params.get('section') as SectionId;
     if (id && id !== section) {
-      if (SECTION_TITLE[id]) {
-        setSection(id);
-      } else {
-        setSection('inicio');
-      }
+      if (SECTION_TITLE[id]) setSection(id);
+      else setSection('inicio');
     }
   }, [location.search, section]);
 
@@ -615,98 +687,122 @@ export default function Xcien2Page() {
     navigate(`?section=${id}`, { replace: true });
   }, [navigate]);
 
+  const alertCount = realAlerts.filter(a => a.severity === 'critical' || a.severity === 'warning').length;
+
   return (
-    <div
-      style={{
-        display: 'flex', height: '100vh', overflow: 'hidden',
-        fontFamily: "'Inter', sans-serif",
-        fontSize: theme.baseFontSize,
-        color: theme.text,
-        background: theme.bg,
-      }}
-    >
-      <Sidebar active={section} onSelect={onSelectSection} theme={theme} backendStatus={backendStatus} />
+    <div style={{
+      display: 'flex', height: '100vh', overflow: 'hidden',
+      fontFamily: "'Inter', sans-serif",
+      fontSize: theme.baseFontSize,
+      color: U.text,
+      background: U.bg,
+    }}>
+      <Sidebar
+        active={section}
+        onSelect={onSelectSection}
+        theme={theme}
+        backendStatus={backendStatus}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(p => !p)}
+      />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        {/* Top header */}
+        {/* UISP-style top header — 48px */}
         <header style={{
-          height: 64, padding: '0 24px',
-          borderBottom: `1px solid ${theme.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: `${theme.bg}cc`, backdropFilter: 'blur(10px)',
-          position: 'sticky', top: 0, zIndex: 100,
+          height: 48,
+          flexShrink: 0,
+          padding: '0 20px',
+          borderBottom: `1px solid ${U.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: U.header,
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>{SECTION_TITLE[section]}</h2>
-              <div style={{ 
-                width: 8, height: 8, borderRadius: '50%', 
-                background: backendStatus === 'online' ? theme.accent : '#ff3366', 
-                boxShadow: `0 0 12px ${backendStatus === 'online' ? theme.accent : '#ff3366'}`, 
-                animation: theme.animations ? 'pulse-dot 2s infinite' : 'none' 
-              }} />
-            </div>
-
-            {/* Quick Access Desktop */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 20, padding: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
-              {[
-                { id: 'noc', label: 'NOC', icon: '📡' },
-                { id: 'wfm', label: 'Dispatch', icon: '⚙️' },
-                { id: 'war-room', label: 'War Room', icon: '⚔️' },
-              ].map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => onSelectSection(item.id as any)}
-                  style={{
-                    padding: '6px 12px', borderRadius: 8, border: 'none',
-                    background: section === item.id ? `${theme.accent}20` : 'transparent',
-                    color: section === item.id ? theme.accent : theme.dim,
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                    display: 'flex', alignItems: 'center', gap: 6
-                  }}
-                >
-                  <span>{item.icon}</span>
-                  <span className="hidden md:inline">{item.label}</span>
-                </button>
-              ))}
-            </div>
+          {/* Left: breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: U.dim }}>XCIEN 2.0</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>/</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: U.text }}>
+              {SECTION_TITLE[section]}
+            </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* City Filter */}
-            <div style={{ position: 'relative', display: section === 'noc' || section === 'wfm' ? 'block' : 'none' }}>
-              <select 
-                style={{
-                  background: 'rgba(255,255,255,0.05)', border: `1px solid ${theme.border}`,
-                  color: theme.text, borderRadius: 8, padding: '6px 32px 6px 12px',
-                  fontSize: 12, fontWeight: 600, cursor: 'pointer', appearance: 'none', outline: 'none'
-                }}
-              >
-                <option value="">Monterrey ▼</option>
-                <option value="mty">Monterrey</option>
-                <option value="sal">Saltillo</option>
-                <option value="pn">Piedras Negras</option>
-              </select>
-              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 8, opacity: 0.5 }}>▼</span>
+          {/* Right: status + alerts + user */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Backend status */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px',
+              background: backendStatus === 'online' ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${backendStatus === 'online' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              borderRadius: 20,
+            }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: backendStatus === 'online' ? '#22c55e' : '#ef4444',
+                boxShadow: backendStatus === 'online' ? '0 0 6px #22c55e' : 'none',
+              }} />
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: backendStatus === 'online' ? '#22c55e' : '#ef4444',
+                letterSpacing: 0.5,
+              }}>
+                {backendStatus === 'online' ? 'EN LÍNEA' : 'OFFLINE'}
+              </span>
             </div>
 
-            {/* Notifications */}
-            <button style={{ position: 'relative', background: 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}>
-              <span style={{ fontSize: 20 }}>🔔</span>
-              <div style={{
-                position: 'absolute', top: 0, right: 0,
-                background: '#FF4D6D', color: '#fff', fontSize: 9, fontWeight: 900,
-                padding: '2px 5px', borderRadius: 10, border: `2px solid ${theme.bg}`,
-                boxShadow: '0 2px 10px rgba(255,77,109,0.4)'
-              }}>
-                235
-              </div>
+            {/* Alerts bell */}
+            <button
+              onClick={() => onSelectSection('noc')}
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34,
+                background: alertCount > 0 ? 'rgba(239,68,68,0.08)' : 'transparent',
+                border: `1px solid ${alertCount > 0 ? 'rgba(239,68,68,0.2)' : 'transparent'}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: alertCount > 0 ? '#ef4444' : U.dim,
+                transition: 'all 0.15s',
+              }}
+              title="Ver alertas"
+            >
+              <AlertTriangle size={15} />
+              {alertCount > 0 && (
+                <div style={{
+                  position: 'absolute', top: 3, right: 3,
+                  background: '#ef4444', color: '#fff',
+                  fontSize: 8, fontWeight: 700,
+                  width: 14, height: 14, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${U.header}`,
+                }}>{alertCount > 99 ? '99' : alertCount}</div>
+              )}
             </button>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: `${theme.accent}10`, border: `1px solid ${theme.accent}30`, borderRadius: 20, padding: '6px 16px' }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: theme.accent, animation: theme.animations ? 'pulse-dot 1.5s infinite' : 'none' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: theme.accent, letterSpacing: 0.5 }}>LIVE MONITOR</span>
+
+            {/* Live pulse */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px',
+              background: 'rgba(0,175,240,0.06)',
+              border: '1px solid rgba(0,175,240,0.15)',
+              borderRadius: 20,
+            }}>
+              <Activity size={11} color={U.accent} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: U.accent, letterSpacing: 0.5 }}>LIVE</span>
             </div>
+
+            {/* User avatar */}
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: U.accent,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 10, color: '#0d1117',
+              marginLeft: 4, cursor: 'pointer',
+              flexShrink: 0,
+            }}>JM</div>
           </div>
         </header>
 
