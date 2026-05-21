@@ -1158,10 +1158,15 @@
         "fecha": "2026-05-15T10:26:56.984893",
         "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-20T13:38:53.721278",
+        "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
+        "usuario": "Sistema"
       }
     ],
-    "odoo_stage_id": 7,
-    "revenue": 59500.0
+    "odoo_stage_id": 63,
+    "revenue": 46200.0
   },
   {
     "id": "ODOO-79720",
@@ -9080,11 +9085,11 @@
   {
     "id": "ODOO-79869",
     "odoo_id": 79869,
-    "odoo_stage_id": 4,
+    "odoo_stage_id": 8,
     "cliente": "CENTRAL DE DROGAS",
     "servicio": "Sandur, SIDP-200, CENTRAL DE DROGAS, SITIO LA PERLA",
     "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
-    "estado": "ALMACEN_VALIDACION",
+    "estado": "APROVISIONAMIENTO",
     "estado_fuente": "odoo",
     "revenue": 2500.0,
     "fecha_deadline": "2026-05-14",
@@ -9142,6 +9147,11 @@
       {
         "fecha": "2026-05-19T10:33:56.996245",
         "accion": "Importado desde Odoo CRM \u2014 > Contratacion",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-20T13:09:59.156862",
+        "accion": "Odoo sync: stage \u2192 > Habilitacion (APROVISIONAMIENTO)",
         "usuario": "Sistema"
       }
     ]

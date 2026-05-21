@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
-import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi } from 'lucide-react';
+import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Eye, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // ── Colores ────────────────────────────────────────────────────────────────────
@@ -610,6 +610,41 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     kmzLayers.current[group.id] = added;
   }, [kmzActive]);
 
+  // ── Observium state ───────────────────────────────────────────────────────────
+  const [obsOpen,       setObsOpen]       = useState(false);
+  const [obsSummary,    setObsSummary]    = useState<{total:number;up:number;down:number;availability:number}|null>(null);
+  const [obsAlerts,     setObsAlerts]     = useState<any[]>([]);
+  const [obsDown,       setObsDown]       = useState<any[]>([]);
+  const [obsLoading,    setObsLoading]    = useState(false);
+  const [obsLastUpdate, setObsLastUpdate] = useState<Date|null>(null);
+
+  const fetchObs = useCallback(async () => {
+    setObsLoading(true);
+    try {
+      const [sumRes, alRes, downRes] = await Promise.all([
+        fetch(`${API_BASE}/api/observium/summary`),
+        fetch(`${API_BASE}/api/observium/alerts?limit=50`),
+        fetch(`${API_BASE}/api/observium/devices/down?limit=150`),
+      ]);
+      const [sum, al, dn] = await Promise.all([sumRes.json(), alRes.json(), downRes.json()]);
+      setObsSummary(sum);
+      setObsAlerts(Array.isArray(al) ? al : []);
+      setObsDown(Array.isArray(dn) ? dn : []);
+      setObsLastUpdate(new Date());
+    } catch(e) { console.error('Observium error:', e); }
+    finally { setObsLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (obsOpen && !obsSummary) fetchObs();
+  }, [obsOpen, obsSummary, fetchObs]);
+
+  useEffect(() => {
+    if (!obsOpen) return;
+    const t = setInterval(fetchObs, 60_000);
+    return () => clearInterval(t);
+  }, [obsOpen, fetchObs]);
+
   // ── Toggle vendor ─────────────────────────────────────────────────────────────
   const toggleVendor = (v: string) => {
     setSelectedCity(null); setSelectedHost(null);
@@ -661,6 +696,30 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           <GitBranch size={13} /> Topología
         </button>
 
+
+        {/* Observium toggle */}
+        <button
+          onClick={() => setObsOpen(p => !p)}
+          style={{
+            padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+            background: obsOpen ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${obsOpen ? '#ef4444' : 'rgba(255,255,255,0.15)'}`,
+            color: obsOpen ? '#ef4444' : 'rgba(255,255,255,0.5)',
+            display: 'flex', alignItems: 'center', gap: 6, position: 'relative',
+          }}
+        >
+          <Eye size={13} />
+          Observium
+          {obsAlerts.length > 0 && (
+            <span style={{
+              position: 'absolute', top: -5, right: -5,
+              background: '#ef4444', color: 'white',
+              borderRadius: '50%', width: 16, height: 16,
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>{obsAlerts.length > 99 ? '99+' : obsAlerts.length}</span>
+          )}
+        </button>
 
         {/* Refresh */}
         <button
@@ -818,6 +877,131 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
           </div>
         ) : null}
+
+        {/* ── Panel Observium ─────────────────────────────────────────────── */}
+        {obsOpen && (
+          <div style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0,
+            width: 360, zIndex: 1000,
+            background: 'rgba(5,5,15,0.97)',
+            borderLeft: '1px solid rgba(239,68,68,0.25)',
+            display: 'flex', flexDirection: 'column',
+            backdropFilter: 'blur(12px)',
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 16px', borderBottom: '1px solid rgba(239,68,68,0.2)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Eye size={15} color="#ef4444" />
+                <span style={{ color: 'white', fontWeight: 700, fontSize: 13 }}>Observium — Red Viva</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={fetchObs} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
+                  <RefreshCw size={13} style={{ animation: obsLoading ? 'spin 1s linear infinite' : 'none' }} />
+                </button>
+                <button onClick={() => setObsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            {obsLoading && !obsSummary ? (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                <Activity size={24} style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                {/* KPIs Observium */}
+                {obsSummary && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {[
+                      { label: 'Total', val: obsSummary.total, color: 'rgba(255,255,255,0.7)' },
+                      { label: 'Online', val: obsSummary.up, color: '#00ff88' },
+                      { label: 'Offline', val: obsSummary.down, color: '#ef4444' },
+                      { label: 'Disponibilidad', val: `${obsSummary.availability}%`, color: obsSummary.availability >= 80 ? '#ffcc00' : '#ef4444' },
+                    ].map(k => (
+                      <div key={k.label} style={{
+                        background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                        padding: '10px 12px', border: '1px solid rgba(255,255,255,0.07)',
+                      }}>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{k.label}</div>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: k.color }}>{k.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Alertas críticas */}
+                {obsAlerts.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <AlertTriangle size={11} color="#ef4444" />
+                      Alertas Críticas ({obsAlerts.length})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {obsAlerts.slice(0, 20).map((a, i) => (
+                        <div key={i} style={{
+                          background: a.cls === 'red' ? 'rgba(239,68,68,0.08)' : 'rgba(234,179,8,0.08)',
+                          border: `1px solid ${a.cls === 'red' ? 'rgba(239,68,68,0.2)' : 'rgba(234,179,8,0.2)'}`,
+                          borderLeft: `3px solid ${a.cls === 'red' ? '#ef4444' : '#eab308'}`,
+                          borderRadius: 6, padding: '7px 10px',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: a.cls === 'red' ? '#ef4444' : '#eab308', textTransform: 'uppercase' }}>
+                              {a.entity_type} · dev {a.device_id}
+                            </span>
+                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>{a.changed}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{a.message || 'Checks failed'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dispositivos down por zona */}
+                {obsDown.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <XCircle size={11} color="#ef4444" />
+                      Equipos Offline ({obsDown.length})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {obsDown.slice(0, 50).map((d, i) => (
+                        <div key={i} style={{
+                          background: 'rgba(239,68,68,0.05)',
+                          borderRadius: 5, padding: '6px 10px',
+                          borderLeft: '2px solid rgba(239,68,68,0.3)',
+                        }}>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 1 }}>
+                            {d.hostname}
+                          </div>
+                          {d.location && (
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{d.location}</div>
+                          )}
+                        </div>
+                      ))}
+                      {obsDown.length > 50 && (
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '8px 0' }}>
+                          + {obsDown.length - 50} equipos más...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {obsLastUpdate && (
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', paddingTop: 4 }}>
+                    Actualizado: {obsLastUpdate.toLocaleTimeString('es-MX')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Loading overlay */}
         {loading && (

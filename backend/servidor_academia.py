@@ -4287,6 +4287,99 @@ def eliminar_usuario(user_id: str, user: dict = Depends(require_rol("admin"))):
 def listar_roles(user: dict = Depends(get_current_user)):
     return auth_service.ROLES
 
+# ─── Observium ────────────────────────────────────────────────────────────────
+
+OBSERVIUM_BASE = "https://172.31.150.244:4301"
+OBSERVIUM_USER = "miguel.macias"
+OBSERVIUM_PASS = "Parley.2392"
+
+import httpx as _httpx
+
+async def _obs_get(path: str, params: dict = {}):
+    try:
+        async with _httpx.AsyncClient(verify=False, timeout=15) as c:
+            r = await c.get(
+                f"{OBSERVIUM_BASE}/api/v0/{path}",
+                params=params,
+                auth=(OBSERVIUM_USER, OBSERVIUM_PASS)
+            )
+            return r.json()
+    except Exception as e:
+        logger.warning(f"Observium error {path}: {e}")
+        return {}
+
+@app.get("/api/observium/summary")
+async def observium_summary():
+    data = await _obs_get("devices")
+    devs = data.get("devices", {})
+    up   = sum(1 for v in devs.values() if str(v.get("status")) == "1")
+    down = sum(1 for v in devs.values() if str(v.get("status")) == "0")
+    total = up + down
+    return {
+        "total": total,
+        "up": up,
+        "down": down,
+        "availability": round(up / total * 100, 2) if total else 0,
+    }
+
+@app.get("/api/observium/alerts")
+async def observium_alerts(limit: int = 100):
+    data = await _obs_get("alerts")
+    alerts = data.get("alerts", {})
+    critical = [
+        {
+            "id": k,
+            "device_id": v.get("device_id"),
+            "entity_type": v.get("entity_type"),
+            "severity": v.get("severity"),
+            "status": v.get("status"),
+            "cls": v.get("class"),
+            "message": v.get("last_message"),
+            "checked": v.get("checked"),
+            "changed": v.get("changed"),
+        }
+        for k, v in alerts.items()
+        if v.get("class") in ("red", "orange", "olive")
+    ]
+    critical.sort(key=lambda x: x.get("changed") or "", reverse=True)
+    return critical[:limit]
+
+@app.get("/api/observium/devices/down")
+async def observium_devices_down(limit: int = 200):
+    data = await _obs_get("devices", {"status": "0"})
+    devs = data.get("devices", {})
+    result = [
+        {
+            "id": k,
+            "hostname": v.get("hostname"),
+            "location": v.get("location"),
+            "os": v.get("os"),
+            "hardware": v.get("hardware"),
+            "uptime": v.get("uptime"),
+            "last_polled": v.get("last_polled"),
+        }
+        for k, v in devs.items()
+    ]
+    result.sort(key=lambda x: x.get("location") or "")
+    return result[:limit]
+
+@app.get("/api/observium/devices/up")
+async def observium_devices_up(limit: int = 200):
+    data = await _obs_get("devices", {"status": "1"})
+    devs = data.get("devices", {})
+    result = [
+        {
+            "id": k,
+            "hostname": v.get("hostname"),
+            "location": v.get("location"),
+            "os": v.get("os"),
+            "hardware": v.get("hardware"),
+        }
+        for k, v in devs.items()
+    ]
+    result.sort(key=lambda x: x.get("location") or "")
+    return result[:limit]
+
 # ─── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn

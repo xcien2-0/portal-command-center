@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte NOC — XCIEN 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;color:#1a1a2e;font-size:14px}
+.header{background:#1a1a2e;color:white;padding:32px 48px;display:flex;justify-content:space-between;align-items:flex-end}
+.header-logo{font-size:28px;font-weight:900;letter-spacing:-1px}
+.header-logo span{color:#00d4aa}
+.header-sub{font-size:11px;color:#8892b0;margin-top:4px}
+.header-meta{text-align:right;font-size:11px;color:#8892b0;line-height:1.8}
+.header-meta strong{color:white;font-size:13px}
+.content{max-width:1200px;margin:0 auto;padding:32px 24px}
+.section-title{font-size:11px;font-weight:800;letter-spacing:2px;color:#8892b0;text-transform:uppercase;margin-bottom:16px;margin-top:32px;padding-bottom:6px;border-bottom:2px solid #e1e8ed}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px}
+.kpi-card{background:white;border-radius:10px;padding:20px 24px;border:1px solid #e1e8ed;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.kpi-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#8892b0;text-transform:uppercase;margin-bottom:8px}
+.kpi-value{font-size:36px;font-weight:900;line-height:1}
+.kpi-sub{font-size:11px;color:#8892b0;margin-top:4px}
+.kpi-green{color:#00875a}.kpi-red{color:#cc0000}.kpi-orange{color:#cc5500}.kpi-blue{color:#0052cc}
+.alert{background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #e65100;border-radius:8px;padding:16px 20px;margin:24px 0}
+.alert-title{font-weight:800;font-size:13px;color:#cc5500;margin-bottom:6px}
+.alert-body{font-size:12px;color:#5a3e00;line-height:1.6}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.card{background:white;border-radius:10px;border:1px solid #e1e8ed;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;margin-bottom:24px}
+.card-header{background:#f8f9fa;border-bottom:1px solid #e1e8ed;padding:14px 20px;font-size:12px;font-weight:800;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#1a1a2e;color:white;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #f0f2f5;vertical-align:middle;word-break:break-word;max-width:280px}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#fafbfc}
+tr:hover td{background:#f0f7ff}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.badge-red{background:#ffe0e0;color:#cc0000}
+.badge-green{background:#e0f7ee;color:#006633}
+.badge-orange{background:#fff3e0;color:#cc5500}
+.site-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.site-name{font-size:11px;width:180px;flex-shrink:0;font-weight:600;color:#1a1a2e}
+.site-bar-wrap{flex:1;background:#f0f2f5;border-radius:4px;height:8px}
+.site-bar{background:#cc0000;height:8px;border-radius:4px}
+.site-count{font-size:11px;font-weight:800;color:#cc0000;width:24px;text-align:right}
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.type-item{background:#f8f9fa;border-radius:8px;padding:12px 16px;border:1px solid #e1e8ed}
+.type-name{font-size:10px;color:#8892b0;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.type-stats{font-size:13px;font-weight:800}
+.type-on{color:#00875a}.type-off{color:#cc0000}
+.footer{background:#1a1a2e;color:#8892b0;text-align:center;padding:20px;font-size:11px;margin-top:48px}
+.footer strong{color:#00d4aa}
+@media print{body{background:white}.header,.th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="header-logo">XCIEN <span>NOC REPORT</span></div>
+    <div class="header-sub">Centro de Operaciones de Red — Análisis de Infraestructura</div>
+  </div>
+  <div class="header-meta">
+    <strong>Generado: 20/05/2026 22:57</strong><br>
+    Fuente: UISP NMS v2.1 · xcien.uisp.com<br>
+    Clasificación: CONFIDENCIAL INTERNO
+  </div>
+</div>
+<div class="content">
+  <div class="alert">
+    <div class="alert-title">⚠ ALERTA CRÍTICA — SITIO MIL ENCINOS</div>
+    <div class="alert-body">
+      <strong>20 dispositivos offline</strong> en Mil Encinos = 22% del total de equipos fuera de línea.
+      13 data-links caídos desde este nodo. Requiere intervención inmediata de equipo de campo.
+      Señales en &lt;-85 dBm en múltiples APs. Posible falla de backbone troncal o problema eléctrico.
+    </div>
+  </div>
+  <div class="section-title">Resumen Ejecutivo — Estado de Red</div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Total Dispositivos</div><div class="kpi-value kpi-blue">180</div><div class="kpi-sub">Registrados en UISP</div></div>
+    <div class="kpi-card"><div class="kpi-label">Online</div><div class="kpi-value kpi-green">87</div><div class="kpi-sub">48.3% del total</div></div>
+    <div class="kpi-card"><div class="kpi-label">Offline</div><div class="kpi-value kpi-red">90</div><div class="kpi-sub">50.0% — CRÍTICO</div></div>
+    <div class="kpi-card"><div class="kpi-label">Sitios</div><div class="kpi-value kpi-blue">98</div><div class="kpi-sub">Nodos monitoreados</div></div>
+  </div>
+  <div class="kpi-grid" style="margin-top:16px">
+    <div class="kpi-card"><div class="kpi-label">Data-Links Total</div><div class="kpi-value kpi-blue">73</div><div class="kpi-sub">Configurados</div></div>
+    <div class="kpi-card"><div class="kpi-label">Links Activos</div><div class="kpi-value kpi-green">45</div><div class="kpi-sub">61.6% operativos</div></div>
+    <div class="kpi-card"><div class="kpi-label">Links Caídos</div><div class="kpi-value kpi-red">28</div><div class="kpi-sub">38.4% fuera de línea</div></div>
+    <div class="kpi-card"><div class="kpi-label">Disponibilidad</div><div class="kpi-value kpi-orange">48.3%</div><div class="kpi-sub">Meta &gt;99.5% — Por debajo</div></div>
+  </div>
+  <div class="section-title">Distribución por Tipo de Equipo</div>
+  <div class="card"><div class="card-body"><div class="type-grid"><div class="type-item"><div class="type-name">airMax</div><div class="type-stats"><span class="type-on">▲ 43</span> &nbsp; <span class="type-off">▼ 33</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 78</div></div>
+<div class="type-item"><div class="type-name">erouter</div><div class="type-stats"><span class="type-on">▲ 16</span> &nbsp; <span class="type-off">▼ 43</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 60</div></div>
+<div class="type-item"><div class="type-name">airFiber</div><div class="type-stats"><span class="type-on">▲ 15</span> &nbsp; <span class="type-off">▼ 11</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 26</div></div>
+<div class="type-item"><div class="type-name">wave</div><div class="type-stats"><span class="type-on">▲ 4</span> &nbsp; <span class="type-off">▼ 3</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 7</div></div>
+<div class="type-item"><div class="type-name">blackBox</div><div class="type-stats"><span class="type-on">▲ 6</span> &nbsp; <span class="type-off">▼ 0</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 6</div></div>
+<div class="type-item"><div class="type-name">eswitch</div><div class="type-stats"><span class="type-on">▲ 2</span> &nbsp; <span class="type-off">▼ 0</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 2</div></div>
+<div class="type-item"><div class="type-name">uispr</div><div class="type-stats"><span class="type-on">▲ 1</span> &nbsp; <span class="type-off">▼ 0</span></div><div style="font-size:10px;color:#8892b0;margin-top:2px;">Total: 1</div></div>
+</div></div></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><span>🔴 Sitios con Mayor Impacto (Offline)</span><span style="font-weight:400;color:#8892b0">Top 8</span></div>
+      <div class="card-body"><div class="site-row"><div class="site-name">Mil Encinos</div><div class="site-bar-wrap"><div class="site-bar" style="width:100%"></div></div><div class="site-count">20</div></div>
+<div class="site-row"><div class="site-name">Olivos</div><div class="site-bar-wrap"><div class="site-bar" style="width:15%"></div></div><div class="site-count">3</div></div>
+<div class="site-row"><div class="site-name">Norte</div><div class="site-bar-wrap"><div class="site-bar" style="width:15%"></div></div><div class="site-count">3</div></div>
+<div class="site-row"><div class="site-name">SANIOR FLEXONICS</div><div class="site-bar-wrap"><div class="site-bar" style="width:10%"></div></div><div class="site-count">2</div></div>
+<div class="site-row"><div class="site-name">de México, Paramount Die</div><div class="site-bar-wrap"><div class="site-bar" style="width:10%"></div></div><div class="site-count">2</div></div>
+<div class="site-row"><div class="site-name">UNIDAD-TRITURADORA-DE-ALLENDE</div><div class="site-bar-wrap"><div class="site-bar" style="width:10%"></div></div><div class="site-count">2</div></div>
+<div class="site-row"><div class="site-name">X100_SOP13213_PTP_MU_UBNT_PB5ACG2_SAL_KARLA_ALEJANDRA_HERNADEZ_</div><div class="site-bar-wrap"><div class="site-bar" style="width:10%"></div></div><div class="site-count">2</div></div>
+<div class="site-row"><div class="site-name">X100_PTP_MU_UBNT_PB5ACG2_MTY_SENDERO-IMPULSORA_ELIZONDO</div><div class="site-bar-wrap"><div class="site-bar" style="width:10%"></div></div><div class="site-count">2</div></div>
+</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span>🔗 Estado de Conectividad</span></div>
+      <div class="card-body">
+        <table>
+          <tr><th>Métrica</th><th>Valor</th><th>%</th></tr>
+          <tr><td>Links activos</td><td><strong style="color:#00875a">45</strong></td><td>61.6%</td></tr>
+          <tr><td>Links caídos</td><td><strong style="color:#cc0000">28</strong></td><td>38.4%</td></tr>
+          <tr><td>APs airMax offline</td><td><strong style="color:#cc0000">33</strong></td><td>42.3%</td></tr>
+          <tr><td>airFiber offline</td><td><strong style="color:#cc0000">11</strong></td><td>42.3%</td></tr>
+          <tr><td>Routers offline</td><td><strong style="color:#cc0000">43</strong></td><td>71.7%</td></tr>
+          <tr><td>Sitios afectados</td><td><strong style="color:#cc5500">61</strong></td><td>de 98 sitios</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="section-title">Inventario de Dispositivos Offline (90 equipos)</div>
+  <div class="card">
+    <div class="card-header"><span>Dispositivos Fuera de Línea — Requieren Atención</span><span style="font-weight:400;color:#8892b0">Ordenados por sitio</span></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Nombre del Equipo</th><th>Sitio</th><th>Tipo</th><th>Modelo</th><th>Firmware</th><th>Estado</th></tr></thead>
+      <tbody><tr><td>BNSInovation</td><td>BNS-INNVATION-INC-MICROPARKE-I</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>CACAO-PRODUCCIONES-Parque-Explora-Oficina</td><td>CACAO-PRODUCCIONES-Parque-Expl</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>CONSTRCCION-Y-AUDITORRIA-NEXXUS</td><td>CONSTRCCION-Y-AUDITORRIA-NEXXU</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>VirginiaAracelyVillarrealSalas</td><td>Carlos francisco Garcia</td><td>erouter</td><td>ER-4</td><td>1.10.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>CarlosFranciscoGarciaFundadores</td><td>CarlosFranciscoGarciaFundadore</td><td>erouter</td><td>ER-4</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>DESARROLLO-HABITACIONAL-DEL-CENTRO-LOS-HUERTO</td><td>DESARROLLO-HABITACIONAL-DEL-CE</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>EXPEREO-DE-MEXICO-ARVIN-SANGO</td><td>EXPEREO-DE-MEXICO-ARVIN-SANGO</td><td>erouter</td><td>ER-12</td><td>1.10.8</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>Emanuel-Calderon-19A</td><td>Emanuel-Calderon-19A</td><td>erouter</td><td>ER-4</td><td>1.10.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>ForPromotional</td><td>ForPromotional</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>GILBERTO.PUC.HERNANDEZ.ANTORCHISTAS</td><td>GILBERTO.PUC.HERNANDEZ.ANTORCH</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>GOBIERNO-DEL-ESTADO-MONITOREO-EDIFICIO-DE-PIE</td><td>GOBIERNO-DEL-ESTADO-MONITOREO-</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>GOBIERNO-DEL-ESTADO-QUINTA-ENCINO</td><td>GOBIERNO-DEL-ESTADO-QUINTA-ENC</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>GRECO-GRUPO-ECOLOGISTICO-DE-COAHUILA</td><td>GRECO-GRUPO-ECOLOGISTICO-DE-CO</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>ChristianMichaelGarciaFuentesLosLLanos</td><td>Garcia, Christian Michel</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>SunpleCienegaDeFlores</td><td>Ginequito, Hospital</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>Gobierno-del-Estado-Coahula-Monitoreo-Camino-</td><td>Gobierno-del-Estado-Coahula-Mo</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>HUSSMANN-AMERICA-CIENEGA-DE-FLORES</td><td>HUSSMANN-AMERICA-CIENEGA-DE-FL</td><td>erouter</td><td>ER-12</td><td>1.10.8</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>INTERMEX-MANUFACTURA-REYNOSA</td><td>INTERMEX-MANUFACTURA-REYNOSA</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>Recuperaciones-Industriales-Internacionales-C</td><td>ITCOM-DATA-SERVER-CENTRO-DE-IN</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>JOSE-MARCOS-SANCHES-DAYS-INN</td><td>JOSE-MARCOS-SANCHES-DAYS-INN</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>JOSE-MARCOS-SANCHES-LA-QUINTA-PIEDRAS-NEGRAS</td><td>JOSE-MARCOS-SANCHES-LA-QUINTA-</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_R5AC_PRISM_JUAREZ-OESTE</td><td>Juarez</td><td>airMax</td><td>R5AC-PRISM</td><td>8.7.5</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>KARLA-ALEJANDRA</td><td>KARLA-ALEJANDRA</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>KINGSPAN-AIRPORT-TECHNOLOGY-PARK</td><td>KINGSPAN-AIRPORT-TECHNOLOGY-PA</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LECOMexicoRepublica</td><td>LECOMexicoRepublica</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LECOMexicoRepublica</td><td>LECO_MEXICO-REPUBLICA</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60_LOMA-CTO_NETWORKS</td><td>Loma Larga</td><td>airFiber</td><td>AF60-LR</td><td>2.6.2</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_R5AC_PRISMA_LOMITA-SURESTE</td><td>Lomita</td><td>airMax</td><td>R5AC-PRISM</td><td>8.7.13</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>MARVELUS.INTERNATIONAL.FOODS.ANTONIO.E.MARCOS</td><td>MARVELUS.INTERNATIONAL.FOODS.A</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>HUUS_VAS/JESUS_EDUARDO_MORALES_PENA[MIL_ENCIN</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/ABRAHAM_MARROQUIN_RINCON[MIL_ENC</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBEM5.HUSS_VAS/LUIS_MAURITICIO_MANRIQUE_GARCI</td><td>Mil Encinos</td><td>airMax</td><td>LB5</td><td>6.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_LBEM5_RU_RANCHO_BRONCO</td><td>Mil Encinos</td><td>airMax</td><td>LB5</td><td>6.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUUS_VAS/SERVICIOS_ADMINISTRATIVOS_LARSA[</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.JESUS_EDUARDO_MORALES_PENA[MIL_ENCINOS]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.4</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/TRAS_EXPRESS_LOGISTIC[MIL_ENCINO</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/FEDERICO_BARRERA_MARCOS[CASA_FED</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.9</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PTP_UBNT_LBE_RU-JARDINES_Y_RIEGOS</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUUS_VAS/ZALE_GRAPHIC[MIL_ENCINOS]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.5.10</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUUS_VAS/ANDREA_SARAHI_GARZA_SALAS[MIL_EN</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.1</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_LBEM5_MU_RANCHO_BRONCO</td><td>Mil Encinos</td><td>airMax</td><td>LB5</td><td>6.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PTP_UBNT_LBE_MU-JARDINES_Y_RIEGOS</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LB5AC.ALVARO_DIAZ_GONZAALEZ[NOGAL_141]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.1</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUUS_VAS/GERARDO_ALFREDO_LOPEZ_MALDONADO[</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.5.10</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LB.BLUEDRY[NEGOCIO]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.9</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/RIEGOS_Y_JARDINES_GARCIA[MIL_ENC</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.4</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/RAMIRO_DELGADO[RANCHO_BRONCO]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.S_G_PROVEEDORES[MIL_ENCINOS]</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.5.10</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>LBE.HUSS_VAS/ARTURO_ZEFERINO_VEGA_GONZALEZ[MI</td><td>Mil Encinos</td><td>airMax</td><td>LBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60LR_MTY_NIMIW-GINEQUITO_B</td><td>Nimiw</td><td>airFiber</td><td>AF60-LR</td><td>2.6.2</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>MONARQUIA_RAMIRO_LINARES</td><td>Norte</td><td>wave</td><td>Wave-Nano</td><td>3.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PILARES_RAMIRO_LINARES</td><td>Norte</td><td>wave</td><td>Wave-LR</td><td>3.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>TITAN_II_Ramiro_Linares</td><td>Norte</td><td>wave</td><td>Wave-LR</td><td>3.2.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_R5AC-L_OLIVOS-OESTE</td><td>Olivos</td><td>airMax</td><td>R5AC-Lite</td><td>8.7.1</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_R5AC_PRISM_OLIVOS-SUR</td><td>Olivos</td><td>airMax</td><td>R5AC-PRISM</td><td>8.7.14</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_R5AC-L_OLIVOS-NORTE</td><td>Olivos</td><td>airMax</td><td>R5AC-Lite</td><td>8.7.8</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>OswaldoHernandez</td><td>OswaldoHernandez</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PB5AC.EASYFLAYERS_TORRE LEGACY</td><td>PB5AC.EASYFLAYERS_TORRE LEGACY</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PTP_MU_UBNT_AF60_MTY_PURISIMA-PDA</td><td>Purísima</td><td>airFiber</td><td>AF60-LR</td><td>2.6.5</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>RentaDeMaquinariaBarranco</td><td>RENTA DE MAQUINARIA BARRANCO</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_AP_UBNT_RM5_REX_ESTE</td><td>REX</td><td>airMax</td><td>R5N</td><td>6.3.6</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>RU_CTO_Networks</td><td>RU_CTO_Networks</td><td>airFiber</td><td>AF60-LR</td><td>2.6.2</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>RiggingServicesDeMexico</td><td>RiggingServicesDeMexico</td><td>erouter</td><td>ER-12</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_RU-MMSA_AF60_ROJAS_BK-STA_ROSA</td><td>Rojas</td><td>airFiber</td><td>AF60-LR</td><td>2.6.2</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_RU_UBNT_AF60_SAL_CORAL-MANUFACTURAS_</td><td>SANIOR FLEXONICS</td><td>airFiber</td><td>AF60-LR</td><td>2.6.4</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60_SAL_CORAL-MANUFACTURAS_</td><td>SANIOR FLEXONICS</td><td>airFiber</td><td>AF60-LR</td><td>2.6.4</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>SAN_JUAN-NERI</td><td>SAN_JUAN-NERI</td><td>airFiber</td><td>AF60-LR</td><td>2.6.4</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>SERVNETMexicoSigmaLinares</td><td>SERVNETMexicoSigmaLinares</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_RU_UBNT_AF60LR_STA_CATARINA-VASCONCELOS</td><td>Santa Catarina</td><td>airFiber</td><td>AF60-LR</td><td>2.6.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>Servicios-Especializados-en-Ciberseguridad-Fa</td><td>Servicios-Especializados-en-Ci</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PB5AC.ABIMAEL MENDEZ SOTO [PRINCIPE CARLOS 51</td><td>?</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.5</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>TECOParqueIndustrialNexxus</td><td>TECOParqueIndustrialNexxus</td><td>erouter</td><td>ER-12</td><td>2.0.9-hotfix.5</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>TRANSPORTES-Y-LOGISTICA-ESPECIALIZADA-TLEA-PA</td><td>TLE-PATIO-SALAMCA</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>TLE-Stellantis</td><td>TLE-Stellantis</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>UNIDAD-TRITURADORA-DE-ALLENDE</td><td>UNIDAD-TRITURADORA-DE-ALLENDE</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>UNIDAD-TRITURADORA-DE-ALLENDE</td><td>UNIDAD-TRITURADORA-DE-ALLENDE</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>UniqueFabricatingDeMexico</td><td>UniqueFabricatingDeMexico</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>VILLAGON-EXPRES-PACK-MATRIZ</td><td>VILLAGON-EXPRES-PACK-MATRIZ</td><td>erouter</td><td>ER-4</td><td>1.10.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_MU_PTP_UBNT_AF60LR_VASCONCELOS-STA_CATAR</td><td>Vasconcelos</td><td>airFiber</td><td>AF60-LR</td><td>2.6.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_RU_UBNT_AF60LR_VASCONCELOS-NIMIW</td><td>Vasconcelos</td><td>airFiber</td><td>AF60-LR</td><td>2.6.8</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>WHITEDOT</td><td>WHITEDOT</td><td>erouter</td><td>ER-4</td><td>1.10.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>WRT-DAVID-MARTINEZ</td><td>WRT-DAVID-MARTINEZ</td><td>erouter</td><td>ER-X</td><td>1.10.11</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>WRTSAMILAFRONTERACORPORATIVO</td><td>WRTSAMILAFRONTERACORPORATIVO</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_RU_UBNT_PB5ACG2_MTY_SENDERO-IMPULSOR</td><td>X100_PTP_MU_UBNT_PB5ACG2_MTY_S</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.1</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_PB5ACG2_MTY_SENDERO-IMPULSOR</td><td>X100_PTP_MU_UBNT_PB5ACG2_MTY_S</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.0</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>PB5ACGen2.RU_KARLA_ALEJANDRA[LOUVRE_234]</td><td>X100_SOP13213_PTP_MU_UBNT_PB5A</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.13</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_SOP13213_PTP_MU_UBNT_PB5ACG2_SAL_KARLA_A</td><td>X100_SOP13213_PTP_MU_UBNT_PB5A</td><td>airMax</td><td>PBE-5AC-Gen2</td><td>8.7.13</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>ERX-PBOTELLO-HIDALGO</td><td>XCIEN, Of. Hidalgo</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>Paramount-Die-De-Mexico</td><td>de México, Paramount Die</td><td>erouter</td><td>ER-X</td><td>2.0.9-hotfix.7</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+<tr><td>X100_PTMP_AP_UBNT_LITEGPS_MTY_VASCONCELOS-EST</td><td>de México, Paramount Die</td><td>airMax</td><td>LAP-GPS</td><td>8.7.15</td><td><span class='badge badge-red'>OFFLINE</span></td></tr>
+</tbody>
+    </table></div>
+  </div>
+  <div class="section-title">Data-Links Caídos (28 conexiones)</div>
+  <div class="card">
+    <div class="card-header"><span>Conexiones de Red Interrumpidas</span><span style="font-weight:400;color:#8892b0">Punto A → Punto B</span></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Equipo Origen</th><th>Sitio Origen</th><th>Equipo Destino</th><th>Sitio Destino</th><th>Estado</th></tr></thead>
+      <tbody><tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-NORTE</td><td>?</td><td>LBE.HUSS_VAS/RIEGOS_Y_JARDINES_GARCIA[MI</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60LR_NIMIW-VASCONCELO</td><td>?</td><td>X100_PTP_RU_UBNT_AF60LR_VASCONCELOS-NIMI</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-ESTE</td><td>?</td><td>LBE.HUSS_VAS/FEDERICO_BARRERA_MARCOS[CAS</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>PTP_UBNT_LBE_MU-JARDINES_Y_RIEGOS</td><td>?</td><td>PTP_UBNT_LBE_RU-JARDINES_Y_RIEGOS</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_WAVE_AP_NORTE-SITIOS_RAMIRO</td><td>?</td><td>MONARQUIA_RAMIRO_LINARES</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-ESTE</td><td>?</td><td>LBE.HUUS_VAS/SERVICIOS_ADMINISTRATIVOS_L</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-NORTE</td><td>?</td><td>LBE.HUUS_VAS/GERARDO_ALFREDO_LOPEZ_MALDO</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LBE.HUUS_VAS/ZALE_GRAPHIC[MIL_ENCINOS]</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LBE.HUUS_VAS/ANDREA_SARAHI_GARZA_SALAS[M</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_WAVE_AP_NORTE-SITIOS_RAMIRO</td><td>?</td><td>TITAN_II_Ramiro_Linares</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-OESTE</td><td>?</td><td>LBE.S_G_PROVEEDORES[MIL_ENCINOS]</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LB.BLUEDRY[NEGOCIO]</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_PB5ACG2_MTY_SENDERO-IMP</td><td>?</td><td>X100_PTP_RU_UBNT_PB5ACG2_MTY_SENDERO-IMP</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-NORTE</td><td>?</td><td>LBE.HUSS_VAS/RAMIRO_DELGADO[RANCHO_BRONC</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_SOP13213_PTP_MU_UBNT_PB5ACG2_SAL_KA</td><td>?</td><td>PB5ACGen2.RU_KARLA_ALEJANDRA[LOUVRE_234]</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LBE.HUSS_VAS/TRAS_EXPRESS_LOGISTIC[MIL_E</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>PTP_MU_UBNT_AF60_MTY_PURISIMA-PDA</td><td>?</td><td>PTP_RU_UBNT_AF60_MTY_PDA-PURISIMA</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTMP_AP_UBNT_LITEGPS_MTY_VASCONCELO</td><td>?</td><td>PB5AC.EASYFLAYERS_TORRE LEGACY</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTP_RU_UBNT_AF60LR_MTY_NIMIW-GINEQU</td><td>?</td><td>X100_PTP_MU_UBNT_AF60LR_MTY_NIMIW-GINEQU</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-ESTE</td><td>?</td><td>HUUS_VAS/JESUS_EDUARDO_MORALES_PENA[MIL_</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_MU_PTP_UBNT_AF60LR_VASCONCELOS-STA_</td><td>?</td><td>X100_RU_UBNT_AF60LR_STA_CATARINA-VASCONC</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60_SAL_CORAL-MANUFACT</td><td>?</td><td>X100_PTP_RU_UBNT_AF60_SAL_CORAL-MANUFACT</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LB5AC.ALVARO_DIAZ_GONZAALEZ[NOGAL_141]</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-NORTE</td><td>?</td><td>LBE.HUSS_VAS/ABRAHAM_MARROQUIN_RINCON[MI</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-SUR</td><td>?</td><td>LBE.HUSS_VAS/ARTURO_ZEFERINO_VEGA_GONZAL</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_PTP_MU_UBNT_AF60_LOMA-CTO_NETWORKS</td><td>?</td><td>RU_CTO_Networks</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-ESTE</td><td>?</td><td>LBE.JESUS_EDUARDO_MORALES_PENA[MIL_ENCIN</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+<tr><td>X100_AP_UBNT_LITEAP_MIL_ENCINOS-ESTE</td><td>?</td><td>LBEM5.HUSS_VAS/LUIS_MAURITICIO_MANRIQUE_</td><td>?</td><td><span class='badge badge-red'>DISCONNECTED</span></td></tr>
+</tbody>
+    </table></div>
+  </div>
+  <div class="section-title">Recomendaciones de Acción Inmediata</div>
+  <div class="card">
+    <div class="card-body">
+      <table>
+        <thead><tr><th>#</th><th>Prioridad</th><th>Acción</th><th>Sitio</th><th>Responsable</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><span class="badge badge-red">CRÍTICA</span></td><td>Inspección física de torre y energía eléctrica — 20 equipos offline</td><td>Mil Encinos</td><td>Equipo de Campo</td></tr>
+          <tr><td>2</td><td><span class="badge badge-red">CRÍTICA</span></td><td>Verificar backbone troncal AF60-LR: NIMIW-VASCONCELOS caído</td><td>Nimiw / Vasconcelos</td><td>NOC + Campo</td></tr>
+          <tr><td>3</td><td><span class="badge badge-red">ALTA</span></td><td>Restaurar 3 equipos offline en Olivos (AP + backhaul)</td><td>Olivos</td><td>Equipo Campo Norte</td></tr>
+          <tr><td>4</td><td><span class="badge badge-red">ALTA</span></td><td>Verificar conectividad REX-ESTE — zona industrial afectada</td><td>REX</td><td>NOC</td></tr>
+          <tr><td>5</td><td><span class="badge badge-orange">MEDIA</span></td><td>Plan actualización masiva de firmware (180 equipos)</td><td>Red completa</td><td>Infraestructura TI</td></tr>
+          <tr><td>6</td><td><span class="badge badge-orange">MEDIA</span></td><td>Revisión clientes corporativos con router offline: INTERMEX, EXPEREO, TLE-Stellantis</td><td>Múltiples</td><td>Soporte Empresarial</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="footer">
+  Reporte generado por <strong>Antigravity Intelligence Platform</strong> · Sistema de Misión Crítica XCIEN · 20/05/2026 22:57 · Datos: UISP NMS API v2.1 · <strong>CONFIDENCIAL — USO INTERNO</strong>
+</div>
+</body></html>
