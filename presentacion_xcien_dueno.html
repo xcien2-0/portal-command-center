@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XCIEN — Diagnóstico y Propuesta de Valor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: white; overflow: hidden; }
+  .deck { width: 100vw; height: 100vh; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 56px 80px; opacity: 0; transition: opacity 0.35s;
+  }
+  .slide.active { display: flex; opacity: 1; }
+
+  .nav {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center; z-index: 100;
+  }
+  .nav button {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: white; padding: 9px 26px; border-radius: 50px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all 0.2s;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.15); }
+  .nav button.next { background: #00d4aa; border-color: #00d4aa; color: #000; font-weight: 800; }
+  .nav button.next:hover { background: #00f0c0; }
+  .slide-counter { font-size: 12px; color: rgba(255,255,255,0.3); font-family: monospace; min-width: 50px; text-align: center; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: all 0.2s; }
+  .dot.active { background: #00d4aa; width: 20px; border-radius: 3px; }
+
+  .label { font-size: 11px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: #00d4aa; margin-bottom: 14px; }
+  .title { font-size: 52px; font-weight: 900; line-height: 1.05; letter-spacing: -2px; }
+  .title span { color: #00d4aa; }
+  .subtitle { font-size: 17px; color: rgba(255,255,255,0.45); margin-top: 16px; line-height: 1.6; }
+  h2 { font-size: 36px; font-weight: 900; letter-spacing: -1px; margin-bottom: 6px; line-height: 1.15; }
+  h2 span { color: #00d4aa; }
+  .section-sub { font-size: 13px; color: rgba(255,255,255,0.35); margin-bottom: 32px; }
+  .divider { width: 56px; height: 3px; background: #00d4aa; border-radius: 2px; margin: 18px 0; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; width: 100%; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; width: 100%; }
+  .full-w { width: 100%; }
+
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 22px 26px; }
+  .card-red    { border-color: rgba(239,68,68,0.35);  background: rgba(239,68,68,0.06); }
+  .card-green  { border-color: rgba(0,212,170,0.35);  background: rgba(0,212,170,0.06); }
+  .card-yellow { border-color: rgba(255,204,0,0.35);  background: rgba(255,204,0,0.06); }
+  .card-blue   { border-color: rgba(96,165,250,0.35); background: rgba(96,165,250,0.06); }
+
+  .kpi-big   { font-size: 60px; font-weight: 900; line-height: 1; letter-spacing: -3px; }
+  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.38); margin-top: 8px; }
+  .kpi-sub   { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 3px; }
+
+  .red    { color: #ef4444; }
+  .green  { color: #00d4aa; }
+  .yellow { color: #ffcc00; }
+  .blue   { color: #60a5fa; }
+  .purple { color: #a855f7; }
+
+  .bar-wrap { background: rgba(255,255,255,0.07); border-radius: 4px; height: 7px; width: 100%; }
+  .bar-fill { height: 7px; border-radius: 4px; }
+
+  .check-list { display: flex; flex-direction: column; gap: 14px; }
+  .check-item { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.5; }
+  .check-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.3); padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); text-align: left; }
+  .data-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .badge-red    { background: rgba(239,68,68,0.2);  color: #ef4444; }
+  .badge-green  { background: rgba(0,212,170,0.2);  color: #00d4aa; }
+  .badge-yellow { background: rgba(255,204,0,0.2);  color: #ffcc00; }
+
+  .timeline { display: flex; flex-direction: column; }
+  .tl-item { display: flex; gap: 18px; }
+  .tl-line { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .tl-connector { width: 2px; flex: 1; min-height: 28px; background: rgba(255,255,255,0.07); }
+  .tl-content { padding-bottom: 22px; }
+  .tl-phase { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
+  .tl-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: white; }
+  .tl-desc  { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+
+  .quote { font-size: 21px; font-weight: 300; line-height: 1.7; color: rgba(255,255,255,0.65); font-style: italic; text-align: center; max-width: 780px; }
+  .quote strong { color: white; font-weight: 700; font-style: normal; }
+
+  .slide-cover  { background: radial-gradient(ellipse at 30% 50%, #001a12 0%, #0a0a0f 65%); }
+  .slide-dark   { background: #0a0a0f; }
+  .slide-red    { background: radial-gradient(ellipse at 70% 30%, #1a0008 0%, #0a0a0f 65%); }
+  .slide-blue   { background: radial-gradient(ellipse at 30% 70%, #00081a 0%, #0a0a0f 65%); }
+  .slide-green  { background: radial-gradient(ellipse at 50% 50%, #001a0d 0%, #0a0a0f 65%); }
+
+  .logo { font-size: 12px; font-weight: 800; letter-spacing: 3px; color: rgba(255,255,255,0.18); position: fixed; top: 22px; left: 36px; }
+  .logo span { color: #00d4aa; }
+  .progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: #00d4aa; transition: width 0.35s; z-index: 200; }
+</style>
+</head>
+<body>
+
+<div class="logo">XCI<span>EN</span></div>
+<div class="progress-bar" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1. PORTADA -->
+  <div class="slide slide-cover active">
+    <div style="max-width:820px; width:100%;">
+      <div class="label">Diagnóstico Estratégico · Mayo 2026</div>
+      <div class="title">El estado real<br>de <span>XCIEN</span><br>y lo que sigue.</div>
+      <div class="divider"></div>
+      <div class="subtitle">
+        Un análisis basado en datos reales de infraestructura,<br>
+        operaciones y sistemas — con una propuesta concreta de acción.
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. XCIEN HOY -->
+  <div class="slide slide-dark">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">Punto de Partida</div>
+      <h2>XCIEN opera a escala nacional.<br>La base ya está construida.</h2>
+      <div class="divider"></div>
+      <div class="grid-4" style="margin-top:32px;">
+        <div class="card card-green" style="text-align:center;">
+          <div class="kpi-big green">384</div>
+          <div class="kpi-label">Equipos de red</div>
+          <div class="kpi-sub">Infraestructura backbone</div>
+        </div>
+        <div class="card card-green" style="text-align:center;">
+          <div class="kpi-big green">20</div>
+          <div class="kpi-label">Ciudades</div>
+          <div class="kpi-sub">Presencia nacional</div>
+        </div>
+        <div class="card card-green" style="text-align:center;">
+          <div class="kpi-big green">83%</div>
+          <div class="kpi-label">Disponibilidad</div>
+          <div class="kpi-sub">Health score: 88.8/100</div>
+        </div>
+        <div class="card card-green" style="text-align:center;">
+          <div class="kpi-big green">77%</div>
+          <div class="kpi-label">Red Mimosa</div>
+          <div class="kpi-sub">+ Ubiquiti · Cambium · MikroTik</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px; display:flex; align-items:center; gap:18px;">
+        <div style="font-size:26px;">💼</div>
+        <div style="font-size:14px; color:rgba(255,255,255,0.55); line-height:1.6;">
+          Presencia en <strong style="color:white">Monterrey · CDMX · Guadalajara · Saltillo · Tampico · Querétaro · Mérida · Reynosa</strong> y 12 ciudades más. Una red de alcance nacional con clientes corporativos reales.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. DIAGNÓSTICO RED -->
+  <div class="slide slide-red">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">⚠ El Diagnóstico — Infraestructura</div>
+      <h2>65 equipos offline.<br>Dos ciudades en <span style="color:#ef4444">estado crítico.</span></h2>
+      <div class="section-sub">Fuente: NOCBoard · Datos en tiempo real</div>
+      <div class="grid-2">
+        <div>
+          <div class="card card-red" style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:800; font-size:15px;">Mérida</span>
+              <span class="badge badge-red">CRÍTICO — 70% offline</span>
+            </div>
+            <div class="bar-wrap"><div class="bar-fill" style="width:30%; background:#ef4444;"></div></div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:8px;">14 de 20 equipos caídos · Solo 6 online</div>
+          </div>
+          <div class="card card-yellow" style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:800; font-size:15px;">San Luis Potosí</span>
+              <span class="badge badge-yellow">ALTO — 50% offline</span>
+            </div>
+            <div class="bar-wrap"><div class="bar-fill" style="width:50%; background:#ffcc00;"></div></div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:8px;">4 de 8 equipos caídos</div>
+          </div>
+          <div class="card card-yellow">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="font-weight:800; font-size:15px;">Sabinas</span>
+              <span class="badge badge-yellow">ALTO — 29% offline</span>
+            </div>
+            <div class="bar-wrap"><div class="bar-fill" style="width:71%; background:#ffcc00;"></div></div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:8px;">2 de 7 equipos caídos</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card card-red" style="text-align:center;">
+            <div class="kpi-big red">65</div>
+            <div class="kpi-label">Equipos offline</div>
+            <div class="kpi-sub">de 384 en red backbone</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div class="kpi-big yellow">83%</div>
+            <div class="kpi-label">Disponibilidad actual</div>
+            <div class="kpi-sub">Meta: 99.5% · Brecha: 16.5 pts</div>
+          </div>
+          <div class="card card-red" style="font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6;">
+            Monterrey concentra <strong style="color:white">27 equipos offline</strong> — la ciudad más grande de la red — pero su porcentaje (16%) indica un problema de volumen, no de colapso.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. OPERACIONES -->
+  <div class="slide slide-dark">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">El Diagnóstico — Operaciones</div>
+      <h2>Los sistemas existen.<br>Pero <span>no hay visión unificada.</span></h2>
+      <div class="section-sub">Herramientas activas en XCIEN hoy · Estado real</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Sistema</th>
+            <th>Qué hace</th>
+            <th>Estado</th>
+            <th>Problema real</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>NOCBoard</strong></td>
+            <td>Monitoreo backbone · fuente de verdad</td>
+            <td><span class="badge badge-green">Activo</span></td>
+            <td style="color:rgba(255,255,255,0.45);">No conectado al WFM — el técnico no ve alertas al salir a campo</td>
+          </tr>
+          <tr>
+            <td><strong>Observium</strong></td>
+            <td>Monitoreo SNMP de red amplia</td>
+            <td><span class="badge badge-green">Activo</span></td>
+            <td style="color:rgba(255,255,255,0.45);">Sin proceso de resolución — alertas se acumulan sin atención</td>
+          </tr>
+          <tr>
+            <td><strong>Odoo ERP (wispi17)</strong></td>
+            <td>Finanzas · RH · Inventario</td>
+            <td><span class="badge badge-green">Activo</span></td>
+            <td style="color:rgba(255,255,255,0.45);">Roles permisivos — cualquier empleado accede a datos financieros</td>
+          </tr>
+          <tr>
+            <td><strong>UISP NMS</strong></td>
+            <td>Gestión equipos Ubiquiti</td>
+            <td><span class="badge badge-green">Activo</span></td>
+            <td style="color:rgba(255,255,255,0.45);">Sin proceso de actualización de firmware en equipos críticos</td>
+          </tr>
+          <tr>
+            <td><strong>WFM / Campo</strong></td>
+            <td>Tickets y técnicos en campo</td>
+            <td><span class="badge badge-yellow">Parcial</span></td>
+            <td style="color:rgba(255,255,255,0.45);">Sin priorización automática por criticidad de red</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="card" style="margin-top:16px; text-align:center;">
+        <span style="font-size:14px; color:rgba(255,255,255,0.5);">
+          Cada sistema genera datos valiosos — pero sin un centro de comando, nadie ve el cuadro completo en tiempo real.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. LA SOLUCIÓN -->
+  <div class="slide slide-green">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">La Propuesta</div>
+      <h2><span>Antigravity</span> — Centro de<br>Comando para XCIEN.</h2>
+      <div class="section-sub">Un sistema ya construido y funcionando — no una propuesta en papel</div>
+      <div class="grid-3">
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">📡</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">Red en Vivo</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Mapa con datos reales de NOCBoard y Observium. El NOC ve el estado de las 20 ciudades en una pantalla.</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">🔧</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">WFM Conectado</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Tickets de campo generados automáticamente desde alertas. El técnico sabe qué es urgente antes de salir.</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">💰</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">ERP Integrado</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Conexión directa con Odoo. Inventario, finanzas y operaciones desde un solo lugar con roles correctos.</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">🎓</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">Academia Interna</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Capacitación técnica con SOPs, certificaciones y quizzes. El equipo aprende con los estándares reales de XCIEN.</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">⛓️</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">Trazabilidad Total</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Cada acción queda registrada. Ante un cliente corporativo o regulador, hay evidencia de todo lo que se hizo.</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:26px; margin-bottom:10px;">🤖</div>
+          <div style="font-weight:800; font-size:14px; margin-bottom:6px;">IA Operativa</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Agentes que analizan datos, responden preguntas operativas y sugieren acciones — sin esperar reportes manuales.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. YA FUNCIONA -->
+  <div class="slide slide-blue">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">Estado Actual del Sistema</div>
+      <h2>No es una idea.<br><span>Está corriendo hoy.</span></h2>
+      <div class="divider"></div>
+      <div class="grid-2" style="margin-top:28px;">
+        <div class="check-list">
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>Backend en producción 24/7</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Conectado a NOCBoard, Observium, UISP y Odoo en tiempo real</span></div>
+          </div>
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>Alertas Observium integradas en dashboard</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Panel de alertas críticas visible en tiempo real desde el NOC</span></div>
+          </div>
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>Mapa de 20 ciudades en vivo</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Con estado de cada equipo, health score y ubicación geográfica</span></div>
+          </div>
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>WFM con tickets de campo activos</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Asignación de técnicos, seguimiento y estados documentados</span></div>
+          </div>
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>Academia con SOPs reales de XCIEN</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Estándares de instalación, quizzes de certificación, 14 documentos cargados</span></div>
+          </div>
+          <div class="check-item">
+            <div class="check-icon">✅</div>
+            <div><strong>Merkle chain — trazabilidad criptográfica</strong><br><span style="color:rgba(255,255,255,0.4); font-size:12px;">Cada evento registrado e inmutable desde el primer día</span></div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card card-blue" style="text-align:center;">
+            <div class="kpi-big blue">1–3</div>
+            <div class="kpi-label">Días para deploy</div>
+            <div class="kpi-sub">En servidor propio de XCIEN</div>
+          </div>
+          <div class="card card-blue" style="text-align:center;">
+            <div class="kpi-big blue">+300</div>
+            <div class="kpi-label">Horas de desarrollo</div>
+            <div class="kpi-sub">Ya invertidas — sistema listo</div>
+          </div>
+          <div class="card" style="font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; text-align:center;">
+            El sistema ya conoce la infraestructura de XCIEN, sus ciudades, sus vendors y sus flujos operativos.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. ROADMAP -->
+  <div class="slide slide-dark">
+    <div style="max-width:920px; width:100%;">
+      <div class="label">Plan de Acción</div>
+      <h2>Tres fases para llevar XCIEN<br>al <span>99%+ de disponibilidad.</span></h2>
+      <div class="divider"></div>
+      <div class="grid-2" style="margin-top:28px; align-items:start;">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-line"><div class="tl-dot" style="background:#00d4aa;"></div><div class="tl-connector"></div></div>
+            <div class="tl-content">
+              <div class="tl-phase" style="color:#00d4aa;">Fase 1 · Semanas 1–2</div>
+              <div class="tl-title">Atención inmediata</div>
+              <div class="tl-desc">Intervención en Mérida (70% offline) y San Luis Potosí (50%). Proceso de respuesta a alertas documentado. Los 65 equipos offline tienen un dueño asignado.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-line"><div class="tl-dot" style="background:#60a5fa;"></div><div class="tl-connector"></div></div>
+            <div class="tl-content">
+              <div class="tl-phase" style="color:#60a5fa;">Fase 2 · Mes 1–2</div>
+              <div class="tl-title">Deploy de Antigravity</div>
+              <div class="tl-desc">Sistema en servidor propio de XCIEN. NOC y campo capacitados. Roles de Odoo corregidos. WFM conectado a alertas de NOCBoard.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-line"><div class="tl-dot" style="background:#a855f7;"></div><div class="tl-connector" style="background:transparent;"></div></div>
+            <div class="tl-content">
+              <div class="tl-phase" style="color:#a855f7;">Fase 3 · Mes 3–6</div>
+              <div class="tl-title">Operación Optimizada</div>
+              <div class="tl-desc">SLAs medidos por ciudad. Academia con certificaciones activas por técnico. Reportes automáticos semanales para dirección. Meta: disponibilidad &gt;95%.</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="card card-green">
+            <div style="font-size:10px; font-weight:800; letter-spacing:1px; color:#00d4aa; text-transform:uppercase; margin-bottom:6px;">Resultado Fase 1</div>
+            <div style="font-size:26px; font-weight:900;">+65 equipos reactivados</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:3px;">Proceso estructurado · Mérida recuperada</div>
+          </div>
+          <div class="card card-blue">
+            <div style="font-size:10px; font-weight:800; letter-spacing:1px; color:#60a5fa; text-transform:uppercase; margin-bottom:6px;">Resultado Fase 2</div>
+            <div style="font-size:26px; font-weight:900;">1 sistema unificado</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:3px;">Red · Campo · Finanzas · Capacitación</div>
+          </div>
+          <div class="card" style="border-color:rgba(168,85,247,0.3); background:rgba(168,85,247,0.05);">
+            <div style="font-size:10px; font-weight:800; letter-spacing:1px; color:#a855f7; text-transform:uppercase; margin-bottom:6px;">Resultado Fase 3</div>
+            <div style="font-size:26px; font-weight:900;">&gt;95% disponibilidad</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:3px;">Estándar ISP competitivo nacional</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. CIERRE -->
+  <div class="slide slide-green">
+    <div style="max-width:820px; width:100%; text-align:center;">
+      <div class="label">Conclusión</div>
+      <div class="quote">
+        XCIEN no tiene un problema de <strong>recursos</strong>.<br>
+        Tiene un problema de <strong>visibilidad y proceso</strong>.<br><br>
+        Los datos, la infraestructura y el equipo ya existen.<br>
+        Lo que falta es un <strong>sistema que los conecte</strong>.
+      </div>
+      <div class="divider" style="margin: 28px auto;"></div>
+      <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+        <div class="card card-green" style="text-align:center; min-width:150px;">
+          <div style="font-size:28px; font-weight:900; color:#00d4aa;">Hoy</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:4px;">El sistema está listo</div>
+        </div>
+        <div class="card card-green" style="text-align:center; min-width:150px;">
+          <div style="font-size:28px; font-weight:900; color:#00d4aa;">1–3 días</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:4px;">Para estar en producción</div>
+        </div>
+        <div class="card card-green" style="text-align:center; min-width:150px;">
+          <div style="font-size:28px; font-weight:900; color:#00d4aa;">30 días</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.4); margin-top:4px;">Para ver resultados medibles</div>
+        </div>
+      </div>
+      <div style="margin-top:36px; font-size:15px; color:rgba(255,255,255,0.4);">
+        Presentado por <strong style="color:white">José Miguel Macías</strong> · Antigravity Intelligence Platform · Mayo 2026
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="nav">
+  <button class="prev" onclick="changeSlide(-1)">← Anterior</button>
+  <div class="dots" id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 8</span>
+  <button class="next" onclick="changeSlide(1)">Siguiente →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const dotsEl = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    document.querySelectorAll('.dot')[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    document.querySelectorAll('.dot')[current].classList.add('active');
+    document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+    document.getElementById('progress').style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); }
+  });
+
+  document.getElementById('progress').style.width = `${(1/total)*100}%`;
+</script>
+</body>
+</html>
