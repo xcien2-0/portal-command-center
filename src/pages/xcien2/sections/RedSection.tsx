@@ -347,6 +347,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [showTopo, setShowTopo]         = useState(false);
+  const [showDevices, setShowDevices]   = useState(false);
+  const [geoDevices, setGeoDevices]     = useState<any[]>([]);
   const [mainView, setMainView]         = useState<'map' | 'graph'>('map');
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
@@ -355,10 +357,11 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [kmzGroups,  setKmzGroups]  = useState<KmzGroup[]>([]);
   const [kmzActive,  setKmzActive]  = useState<Record<string, boolean>>({});
 
-  const mapRef    = useRef<any>(null);
-  const leafRef   = useRef<any>(null);
-  const layerRef  = useRef<any>(null);
-  const topoLayer = useRef<any>(null);
+  const mapRef       = useRef<any>(null);
+  const leafRef      = useRef<any>(null);
+  const layerRef     = useRef<any>(null);
+  const topoLayer    = useRef<any>(null);
+  const devicesLayer = useRef<any>(null);
   const tileRef   = useRef<any>(null);
   const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
   const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
@@ -387,6 +390,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     const t = setInterval(cargar, 30_000);
     return () => clearInterval(t);
   }, [cargar]);
+
+  // ── Cargar dispositivos con coords geográficas ───────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/dispositivos-geo`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setGeoDevices(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   // ── Cargar índice KMZ ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -563,6 +574,59 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     });
   }, [showTopo, topoLinks, vendorFilter]);
 
+  // ── Renderizar dispositivos UISP sobre el mapa ───────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (devicesLayer.current) { devicesLayer.current.clearLayers(); }
+    else { devicesLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showDevices || geoDevices.length === 0) return;
+
+    // Color por calidad de señal
+    const signalColor = (signal: number | null, status: string): string => {
+      if (status !== 'active') return '#ff3366';          // rojo  — desconectado
+      if (signal == null)       return '#00aff0';          // azul  — sin dato de señal (routers, switches)
+      if (signal >= -65)        return '#00ff88';          // verde — excelente ≥ -65 dBm
+      if (signal >= -75)        return '#ffcc00';          // ámbar — bueno -65 a -75 dBm
+      return '#ff3366';                                    // rojo  — malo < -75 dBm
+    };
+
+    const signalLabel = (signal: number | null, status: string): string => {
+      if (status !== 'active') return 'DESCONECTADO';
+      if (signal == null)       return 'SIN SEÑAL RF';
+      if (signal >= -65)        return `EXCELENTE (${signal} dBm)`;
+      if (signal >= -75)        return `BUENO (${signal} dBm)`;
+      return `MALO (${signal} dBm)`;
+    };
+
+    geoDevices.forEach(dev => {
+      const color  = signalColor(dev.signal, dev.status);
+      const isUp   = dev.status === 'active';
+      const radius = dev.type === 'wave' || dev.type === 'airFiber' ? 8
+                   : dev.type === 'airMax' ? 6 : 5;
+
+      L.circleMarker([dev.lat, dev.lng], {
+        radius,
+        fillColor: color,
+        color: color,
+        weight: 1.5,
+        fillOpacity: isUp ? 0.85 : 0.5,
+        opacity: 1,
+      }).bindTooltip(
+        `<div style="font-weight:700;color:${color};margin-bottom:4px">${dev.name}</div>
+         <div style="color:rgba(255,255,255,0.5);font-size:10px">${dev.model || dev.type}</div>
+         <div style="margin-top:5px">
+           <span style="color:${color};font-weight:700;font-size:10px">● ${signalLabel(dev.signal, dev.status)}</span>
+         </div>
+         ${dev.stations != null ? `<div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:2px">Estaciones: ${dev.stations}</div>` : ''}
+         <div style="color:rgba(255,255,255,0.3);font-size:9px;margin-top:3px">${dev.site}</div>`,
+        { className: 'noc-tooltip' }
+      ).addTo(devicesLayer.current);
+    });
+  }, [showDevices, geoDevices]);
+
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
     if (!mapRef.current || !leafRef.current) return;
@@ -669,20 +733,28 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           </button>
         </div>
 
-        {/* Topología toggle — solo visible en vista mapa */}
+        {/* Controles de capas — solo en vista mapa */}
         {mainView === 'map' && (
-          <button
-            onClick={() => setShowTopo(p => !p)}
-            style={{
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setShowDevices(p => !p)} style={{
+              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              background: showDevices ? 'rgba(0,175,240,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${showDevices ? '#00aff0' : 'rgba(255,255,255,0.15)'}`,
+              color: showDevices ? '#00aff0' : 'rgba(255,255,255,0.5)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <Wifi size={13} /> Dispositivos
+            </button>
+            <button onClick={() => setShowTopo(p => !p)} style={{
               padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
               background: showTopo ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
               border: `1px solid ${showTopo ? '#3b82f6' : 'rgba(255,255,255,0.15)'}`,
               color: showTopo ? '#3b82f6' : 'rgba(255,255,255,0.5)',
               display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <GitBranch size={13} /> Links backbone
-          </button>
+            }}>
+              <GitBranch size={13} /> Links
+            </button>
+          </div>
         )}
 
 
@@ -807,6 +879,37 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             host={selectedHost}
             onClose={() => setSelectedHost(null)}
           />
+        )}
+
+        {/* Leyenda — dispositivos por calidad de señal */}
+        {showDevices && (
+          <div style={{
+            position: 'absolute', bottom: 24, right: 16, zIndex: 999,
+            background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '10px 14px', minWidth: 170,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              Calidad de señal RF
+            </div>
+            {[
+              { color: '#00ff88', label: 'Excelente', detail: '≥ −65 dBm' },
+              { color: '#ffcc00', label: 'Bueno',     detail: '−65 a −75 dBm' },
+              { color: '#ff3366', label: 'Malo / Caído', detail: '< −75 dBm' },
+              { color: '#00aff0', label: 'Sin señal RF', detail: 'Router / Switch' },
+            ].map(({ color, label, detail }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginLeft: 5 }}>{detail}</span>
+                </div>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 6, paddingTop: 6, fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>
+              {geoDevices.length} dispositivos con coords
+            </div>
+          </div>
         )}
 
         {/* Leyenda — topología + fibra activas */}

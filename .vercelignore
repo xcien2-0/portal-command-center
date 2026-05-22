@@ -1,0 +1,12 @@
+backend/
+*.db
+*.sqlite
+logs/
+.env
+.env.*
+Xcien_Docs/
+nginx/
+deploy.sh
+docker-compose.yml
+Dockerfile
+ecosystem.config.cjs
