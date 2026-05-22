@@ -1166,7 +1166,7 @@ export default function NocSection({
               borderRadius: 10, padding: '10px 14px', backdropFilter: 'blur(8px)',
             }}>
               <div style={{ fontSize: 9, color: G, fontWeight: 700, letterSpacing: 1.5, marginBottom: 8 }}>LEYENDA DE RED</div>
-              {[['#00ff88','Online ≥ 85%'],['#ffcc00','Degradado 50–84%'],['#ff3366','Crítico < 50%']].map(([color, label]) => (
+              {[['#00e5ff','Online ≥ 85%'],['#ffd166','Degradado 50–84%'],['#ff6b2b','Crítico < 50%']].map(([color, label]) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>{label}</span>

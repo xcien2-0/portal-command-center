@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
-import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi } from 'lucide-react';
+import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2 } from 'lucide-react';
+import NetworkGraph from '../../../components/NetworkGraph';
 import 'leaflet/dist/leaflet.css';
 
 // ── Colores ────────────────────────────────────────────────────────────────────
@@ -346,6 +347,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [showTopo, setShowTopo]         = useState(false);
+  const [mainView, setMainView]         = useState<'map' | 'graph'>('map');
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
   const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
@@ -647,19 +649,41 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           ))}
         </div>
 
-        {/* Topología toggle */}
-        <button
-          onClick={() => setShowTopo(p => !p)}
-          style={{
-            padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-            background: showTopo ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${showTopo ? '#3b82f6' : 'rgba(255,255,255,0.15)'}`,
-            color: showTopo ? '#3b82f6' : 'rgba(255,255,255,0.5)',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          <GitBranch size={13} /> Topología
-        </button>
+        {/* Vista toggle */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, gap: 2 }}>
+          <button onClick={() => setMainView('map')} style={{
+            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
+            background: mainView === 'map' ? 'rgba(0,255,136,0.15)' : 'transparent',
+            color: mainView === 'map' ? COLOR_ONLINE : 'rgba(255,255,255,0.35)',
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}>
+            <Radio size={12} /> Mapa
+          </button>
+          <button onClick={() => setMainView('graph')} style={{
+            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
+            background: mainView === 'graph' ? 'rgba(0,175,240,0.15)' : 'transparent',
+            color: mainView === 'graph' ? '#00aff0' : 'rgba(255,255,255,0.35)',
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}>
+            <Share2 size={12} /> Grafo completo
+          </button>
+        </div>
+
+        {/* Topología toggle — solo visible en vista mapa */}
+        {mainView === 'map' && (
+          <button
+            onClick={() => setShowTopo(p => !p)}
+            style={{
+              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              background: showTopo ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${showTopo ? '#3b82f6' : 'rgba(255,255,255,0.15)'}`,
+              color: showTopo ? '#3b82f6' : 'rgba(255,255,255,0.5)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <GitBranch size={13} /> Links backbone
+          </button>
+        )}
 
 
         {/* Refresh */}
@@ -754,9 +778,18 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         )}
       </div>
 
-      {/* Mapa */}
+      {/* Vista principal: Mapa o Grafo completo */}
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-        <div id="red-section-map" style={{ width: '100%', height: '100%' }} />
+
+        {/* Grafo D3 — toda la red inalámbrica */}
+        {mainView === 'graph' && (
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <NetworkGraph height="100%" />
+          </div>
+        )}
+
+        {/* Mapa Leaflet */}
+        <div id="red-section-map" style={{ width: '100%', height: '100%', display: mainView === 'map' ? 'block' : 'none' }} />
 
         {/* Panel ciudad */}
         {selectedCity && !selectedHost && (

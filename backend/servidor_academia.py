@@ -98,6 +98,13 @@ WFM_DB = os.path.join(BASE_DIR, "db", "wfm_data.json")
 # ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Portal Academia Xcien API")
 
+
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    asyncio.create_task(uisp_service.warm_cache())
+
+
 @app.api_route("/academia", methods=["GET", "HEAD"])
 @app.api_route("/academia/", methods=["GET", "HEAD"])
 def redirect_academia():
@@ -116,8 +123,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
         "http://localhost:8080",
         "http://localhost:8081",
+        "http://127.0.0.1:5175",
         "http://127.0.0.1:8080",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
@@ -3891,6 +3901,36 @@ async def red_links():
 async def red_topologia_geo():
     """Links con coordenadas geográficas para dibujar en el mapa."""
     return await uisp_service.get_topology_geo()
+
+
+@app.get("/api/red/dispositivos-geo")
+async def red_dispositivos_geo():
+    """Dispositivos UISP con coordenadas de su sitio — para pintar en el mapa."""
+    import asyncio
+    devices, sites_coords = await asyncio.gather(
+        uisp_service.get_devices(),
+        uisp_service.get_sites_coords(),
+    )
+    result = []
+    for d in devices:
+        site_name = (d.get("site") or {}).get("name") if isinstance(d.get("site"), dict) else d.get("site")
+        coords = sites_coords.get(site_name) if site_name else None
+        if not coords:
+            continue
+        result.append({
+            "id":      d["id"],
+            "name":    d["name"],
+            "model":   d["model"],
+            "type":    d["type"],
+            "status":  d["status"],
+            "signal":  d.get("signal"),
+            "stations": d.get("stations_count"),
+            "site":    site_name,
+            "lat":     coords["lat"],
+            "lng":     coords["lng"],
+            "inferred": coords.get("inferred", False),
+        })
+    return result
 
 
 @app.get("/api/red/host/{host_id}")

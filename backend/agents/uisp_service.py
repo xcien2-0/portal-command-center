@@ -19,15 +19,26 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# Cache simple en memoria para evitar hammering
+# Cache en memoria con TTL largo — UISP es lento, precalentamos en background
 _cache: dict[str, Any] = {}
 _cache_ts: dict[str, float] = {}
-CACHE_TTL = 30  # segundos
+CACHE_TTL = 300  # 5 minutos
 
 
 def _is_fresh(key: str) -> bool:
     import time
     return key in _cache and (time.time() - _cache_ts.get(key, 0)) < CACHE_TTL
+
+
+async def warm_cache():
+    """Pre-calienta el caché de UISP en background al arrancar el servidor."""
+    try:
+        logger.info("UISP: precalentando caché...")
+        await get_topology()
+        await get_topology_geo()
+        logger.info("UISP: caché listo.")
+    except Exception as e:
+        logger.warning(f"UISP warm_cache error: {e}")
 
 
 async def _get(path: str) -> Any:
@@ -193,15 +204,102 @@ async def _get_devices_and_links():
     return devices, links
 
 
+def _extract_coords_from_address(address):
+    """Intenta extraer lat,lng de un string de dirección como '25.456, -100.993'."""
+    import re
+    if not isinstance(address, str):
+        return None
+    m = re.search(r'(-?\d{1,3}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})', address)
+    if m:
+        lat, lng = float(m.group(1)), float(m.group(2))
+        # Validar rango México aproximado
+        if 14 <= lat <= 33 and -118 <= lng <= -86:
+            return lat, lng
+    return None
+
+
+# Coordenadas de ciudades conocidas para sitios sin GPS
+_CITY_COORDS: dict[str, tuple[float, float]] = {
+    "monterrey":       (25.6866, -100.3161),
+    "saltillo":        (25.4232, -100.9928),
+    "piedras negras":  (28.7000, -100.5231),
+    "san luis potosi": (22.1565, -100.9855),
+    "san luis potosí": (22.1565, -100.9855),
+    "torreon":         (25.5428, -103.4068),
+    "torreón":         (25.5428, -103.4068),
+    "chihuahua":       (28.6353, -106.0889),
+    "nuevo laredo":    (27.4765,  -99.5151),
+    "reynosa":         (26.0922,  -98.2772),
+    "matamoros":       (25.8691,  -97.5027),
+    "monclova":        (26.9083, -101.4217),
+    "guadalajara":     (20.6597, -103.3496),
+    "cdmx":            (19.4326,  -99.1332),
+    "ciudad de mexico":(19.4326,  -99.1332),
+    "queretaro":       (20.5888, -100.3899),
+    "querétaro":       (20.5888, -100.3899),
+    "leon":            (21.1221, -101.6823),
+    "léon":            (21.1221, -101.6823),
+    "tampico":         (22.2552,  -97.8686),
+    "merida":          (20.9674,  -89.5926),
+    "mérida":          (20.9674,  -89.5926),
+    "puebla":          (19.0414,  -98.2063),
+    "celaya":          (20.5200, -100.8161),
+    "apodaca":         (25.7800, -100.1880),
+    "guadalupe":       (25.6790, -100.2495),
+    "escobedo":        (25.7960, -100.3280),
+    "santa catarina":  (25.6733, -100.4589),
+    "garcia":          (25.8151, -100.5887),
+    "san nicolas":     (25.7460, -100.2960),
+    "juarez":          (25.6417, -100.0909),
+    "linares":         (24.8653,  -99.5706),
+    "allende":         (25.2805, -100.0157),
+    "ramos arizpe":    (25.5500, -100.9500),
+    "hidalgo":         (26.9378, -99.8539),
+    "salamanca":       (20.5693, -101.1964),
+    "frontera":        (26.9342, -101.6800),
+    "carmen":          (18.6481,  -91.8261),
+}
+
+
+def _city_coords_from_name(name: str):
+    """Intenta inferir coordenadas a partir del nombre del sitio."""
+    nl = name.lower()
+    for city, coords in _CITY_COORDS.items():
+        if city in nl:
+            return coords
+    return None
+
+
 async def get_sites_coords() -> dict[str, dict]:
-    """Índice site_name → {lat, lng} desde UISP."""
+    """Índice site_name → {lat, lng} desde UISP.
+    Intenta: 1) coords explícitas, 2) coords en campo address, 3) infiere de nombre."""
     raw = await _get("/sites")
     index = {}
     for s in raw:
         name = s.get("identification", {}).get("name", "")
-        loc = s.get("description", {}).get("location", {})
-        if loc and loc.get("latitude") and loc.get("longitude"):
-            index[name] = {"lat": loc["latitude"], "lng": loc["longitude"]}
+        if not name:
+            continue
+
+        loc = s.get("description", {}).get("location", {}) or {}
+        lat = loc.get("latitude")
+        lng = loc.get("longitude")
+
+        if lat and lng:
+            index[name] = {"lat": lat, "lng": lng}
+            continue
+
+        # Intentar extraer del campo address
+        address = s.get("description", {}).get("address", "")
+        parsed = _extract_coords_from_address(address)
+        if parsed:
+            index[name] = {"lat": parsed[0], "lng": parsed[1]}
+            continue
+
+        # Inferir por nombre de ciudad
+        inferred = _city_coords_from_name(name)
+        if inferred:
+            index[name] = {"lat": inferred[0], "lng": inferred[1], "inferred": True}
+
     return index
 
 

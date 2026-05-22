@@ -1163,9 +1163,14 @@
         "fecha": "2026-05-20T13:38:53.721278",
         "accion": "Odoo sync: stage \u2192 > Ing. Pre-Venta (ANTEPROYECTO)",
         "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-21T11:08:55.649416",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
       }
     ],
-    "odoo_stage_id": 63,
+    "odoo_stage_id": 7,
     "revenue": 46200.0
   },
   {
@@ -9220,6 +9225,425 @@
     "historial": [
       {
         "fecha": "2026-05-19T16:23:52.045717",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80015",
+    "odoo_id": 80015,
+    "odoo_stage_id": 7,
+    "cliente": "[DUPLICADO] LUIS FERNANDO MIRANDA RUIZ",
+    "servicio": "HUUS, SIEV-100-3, [DUPLICADO] LUIS FERNANDO MIRANDA RUIZ, SITIO: LIVERPOOL 76",
+    "comercial": "OMAR YAIR MACEDO MONDRAGON",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 46200.0,
+    "fecha_deadline": "2026-05-25",
+    "fecha_creacion": "2026-05-20 22:59:36",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento 26 MAYO 2026</span></b></span></li><li>Horario del evento 9AM</li><li>Horario de fin del evento para retiro de equipos 8PM</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar&nbsp;Liverpool 76, Ju\u00e1rez, Cuauht\u00e9moc, 06600 Ciudad de M\u00e9xico, CDMX&nbsp;19.42613518411517, -99.1602692220883</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande) CASA</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega) 6M</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso NA&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento 100MBPS</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar 150&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos SI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi SI</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi 30X18M&nbsp;</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc) NA</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones SI&nbsp;</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600&nbsp; SI&nbsp;</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><img width=\"1131.64\" style=\"box-sizing: border-box; display: inline-block; height: auto; max-width: 100%; vertical-align: middle; width: 1131.64px; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all; mso-hide: all;\" class=\"img img-fluid o_we_custom_image\" src=\"/web/image/3578242-5791cd1b/LIVERPOOL.png?access_token=46710ab7-ab60-4987-8e70-3417f99cdb30\"></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-20 22:59:36"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T07:39:24.529076",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      },
+      {
+        "fecha": "2026-05-21T18:19:20.706045",
+        "accion": "Odoo sync: stage \u2192 Negociacion (ANTEPROYECTO)",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80032",
+    "odoo_id": 80032,
+    "odoo_stage_id": 63,
+    "cliente": "EVENTOS AKTUM",
+    "servicio": "Sandur, SIEV-20-3, EVENTOS AKTUM, Sitio:Yanfeng",
+    "comercial": "JUAN MANUEL ESCAMILLA FRANCO",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 23970.0,
+    "fecha_deadline": "2026-05-28",
+    "fecha_creacion": "2026-05-21 23:01:00",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><br></b></p><ol style=\"padding:0 0 0 32px;list-style-type:decimal;margin:0px 0 12px 0;box-sizing:border-box;\"><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Fecha del evento: 11, 18 y 24 Junio Los juegos de la seleccion mexicana</span></b></span></li><li>Horario del evento: 8 a 8</li><li>Horario de fin del evento para retiro de equipos:de 10 a 3</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Direcci\u00f3n y ubicaci\u00f3n del lugar:Es en la empresa Yanfeng Santa Maria 1 Blvd. Alpha 7 Santa Maria Ramos Arizpe, Coah. en el estacionamiento de la planta</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Tipo de infraestructura (Edificio, nave industrial, bodega chica , grande): Nave</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Altura del predio (cantidad de pisos o altura de nave o bodega): 12 mts</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Requerimientos de documentos para acceso : en su momento</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se sabe que capacidad requiere para el evento: 20 megas para pasar el juego en una pantalla de 2 x 3 mts</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Cu\u00e1ntos dispositivos se tienen considerados conectar: 1&nbsp;</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere red interna como conexi\u00f3n a computadoras o dispositivos: no</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se requiere cubrir red WiFi: no solo para la TV</span></b></span></li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Que \u00e1rea es la que se requiere cubrir con WiFi: no</span></b></span></li><li>Se requiere configuraci\u00f3n especial (DHCP, IP\u00b4s fijas, Nat de puertos, etc): no</li><li><span style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><b style=\"box-sizing:border-box;font-weight:normal\"><span style=\"font-size:11pt;background-color:transparent\">Se cuenta con lay out para validaci\u00f3n de dimensiones: no esn la foto fisica se aprecia el estacionamiento</span></b></span></li><li>Se requiere personal en sitio para cubrir evento (costo adicional por tiempo) 6 horas x $1,600&nbsp; en su momento</li></ol><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">IMPORTANTE ,- EL EVENTO SE DEBERA CONFIRMAR CON 5 DIAS HABILES DE ANTICIPACION , EN CASO DE CONFIRMAR DESPUES SE COBRA ADICIONAL $5,000 SIN EXCEPCION Y VALIDAR: EQUIPO DISPONIBLE Y PERSONAL TECNICO DISPONIBLE</p><p style=\"caret-color:#37352f;position:relative;margin:0px 0 12px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 12px 0;box-sizing:border-box;\"><br></p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-21 23:01:00"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T18:19:20.705988",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80029",
+    "odoo_id": 80029,
+    "odoo_stage_id": 63,
+    "cliente": "ONE CALL MX OPERATIONS",
+    "servicio": "Sandur, SVOZ-EXT-N2P, ONE CALL MX OPERATIONS, SITIO: CX MONTERREY Recepci\u00f3n",
+    "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 360.0,
+    "fecha_deadline": "2026-05-31",
+    "fecha_creacion": "2026-05-21 19:13:44",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene PBX No</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">si la respuesta es s\u00ed, favor de comentar cual es la marca y modelo</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Tiene personal que administre el PBX</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El PBX es compatible con SIP&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere funcionalidades de PBX? (en caso de que no tenga requiere el PBX f\u00edsico o en la nube) No</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con cableado rematado en patch panel e identificado para voz? No, se entrega desde router de servicio de internet XCIEN</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Switch?&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfDe cuantos puertos, Marca y Modelo?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfEs Switch poe?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfTiene identificados los lugares donde corresponde cada extensi\u00f3n?, y si los lugares est\u00e1n preparados con nodo de red habilitado disponible para el equipo telef\u00f3nico:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntas extensiones requiere? ninguna</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue tipo de tel\u00e9fono requiere para cada extensi\u00f3n, gama Alta, Media o Baja o de recepci\u00f3n ? Media - Baja</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCu\u00e1ntos equipos tiene? ninguno</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfQue Marca, modelo y que version de firmware ?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con Firewall? Si, Fortinet</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCuenta con oficinas externas (sucursales), cuantas?&nbsp; no</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfLas oficinas remotas tienen conmutador? Marca y modelo:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfCantidad de extensiones en cada sitio?</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere Adecuaciones? puertos para voz, para datos, patchcord para la conexi\u00f3n, cableado, etc</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere portabilidad ? no, linea nueva</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere configuraci\u00f3n de extensiones ? no</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">\u00bfRequiere IVR? no</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Se cuenta o se requieren configuraciones adicionales para separar la voz y datos VLAN&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Los equipos telef\u00f3nicos necesitan IP fija o puede ser din\u00e1mica&nbsp;</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">NOTA:</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">En caso de portabilidad es necesario contar con los documentos &nbsp;(comprobante de domicilio, INE, en caso de ser persona moral se requiere acta constitutiva y poder notarial del representante legal), adjuntar requisitos en la tarea antes de la solicitud de habilitaci\u00f3n.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">Net2phone proporcionar\u00e1 el formato correspondiente. </p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\">El cliente al cancelar con su proveedor anterior tiene 30 d\u00edas para solicitar la portabilidad tomando en cuenta los d\u00edas que este tr\u00e1mite conlleva, en caso de no solicitarlo con tiempo se corre riesgo de perder el/los n\u00fameros telef\u00f3nicos.</p><p style=\"margin:0px 0 0px 0;box-sizing:border-box;margin-bottom: 0px;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">En caso de configuraciones para nombre de extensiones , IP fija e IVR deber\u00e1 estar completo el documento y adjuntarlo en la tarea antes de la solicitud de habilitaci\u00f3n.</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-21 19:13:44"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T18:19:20.706014",
+        "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80028",
+    "odoo_id": 80028,
+    "odoo_stage_id": 67,
+    "cliente": "ONE CALL MX OPERATIONS",
+    "servicio": "Sandur, [SIN PRODUCTO], ONE CALL MX OPERATIONS, [SIN SITIO]",
+    "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
+    "estado": "SOLICITUD_PREVENTA",
+    "estado_fuente": "odoo",
+    "revenue": 400.0,
+    "fecha_deadline": false,
+    "fecha_creacion": "2026-05-21 19:13:28",
+    "preventa": {
+      "analisis": "",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-21 19:13:28"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T18:19:20.706022",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80027",
+    "odoo_id": 80027,
+    "odoo_stage_id": 67,
+    "cliente": "ONE CALL MX OPERATIONS",
+    "servicio": "Sandur, [SIN PRODUCTO], ONE CALL MX OPERATIONS, [SIN SITIO]",
+    "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
+    "estado": "SOLICITUD_PREVENTA",
+    "estado_fuente": "odoo",
+    "revenue": 400.0,
+    "fecha_deadline": false,
+    "fecha_creacion": "2026-05-21 19:13:08",
+    "preventa": {
+      "analisis": "",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "SOLICITUD_PREVENTA": "2026-05-21 19:13:08"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T18:19:20.706029",
+        "accion": "Importado desde Odoo CRM \u2014 Borrador",
+        "usuario": "Sistema"
+      }
+    ]
+  },
+  {
+    "id": "ODOO-80025",
+    "odoo_id": 80025,
+    "odoo_stage_id": 63,
+    "cliente": "ONE CALL MX OPERATIONS",
+    "servicio": "Sandur, SIDP-20, ONE CALL MX OPERATIONS, SITIO: CX MONTERREY Recepci\u00f3n",
+    "comercial": "JOSE GERARDO DE LA GARZA MARTINEZ",
+    "estado": "ANTEPROYECTO",
+    "estado_fuente": "odoo",
+    "revenue": 2100.0,
+    "fecha_deadline": "2026-05-31",
+    "fecha_creacion": "2026-05-21 19:02:43",
+    "preventa": {
+      "analisis": "<p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;El cliente requiere un servicio para el \u00e1rea de recepci\u00f3n en donde se colocara un router con servicio de internet para conectar una l\u00ednea telef\u00f3nica</p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\"><br></p><p style=\"margin:0px 0 16px 0;box-sizing:border-box;\">&nbsp;Este servicio se conectar\u00e1 desde el mismo circuito del servicio [SOP-18020] SIDP-1 Gbps / CX MONTERREY en donde podemos utilizar un puerto del router para el servicio nuevo</p>",
+      "factibilidad": null,
+      "tecnologia": null,
+      "equipos_sugeridos": [],
+      "anteproyecto_url": null
+    },
+    "almacen": {
+      "disponibilidad": false,
+      "equipos_asignados": [],
+      "esperando_inventario": false
+    },
+    "aprovisionamiento": {
+      "config_logica": null,
+      "parametros_red": {},
+      "listo": false
+    },
+    "pm": {
+      "auditoria_ok": false,
+      "bloqueada": false,
+      "motivo_bloqueo": null,
+      "backlogs": []
+    },
+    "evidencias": {
+      "fotos_antes": [],
+      "fotos_despues": [],
+      "checklist_ok": false,
+      "notas": "",
+      "cerrado_por": null,
+      "fecha_cierre": null
+    },
+    "checklist": [],
+    "pruebas_velocidad": [],
+    "noc": {
+      "ping_ok": null,
+      "latencia_ms": null,
+      "dado_de_alta": false,
+      "herramienta_monitoreo": null,
+      "host_id": null,
+      "alertas_configuradas": false,
+      "grupos_alerta": [],
+      "aprobado": false,
+      "aprobado_por": null,
+      "fecha_alta": null,
+      "observaciones": ""
+    },
+    "timestamps_estados": {
+      "ANTEPROYECTO": "2026-05-21 19:02:43"
+    },
+    "historial": [
+      {
+        "fecha": "2026-05-21T18:19:20.706038",
         "accion": "Importado desde Odoo CRM \u2014 > Ing. Pre-Venta",
         "usuario": "Sistema"
       }
