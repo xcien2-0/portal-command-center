@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import HexoField3D from '../../../components/HexoField3D';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,7 +210,18 @@ export default function MerkleFeedSection({ theme }: { theme: ThemeConfig }) {
   const accent = theme.accent || '#60a5fa';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
+
+      {/* Fondo hexomórfico animado */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        pointerEvents: 'none', opacity: 0.13,
+      }}>
+        <HexoField3D mode="blockchain" interactive={false} width="100%" height="100%" />
+      </div>
+
+      {/* Contenido sobre el fondo — z-index 1 */}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
@@ -366,6 +378,7 @@ export default function MerkleFeedSection({ theme }: { theme: ThemeConfig }) {
           50%       { opacity: 0.4; }
         }
       `}</style>
+      </div>
     </div>
   );
 }
