@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ThemeConfig } from '../types';
 import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
-import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Eye } from 'lucide-react';
+import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Eye, Box } from 'lucide-react';
+import HexoField3D, { NetworkNode } from '../../../components/HexoField3D';
 import { API_BASE } from '../../../config';
 import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
@@ -979,7 +980,8 @@ export default function NocSection({
   onTenantChange,
 }: Props) {
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
-  const [view, setView] = useState<'map' | 'grid' | 'reportes'>('map');
+  const [view, setView] = useState<'map' | 'grid' | 'reportes' | '3d'>('map');
+  const [selected3dNode, setSelected3dNode] = useState<NetworkNode | null>(null);
 
   // ── Observium ──────────────────────────────────────────────────────────────
   const [obsOpen,    setObsOpen]    = useState(false);
@@ -1086,7 +1088,7 @@ export default function NocSection({
 
         {/* View toggle */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', padding: 3, borderRadius: 10, gap: 2 }}>
-          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
+          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['3d', 'Topología 3D', Box], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
             <button key={id} onClick={() => setView(id as any)} style={{
               padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 7,
               border: 'none', cursor: 'pointer', transition: 'all 0.15s',
@@ -1137,6 +1139,97 @@ export default function NocSection({
               <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
             )}
           </>
+        ) : view === '3d' ? (
+          <div style={{ flex: 1, position: 'relative', borderRadius: 16, overflow: 'hidden', border: `1px solid ${G}20`, background: '#050810' }}>
+            <HexoField3D
+              mode="network"
+              nodes={cities.map(c => ({
+                id: c.id,
+                label: c.name,
+                status: c.availability >= 85 ? 'online' : c.availability >= 50 ? 'warning' : 'offline',
+                group: c.name,
+                value: c.totalHosts,
+              }))}
+              width="100%"
+              height="100%"
+              interactive={true}
+              onNodeClick={(node) => {
+                const city = cities.find(c => c.id === node.id);
+                if (city) { handleSelectCity(city); setSelected3dNode(node); }
+              }}
+            />
+
+            {/* Leyenda */}
+            <div style={{
+              position: 'absolute', bottom: 20, left: 20,
+              background: 'rgba(5,8,16,0.85)', border: `1px solid ${G}20`,
+              borderRadius: 10, padding: '10px 14px', backdropFilter: 'blur(8px)',
+            }}>
+              <div style={{ fontSize: 9, color: G, fontWeight: 700, letterSpacing: 1.5, marginBottom: 8 }}>LEYENDA DE RED</div>
+              {[['#00ff88','Online ≥ 85%'],['#ffcc00','Degradado 50–84%'],['#ff3366','Crítico < 50%']].map(([color, label]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>{label}</span>
+                </div>
+              ))}
+              <div style={{ borderTop: `1px solid rgba(255,255,255,0.06)`, marginTop: 8, paddingTop: 6, fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
+                Click en nodo para inspeccionar
+              </div>
+            </div>
+
+            {/* KPIs flotantes */}
+            <div style={{
+              position: 'absolute', top: 16, right: 16,
+              display: 'flex', gap: 8,
+            }}>
+              {[
+                { label: 'Nodos', val: cities.length, color: '#fff' },
+                { label: 'Online', val: cities.filter(c => c.availability >= 85).length, color: '#00ff88' },
+                { label: 'Alerta', val: cities.filter(c => c.availability < 85 && c.availability >= 50).length, color: '#ffcc00' },
+                { label: 'Crítico', val: cities.filter(c => c.availability < 50).length, color: '#ff3366' },
+              ].map(k => (
+                <div key={k.label} style={{
+                  background: 'rgba(5,8,16,0.85)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 8, padding: '6px 12px', textAlign: 'center', backdropFilter: 'blur(8px)',
+                }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: k.color }}>{k.val}</div>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>{k.label.toUpperCase()}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Inspector flotante cuando se hace click */}
+            {selected3dNode && (
+              <div style={{
+                position: 'absolute', bottom: 20, right: 20,
+                background: 'rgba(5,8,16,0.9)', border: `1px solid ${G}30`,
+                borderRadius: 12, padding: '14px 18px', backdropFilter: 'blur(12px)',
+                minWidth: 200,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{selected3dNode.label}</span>
+                  <button onClick={() => setSelected3dNode(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 2 }}>
+                    <X size={13} />
+                  </button>
+                </div>
+                {(() => {
+                  const city = cities.find(c => c.id === selected3dNode.id);
+                  if (!city) return null;
+                  const color = city.availability >= 85 ? '#00ff88' : city.availability >= 50 ? '#ffcc00' : '#ff3366';
+                  return (
+                    <>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>Disponibilidad</div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color, marginBottom: 8 }}>{city.availability.toFixed(1)}%</div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 10 }}>
+                        <span style={{ color: '#00ff88' }}>↑ {city.onlineHosts} online</span>
+                        <span style={{ color: '#ff3366' }}>↓ {city.offlineHosts} offline</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
         ) : null}
       </div>
 

@@ -7,6 +7,7 @@ import {
   Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
   Activity, Network, Layers, AlertTriangle,
 } from 'lucide-react';
+import HexoField3D from '../../components/HexoField3D';
 import { API_BASE } from '../../config';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import FloatingChat from './sections/FloatingChat';
@@ -844,7 +845,23 @@ export default function Xcien2Page() {
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px }
         button:focus { outline:none }
       `}</style>
-      {activeThemeId === 'matrix' && <div className="matrix-bg" />}
+      {/* Matrix theme: hexo-particles 3D + scanline combinados */}
+      {activeThemeId === 'matrix' && (
+        <>
+          <div className="matrix-bg" />
+          <HexoField3D
+            mode="ambient"
+            accentColor="#00ff41"
+            interactive={false}
+            opacity={0.18}
+            style={{
+              position: 'fixed', inset: 0,
+              pointerEvents: 'none',
+              zIndex: 99,
+            }}
+          />
+        </>
+      )}
       <FloatingChat theme={theme} section={section} />
     </div>
   );
