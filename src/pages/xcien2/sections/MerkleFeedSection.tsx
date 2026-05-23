@@ -213,15 +213,15 @@ export default function MerkleFeedSection({ theme }: { theme: ThemeConfig }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
 
       {/* Fondo hexomórfico animado */}
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 0,
-        pointerEvents: 'none', opacity: 0.13,
-      }}>
-        <HexoField3D mode="blockchain" interactive={false} width="100%" height="100%" />
-      </div>
+      <HexoField3D
+        mode="blockchain"
+        interactive={false}
+        opacity={0.18}
+        style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none' }}
+      />
 
-      {/* Contenido sobre el fondo — z-index 1 */}
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Contenido sobre el fondo — z-index 10 */}
+      <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
