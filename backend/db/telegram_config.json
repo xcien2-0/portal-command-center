@@ -1,7 +1,0 @@
-{
-  "enabled": false,
-  "token": "",
-  "chat_id": "",
-  "min_severity": "critical",
-  "last_processed_alert_id": null
-}
