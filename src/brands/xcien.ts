@@ -12,6 +12,12 @@ const xcien: BrandConfig = {
   academiaLabel: 'XCIEN Academia',
   appTitle: 'XCIEN 2.0 — Portal de Operaciones',
   appDescription: 'Portal de operaciones, NOC y campo — XCIEN 2.0',
+  odooUrl: 'https://odoo.wispi.mx',
+  odooDb: 'wispi17',
+  emailDomain: 'xcien.com',
+  orgName: 'XCIEN',
+  scannerLabel: 'XCIEN Scanner',
+  nocLabel: 'XCIEN NOC',
 };
 
 export default xcien;

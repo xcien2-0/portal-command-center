@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeConfig, ChatMessage } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 async function callDirectorAPI(message: string, history: {role: string, content: string}[], context: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/director/chat`, {
@@ -117,7 +118,7 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Director General IA</h2>
           <span style={{ fontSize: 10, background: `${accent}18`, color: accent, border: `1px solid ${accent}30`, borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>EN LÍNEA</span>
         </div>
-        <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>Agente de orquestación · acceso total al sistema XCIEN 2.0</p>
+        <p style={{ fontSize: 12, color: theme.dim, margin: 0 }}>{`Agente de orquestación · acceso total al sistema ${brand.name} ${brand.version}`}</p>
       </div>
 
       {/* Antigravity Bridge (Live Execution Feedback) */}
@@ -228,7 +229,7 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
 
       {/* Quick prompts */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-        {['Estado de red', 'Academia XCIEN', 'Operaciones de campo', 'Resumen ingresos'].map(q => (
+        {['Estado de red', brand.academiaLabel, 'Operaciones de campo', 'Resumen ingresos'].map(q => (
           <button
             key={q}
             onClick={() => { setInput(q); }}

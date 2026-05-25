@@ -90,10 +90,10 @@ interface TokensResumen {
 
 // ── Colores ───────────────────────────────────────────────────────────────────
 const EMPRESA_COLOR: Record<string, string> = {
-  xcien:   '#00C896',
-  luminet: '#4FC3F7',
-  wispi:   '#FFB703',
-  huus:    '#FF6B35',
+  empresa_a: '#00C896',
+  luminet:   '#4FC3F7',
+  empresa_b: '#FFB703',
+  huus:      '#FF6B35',
 };
 
 const AREA_ICON: Record<string, string> = {
@@ -107,7 +107,7 @@ const AREA_ICON: Record<string, string> = {
   almacen:         '📦',
 };
 
-const EMPRESAS = ['xcien', 'luminet', 'wispi', 'huus'];
+const EMPRESAS = ['empresa_a', 'luminet', 'empresa_b', 'huus'];
 
 const DEMO: Resumen = {
   total_tx: 0, valor_total: 0, ahorro_total: 0,

@@ -485,7 +485,7 @@ function ScannerTab({ initialActivo, onBack }: { initialActivo?: Activo | null; 
 
 // ── Sub: Etiquetas tab ────────────────────────────────────────────────────────
 const EMPRESA_COLOR: Record<string, string> = {
-  xcien: '#00C896', luminet: '#4FC3F7', wispi: '#FFB703', huus: '#FF6B35',
+  empresa_a: '#00C896', luminet: '#4FC3F7', empresa_b: '#FFB703', huus: '#FF6B35',
 };
 const REGIMEN_COLOR: Record<string, string> = {
   PROPIO: '#00C896', RENTADO: '#FFB703', LEASING: '#4FC3F7',
@@ -511,7 +511,7 @@ function EtiquetasTab() {
   const [online, setOnline]           = useState(false);
   const [showForm, setShowForm]       = useState(false);
   const [formData, setFormData]       = useState({
-    nombre: '', categoria: 'equipo_red', empresa: 'xcien', regimen: 'PROPIO',
+    nombre: '', categoria: 'equipo_red', empresa: 'empresa_a', regimen: 'PROPIO',
     site: '', numero_serie: '', marca: '', modelo: '', ip: '', network_code: 'X100',
   });
 

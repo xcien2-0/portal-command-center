@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ThemeConfig } from '../types';
+import brand from '../../../brand';
 import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
 import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Eye, Box } from 'lucide-react';
@@ -279,7 +280,7 @@ function HoloMap({ cities, onSelectCity, selectedCityId }: {
 
       {/* HUD corners */}
       {[
-        { style: { top: 16, left: 16 }, label: 'XCIEN NOC', value: `${cities.length} NODOS` },
+        { style: { top: 16, left: 16 }, label: brand.nocLabel, value: `${cities.length} NODOS` },
         { style: { top: 16, right: 16 }, label: 'SYNC', value: 'REAL-TIME' },
       ].map(({ style, label, value }) => (
         <div key={label} style={{

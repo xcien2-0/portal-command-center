@@ -51,7 +51,7 @@ const queryClient = new QueryClient();
 
 const getGlobalTheme = () => {
   try {
-    const saved = localStorage.getItem('xcien2_theme');
+    const saved = localStorage.getItem('app_theme');
     return saved ? { ...DEFAULT_THEME, ...JSON.parse(saved) } : DEFAULT_THEME;
   } catch { return DEFAULT_THEME; }
 };
@@ -66,7 +66,7 @@ const App = () => (
         <Routes>
           {/* Main Hub (Classic Entry) */}
           <Route path="/" element={<Index />} />
-          <Route path="/xcien2" element={<Xcien2Page />} />
+          <Route path="/portal" element={<Xcien2Page />} />
           <Route path="/invite" element={<InvitePage />} />
 
           {/* Legacy/Classic routes can stay for now but without double sidebar */}

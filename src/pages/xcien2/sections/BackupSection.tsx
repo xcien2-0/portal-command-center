@@ -14,6 +14,7 @@ import {
   Server
 } from 'lucide-react';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 interface BackupRecord {
   id: string;
@@ -44,7 +45,7 @@ export default function BackupSection({ theme }: BackupSectionProps) {
       size: '1.2 GB',
       type: 'full',
       status: 'completed',
-      user: 'Admin XCIEN',
+      user: brand.adminLabel,
       location: 'Local Storage (RAID 5)'
     },
     {
@@ -99,7 +100,7 @@ export default function BackupSection({ theme }: BackupSectionProps) {
               size: '1.2 GB',
               type: 'full',
               status: 'completed',
-              user: 'Admin XCIEN',
+              user: brand.adminLabel,
               location: 'Local Storage (RAID 5)'
             };
             setBackups([newBackup, ...backups]);
@@ -156,7 +157,7 @@ export default function BackupSection({ theme }: BackupSectionProps) {
                 Respaldo Crítico (Snapshot Odoo)
               </h3>
               <p style={{ color: theme.dim, fontSize: 14, lineHeight: 1.6, maxWidth: 600, marginBottom: 24 }}>
-                Este proceso genera un volcado binario directo de la base de datos PostgreSQL y el filestore de Odoo (wispi17). 
+                {`Este proceso genera un volcado binario directo de la base de datos PostgreSQL y el filestore de Odoo (${brand.odooDb || 'ERP'}). `}
                 Es el requisito fundamental antes de iniciar cualquier fase de migración en el laboratorio.
               </p>
 

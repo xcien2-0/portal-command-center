@@ -54,7 +54,7 @@ interface Token {
 }
 
 const DEMO_TOKENS: Token[] = [
-  { token_id: "a1b2c3d4-0001", tipo: "alta", empresa: "xcien", nombre: "Juan Pérez", detalle: "Ingreso como Especialista de Red", emitido_en: "2026-04-26T10:00:00Z", firma: "demo" },
+  { token_id: "a1b2c3d4-0001", tipo: "alta", empresa: "empresa_a", nombre: "Juan Pérez", detalle: "Ingreso como Especialista de Red", emitido_en: "2026-04-26T10:00:00Z", firma: "demo" },
   { token_id: "a1b2c3d4-0002", tipo: "promocion", empresa: "luminet", nombre: "Ana Rodríguez", detalle: "Ascenso a Gerencia de Operaciones", emitido_en: "2026-04-25T14:30:00Z", firma: "demo" },
 ];
 
@@ -71,13 +71,13 @@ const TIPO_CONFIG: Record<string, { label: string; icon: string; color: string }
 };
 
 const EMPRESA_COLOR: Record<string, string> = {
-  xcien:   '#00C896',
-  luminet: '#4FC3F7',
-  wispi:   '#FFB703',
-  huus:    '#FF6B35',
+  empresa_a: '#00C896',
+  luminet:   '#4FC3F7',
+  empresa_b: '#FFB703',
+  huus:      '#FF6B35',
 };
 
-const EMPRESAS = ['todas', 'xcien', 'luminet', 'wispi', 'huus'];
+const EMPRESAS = ['todas', 'empresa_a', 'luminet', 'empresa_b', 'huus'];
 const TIPOS    = ['todos', ...Object.keys(TIPO_CONFIG)];
 
 function formatDate(iso: string) {
@@ -155,7 +155,7 @@ export default function TokensSection({ theme, activeThemeId }: { theme: ThemeCo
   const [tipoFiltro, setTipo]         = useState('todos');
   const [backendOnline, setOnline]    = useState(false);
   const [showForm, setShowForm]       = useState(false);
-  const [formData, setFormData]       = useState({ tipo: 'alta', nombre: '', detalle: '', empresa: 'xcien' });
+  const [formData, setFormData]       = useState({ tipo: 'alta', nombre: '', detalle: '', empresa: 'empresa_a' });
 
   const loadTokens = () => {
     fetch(`${API_BASE}/api/tokens`)
@@ -180,7 +180,7 @@ export default function TokensSection({ theme, activeThemeId }: { theme: ThemeCo
       });
       if (res.ok) {
         setShowForm(false);
-        setFormData({ tipo: 'alta', nombre: '', detalle: '', empresa: 'xcien' });
+        setFormData({ tipo: 'alta', nombre: '', detalle: '', empresa: 'empresa_a' });
         loadTokens();
       }
     } catch (e) { alert("Error al generar token"); }

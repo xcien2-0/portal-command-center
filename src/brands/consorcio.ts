@@ -12,6 +12,12 @@ const consorcio: BrandConfig = {
   academiaLabel: 'CMTT Academia',
   appTitle: 'Consorcio Mexicano de Telecomunicaciones y Tecnología — Portal de Operaciones',
   appDescription: 'Portal de operaciones, NOC y campo — CMTT',
+  odooUrl: '',
+  odooDb: '',
+  emailDomain: 'cmtt.mx',
+  orgName: 'Consorcio Mexicano de Telecomunicaciones y Tecnología',
+  scannerLabel: 'CMTT Scanner',
+  nocLabel: 'CMTT NOC',
 };
 
 export default consorcio;

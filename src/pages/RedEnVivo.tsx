@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MOCK_NODES, MOCK_ALERTS, getNetworkHealthPercent, NetworkNode, ActiveAlert } from '@/data/mockNetworkData';
+import brand from '../brand';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const G = '#00ff88';
@@ -25,7 +26,7 @@ function uptimeStatus(u: number)   { return u < 95 ? 'critical' : u < 99 ? 'warn
 function ispColor(isp: string)     { return ISP_COLORS[isp] ?? '#888'; }
 
 const BOOT_LINES = [
-  'XCIEN NOC v2.0 — INICIANDO...',
+  `${brand.nocLabel} v${brand.version} — INICIANDO...`,
   'Cargando nodos de red...',
   'Conectando telemetría...',
   'Sistema operacional.',
@@ -342,7 +343,7 @@ export default function RedEnVivo() {
           {/* ── Footer ── */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, padding: '0 2px' }}>
             <span style={{ fontSize: 8, color: `${G}20`, fontFamily: 'monospace', letterSpacing: 1.5 }}>
-              XCIEN NOC v2.0 · REFRESH {lastR.toLocaleTimeString('es-MX')} · AUTO 30s
+              {brand.nocLabel} v{brand.version} · REFRESH {lastR.toLocaleTimeString('es-MX')} · AUTO 30s
             </span>
             <div style={{ display: 'flex', gap: 14, fontSize: 8, fontFamily: 'monospace', letterSpacing: 1 }}>
               <span style={{ color: G }}>● OK</span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ThemeConfig, SectionId } from '../types';
+import brand from '../../../brand';
 import { 
   Monitor, Radio, Send, Phone, ScanLine, LayoutDashboard, 
   FileBarChart, GraduationCap, ChevronRight 
@@ -17,7 +18,7 @@ const MODULES: { id: SectionId; title: string; desc: string; icon: any; color: s
   { id: 'scan',     title: 'Scanner de Inventario', icon: ScanLine, desc: 'Escaneo de equipos y red', color: '#FB923C' },
   { id: 'gerencia', title: 'Dashboard Gerencial',   icon: LayoutDashboard, desc: 'Revenue, SLAs y métricas', color: '#FBBF24' },
   { id: 'reports',  title: 'Reportes & Gobierno',   icon: FileBarChart, desc: 'Impacto y cumplimiento', color: '#F472B6' },
-  { id: 'academia', title: 'Academia XCIEN',        icon: GraduationCap, desc: 'Capacitación y WFM', color: '#34D399' },
+  { id: 'academia', title: brand.academiaLabel,      icon: GraduationCap, desc: 'Capacitación y WFM', color: '#34D399' },
 ];
 
 export default function InicioSection({ theme, onNavigate }: Props) {
@@ -29,7 +30,7 @@ export default function InicioSection({ theme, onNavigate }: Props) {
         <h1 style={{ fontSize: 32, fontWeight: 800, color: theme.text, marginBottom: 8, letterSpacing: -1 }}>
           Operations Hub <span style={{ color: accent }}>2.0</span>
         </h1>
-        <p style={{ color: theme.dim, fontSize: 14 }}>Bienvenido al centro de mando unificado de XCIEN.</p>
+        <p style={{ color: theme.dim, fontSize: 14 }}>Bienvenido al centro de mando unificado de {brand.name}.</p>
       </div>
 
       <div style={{ 

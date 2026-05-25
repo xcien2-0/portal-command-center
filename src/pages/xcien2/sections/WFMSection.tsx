@@ -1123,7 +1123,7 @@ function NocValidacionPanel({ theme, order, onRefresh }: NocPanelProps) {
             </div>
             <div>
               <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Host ID / Nombre en {herramienta}</div>
-              <input style={inputStyle} placeholder="ej. xcien-cliente-fw01" value={hostId} onChange={e => setHostId(e.target.value)} />
+              <input style={inputStyle} placeholder="ej. cliente-fw01" value={hostId} onChange={e => setHostId(e.target.value)} />
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
@@ -1455,7 +1455,7 @@ function PruebasVelocidadPanel({ theme, order, onRefresh }: PruebasProps) {
     subida_mbps: '',
     latencia_ms: '',
     perdida_pct: '0',
-    servidor: 'XCIEN-SRV-MTY',
+    servidor: 'SRV-MTY',
     herramienta: 'iPerf3',
   });
 
@@ -1584,7 +1584,7 @@ function PruebasVelocidadPanel({ theme, order, onRefresh }: PruebasProps) {
           </div>
           <div>
             <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4 }}>Servidor de prueba</div>
-            <input style={inputStyle} placeholder="XCIEN-SRV-MTY"
+            <input style={inputStyle} placeholder="SRV-MTY"
               value={form.servidor} onChange={e => setForm(f => ({ ...f, servidor: e.target.value }))} />
           </div>
         </div>

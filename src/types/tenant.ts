@@ -11,7 +11,7 @@ export interface Tenant {
 }
 
 export const CASA_TENANTS: Tenant[] = [
-  { id: 'xcien',   name: 'XCIEN',       type: 'casa', slug: 'xcien',   nocboardApiUrl: 'https://noc.xcien.mx/api' },
+  { id: 'xcien',   name: 'XCIEN',       type: 'casa', slug: 'xcien' },
   { id: 'wispi',   name: 'Wispi',       type: 'casa', slug: 'wispi' },
   { id: 'luminet', name: 'Luminet WAN', type: 'casa', slug: 'luminet' },
   { id: 'huus',    name: 'Huus',        type: 'casa', slug: 'huus' },

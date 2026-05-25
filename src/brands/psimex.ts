@@ -12,6 +12,12 @@ const psimex: BrandConfig = {
   academiaLabel: 'PSI México Academia',
   appTitle: 'Proveedora de Servicios de Internet de México — Portal de Operaciones',
   appDescription: 'Portal de operaciones, NOC y campo — PSI México',
+  odooUrl: '',
+  odooDb: '',
+  emailDomain: 'psimex.mx',
+  orgName: 'PSI México',
+  scannerLabel: 'PSI México Scanner',
+  nocLabel: 'PSI México NOC',
 };
 
 export default psimex;

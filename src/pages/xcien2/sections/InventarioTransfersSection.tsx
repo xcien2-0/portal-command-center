@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 // ─── Types (mirrors inventario_tokens.py) ─────────────────────────────────────
 
@@ -399,7 +400,7 @@ function NewTransferForm({
           <input
             value={createdBy}
             onChange={e => setCreatedBy(e.target.value)}
-            placeholder="tu@xcien.com"
+            placeholder={`tu@${brand.emailDomain}`}
             style={fieldStyle}
           />
         </div>

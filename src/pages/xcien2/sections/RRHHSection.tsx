@@ -1,7 +1,6 @@
 /**
  * RRHHSection.tsx — Módulo de Recursos Humanos
  * Directorio · Estadísticas · Organigrama por empresa/departamento
- * Fuente: Odoo wispi17 (hr.employee)
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -372,7 +371,7 @@ export default function RRHHSection({ theme }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: text }}>Recursos Humanos</h2>
-            <p style={{ fontSize: 12, color: dim, margin: '4px 0 0' }}>Directorio organizacional · Odoo wispi17</p>
+            <p style={{ fontSize: 12, color: dim, margin: '4px 0 0' }}>Directorio organizacional · ERP</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {[

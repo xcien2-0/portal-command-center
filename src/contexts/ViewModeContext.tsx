@@ -13,7 +13,7 @@ const ViewModeContext = createContext<ViewModeContextType | undefined>(undefined
 export function ViewModeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ViewMode>(() => {
     try {
-      return (localStorage.getItem('xcien_view_mode') as ViewMode) || 'classic';
+      return (localStorage.getItem('app_view_mode') as ViewMode) || 'classic';
     } catch {
       return 'classic';
     }
@@ -22,7 +22,7 @@ export function ViewModeProvider({ children }: { children: React.ReactNode }) {
   const setMode = (newMode: ViewMode) => {
     setModeState(newMode);
     try {
-      localStorage.setItem('xcien_view_mode', newMode);
+      localStorage.setItem('app_view_mode', newMode);
     } catch (e) {
       console.error(e);
     }

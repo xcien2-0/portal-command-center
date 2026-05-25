@@ -54,7 +54,7 @@ interface Tx {
 }
 
 const EMPRESA_COLOR: Record<string, string> = {
-  xcien: '#00C896', luminet: '#4FC3F7', wispi: '#FFB703', huus: '#FF6B35',
+  empresa_a: '#00C896', luminet: '#4FC3F7', empresa_b: '#FFB703', huus: '#FF6B35',
 };
 
 const REGIMEN_COLOR: Record<string, string> = {
@@ -77,7 +77,7 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
   const [online, setOnline]     = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    nombre: '', categoria: 'equipo_red', empresa: 'xcien', regimen: 'PROPIO',
+    nombre: '', categoria: 'equipo_red', empresa: 'empresa_a', regimen: 'PROPIO',
     site: '', numero_serie: '', marca: '', modelo: '', ip: '', network_code: 'X100'
   });
 
@@ -87,14 +87,14 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
       fetch(`${API}/api/transacciones`).then(r => r.json()),
     ]).then(([a, t]) => {
       if (Array.isArray(a) && a.length > 0) setActivos(a);
-      else setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'xcien', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
+      else setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'empresa_a', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
       if (Array.isArray(t) && t.length > 0) setTxs(t);
-      else setTxs([{ tx_id: 'TX-001', empresa_origen: 'xcien', empresa_destino: 'wispi', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
+      else setTxs([{ tx_id: 'TX-001', empresa_origen: 'empresa_a', empresa_destino: 'empresa_b', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
       setOnline(true);
     }).catch(() => {
       setOnline(false);
-      setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'xcien', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
-      setTxs([{ tx_id: 'TX-001', empresa_origen: 'xcien', empresa_destino: 'wispi', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
+      setActivos([{ activo_id: 'ACT-001', nombre: 'Router Core X', categoria_label: 'Equipo de Red', empresa: 'empresa_a', regimen: 'PROPIO', site: 'Monterrey', numero_serie: 'SN-9988', categoria: 'equipo_red', ip: '10.0.0.1' }]);
+      setTxs([{ tx_id: 'TX-001', empresa_origen: 'empresa_a', empresa_destino: 'empresa_b', concepto: 'Traspaso de Hardware', precio_preferencial: 2500, fecha: new Date().toISOString() }]);
     });
   }, []);
 

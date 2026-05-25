@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { API_BASE } from '../config';
+import brand from '../brand';
 import {
   Monitor, Radio, Send, Phone, ScanLine, LayoutDashboard,
   FileBarChart, GraduationCap, AlertTriangle, CheckCircle2,
@@ -18,7 +19,7 @@ const MODULES = [
   {
     title: 'Centro de Operaciones (NOC)',
     description: 'Monitoreo de red, nodos y alertas en tiempo real',
-    url: '/xcien2?section=noc',
+    url: '/portal?section=noc',
     icon: Monitor,
     color: '#00B4D8',
     bg: 'rgba(0,180,216,0.08)',
@@ -27,7 +28,7 @@ const MODULES = [
   {
     title: 'Dispatch',
     description: 'Gestión de técnicos en campo',
-    url: '/xcien2?section=wfm',
+    url: '/portal?section=wfm',
     icon: Send,
     color: '#60A5FA',
     bg: 'rgba(96,165,250,0.08)',
@@ -36,7 +37,7 @@ const MODULES = [
   {
     title: 'Call Center',
     description: 'Atención y escalamiento de tickets',
-    url: '/xcien2?section=call',
+    url: '/portal?section=call',
     icon: Phone,
     color: '#A78BFA',
     bg: 'rgba(167,139,250,0.08)',
@@ -45,7 +46,7 @@ const MODULES = [
   {
     title: 'Inventario & Scanner',
     description: 'Escaneo de equipos y trazabilidad',
-    url: '/xcien2?section=scan',
+    url: '/portal?section=scan',
     icon: ScanLine,
     color: '#FB923C',
     bg: 'rgba(251,146,60,0.08)',
@@ -54,7 +55,7 @@ const MODULES = [
   {
     title: 'Creación de Etiquetas',
     description: 'Generación de QR y comprobantes',
-    url: '/xcien2?section=etiquetas',
+    url: '/portal?section=etiquetas',
     icon: Tag,
     color: '#FFB703',
     bg: 'rgba(255,183,3,0.08)',
@@ -63,7 +64,7 @@ const MODULES = [
   {
     title: 'Gerencia',
     description: 'Revenue, SLAs y agentes IA',
-    url: '/xcien2?section=gerencia',
+    url: '/portal?section=gerencia',
     icon: LayoutDashboard,
     color: '#FBBF24',
     bg: 'rgba(251,191,36,0.08)',
@@ -72,16 +73,16 @@ const MODULES = [
   {
     title: 'Reportes',
     description: 'Gobierno, impacto y cumplimiento',
-    url: '/xcien2?section=reports',
+    url: '/portal?section=reports',
     icon: FileBarChart,
     color: '#F472B6',
     bg: 'rgba(244,114,182,0.08)',
     border: 'rgba(244,114,182,0.25)',
   },
   {
-    title: 'Academia XCIEN',
+    title: brand.academiaLabel,
     description: 'Capacitación, exámenes y WFM',
-    url: '/xcien2?section=academia',
+    url: '/portal?section=academia',
     icon: GraduationCap,
     color: '#34D399',
     bg: 'rgba(52,211,153,0.08)',
@@ -90,7 +91,7 @@ const MODULES = [
   {
     title: 'Puente IA (Antigravity)',
     description: 'Terminal de ejecución y logs en tiempo real',
-    url: '/xcien2?section=bridge',
+    url: '/portal?section=bridge',
     icon: Zap,
     color: '#F472B6',
     bg: 'rgba(244,114,182,0.08)',
@@ -99,7 +100,7 @@ const MODULES = [
   {
     title: 'Sala de Guerra (War Room)',
     description: 'Orquestación multi-agente en vivo',
-    url: '/xcien2?section=war-room',
+    url: '/portal?section=war-room',
     icon: Activity,
     color: '#FFB703',
     bg: 'rgba(255,183,3,0.08)',
@@ -204,36 +205,36 @@ export default function Index() {
   const dateStr = now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--xcien-bg)', color: 'var(--xcien-text)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--app-bg)', color: 'var(--app-text)' }}>
 
       {/* ── Hero Header ──────────────────────────────────────────────────── */}
       <div
         className="px-8 pt-10 pb-8"
-        style={{ borderBottom: '1px solid var(--xcien-border)' }}
+        style={{ borderBottom: '1px solid var(--app-border)' }}
       >
         <div className="max-w-[1300px] mx-auto flex items-end justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <img src="/xcien.png" alt="XCIEN" className="h-8 w-auto object-contain" />
+              <img src={brand.logo} alt={brand.name} className="h-8 w-auto object-contain" />
               <span
                 className="text-[28px] font-bold tracking-tight"
-                style={{ color: 'var(--xcien-text)', letterSpacing: '-0.02em' }}
+                style={{ color: 'var(--app-text)', letterSpacing: '-0.02em' }}
               >
-                XCIEN 2.0
+                {brand.name} {brand.version}
               </span>
               <span
                 className="text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                style={{ color: 'var(--xcien-accent)', borderColor: 'var(--xcien-accent)', background: 'var(--xcien-accent)15' }}
+                style={{ color: 'var(--app-accent)', borderColor: 'var(--app-accent)', background: 'var(--app-accent)15' }}
               >
                 Operations Hub
               </span>
             </div>
-            <p className="text-[13px] capitalize" style={{ color: 'var(--xcien-dim)' }}>{dateStr}</p>
+            <p className="text-[13px] capitalize" style={{ color: 'var(--app-dim)' }}>{dateStr}</p>
           </div>
 
-          <div className="flex items-center gap-2" style={{ color: 'var(--xcien-dim)' }}>
+          <div className="flex items-center gap-2" style={{ color: 'var(--app-dim)' }}>
             <Clock className="h-4 w-4" />
-            <span className="font-mono text-[20px] font-medium tabular-nums" style={{ color: 'var(--xcien-text)' }}>
+            <span className="font-mono text-[20px] font-medium tabular-nums" style={{ color: 'var(--app-text)' }}>
               {timeStr}
             </span>
           </div>
@@ -260,7 +261,7 @@ export default function Index() {
           </button>
           <div 
             className="flex items-center justify-between p-4 rounded-xl border"
-            style={{ background: 'var(--xcien-card)', borderColor: 'var(--xcien-border)' }}
+            style={{ background: 'var(--app-card)', borderColor: 'var(--app-border)' }}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
@@ -329,16 +330,16 @@ export default function Index() {
               return (
                 <Link
                   key={t.id}
-                  to="/xcien2?section=noc"
+                  to="/portal?section=noc"
                   className="rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02]"
                   style={{
-                    background: 'var(--xcien-card)',
+                    background: 'var(--app-card)',
                     border: `1px solid ${color}30`,
                     boxShadow: `0 0 0 1px ${color}10`,
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold" style={{ color: 'var(--xcien-text)' }}>{t.name}</span>
+                    <span className="text-[13px] font-semibold" style={{ color: 'var(--app-text)' }}>{t.name}</span>
                     <span
                       className="text-[10px] font-medium px-2 py-0.5 rounded-full"
                       style={{ background: `${sc_color}18`, color: sc_color }}
@@ -355,13 +356,13 @@ export default function Index() {
                       {sc}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <div className="h-1.5 rounded-full" style={{ background: 'var(--xcien-border)' }}>
+                      <div className="h-1.5 rounded-full" style={{ background: 'var(--app-border)' }}>
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{ width: `${sc}%`, background: sc_color }}
                         />
                       </div>
-                      <div className="flex justify-between text-[10px]" style={{ color: 'var(--xcien-dim)' }}>
+                      <div className="flex justify-between text-[10px]" style={{ color: 'var(--app-dim)' }}>
                         <span>{t.cities} ciudad{t.cities !== 1 ? 'es' : ''}</span>
                         <span>{t.cityAlerts > 0 ? `${t.cityAlerts} alertas` : 'sin alertas'}</span>
                       </div>
@@ -392,8 +393,8 @@ export default function Index() {
                 to={m.url}
                 className="group rounded-xl p-5 flex flex-col gap-3 transition-all duration-200 hover:scale-[1.02]"
                 style={{
-                  background: 'var(--xcien-card)',
-                  border: `1px solid var(--xcien-border)`,
+                  background: 'var(--app-card)',
+                  border: `1px solid var(--app-border)`,
                 }}
               >
                 <div
@@ -403,8 +404,8 @@ export default function Index() {
                   <m.icon className="h-5 w-5" style={{ color: m.color }} />
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold" style={{ color: 'var(--xcien-text)' }}>{m.title}</p>
-                  <p className="text-[11px] mt-1 line-clamp-2" style={{ color: 'var(--xcien-dim)' }}>{m.description}</p>
+                  <p className="text-[14px] font-semibold" style={{ color: 'var(--app-text)' }}>{m.title}</p>
+                  <p className="text-[11px] mt-1 line-clamp-2" style={{ color: 'var(--app-dim)' }}>{m.description}</p>
                 </div>
               </Link>
             ))}
@@ -419,8 +420,8 @@ export default function Index() {
 function SectionLabel({ children, icon }: { children: React.ReactNode, icon: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <span style={{ color: 'var(--xcien-accent)' }}>{icon}</span>
-      <h2 className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--xcien-dim)' }}>
+      <span style={{ color: 'var(--app-accent)' }}>{icon}</span>
+      <h2 className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--app-dim)' }}>
         {children}
       </h2>
     </div>
@@ -442,7 +443,7 @@ function KpiCard({
   return (
     <div
       className="rounded-xl p-5 relative overflow-hidden"
-      style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}
+      style={{ background: 'var(--app-card)', border: '1px solid var(--app-border)' }}
     >
       <div className="flex items-center justify-between mb-3 relative z-10">
         <span style={{ color: accent }}>{icon}</span>

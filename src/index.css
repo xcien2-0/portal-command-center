@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Paleta XCIEN — Verde corporativo + Blanco */
+    /* Paleta principal — Verde corporativo + Blanco */
     --background: 160 20% 8%;
     --foreground: 0 0% 96%;
 

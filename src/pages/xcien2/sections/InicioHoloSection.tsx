@@ -1,5 +1,6 @@
 import { ThemeConfig } from '../types';
 import { useState, useEffect } from 'react';
+import brand from '../../../brand';
 import { API_BASE } from '../../../config';
 import { 
   Zap, 
@@ -57,11 +58,11 @@ export default function InicioHoloSection({ theme, backendStatus, onSelect, brid
       {/* Hero Welcome */}
       <div style={{ marginBottom: 48, position: 'relative' }}>
         <h1 style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: -2, lineHeight: 1 }}>
-          CENTRO DE COMANDO <span style={{ color: accent }}>XCIEN 2.0</span>
+          CENTRO DE COMANDO <span style={{ color: accent }}>{brand.name} {brand.version}</span>
         </h1>
         <p style={{ fontSize: 16, color: theme.dim, marginTop: 12, maxWidth: 600 }}>
-          Orquestación multi-agente para la profesionalización operativa. 
-          Sistema de misión crítica para la infraestructura nacional de XCIEN.
+          Orquestación multi-agente para la profesionalización operativa.
+          Sistema de misión crítica para la infraestructura nacional de {brand.name}.
         </p>
       </div>
 
@@ -116,7 +117,7 @@ export default function InicioHoloSection({ theme, backendStatus, onSelect, brid
                     <Database size={20} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>Conector ERP (Odoo wispi17)</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>Conector ERP (Odoo {brand.odooDb || 'ERP'})</div>
                     <div style={{ fontSize: 12, color: theme.dim }}>XML-RPC over HTTPS</div>
                   </div>
                 </div>
@@ -184,7 +185,7 @@ export default function InicioHoloSection({ theme, backendStatus, onSelect, brid
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <span style={{ color: accent }}>[06:45:08]</span>
-              <span>Sincronizando base de datos wispi17... OK.</span>
+              <span>{`Sincronizando base de datos ${brand.odooDb || 'ERP'}... OK.`}</span>
             </div>
             <div style={{ display: 'flex', gap: 12, opacity: 0.6 }}>
               <span style={{ color: accent }}>[06:44:55]</span>

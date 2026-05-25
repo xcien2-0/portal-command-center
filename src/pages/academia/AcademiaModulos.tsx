@@ -23,7 +23,7 @@ export default function AcademiaModulos() {
         const mapped = docs.map((d, i) => ({
           id: d.filename || String(i),
           titulo: d.title || d.filename,
-          descripcion: d.description || 'Estándar de operación XCIEN',
+          descripcion: d.description || 'Estándar de operación',
           tipo: 'documento',
           nivel_requerido: 1,
           xp_otorga: 30,

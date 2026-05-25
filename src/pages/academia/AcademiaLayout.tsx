@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Home, BookOpen, ClipboardCheck, User, Trophy, Settings, ChevronDown } from 'lucide-react';
 import { API_BASE } from '@/config';
 import { getInitials, getLevelInfo, PLAZA_LABELS } from '@/lib/academia-utils';
+import brand from '@/brand';
 
 interface Technician {
   id: string;
@@ -84,7 +85,7 @@ export default function AcademiaLayout() {
               <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ background: '#1D9E75' }}>
                 X
               </div>
-              <span className="font-semibold text-base hidden sm:block">Academia <span style={{ color: '#1D9E75' }}>XCIEN</span></span>
+              <span className="font-semibold text-base hidden sm:block">{brand.academiaLabel}</span>
             </Link>
 
             {/* Nav links */}

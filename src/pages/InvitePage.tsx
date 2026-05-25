@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../config';
+import brand from '../brand';
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
@@ -69,10 +70,10 @@ export default function InvitePage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#00A859] opacity-10 blur-[100px] -mr-32 -mt-32" />
         
         <div className="relative z-10">
-          <img src="/xcien.png" alt="XCIEN" className="h-10 mb-8" />
-          
+          <img src={brand.logo} alt={brand.name} className="h-10 mb-8" />
+
           <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-            ¡Bienvenido a <span className="text-[#00A859]">XCIEN 2.0</span>!
+            ¡Bienvenido a <span className="text-[#00A859]">{brand.name} {brand.version}</span>!
           </h1>
           
           <p className="text-[#808080] text-lg mb-8 leading-relaxed">
@@ -91,14 +92,14 @@ export default function InvitePage() {
           </div>
 
           <button 
-            onClick={() => navigate('/xcien2')}
+            onClick={() => navigate('/portal')}
             className="w-full bg-[#00A859] text-black font-black py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,168,89,0.3)] text-lg"
           >
             Entrar al Centro de Comando
           </button>
           
           <p className="mt-6 text-center text-[#555] text-xs font-medium">
-            SISTEMA OPERATIVO XCIEN — MOTOR ANTIGRAVITY v2.6.4
+            {`SISTEMA OPERATIVO ${brand.name} — MOTOR ANTIGRAVITY v2.6.4`}
           </p>
         </div>
       </div>

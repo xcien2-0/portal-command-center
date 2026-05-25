@@ -1,4 +1,4 @@
-// Academia XCIEN — Utility functions and constants
+// Academia — Utility functions and constants
 
 export const LEVEL_CONFIG = [
   { level: 1, name: 'Aprendiz', xpRequired: 0, color: '#94a3b8', multiplier: 1.0 },

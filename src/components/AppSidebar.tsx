@@ -4,6 +4,7 @@ import {
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
   ChevronDown, Activity, Settings, FileBarChart, Users, BookOpen, ExternalLink, Tag
 } from 'lucide-react';
+import brand from '@/brand';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +44,7 @@ const opsGroup: { label: string; icon: any; children: Item[] } = {
     { title: 'Dispatch', url: '/dispatch', icon: Send },
     { title: 'Call Center', url: '/call-center', icon: Phone },
     { title: 'Inventario & Scanner', url: '/scan', icon: ScanLine },
-    { title: 'Creación de Etiquetas', url: '/xcien2?section=etiquetas', icon: Tag, external: true },
+    { title: 'Creación de Etiquetas', url: '/portal?section=etiquetas', icon: Tag, external: true },
   ],
 };
 
@@ -58,15 +59,15 @@ const reportsGroup: { label: string; icon: any; children: Item[] } = {
   ],
 };
 
-const xcien2Item: Item = { title: 'XCIEN 2.0', url: '/xcien2', icon: ExternalLink };
+const xcien2Item: Item = { title: `${brand.name} ${brand.version}`, url: '/portal', icon: ExternalLink };
 
 const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } = {
-  label: 'Academia XCIEN',
+  label: brand.academiaLabel,
   icon: GraduationCap,
   main: { title: 'Dashboard', url: '/academia', icon: Home },
   children: [
     { title: 'Biblioteca & Exámenes', url: '/academia/modulos', icon: BookOpen },
-    { title: 'WFM Control Operativo', url: '/xcien2', icon: Users },
+    { title: 'WFM Control Operativo', url: '/portal', icon: Users },
   ],
 };
 
@@ -180,10 +181,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest">
             {collapsed ? (
-              <img src="/xcien.png" alt="XCIEN" className="h-6 w-6 object-contain mx-auto" />
+              <img src={brand.logo} alt={brand.name} className="h-6 w-6 object-contain mx-auto" />
             ) : (
               <div className="flex items-center gap-2 py-1">
-                <img src="/xcien.png" alt="XCIEN" className="h-7 w-auto object-contain" />
+                <img src={brand.logo} alt={brand.name} className="h-7 w-auto object-contain" />
                 <span className="text-[11px] font-semibold tracking-widest text-sidebar-foreground">2.0</span>
               </div>
             )}

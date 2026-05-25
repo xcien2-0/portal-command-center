@@ -629,7 +629,7 @@ export default function Xcien2Page() {
 
   const [theme, dispatch] = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
-      const saved = localStorage.getItem('xcien2_theme');
+      const saved = localStorage.getItem('app_theme');
       return saved ? { ...initial, ...JSON.parse(saved) } : initial;
     } catch { return initial; }
   });
@@ -663,14 +663,14 @@ export default function Xcien2Page() {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--xcien-accent', theme.accent);
-    root.style.setProperty('--xcien-bg', theme.bg);
-    root.style.setProperty('--xcien-card', theme.card);
-    root.style.setProperty('--xcien-border', theme.border);
-    root.style.setProperty('--xcien-text', theme.text);
-    root.style.setProperty('--xcien-dim', theme.dim);
-    root.style.setProperty('--xcien-radius', `${theme.radius}px`);
-    root.style.setProperty('--xcien-font', `${theme.baseFontSize}px`);
+    root.style.setProperty('--app-accent', theme.accent);
+    root.style.setProperty('--app-bg', theme.bg);
+    root.style.setProperty('--app-card', theme.card);
+    root.style.setProperty('--app-border', theme.border);
+    root.style.setProperty('--app-text', theme.text);
+    root.style.setProperty('--app-dim', theme.dim);
+    root.style.setProperty('--app-radius', `${theme.radius}px`);
+    root.style.setProperty('--app-font', `${theme.baseFontSize}px`);
     document.body.style.background = theme.bg;
   }, [theme]);
 

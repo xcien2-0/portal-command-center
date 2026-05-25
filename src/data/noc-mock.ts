@@ -4,7 +4,7 @@ export interface NOCTenantData {
   cities: NOCCity[];
 }
 
-// Datos reales Odoo wispi17 — Abril 2026
+// Datos de referencia — Abril 2026
 // Fuente: Field Service (FSM) — project.task
 
 const buildCity = (id: string, name: string, score: number, online: number, offline: number, alerts: number, lat: number, lng: number): NOCCity => {

@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { ThemeConfig, DEFAULT_THEME, PRESET_ACCENTS, PRESET_THEMES, PresetTheme } from './types';
+import brand from '../../brand';
 
-const LS_KEY   = 'xcien2_theme';
-const LS_SAVED = 'xcien2_saved_themes';
+const LS_KEY   = 'app_theme';
+const LS_SAVED = 'app_saved_themes';
 
 // ── Matrix Background ─────────────────────────────────────────────────────────
 function MatrixBackground() {
@@ -239,7 +240,7 @@ export default function DevPanel({ theme, activeThemeId, onChange, onApplyPreset
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: accent, boxShadow: `0 0 15px ${accent}` }} />
           <div>
             <h2 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px', color: '#fff', textShadow: `0 0 20px ${accent}`, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', letterSpacing: 2 }}>Protocolo Matriz</h2>
-            <p style={{ fontSize: 13, color: accent, margin: 0, fontWeight: 500 }}>Configuración de Núcleo · XCIEN 2.0</p>
+            <p style={{ fontSize: 13, color: accent, margin: 0, fontWeight: 500 }}>{`Configuración de Núcleo · ${brand.name} ${brand.version}`}</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

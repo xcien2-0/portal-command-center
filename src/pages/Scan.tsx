@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, ChevronRight, Check, X, Search, ScanLine, Package } from 'lucide-react';
 import { API_BASE as API } from '../config';
+import brand from '../brand';
 
 /* ── tokens ── */
 const dk = {
@@ -324,7 +325,7 @@ export default function Scan() {
 
         <div className="absolute top-0 left-0 right-0 flex items-center h-14 px-4 z-10">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" style={{ color: dk.text }} /></button>
-          <span className="flex-1 text-center text-sm font-medium" style={{ color: dk.text }}>XCIEN Scanner</span>
+          <span className="flex-1 text-center text-sm font-medium" style={{ color: dk.text }}>{brand.scannerLabel}</span>
         </div>
 
         {state === 'scanning' && (

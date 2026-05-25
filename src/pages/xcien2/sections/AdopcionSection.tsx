@@ -1,6 +1,7 @@
 import { ThemeConfig } from '../types';
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 interface User {
   id: string;
@@ -13,9 +14,9 @@ interface User {
 }
 
 const INITIAL_USERS: User[] = [
-  { id: '1', name: 'Jesús Morales', email: 'j.morales@xcien.com', role: 'Director General', department: 'Dirección', status: 'active', lastSeen: 'Hoy, 09:15' },
-  { id: '2', name: 'Ana Rodríguez', email: 'a.rodriguez@xcien.com', role: 'Líder Técnico', department: 'Operaciones', status: 'active', lastSeen: 'Ayer, 18:30' },
-  { id: '3', name: 'Carlos Mendoza', email: 'c.mendoza@xcien.com', role: 'Técnico Especialista', department: 'Operaciones', status: 'active', lastSeen: 'Hoy, 10:45' },
+  { id: '1', name: 'Jesús Morales', email: 'j.morales@empresa.com', role: 'Director General', department: 'Dirección', status: 'active', lastSeen: 'Hoy, 09:15' },
+  { id: '2', name: 'Ana Rodríguez', email: 'a.rodriguez@empresa.com', role: 'Líder Técnico', department: 'Operaciones', status: 'active', lastSeen: 'Ayer, 18:30' },
+  { id: '3', name: 'Carlos Mendoza', email: 'c.mendoza@empresa.com', role: 'Técnico Especialista', department: 'Operaciones', status: 'active', lastSeen: 'Hoy, 10:45' },
 ];
 
 export default function AdopcionSection({ theme }: { theme: ThemeConfig }) {
@@ -99,7 +100,7 @@ export default function AdopcionSection({ theme }: { theme: ThemeConfig }) {
               <input 
                 value={newUser.email}
                 onChange={e => setNewUser({...newUser, email: e.target.value})}
-                placeholder="usuario@xcien.com"
+                placeholder={`usuario@${brand.emailDomain}`}
                 style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${theme.border}`, borderRadius: 6, padding: 10, color: theme.text, outline: 'none' }}
               />
             </div>

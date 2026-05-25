@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ function fmt(iso?: string) {
 function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
 
 const ENTITY_COLOR: Record<string, string> = {
-  xcien: '#1976D2', luminet: '#00796B', wispi: '#E65100', huus: '#7B1FA2',
+  empresa_a: '#1976D2', luminet: '#00796B', empresa_b: '#E65100', huus: '#7B1FA2',
 };
 
 function extractSummary(token: XToken, schema: Schema): string {
@@ -200,7 +201,7 @@ function TransitionPanel({ token, schema, theme, onDone }: {
         </div>
         <div>
           <label style={{ fontSize: 9, color: theme.dim, display: 'block', marginBottom: 3 }}>QUIÉN</label>
-          <input value={by} onChange={e => setBy(e.target.value)} placeholder="tu@xcien.com" style={inputStyle} />
+          <input value={by} onChange={e => setBy(e.target.value)} placeholder={`tu@${brand.emailDomain}`} style={inputStyle} />
         </div>
       </div>
       <div>
@@ -355,7 +356,7 @@ function NewTokenForm({ schema, theme, onCreated, onCancel }: {
 }) {
   const accent = theme.accent || '#60a5fa';
   const [domain, setDomain] = useState('inventory');
-  const [entity, setEntity] = useState('xcien');
+  const [entity, setEntity] = useState('empresa_a');
   const [createdBy, setCreatedBy] = useState('');
   const [notes, setNotes] = useState('');
   const [payload, setPayload] = useState<Record<string, any>>({});
@@ -513,7 +514,7 @@ function NewTokenForm({ schema, theme, onCreated, onCancel }: {
         <div>
           <label style={{ fontSize: 9, color: theme.dim, display: 'block', marginBottom: 3 }}>CREADO POR</label>
           <input value={createdBy} onChange={e => setCreatedBy(e.target.value)}
-            placeholder="tu@xcien.com" style={inputStyle} />
+            placeholder={`tu@${brand.emailDomain}`} style={inputStyle} />
         </div>
       </div>
 
@@ -701,7 +702,7 @@ export default function XcienTokensSection({ theme }: { theme: ThemeConfig }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: theme.text }}>
-            Tokens XCIEN — Sistema Unificado
+            {`Tokens ${brand.name} — Sistema Unificado`}
           </h2>
           <p style={{ margin: 0, fontSize: 12, color: theme.dim }}>
             Inventario · RRHH · Finanzas · NOC · Academia · Campo — un solo registro, todos los dominios

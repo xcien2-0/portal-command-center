@@ -10,4 +10,10 @@ export interface BrandConfig {
   academiaLabel: string; // "XCIEN Academia", etc.
   appTitle: string;      // Título del <title> en el HTML
   appDescription: string;
+  odooUrl: string;       // "https://odoo.wispi.mx" for xcien
+  odooDb: string;        // "wispi17" for xcien
+  emailDomain: string;   // "xcien.com" for xcien
+  orgName: string;       // full org name for org chart root
+  scannerLabel: string;  // "XCIEN Scanner"
+  nocLabel: string;      // "XCIEN NOC"
 }

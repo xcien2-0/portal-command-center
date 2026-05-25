@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 interface Empleado {
   id: number;
@@ -124,7 +125,7 @@ function buildGraph(
   }
 
   // root
-  add({ id:'root', label:'XCIEN', sublabel:'Grupo Empresarial', type:'root', color:'#00A859', r:36, x:W/2, y:H/2 });
+  add({ id:'root', label:brand.orgName, sublabel:'Grupo Empresarial', type:'root', color:'#00A859', r:36, x:W/2, y:H/2 });
 
   for (const [co, depts] of Object.entries(structure)) {
     const coId    = `co::${co}`;
@@ -174,7 +175,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
   const [photoZoom,   setPhotoZoom]   = useState(false);
   const [searchQ,     setSearchQ]     = useState('');
   const [searchRes,   setSearchRes]   = useState<Empleado[]>([]);
-  const [crumbs, setCrumbs] = useState([{id:'root',label:'XCIEN'}]);
+  const [crumbs, setCrumbs] = useState([{id:'root',label:brand.name}]);
   const { accent, bg, card, border, text, dim } = theme;
 
   // All mutable D3 state lives in refs — never causes re-renders
@@ -300,7 +301,7 @@ export default function OrgTreeView({ empleados, theme }: Props) {
     svg.on('click', () => { setSelectedEmp(null); setEmpDetail(null); setPhotoFailed(false); setPhotoZoom(false); });
 
     // Initial draw
-    expand('root', 'XCIEN');
+    expand('root', brand.name);
 
   }, [empleados]); // only when data loads — never on click
 

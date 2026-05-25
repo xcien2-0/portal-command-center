@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 // ── Odoo eLearning types ──────────────────────────────────────────────────────
 interface OdooLesson {
@@ -83,7 +84,7 @@ function CursosView() {
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: selected.published ? 'rgba(0,200,150,0.12)' : 'rgba(255,71,87,0.12)', color: selected.published ? '#00C896' : '#FF4757', border: `1px solid ${selected.published ? 'rgba(0,200,150,0.3)' : 'rgba(255,71,87,0.3)'}` }}>
             {selected.published ? '● Publicado' : '● No publicado'}
           </span>
-          <a href={`https://odoo.wispi.mx/slides/${selected.id}`} target="_blank" rel="noreferrer"
+          <a href={`${brand.odooUrl}/slides/${selected.id}`} target="_blank" rel="noreferrer"
             style={{ fontSize: 11, fontWeight: 600, padding: '5px 14px', borderRadius: 8, background: 'rgba(0,200,150,0.15)', color: '#00C896', border: '1px solid rgba(0,200,150,0.3)', textDecoration: 'none' }}>
             Abrir en Odoo ↗
           </a>
@@ -111,7 +112,7 @@ function CursosView() {
                 {l.published ? 'Publicada' : 'Borrador'}
               </span>
               {l.website_url && (
-                <a href={`https://odoo.wispi.mx${l.website_url}`} target="_blank" rel="noreferrer"
+                <a href={`${brand.odooUrl}${l.website_url}`} target="_blank" rel="noreferrer"
                   style={{ fontSize: 10, color: '#555', textDecoration: 'none', padding: '3px 8px', borderRadius: 6, border: '0.5px solid rgba(255,255,255,0.08)' }}>
                   Ver ↗
                 </a>
@@ -239,7 +240,7 @@ const LEVELS: Level[] = [
 const BADGES_DATA: Badge[] = [
   { icon:'🔧', name:'Maestro Instalador', desc:'100% en Instalación',      holders:3,  tc:'#4FC3F7' },
   { icon:'📡', name:'RF Pro',             desc:'Dominio total Redes RF',   holders:2,  tc:'#7c3aed' },
-  { icon:'⭐', name:'Leyenda XCIEN',      desc:'Avance ≥ 95%',            holders:1,  tc:'#FFB703' },
+  { icon:'⭐', name:`Leyenda ${brand.name}`,  desc:'Avance ≥ 95%',            holders:1,  tc:'#FFB703' },
   { icon:'🔥', name:'Firewall Hero',      desc:'Habilidad crítica',       holders:4,  tc:'#FF4757' },
   { icon:'🏅', name:'Top de Plaza',       desc:'Mejor técnico en ciudad', holders:6,  tc:'#00C896' },
   { icon:'💥', name:'Racha x5',           desc:'5 capacitaciones seguidas',holders:8, tc:'#FFB703' },
@@ -255,7 +256,7 @@ const TOP5: Top[] = [
 
 const ROADMAP: Phase[] = [
   { q:'Q2 2025', done:true,  color:'#00C896', items:['Matriz de habilidades v1','Sistema de 6 niveles','15 badges definidos','Datos de 47 técnicos'] },
-  { q:'Q3 2025', done:false, color:'#FFB703', items:['Portal web Academia XCIEN','Exámenes en línea','Integración con Odoo','Login individual'] },
+  { q:'Q3 2025', done:false, color:'#FFB703', items:[`Portal web ${brand.academiaLabel}`,'Exámenes en línea','Integración con Odoo','Login individual'] },
   { q:'Q4 2025', done:false, color:'#888',    items:['App móvil técnicos','Smart contracts bonos','Certificaciones oficiales','Expansión 100+'] },
 ];
 
@@ -353,7 +354,7 @@ function SlideIntro() {
         <Chip>Field Services</Chip><Chip>47 técnicos</Chip><Chip>6 plazas · México</Chip>
       </div>
       <div style={{ fontSize: 'clamp(80px,10vw,120px)', fontWeight: 800, lineHeight: 0.8, letterSpacing: -3, marginBottom: 24, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 50px rgba(0,255,136,0.3)' }}>
-        Academia<br /><span style={{ fontWeight: 400, color: GREEN, textShadow: `0 0 30px ${GREEN}60` }}>XCIEN</span>
+        Academia<br /><span style={{ fontWeight: 400, color: GREEN, textShadow: `0 0 30px ${GREEN}60` }}>{brand.name}</span>
       </div>
       <p style={{ fontSize: 16, color: DIM, lineHeight: 1.7, marginBottom: 40, maxWidth: 600 }}>
         El sistema que convierte capacitación en carrera,<br />esfuerzo en reconocimiento, técnicos en leyendas.
@@ -573,7 +574,7 @@ function SlideExamen({ theme }: { theme: ThemeConfig }) {
 function SlideCTA({ onStartExam }: { onStartExam: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}><Chip>Academia XCIEN</Chip><Chip>Q3 2025</Chip></div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}><Chip>{brand.academiaLabel}</Chip><Chip>Q3 2025</Chip></div>
       <div style={{ fontSize: 'clamp(32px,4vw,50px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: -2, marginBottom: 16 }}>
         ¿Listo para ser<br /><span style={{ fontWeight: 400, color: DIM }}>una Leyenda?</span>
       </div>
@@ -632,7 +633,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: GREEN }} />
-            <span style={{ fontSize: 13, fontWeight: 500 }}>XCIEN ACADEMIA</span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>{brand.academiaLabel.toUpperCase()}</span>
           </div>
           
           <div style={{ display: 'flex', gap: 8 }}>

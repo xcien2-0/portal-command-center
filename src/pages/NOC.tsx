@@ -176,28 +176,28 @@ export default function NOC() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--xcien-bg)', color: 'var(--xcien-text)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--app-bg)', color: 'var(--app-text)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--xcien-border)' }}>
+      <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--app-border)' }}>
         <div className="flex items-center gap-3">
-          <Monitor className="h-5 w-5" style={{ color: 'var(--xcien-accent)' }} />
+          <Monitor className="h-5 w-5" style={{ color: 'var(--app-accent)' }} />
           <h1 className="text-[18px] font-bold tracking-tight">NOC Dashboard</h1>
         </div>
-        <div className="flex items-center gap-4 text-[13px] font-medium" style={{ color: 'var(--xcien-dim)' }}>
+        <div className="flex items-center gap-4 text-[13px] font-medium" style={{ color: 'var(--app-dim)' }}>
           <span>{alerts.length} Alertas Activas</span>
-          <div className="h-4 w-[1px]" style={{ background: 'var(--xcien-border)' }} />
+          <div className="h-4 w-[1px]" style={{ background: 'var(--app-border)' }} />
           <span>Ultima actualización: {lastUpdated}</span>
         </div>
       </div>
 
       {/* Tenant tabs */}
-      <div className="flex items-center gap-1 px-6 py-2 overflow-x-auto" style={{ borderBottom: '1px solid var(--xcien-border)' }}>
+      <div className="flex items-center gap-1 px-6 py-2 overflow-x-auto" style={{ borderBottom: '1px solid var(--app-border)' }}>
         <button
           onClick={() => { setActiveTenantId(null); setSelectedCityId(null); }}
           className={`px-4 py-1.5 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${
             activeTenantId === null 
-              ? 'bg-[var(--xcien-accent)] text-white shadow-[0_0_15px_var(--xcien-accent)]' 
-              : 'text-[var(--xcien-dim)] hover:text-[var(--xcien-text)] hover:bg-[var(--xcien-border)]'
+              ? 'bg-[var(--app-accent)] text-white shadow-[0_0_15px_var(--app-accent)]' 
+              : 'text-[var(--app-dim)] hover:text-[var(--app-text)] hover:bg-[var(--app-border)]'
           }`}
         >
           Vista Global
@@ -208,8 +208,8 @@ export default function NOC() {
             onClick={() => { setActiveTenantId(tenant.id); setSelectedCityId(null); }}
             className={`px-4 py-1.5 rounded-md text-[12px] font-medium transition-all whitespace-nowrap ${
               activeTenantId === tenant.id 
-                ? 'bg-[var(--xcien-accent)] text-white shadow-[0_0_15px_var(--xcien-accent)]' 
-                : 'text-[var(--xcien-dim)] hover:text-[var(--xcien-text)] hover:bg-[var(--xcien-border)]'
+                ? 'bg-[var(--app-accent)] text-white shadow-[0_0_15px_var(--app-accent)]' 
+                : 'text-[var(--app-dim)] hover:text-[var(--app-text)] hover:bg-[var(--app-border)]'
             }`}
           >
             {tenant.name}
@@ -226,12 +226,12 @@ export default function NOC() {
               <div className="space-y-6">
                 <BenchmarkTable />
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl" style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--xcien-dim)' }}>SLA Cumplimiento</p>
+                  <div className="p-4 rounded-xl" style={{ background: 'var(--app-card)', border: '1px solid var(--app-border)' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--app-dim)' }}>SLA Cumplimiento</p>
                     <p className="text-[24px] font-bold text-[#00C896]">99.8%</p>
                   </div>
-                  <div className="p-4 rounded-xl" style={{ background: 'var(--xcien-card)', border: '1px solid var(--xcien-border)' }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--xcien-dim)' }}>MTTR Global</p>
+                  <div className="p-4 rounded-xl" style={{ background: 'var(--app-card)', border: '1px solid var(--app-border)' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--app-dim)' }}>MTTR Global</p>
                     <p className="text-[24px] font-bold text-[#FFB703]">42m</p>
                   </div>
                 </div>
