@@ -1,4 +1,33 @@
-# Backups y temporales que rompen Vite/TS
+# ── Solo se trackea código de la app (src/, public/, backend/, config) ────────
+# Documentos, PDFs, scripts y archivos personales NUNCA van al repo
+*.pdf
+*.mp4
+*.mov
+*.html
+*.py
+*.sh
+*.md
+!README.md
+*.mmd
+backups/
+docs/
+db/
+static/
+scratch/
+supabase/
+nginx/
+Xcien_Docs/
+xcien-docs-repo
+banco_preguntas.json
+requirements.txt
+ecosystem.config.cjs
+docker-compose.yml
+netlify.toml
+playwright*.ts
+playwright*.config.*
+deploy.sh
+
+# ── Backups y temporales que rompen Vite/TS ───────────────────────────────────
 *.bak
 *.backup
 *.orig
