@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import HexoField3D from '../../components/HexoField3D';
 import { API_BASE } from '../../config';
+import brand from '../../brand';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
 import FloatingChat from './sections/FloatingChat';
 import NocSection from './sections/NocSection';
@@ -132,7 +133,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   etiquetas: 'Etiquetas & Comprobantes',
   foda: 'Análisis Estratégico',
   adopcion: 'Gestión de Usuarios',
-  academia: 'XCIEN Academia',
+  academia: brand.academiaLabel,
   gerencia: 'Dashboard Gerencial',
   reports: 'Reportes & Gobierno',
   bridge: 'Antigravity Data Bridge',
@@ -212,15 +213,15 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
         flexShrink: 0,
         overflow: 'hidden',
       }}>
-        <img src="/xcien.png" alt="XCIEN" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
+        <img src={brand.logo} alt={brand.name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
         {!collapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: U.text, letterSpacing: -0.3 }}>XCIEN</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: U.text, letterSpacing: -0.3 }}>{brand.name}</span>
             <span style={{
               color: U.accent, fontSize: 9, fontWeight: 700,
               background: 'rgba(0,175,240,0.12)',
               padding: '2px 5px', borderRadius: 3, letterSpacing: 0.5,
-            }}>2.0</span>
+            }}>{brand.version}</span>
           </div>
         )}
       </div>
@@ -309,7 +310,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
               fontWeight: 700, fontSize: 10, color: '#0d1117', flexShrink: 0,
             }}>JM</div>
             <div style={{ overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: U.text, whiteSpace: 'nowrap' }}>Admin XCIEN</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: U.text, whiteSpace: 'nowrap' }}>{brand.adminLabel}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <div style={{
                   width: 5, height: 5, borderRadius: '50%',
@@ -545,7 +546,7 @@ function Content({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 32 }}>
           <div style={{ textAlign: 'center', maxWidth: 400 }}>
             <h2 style={{ fontSize: 28, fontWeight: 800, color: theme.accent, marginBottom: 12 }}>📱 ACCESO MÓVIL</h2>
-            <p style={{ fontSize: 16, color: theme.dim }}>Escanea el código para llevar el centro de mando XCIEN 2.0 en tu celular.</p>
+            <p style={{ fontSize: 16, color: theme.dim }}>Escanea el código para llevar el centro de mando {brand.name} {brand.version} en tu celular.</p>
           </div>
 
           <div style={{
@@ -724,7 +725,7 @@ export default function Xcien2Page() {
         }}>
           {/* Left: breadcrumb */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: U.dim }}>XCIEN 2.0</span>
+            <span style={{ fontSize: 11, color: U.dim }}>{brand.name} {brand.version}</span>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>/</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: U.text }}>
               {SECTION_TITLE[section]}

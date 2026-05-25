@@ -9,7 +9,6 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
-    // Proxy: todas las rutas /api/* y /academia van al backend sin CORS
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
