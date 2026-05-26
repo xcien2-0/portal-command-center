@@ -1,0 +1,410 @@
+Estandar de entrega 
+
+Estándar de instalación:
+
+El Estándar de Instalación es un proceso sistematizado con pasos y reglas definidos para la entrega de servicios.
+
+
+
+
+
+Pasos a seguir para la entrega de servicio:
+
+Recepción de Tarea, análisis de requerimientos  (Odoo)
+Solicitud de Requerimientos 
+Trayecto con el cliente 
+Presentación con el cliente
+Ejecución de Entrega 
+Validación de Entrega 
+Servicio Entregado 
+
+
+Recepción de Tarea 
+
+
+El equipo técnico verifica la Habilitación a través de su herramienta de trabajo (Celular) vía una tarea de Odoo, en la cual se encuentra el nombre del cliente, dirección, el tipo de Entrega, fecha, horario de visita,etc, así como un resumen del diagnóstico o indicación previo de las áreas de venta, preventa.
+
+
+
+TAREA SERVICIO EXTERNO 
+Se presentan los siguientes datos:
+
+Título de tarea
+Tipo de tarea
+Nombre de cliente 
+Contacto en sitio 
+Fecha en que se realizará el servicio 
+
+
+Revisión de equipo de protección personal
+
+Contar siempre con uniforme completo
+Zapatos de seguridad
+Chaleco de seguridad
+Casco de seguridad con barbiquejo
+Guantes para trabajo
+Arnés de seguridad a 5 puntos de anclaje
+Línea de vida para seguridad del trabajador 
+Línea de vida de ganchos dobles para ascenso 
+
+
+
+Solicitud de Requerimientos 
+
+En esta parte se involucra la solicitud de equipamiento y/o materiales correspondientes para realizar la entrega de servicio.
+ 
+Ejemplos:
+Radios
+Routers
+Mastiles (Basicos o Telescopicos)
+Cableado
+AP´s
+Tuberias
+
+Etc..
+
+
+Ejemplo de Requerimientos 
+
+Tipo o nombre de requerimiento, explica radios, router, antenas, poe, etc.
+Descripción, explica brevemente la función del tipo de requerimiento.
+Orden de compra, es el folio con el cual se procesa la compra del equipo 
+
+Trayecto con cliente
+
+
+Para este paso se deben seguir las indicaciones brindadas en la tarea S.E. donde previamente el personal de dispatch corrobora la dirección y/o coordenadas del cliente.
+
+Es responsabilidad tanto de dispatch como del técnico estar brindando tiempos en el trayecto en dirección al cliente.
+
+
+En el apartado de Descripción se muestran los detalles del sitio para con esto ubicar y asistir al sitio correcto.
+Uso de GPS
+
+Etapa 3
+Presentación con el cliente 
+
+Empresa de la que se acude
+ (XCIEN, HUUS, LUMINET WAN), siempre con cordialidad y tener buena presentación con el cliente.           
+
+Explicación del trabajo al cliente
+
+Explicación de cómo se instalará el servicio, si se cuenta con algún acceso a azotea,  ya sea escalera marina o se requiere la escalera, donde se entregará el router o punto de demarcación.
+Trayectoria de cableado
+Validar trayectoria de cableado desde instalación en azotea hasta el site o donde se vaya a instalar el demarcador, validar acceso por tubería o paso de muro.
+Comenzar con el proceso de instalación  
+
+Prepararse para subir a azotea, escalera,
+arnes, casco, linea de vida, etc. lo que se 
+requiere en sitio para trabajar de manera
+segura.
+
+Material especial para instalación
+ 
+Realizar revisión en sitio y con cliente si se requiere algún material especial para la instalación o algún requerimiento especial del sitio.
+
+05
+01
+02
+03
+04
+Procedimiento de Instalación en sitio  
+(presentación con el cliente)
+
+Presentación con cliente
+Manejo de la información
+
+
+Buenos días (tardes) mi nombre es ___Pablo Capetillo___
+De la Empresa (Xcien, Luminet, Huus, Senel )
+Vengo a realizar la Instalación de su servicio de  Internet el cual es (Ejemplo [SO54439] Sandur, SIDP-30, TRANSPORTES LAR MEX ) traducido a un servicio de internet dedicado de 30mb
+
+   Presentación
+
+Ejemplos de nomenclaturas de tipo de servicio
+SIDP
+VOIP
+SIEV
+AD
+SRPVD
+SIMP
+CDD
+SIS
+SSTC
+Servicio internet dedicado plus
+Servicio Voz IP
+Servicio Eventual 
+Alta Disponibilidad 
+Servicio red privada virtual
+Servicio internet mye plus
+cambio de domicilio 
+servicio internet satelital
+Servicio de soporte tecnico
+
+
+Proceso de instalación
+
+La instalación se trabaja en tres fases: 
+ 
+Fase 1: Se realiza una revisión completa de cuál es la mejor ubicación para realizar la instalación y lo que se va a requerir (Corroborado con cliente)
+Fase 2: Instalamos  un mástil con un radio en la azotea.
+Fase 3: Cableamos el radio hacia un router que instalamos en el site o en donde usted nos indique.
+Fase 4: Instalación y configuración del router.
+
+El tiempo aproximado de la  Instalación es de __________
+  
+
+Etapa 4
+Puntos a considerar sobre Instalación 
+
+
+LINEA DE VISTA 
+
+Subir a el punto más alto y con espacio suficiente para realizar la instalación factible
+
+En base a la información de la tarea S.E. se debe ubicar la línea hacia la RB de la que depende el servicio, en esta parte se define si se realizara maqueta o se instala la infraestructura (esto se define dando vista a la línea y revisando el relieve hacia la RB )
+
+
+
+
+
+
+
+
+Validar lo que se requiere para la instalación ya sea empotrado, tensado, o alguna infraestructura especial, ejemplo si ocupan opresores en  caso de ser lámina de ceja.
+LV hacia RB 
+
+
+MAQUETA E INSTALACIÓN 
+(factible)
+
+Validar línea de vista y altura que se requiere en sitio, si se detecta alguna obstrucción o comprometida la LV, se realizará una maqueta para poder validar el servicio y que se tenga la altura requerida para poder entregar un servicio de calidad y en óptimas condiciones.
+
+
+
+                            
+
+
+
+
+
+
+
+Una vez realizada la maqueta de manera exitosa, se procederá a realizar la instalación como se había pre-visualizado anteriormente, ya sea empotrado o tensado, en dado caso que la LV sea franca hacia RB, la altura requerida en sitio y si no se detecta obstrucción en base al resultado de aprovisionamiento NO será necesario realizar maqueta y se realiza directamente la instalación.
+
+(Realización de maqueta en sitio)
+Definición de Maqueta:
+Poner provisional con el equipo en la punta del mástil para validar si da los valores requeridos para la entrega del servicio
+
+
+MAQUETA E INSTALACIÓN 
+(No factible)
+
+Si en dado caso la maqueta del servicio no es factible con 3 mts de mástil ni con 6 mts, validar con aprovisionamiento junto con preventa y COR (opcional) el paso a seguir, brindar retroalimentación del sitio, altura total de la construcción, caseta o nave industrial, y realizar levantamiento del sitio (altura, espacio disponible para instalar, tipo de estructura, trayectoria de cableado, instalación de router o punto de demarcación y LV), y se regresa la tarea al area de preventa para la revisión de la factibilidad del sitio 
+
+
+                            
+
+
+
+
+
+
+
+Una vez realizada la maqueta NO exitosa y haber validado con aprovisionamiento y preventa que con la altura que se cuenta y no se pudo dar otra solución en sitio (otro punto de instalación, otra RB o alguna otra solución por tema de sitio), se procederá a retirarse de sitio.
+
+
+Área para instalación segura
+Tipo de instalación 
+Ángulos de anclaje 
+Anclaje seguro
+Ángulo de retenida (45* o mínimo la mitad de la altura instalada)
+Altura de retenida (15 cm aprox debajo de la punta de cada sección de mástil) 
+Trayectoria de cableado
+Tipo de servicio a instalar
+Revisión de voltajes 
+
+Puntos para una instalación segura 
+Infraestructura Tensada
+
+
+		Validación de Voltaje Correcto
+
+Ejemplos de infraestructuras 
+
+
+INSTALACIÓN  EMPOTRADO 
+(3 mts maximo)
+
+
+Contar con LV totalmente franca hacia RB 
+Contar con al menos 80 cm de pretil 
+Utilizar 2 herrajes tipo V con separación de al menos 30 cm entre ellos y Pija broca para reforzar del herraje al mástil
+Dejar el mástil nivelado 
+Se dejará el Radio a los 2.5 mts del mástil 
+EL encinchado del cable tendrá que ser cada 50 cm en el mástil dejando 1 metro de resguardo a la altura del radio y 2 metros más en la parte inferior del mástil.
+La altura total del mástil no rebasa los 3 mts 
+
+Puntos para una instalación  
+Infraestructura Empotrada
+
+
+INSTALACIÓN 3 MTS TENSADO 
+
+Área para instalación 3 mts cuadrados
+Anclaje con espárrago y taquete expansor al pretil con alambre y tensor 
+Ángulo de 45° en las retenidas al menos a 1.5 a 2 mts de separación de la base del mástil 
+Doble herraje V y 2 espárragos para la sujeción de las retenidas al mástil con pija broca para evitar que se baje al tensar
+Retenida a los 2 mts del mástil
+El cableado deberá ir encinchado cada 50 cm y con un resguardo de 1 mt a la altura del radio y 2 mts en la base del mástil. 
+
+Puntos para una instalación segura 
+Infraestructura Tensada 3 mts sobre loza de concreto
+
+
+Área para instalación 3 mts cuadrados
+3 anclajes con sujetadores mecánicos con alambre y tensor al menos a 2 mts de la base del mástil y a 120° entre c/u
+Ángulo de 45° en las retenidas y a los 2 mts de altura del mástil 
+Doble herraje V y 2 espárragos para la sujeción de las retenidas al mástil con pija broca para evitar que se baje al tensar
+El cableado deberá ir encinchado cada 50 cm y con un resguardo de 1 mt a la altura del radio y 2 mts en la base del mástil. 
+
+Puntos para una instalación segura 
+Infraestructura Tensada 3 mts sobre lámina
+
+
+OPERACIONES ( Material por tipo de instalación )
+
+Mastil de 6 mts tensado 
+
+Área para instalación 4 mts cuadrados
+3 anclajes con espárrago y taquete expansor al pretil con alambre y tensor al menos a 2.5 mts de la base del mástil y a 120° c/u
+Ángulo de 45° en las retenidas la primera a los 2.5 mts y la segunda a los 5 mts del mástil.
+Doble herraje V y 2 espárragos para la sujeción de las retenidas al mástil en los dos puntos con pija broca para evitar que se baje al tensar
+El cableado deberá ir encinchado cada 50 cm y con un resguardo de 1 mt a la altura del radio y 2 mts en la base del mástil. 
+
+Puntos para una instalación segura 
+Infraestructura Tensada 6 mts sobre loza de concreto
+
+
+Área para instalación 4 mts cuadrados
+3 anclajes con sujetadores mecánicos con alambre y tensor al menos a 2.5 mts de la base del mástil y a 120° entre c/u
+Ángulo de 45° en las retenidas la primera a los 2.5 mts y la segunda a los 5 mts del mástil.
+Doble herraje V y 2 espárragos para la sujeción de las retenidas al mástil en los dos puntos con pija broca para evitar que se baje al tensar
+El cableado deberá ir encinchado cada 50 cm y con un resguardo de 1 mt a la altura del radio y 2 mts en la base del mástil. 
+
+Puntos para una instalación segura 
+Infraestructura Tensada 6 mts sobre lámina
+
+
+Mastil Telescopico 
+
+Área para instalación 6 mts cuadrados
+3 anclajes tipo aleta con retenida 1/8 y tensores al menos a 5 mts de la base del mástil y a 120° c/u
+Ángulo de 45° en las retenidas la primera a los 3 mts, la segunda a los 6 mts, la tercera a los 9 y la cuarta a los 12 mts del mástil.
+4 porta retenidas  para la sujeción de las retenidas al mástil se instalarán por encima del tornillo de ajuste para evitar que se baje al tensar
+El cableado deberá ir encinchado cada 1 m y con un resguardo de 3 mts en la base del mástil. 
+
+Puntos para una instalación segura 
+Infraestructura Tensada 12 mts sobre loza de concreto
+
+
+Puntos para una instalación segura 
+Infraestructura Tensada 6 mts sobre lámina
+
+Área para instalación 6 mts cuadrados
+6 anclajes con sujetador mecánico a la lámina de ceja uno a 3 metros para las primeras dos retenidas y el segundo a los 5 metros para la tercera y cuarta retenida con retenida 1/8 y tensores al menos  y a 120° entre cada uno 
+Ángulo de 45° en las retenidas, la primera a los 3 mts, la segunda a los 3 mts, la tercera a los 9 y la cuarta a los 12 mts del mástil.
+4 porta retenidas  para la sujeción de las retenidas al mástil se instalarán por encima del tornillo de ajuste para evitar que se baje al tensar
+El cableado deberá ir encinchado cada 1 m y con un resguardo de 3 mts en la base del mástil. 
+
+
+TRAYECTORIA DE CABLEADO 
+
+Si el cableado va expuesto, se tendrá que buscar la manera más segura para el trayecto de la base del mástil hacia un pretil a seguir cercano a la bajada del cableado estructurado cada vuelta del cableado asegurandolo con grapas o sinchos dependiendo el caso si es encinchado tendra que ser cada 2 metros y si es grapado cada metro de cable.
+
+Si es por tubería asegurarse que la trayectoria de la tubería sea segura y no contenga agua.
+
+Puntos para un Cableado correcto 
+
+
+
+Etapa 5
+Configuración
+
+Configuración de radios
+
+Ya que se tiene instalado y cableado el servicio hasta el router se procede a realizar la configuración básica del radio, (SSID, llave, ip, mascara y gateway), para que el equipo se enlace y con esto pasar al tema de alineación
+
+                                                        Configuración equipo basica
+
+Alineación de Radios 
+
+Una vez enlazado el/los radio´s se realiza la alineación del equipo, después de encontrar la mejor alineación, se procede a realizar la configuración del router (se valida con el cliente que tipo de entrega require, DHCP o IP fija).
+
+
+
+                                                                                                                         Decibeles
+
+                                                                                                      
+
+
+                                                                                                                           Capacidad del enlace 
+                                                                                                      
+
+Niveles de Señal
+
+
+   
+En la siguiente tabla de muestran los brackets de tolerancia en cuanto a señal del enlace 
+
+
+
+
+35-45 dbi Excelente
+45-55 dbi Bueno
+55-65 dbi Regular
+65-75 dbi Alto
+75-85 dbi Malo
+
+
+
+Pruebas de Velocidad
+
+Después de la configuración del router se procede a realizar pruebas de velocidad ilimitadas para validar ancho de banda que entrega el enlace, se limita el servicio a lo que contrata el cliente y se corren pruebas de velocidad limitadas para entregar el servicio, se valida con el cliente y se libera el servicio.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+             
+                 (Prueba ilimitada)                                               (Prueba limitada)
+
+Etapa 6
+Documentación
+
+
+En esta parte se procede a llenar en ODOO la hoja de trabajo, incluyendo el listado de materiales consumibles utilizados en sitio y recolectar la firma del cliente, se anexan imágenes a la tarea.
+Al terminar se procede a recoger en sitio la herramienta, las escaleras que se utilizaron y se retiran los técnicos del sitio.   
+
+
+Revision final
+
+
+Validar con dispatcher la llamada de calidad estando en sitio
+Validar que no se haya quedado nada de basura en sitio
+Siempre utilizar lo aprendido con el curso de atencion a cliente
+Validar con el dispatcher (salida de sitio)
+No salir de sitio sin documentar tarea correspondiente 
+
+GRACIAS
