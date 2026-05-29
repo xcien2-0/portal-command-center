@@ -219,8 +219,8 @@ function CursosView() {
 const SLIDES = ['intro','problema','comparacion','solucion','niveles','badges','leaderboard','roadmap','cta'] as const;
 type SlideId = typeof SLIDES[number];
 const LABELS: Record<SlideId, string> = {
-  intro:'Intro', problema:'Problema', comparacion:'Comparación', solucion:'Solución',
-  niveles:'Niveles', badges:'Badges', leaderboard:'Ranking', roadmap:'Roadmap', cta:'Cierre',
+  intro: 'Intro', problema: 'Problema', comparacion: 'Comparación', solucion: 'Solución',
+  niveles: 'Niveles', badges: 'Badges', leaderboard: 'Ranking', roadmap: 'Roadmap', cta: 'Cierre',
 };
 
 interface Level  { name:string; min:number; max:number; icon:string; color:string; accent:string; count:number }
@@ -557,15 +557,517 @@ function SlideRoadmap() {
   );
 }
 
-function SlideExamen({ theme }: { theme: ThemeConfig }) {
+// ── Exam View ─────────────────────────────────────────────────────────────────
+
+// Shared question/answer types (Odoo)
+interface OdooAnswer   { id: number; text: string }
+interface OdooPregunta { id: number; question: string; slide: string; answers: OdooAnswer[] }
+interface OdooExamen   { channel_id: number; name: string; total: number; preguntas: OdooPregunta[] }
+interface OdooResult   { score_pct: number; correctas: number; total: number; nivel: string; xp_awarded: number; aprobado: boolean }
+interface OdooCurso    { id: number; name: string; total_slides: number; lessons: { has_quiz: boolean }[] }
+
+// Colocación types
+interface ColPregunta  { id: number; competencia_key: string; competencia_label: string; pregunta: string; opciones: string[] }
+interface ColData      { total: number; preguntas: ColPregunta[] }
+interface ColCompResult { key: string; label: string; correctas: number; total: number; pct: number; aprobada: boolean }
+interface ColResult    {
+  tecnico_name: string; plaza: string; total_correctas: number; total_preguntas: number;
+  comp_pct: number; total_aprobadas: number; total_competencias: number;
+  nivel: string; nivel_num: number; xp_awarded: number;
+  competencias: ColCompResult[];
+  plan_capacitacion: { num: number; nombre: string; descripcion: string }[];
+  fecha: string;
+}
+
+// ── Shared: generic question flow ─────────────────────────────────────────────
+function QuestionFlow({
+  title, subtitle, preguntas, onSubmit, onBack, loading, error,
+  renderQuestion, totalLabel,
+}: {
+  title: string; subtitle: string;
+  preguntas: { id: number | string; label?: string }[];
+  onSubmit: (resp: Record<string, number>) => void;
+  onBack: () => void; loading: boolean; error: string;
+  renderQuestion: (q: any, selected: number | undefined, onSelect: (v: number) => void) => React.ReactNode;
+  totalLabel?: string;
+}) {
+  const [qIdx, setQIdx]       = useState(0);
+  const [resp, setResp]       = useState<Record<string, number>>({});
+  const total    = preguntas.length;
+  const answered = Object.keys(resp).length;
+  const current  = preguntas[qIdx] as any;
+  const pct      = Math.round((answered / total) * 100);
+
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 200px)', minHeight: 600, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: `1px solid ${theme.border}`, background: theme.bg }}>
-        <iframe 
-          src={`${API_BASE}/static/examen_holo.html?accent=${encodeURIComponent(theme.accent)}&bg=${encodeURIComponent(theme.bg)}&card=${encodeURIComponent(theme.card)}&text=${encodeURIComponent(theme.text)}&dim=${encodeURIComponent(theme.dim)}`} 
-          style={{ width: '100%', height: '100%', border: 'none' }}
-          title="Examen Holo"
-        />
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color: DIM, fontSize: 12, cursor: 'pointer', padding: 0, marginBottom: 4 }}>← Volver</button>
+          <div style={{ fontSize: 11, color: DIM }}>{subtitle}</div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Pregunta {qIdx + 1} de {total}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 11, color: DIM, marginBottom: 4 }}>{answered}/{total} respondidas</div>
+          <div style={{ width: 120, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: GREEN, borderRadius: 2, transition: 'width 0.4s ease' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Question */}
+      <div style={{ background: '#151515', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
+        {current?.competencia_label && (
+          <div style={{ fontSize: 10, color: GREEN, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 700 }}>
+            📋 {current.competencia_label}
+          </div>
+        )}
+        {current?.slide && (
+          <div style={{ fontSize: 10, color: DIM, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>📄 {current.slide}</div>
+        )}
+        {renderQuestion(current, resp[String(current?.id)], (v) => setResp(p => ({ ...p, [String(current.id)]: v })))}
+      </div>
+
+      {/* Navigation */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={() => setQIdx(i => Math.max(0, i - 1))} disabled={qIdx === 0}
+          style={{ padding: '10px 20px', borderRadius: 10, background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', color: qIdx === 0 ? '#333' : '#fff', cursor: qIdx === 0 ? 'not-allowed' : 'pointer', fontSize: 13 }}>
+          ← Anterior
+        </button>
+        {qIdx < total - 1 ? (
+          <button onClick={() => setQIdx(i => i + 1)}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: 10, background: resp[String(current?.id)] !== undefined ? 'rgba(0,200,150,0.15)' : '#151515', border: `0.5px solid ${resp[String(current?.id)] !== undefined ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.1)'}`, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            Siguiente →
+          </button>
+        ) : (
+          <button onClick={() => onSubmit(resp)} disabled={loading || answered < total}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: 10, background: answered >= total ? GREEN : '#151515', border: 'none', color: answered >= total ? '#000' : '#333', cursor: answered >= total && !loading ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, transition: 'all 0.2s' }}>
+            {loading ? 'Evaluando...' : answered < total ? `Responde todas (${answered}/${total})` : '✓ Enviar examen'}
+          </button>
+        )}
+      </div>
+
+      {/* Dot nav */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 18, justifyContent: 'center' }}>
+        {preguntas.map((p, i) => (
+          <button key={i} onClick={() => setQIdx(i)}
+            style={{ width: 26, height: 26, borderRadius: 6, border: `1.5px solid ${i === qIdx ? GREEN : resp[String(p.id)] !== undefined ? 'rgba(0,200,150,0.4)' : 'rgba(255,255,255,0.1)'}`, background: i === qIdx ? 'rgba(0,200,150,0.15)' : resp[String(p.id)] !== undefined ? 'rgba(0,200,150,0.06)' : 'transparent', color: i === qIdx ? GREEN : resp[String(p.id)] !== undefined ? GREEN : DIM, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
+            {i + 1}
+          </button>
+        ))}
+      </div>
+      {error && <div style={{ marginTop: 12, color: '#FF4757', fontSize: 12 }}>{error}</div>}
+    </div>
+  );
+}
+
+// ── Colocación Flow ────────────────────────────────────────────────────────────
+function ColocacionFlow({ onBack }: { onBack: () => void }) {
+  const [step, setStep]       = useState<'intro' | 'loading' | 'exam' | 'result'>('intro');
+  const [data, setData]       = useState<ColData | null>(null);
+  const [result, setResult]   = useState<ColResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const [nombre, setNombre]   = useState('');
+  const [plaza, setPlaza]     = useState('');
+
+  const PLAZAS = ['Monterrey', 'Saltillo', 'Reynosa', 'Querétaro', 'Guadalajara', 'CDMX', 'Otra'];
+
+  const loadExam = async () => {
+    setStep('loading'); setError('');
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/examen/colocacion/preguntas`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d: ColData = await r.json();
+      setData(d); setStep('exam');
+    } catch (e: any) { setError(e.message); setStep('intro'); }
+  };
+
+  const submit = async (resp: Record<string, number>) => {
+    setLoading(true); setError('');
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/examen/colocacion/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ respuestas: resp, tecnico_name: nombre, plaza }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setResult(await r.json()); setStep('result');
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  // Intro
+  if (step === 'intro') return (
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: DIM, fontSize: 12, cursor: 'pointer', padding: 0, marginBottom: 20 }}>← Volver</button>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🎯</div>
+        <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: -1, marginBottom: 8 }}>
+          Examen de Colocación
+        </div>
+        <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8, maxWidth: 440, margin: '0 auto' }}>
+          Evalúa tus conocimientos en las <strong style={{ color: '#fff' }}>13 competencias técnicas</strong> de la Matriz de Habilidades XCIEN.<br />
+          <span style={{ fontSize: 12 }}>~26 preguntas · Generadas por IA · Nivel de campo real</span>
+        </p>
+      </div>
+
+      {/* Competency chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 28 }}>
+        {['Habilitación','Radiobase','Enlace','Wireless','Redes','Routing','Energía','Electricidad','Operaciones','Seguridad','Procesos','Clientes','Soft Skills'].map(c => (
+          <span key={c} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, background: 'rgba(0,200,150,0.08)', border: '0.5px solid rgba(0,200,150,0.2)', color: GREEN }}>{c}</span>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        <div>
+          <label style={{ fontSize: 11, color: DIM, display: 'block', marginBottom: 5 }}>Nombre completo</label>
+          <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Juan Pérez García"
+            style={{ width: '100%', background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, color: DIM, display: 'block', marginBottom: 5 }}>Plaza</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {PLAZAS.map(p => (
+              <button key={p} onClick={() => setPlaza(p)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${plaza === p ? GREEN : 'rgba(255,255,255,0.1)'}`, background: plaza === p ? 'rgba(0,200,150,0.12)' : 'transparent', color: plaza === p ? GREEN : DIM, fontSize: 12, cursor: 'pointer' }}>
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {error && <div style={{ padding: '10px 14px', background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: 10, color: '#FF4757', fontSize: 12, marginBottom: 16 }}>{error}</div>}
+
+      <button onClick={loadExam}
+        style={{ width: '100%', padding: '14px', borderRadius: 12, background: nombre ? GREEN : 'rgba(255,255,255,0.05)', border: 'none', color: nombre ? '#000' : '#333', fontSize: 15, fontWeight: 700, cursor: nombre ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
+        {nombre ? 'Comenzar examen →' : 'Ingresa tu nombre para continuar'}
+      </button>
+    </div>
+  );
+
+  // Loading
+  if (step === 'loading') return (
+    <div style={{ textAlign: 'center', padding: 60 }}>
+      <div style={{ width: 40, height: 40, border: `3px solid ${GREEN}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
+      <div style={{ fontSize: 14, color: DIM }}>Generando banco de preguntas con IA...</div>
+      <div style={{ fontSize: 11, color: '#333', marginTop: 8 }}>Esto puede tomar ~30 segundos la primera vez</div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  // Exam
+  if (step === 'exam' && data) return (
+    <QuestionFlow
+      title="Examen de Colocación"
+      subtitle={`${nombre}${plaza ? ` · ${plaza}` : ''}`}
+      preguntas={data.preguntas}
+      onSubmit={submit}
+      onBack={() => setStep('intro')}
+      loading={loading}
+      error={error}
+      renderQuestion={(q: ColPregunta, selected, onSelect) => (
+        <>
+          <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.55, marginBottom: 22 }}>{q.pregunta}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {q.opciones.map((op, i) => {
+              const sel = selected === i;
+              return (
+                <button key={i} onClick={() => onSelect(i)}
+                  style={{ textAlign: 'left', padding: '13px 18px', borderRadius: 10, border: `1.5px solid ${sel ? GREEN : 'rgba(255,255,255,0.08)'}`, background: sel ? 'rgba(0,200,150,0.1)' : 'rgba(255,255,255,0.02)', color: sel ? '#fff' : '#ccc', fontSize: 13, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? GREEN : 'rgba(255,255,255,0.2)'}`, background: sel ? GREEN : 'transparent', flexShrink: 0, transition: 'all 0.15s' }} />
+                  {op}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    />
+  );
+
+  // Result
+  if (step === 'result' && result) {
+    const NIVEL_COLOR: Record<string, string> = { AVANZADO: '#00C896', INTERMEDIO: '#FFB703', BÁSICO: '#FF4757' };
+    const NIVEL_ICON:  Record<string, string> = { AVANZADO: '🏆', INTERMEDIO: '🔧', BÁSICO: '🌱' };
+    const nc = NIVEL_COLOR[result.nivel] || GREEN;
+    return (
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        {/* Top */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>{NIVEL_ICON[result.nivel] || '🎓'}</div>
+          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: -1, marginBottom: 4 }}>
+            {result.tecnico_name || 'Resultado'}
+          </div>
+          {result.plaza && <div style={{ fontSize: 12, color: DIM, marginBottom: 16 }}>📍 {result.plaza}</div>}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ padding: '16px 24px', borderRadius: 12, background: `${nc}14`, border: `1px solid ${nc}40`, textAlign: 'center', minWidth: 110 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: nc, fontFamily: 'Oswald, sans-serif' }}>{result.nivel}</div>
+              <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>Nivel asignado</div>
+            </div>
+            <div style={{ padding: '16px 24px', borderRadius: 12, background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', textAlign: 'center', minWidth: 110 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, fontFamily: 'Oswald, sans-serif' }}>{result.total_aprobadas}/{result.total_competencias}</div>
+              <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>Competencias cubiertas</div>
+            </div>
+            <div style={{ padding: '16px 24px', borderRadius: 12, background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', textAlign: 'center', minWidth: 110 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#FFB703', fontFamily: 'Oswald, sans-serif' }}>+{result.xp_awarded}</div>
+              <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>XP ganado</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Competency grid */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: DIM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Perfil de competencias</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+            {result.competencias.map(c => (
+              <div key={c.key} style={{ padding: '10px 14px', borderRadius: 10, background: c.aprobada ? 'rgba(0,200,150,0.07)' : 'rgba(255,71,87,0.07)', border: `1px solid ${c.aprobada ? 'rgba(0,200,150,0.25)' : 'rgba(255,71,87,0.25)'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14 }}>{c.aprobada ? '✓' : '✗'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: c.aprobada ? '#fff' : '#FF4757', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</div>
+                  <div style={{ fontSize: 10, color: DIM }}>{c.correctas}/{c.total} correctas</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Training plan */}
+        {result.plan_capacitacion.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: DIM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>
+              Plan de capacitación recomendado ({result.plan_capacitacion.length} módulos)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {result.plan_capacitacion.map(m => (
+                <div key={m.num} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', background: '#151515', border: '0.5px solid rgba(255,183,3,0.2)', borderRadius: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,183,3,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#FFB703', flexShrink: 0 }}>M{m.num}</div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{m.nombre}</div>
+                    <div style={{ fontSize: 11, color: DIM, lineHeight: 1.5 }}>{m.descripcion}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {result.plan_capacitacion.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '20px 0', marginBottom: 24 }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🎉</div>
+            <div style={{ fontSize: 14, color: GREEN, fontWeight: 600 }}>¡Perfil completo! No se requieren módulos adicionales.</div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button onClick={() => { setStep('intro'); setResult(null); setData(null); }}
+            style={{ padding: '11px 24px', borderRadius: 40, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+            Nuevo examen
+          </button>
+          <button onClick={() => { setStep('exam'); setResult(null); }}
+            style={{ padding: '11px 24px', borderRadius: 40, background: GREEN, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            Reintentar
+          </button>
+        </div>
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#333', marginTop: 16 }}>{result.fecha}</div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ── Odoo Courses Flow ──────────────────────────────────────────────────────────
+function OdooFlow({ onBack }: { onBack: () => void }) {
+  const [step, setStep]       = useState<'select' | 'exam' | 'result'>('select');
+  const [cursos, setCursos]   = useState<OdooCurso[]>([]);
+  const [examen, setExamen]   = useState<OdooExamen | null>(null);
+  const [result, setResult]   = useState<OdooResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const [nombre, setNombre]   = useState('');
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/academia/cursos`)
+      .then(r => r.json())
+      .then((data: OdooCurso[]) => {
+        const wq = data.filter(c => c.lessons.some(l => l.has_quiz));
+        setCursos(wq.length > 0 ? wq : data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const startExam = async (channelId: number) => {
+    setLoading(true); setError('');
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/examen/${channelId}/preguntas`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d: OdooExamen = await r.json();
+      if (d.total === 0) { setError('Este curso no tiene preguntas de examen en Odoo. Agrega quizzes a las lecciones para habilitarlo.'); setLoading(false); return; }
+      setExamen(d); setStep('exam');
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  if (step === 'select') return (
+    <div style={{ maxWidth: 620, margin: '0 auto' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: DIM, fontSize: 12, cursor: 'pointer', padding: 0, marginBottom: 20 }}>← Volver</button>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Exámenes de Cursos Odoo</div>
+      <div style={{ fontSize: 13, color: DIM, marginBottom: 20 }}>Preguntas cargadas directamente desde Odoo eLearning.</div>
+      <div style={{ marginBottom: 16 }}>
+        <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre (opcional)"
+          style={{ width: '100%', background: '#151515', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+      </div>
+      {error && <div style={{ padding: '10px 14px', background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: 10, color: '#FF4757', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {cursos.map(c => {
+          const qc = c.lessons.filter(l => l.has_quiz).length;
+          return (
+            <div key={c.id} onClick={() => !loading && startExam(c.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(0,200,150,0.3)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(0,200,150,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎓</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                <div style={{ fontSize: 11, color: DIM, marginTop: 2 }}>{c.total_slides} lecciones {qc > 0 ? `· 🧪 ${qc} con quiz` : ''}</div>
+              </div>
+              <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>{loading ? '...' : 'Iniciar →'}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (step === 'exam' && examen) return (
+    <QuestionFlow
+      title={examen.name}
+      subtitle={examen.name}
+      preguntas={examen.preguntas.map(p => ({ ...p, id: p.id }))}
+      onSubmit={async (resp) => {
+        setLoading(true); setError('');
+        try {
+          const r = await fetch(`${API_BASE}/api/academia/examen/submit`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel_id: examen.channel_id, respuestas: resp, tecnico_name: nombre }),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          setResult(await r.json()); setStep('result');
+        } catch (e: any) { setError(e.message); }
+        finally { setLoading(false); }
+      }}
+      onBack={() => setStep('select')}
+      loading={loading}
+      error={error}
+      renderQuestion={(q: OdooPregunta, selected, onSelect) => (
+        <>
+          <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.55, marginBottom: 22 }}>{q.question}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {q.answers.map(a => {
+              const sel = selected === a.id;
+              return (
+                <button key={a.id} onClick={() => onSelect(a.id)}
+                  style={{ textAlign: 'left', padding: '13px 18px', borderRadius: 10, border: `1.5px solid ${sel ? GREEN : 'rgba(255,255,255,0.08)'}`, background: sel ? 'rgba(0,200,150,0.1)' : 'rgba(255,255,255,0.02)', color: sel ? '#fff' : '#ccc', fontSize: 13, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? GREEN : 'rgba(255,255,255,0.2)'}`, background: sel ? GREEN : 'transparent', flexShrink: 0 }} />
+                  {a.text}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    />
+  );
+
+  if (step === 'result' && result) {
+    const NC: Record<string, string> = { Aprendiz: '#888', Técnico: '#4FC3F7', Especialista: '#00C896', Senior: '#d97706' };
+    const nc = NC[result.nivel] || GREEN;
+    return (
+      <div style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ fontSize: 52, marginBottom: 12 }}>{result.aprobado ? '🎉' : '📚'}</div>
+        <div style={{ fontSize: 26, fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: -1, marginBottom: 8 }}>{result.aprobado ? '¡Aprobado!' : 'Sigue practicando'}</div>
+        <div style={{ fontSize: 13, color: DIM, marginBottom: 28 }}>{nombre ? `${nombre} · ` : ''}{result.correctas}/{result.total} correctas</div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div style={{ padding: '20px 28px', borderRadius: 12, background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: result.aprobado ? GREEN : '#FF4757', fontFamily: 'Oswald, sans-serif' }}>{result.score_pct}%</div>
+            <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>Puntaje</div>
+          </div>
+          <div style={{ padding: '20px 28px', borderRadius: 12, background: `${nc}14`, border: `1px solid ${nc}40` }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: nc, fontFamily: 'Oswald, sans-serif' }}>{result.nivel}</div>
+            <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>Nivel</div>
+          </div>
+          <div style={{ padding: '20px 28px', borderRadius: 12, background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: '#FFB703', fontFamily: 'Oswald, sans-serif' }}>+{result.xp_awarded}</div>
+            <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>XP</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button onClick={() => { setStep('select'); setResult(null); setExamen(null); }}
+            style={{ padding: '10px 22px', borderRadius: 40, background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+            Otro examen
+          </button>
+          {!result.aprobado && (
+            <button onClick={() => { setStep('exam'); setResult(null); }}
+              style={{ padding: '10px 22px', borderRadius: 40, background: GREEN, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Reintentar
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ── Main ExamenView ────────────────────────────────────────────────────────────
+function ExamenView() {
+  const [mode, setMode] = useState<null | 'colocacion' | 'odoo'>(null);
+
+  if (mode === 'colocacion') return <ColocacionFlow onBack={() => setMode(null)} />;
+  if (mode === 'odoo')       return <OdooFlow onBack={() => setMode(null)} />;
+
+  return (
+    <div style={{ maxWidth: 620, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.2em', textTransform: 'uppercase', color: GREEN, marginBottom: 10 }}>Evaluación</div>
+        <div style={{ fontSize: 34, fontWeight: 800, fontFamily: 'Oswald, sans-serif', letterSpacing: -1, marginBottom: 8 }}>
+          ¿Qué tipo de examen<br /><span style={{ color: DIM, fontWeight: 400 }}>quieres realizar?</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Colocación */}
+        <div onClick={() => setMode('colocacion')}
+          style={{ padding: 24, borderRadius: 16, background: '#151515', border: '1px solid rgba(0,200,150,0.15)', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(0,200,150,0.5)'; (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,200,150,0.05)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(0,200,150,0.15)'; (e.currentTarget as HTMLDivElement).style.background = '#151515'; }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🎯</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Examen de Colocación</div>
+          <div style={{ fontSize: 12, color: DIM, lineHeight: 1.7 }}>
+            13 competencias técnicas<br />
+            ~26 preguntas generadas por IA<br />
+            <span style={{ color: GREEN, fontWeight: 600 }}>Asigna nivel de ingreso</span>
+          </div>
+          <div style={{ marginTop: 16, fontSize: 11, color: GREEN, fontWeight: 600 }}>Para técnicos nuevos →</div>
+        </div>
+
+        {/* Promoción / Odoo */}
+        <div onClick={() => setMode('odoo')}
+          style={{ padding: 24, borderRadius: 16, background: '#151515', border: '1px solid rgba(83,74,183,0.2)', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(83,74,183,0.5)'; (e.currentTarget as HTMLDivElement).style.background = 'rgba(83,74,183,0.05)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(83,74,183,0.2)'; (e.currentTarget as HTMLDivElement).style.background = '#151515'; }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📚</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Examen de Promoción</div>
+          <div style={{ fontSize: 12, color: DIM, lineHeight: 1.7 }}>
+            Cursos de Odoo eLearning<br />
+            Preguntas por módulo<br />
+            <span style={{ color: '#7c3aed', fontWeight: 600 }}>Evalúa cursos completados</span>
+          </div>
+          <div style={{ marginTop: 16, fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>Para ascenso de nivel →</div>
+        </div>
       </div>
     </div>
   );
@@ -601,7 +1103,6 @@ const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
   badges:      SlideBadges,
   leaderboard: SlideLeaderboard,
   roadmap:     SlideRoadmap,
-  examen:      SlideExamen,
   cta:         SlideCTA,
 };
 
@@ -679,8 +1180,8 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
           </div>
         )}
         {view === 'exam' && (
-          <div style={{ height: '100%', minHeight: 700 }}>
-            <SlideExamen theme={theme} />
+          <div style={{ minHeight: 600 }}>
+            <ExamenView />
           </div>
         )}
       </div>
