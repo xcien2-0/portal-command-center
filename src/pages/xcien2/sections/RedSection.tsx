@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
-import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2 } from 'lucide-react';
+import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2, Building2 } from 'lucide-react';
 import NetworkGraph from '../../../components/NetworkGraph';
 import 'leaflet/dist/leaflet.css';
 
@@ -354,14 +354,19 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
   const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
 
-  const [kmzGroups,  setKmzGroups]  = useState<KmzGroup[]>([]);
-  const [kmzActive,  setKmzActive]  = useState<Record<string, boolean>>({});
+  const [kmzGroups,       setKmzGroups]       = useState<KmzGroup[]>([]);
+  const [kmzActive,       setKmzActive]       = useState<Record<string, boolean>>({});
+  const [uispStatus,      setUispStatus]       = useState<{ ok: boolean; error: string | null } | null>(null);
+  const [odooServicios,   setOdooServicios]    = useState<any[]>([]);
+  const [showOdoo,        setShowOdoo]         = useState(false);
+  const [odooFiltro,      setOdooFiltro]       = useState<'all' | 'innet' | 'offnet'>('all');
 
   const mapRef       = useRef<any>(null);
   const leafRef      = useRef<any>(null);
   const layerRef     = useRef<any>(null);
   const topoLayer    = useRef<any>(null);
   const devicesLayer = useRef<any>(null);
+  const odooLayer    = useRef<any>(null);
   const tileRef   = useRef<any>(null);
   const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
   const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
@@ -369,14 +374,17 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   // ── Cargar datos ─────────────────────────────────────────────────────────────
   const cargar = useCallback(async () => {
     try {
-      const [hostsRes, topoRes] = await Promise.all([
+      const [hostsRes, topoRes, uispRes] = await Promise.all([
         fetch(`${API_BASE}/api/noc/hosts`),
         fetch(`${API_BASE}/api/red/topologia-geo`),
+        fetch(`${API_BASE}/api/red/uisp-status`),
       ]);
       const hostsData = await hostsRes.json();
       const topoData  = await topoRes.json();
+      const uispData  = uispRes.ok ? await uispRes.json() : null;
       setHosts(Array.isArray(hostsData) ? hostsData : (hostsData.hosts || []));
       setTopoLinks(Array.isArray(topoData) ? topoData : []);
+      if (uispData) setUispStatus(uispData);
       setLastUpdate(new Date());
     } catch (e) {
       console.error('RedSection error:', e);
@@ -396,6 +404,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     fetch(`${API_BASE}/api/red/dispositivos-geo`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setGeoDevices(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // ── Cargar servicios Odoo con coords ────────────────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/odoo-servicios-geo`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setOdooServicios(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
@@ -627,6 +643,89 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     });
   }, [showDevices, geoDevices]);
 
+  // ── Renderizar servicios Odoo ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (odooLayer.current) { odooLayer.current.clearLayers(); }
+    else { odooLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showOdoo || odooServicios.length === 0) return;
+
+    // Colores por tipo de entrega (onnet/offnet)
+    const COLOR_INNET  = '#00A859';   // verde XCIEN — on-net
+    const COLOR_OFFNET = '#3b82f6';   // azul — off-net (infraestructura de terceros)
+    const COLOR_INTER  = '#a855f7';   // morado — intercompañía
+    const COLOR_NULL   = '#64748b';   // gris — sin clasificar
+
+    const entregaColor = (entrega: string): string => {
+      if (entrega === 'innet')  return COLOR_INNET;
+      if (entrega === 'offnet') return COLOR_OFFNET;
+      if (entrega === 'inter')  return COLOR_INTER;
+      return COLOR_NULL;
+    };
+    const entregaLabel = (entrega: string): string => {
+      if (entrega === 'innet')  return 'ON-NET';
+      if (entrega === 'offnet') return 'OFF-NET';
+      if (entrega === 'inter')  return 'INTERCOMPANY';
+      return '—';
+    };
+    const iconoAcceso: Record<string, string> = { radio: '📡', fiber: '🔌', other: '🌐' };
+
+    const visibles = odooFiltro === 'all'
+      ? odooServicios
+      : odooServicios.filter(s => {
+          if (odooFiltro === 'innet')  return s.entrega === 'innet';
+          if (odooFiltro === 'offnet') return s.entrega === 'offnet';
+          return true;
+        });
+
+    visibles.forEach(srv => {
+      const color  = entregaColor(srv.entrega);
+      const icono  = iconoAcceso[srv.acceso] || '🌐';
+      const label  = entregaLabel(srv.entrega);
+      const isActive = srv.estado === 'active';
+
+      const sopUrl = `https://odoo.wispi.mx/web#id=${srv.id}&model=running.services&view_type=form&cids=25`;
+
+      L.circleMarker([srv.lat, srv.lng], {
+        radius:      isActive ? 5 : 4,
+        fillColor:   color,
+        color:       isActive ? color : '#475569',
+        weight:      1,
+        fillOpacity: isActive ? 0.8 : 0.35,
+        opacity:     1,
+      })
+      .bindTooltip(
+        `<div style="font-weight:700;color:${color};margin-bottom:3px">${icono} ${srv.nombre}</div>
+         <div style="color:rgba(255,255,255,0.75);font-size:11px">${srv.cliente}</div>
+         <div style="margin-top:4px;font-size:10px">
+           <span style="background:${color}22;color:${color};padding:1px 6px;border-radius:8px;font-weight:700">${label}</span>
+         </div>`,
+        { className: 'noc-tooltip' }
+      )
+      .bindPopup(
+        `<div style="min-width:200px">
+           <div style="font-weight:700;color:${color};font-size:13px;margin-bottom:4px">${icono} ${srv.nombre}</div>
+           <div style="color:#64748b;font-size:11px;margin-bottom:8px">${srv.cliente}</div>
+           <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:10px;margin-bottom:6px">
+             <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:8px;font-weight:700">${label}</span>
+             ${srv.acceso ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:8px">${srv.acceso}</span>` : ''}
+             ${srv.bajada_mbps ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:8px">${srv.bajada_mbps}↓ ${srv.subida_mbps}↑ Mbps</span>` : ''}
+           </div>
+           ${srv.ip ? `<div style="color:#94a3b8;font-size:10px;margin-bottom:8px;font-family:monospace">${srv.ip}</div>` : ''}
+           <a href="${sopUrl}" target="_blank" rel="noopener noreferrer"
+              style="display:block;text-align:center;padding:6px 12px;background:${color};color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">
+             Abrir SOP en Odoo →
+           </a>
+         </div>`,
+        { className: 'noc-popup', maxWidth: 260 }
+      )
+      .addTo(odooLayer.current);
+    });
+  }, [showOdoo, odooServicios, odooFiltro]);
+
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
     if (!mapRef.current || !leafRef.current) return;
@@ -705,6 +804,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             { label: 'Uptime',       val: `${uptime}%`,     color: uptime >= 85 ? COLOR_ONLINE : COLOR_WARN },
             { label: 'Ciudades',     val: cities.length,    color: 'rgba(255,255,255,0.5)' },
             { label: 'Links',        val: topoLinks.length, color: '#3b82f6' },
+            { label: 'Servicios',    val: odooServicios.filter(s => s.estado === 'active').length, color: '#00A859' },
           ].map(k => (
             <div key={k.label} style={{ textAlign: 'center' }}>
               <div style={{ color: k.color, fontWeight: 700, fontSize: 17 }}>{k.val}</div>
@@ -754,6 +854,47 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             }}>
               <GitBranch size={13} /> Links
             </button>
+            <button onClick={() => setShowOdoo(p => !p)} style={{
+              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              background: showOdoo ? 'rgba(0,168,89,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${showOdoo ? '#00A859' : 'rgba(255,255,255,0.15)'}`,
+              color: showOdoo ? '#00A859' : 'rgba(255,255,255,0.5)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <Building2 size={13} />
+              Servicios Odoo
+              {odooServicios.length > 0 && (
+                <span style={{
+                  background: showOdoo ? 'rgba(0,168,89,0.25)' : 'rgba(255,255,255,0.08)',
+                  borderRadius: 8, padding: '0 5px', fontSize: 10,
+                }}>
+                  {odooServicios.filter(s => s.estado === 'active').length}
+                </span>
+              )}
+            </button>
+            {/* Sub-filtros onnet/offnet — solo si Odoo visible */}
+            {showOdoo && (
+              <>
+                {([
+                  { id: 'all',    label: 'Todos',    count: odooServicios.filter(s=>s.estado==='active').length,                            color: '#e2e8f0' },
+                  { id: 'innet',  label: '🟢 On-net', count: odooServicios.filter(s=>s.estado==='active'&&s.entrega==='innet').length,  color: '#00A859' },
+                  { id: 'offnet', label: '🔵 Off-net', count: odooServicios.filter(s=>s.estado==='active'&&s.entrega==='offnet').length, color: '#3b82f6' },
+                ] as const).map(opt => (
+                  <button key={opt.id} onClick={() => setOdooFiltro(opt.id)} style={{
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                    background: odooFiltro === opt.id ? `${opt.color}20` : 'transparent',
+                    border: `1px solid ${odooFiltro === opt.id ? opt.color : `${opt.color}30`}`,
+                    color: odooFiltro === opt.id ? opt.color : `${opt.color}70`,
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    {opt.label}
+                    <span style={{ background: `${opt.color}18`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>
+                      {opt.count}
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -771,6 +912,25 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           {lastUpdate ? lastUpdate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '...'}
         </button>
       </div>
+
+      {/* Banner UISP no disponible */}
+      {uispStatus && !uispStatus.ok && (
+        <div style={{
+          padding: '7px 20px',
+          background: 'rgba(255,160,0,0.08)',
+          borderBottom: '1px solid rgba(255,160,0,0.25)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <Zap size={13} color="#ff9f0a" />
+          <span style={{ color: '#ff9f0a', fontSize: 12, fontWeight: 600 }}>
+            Monitoreo Ubiquiti (UISP) no disponible
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>
+            — Los links de topología y dispositivos Ubiquiti no se pueden cargar en este momento.
+            {uispStatus.error && ` (${uispStatus.error.slice(0, 80)})`}
+          </span>
+        </div>
+      )}
 
       {/* Filtros por marca */}
       <div style={{
@@ -983,6 +1143,22 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
         }
         .noc-tooltip::before { display:none !important; }
+        .noc-popup .leaflet-popup-content-wrapper {
+          background: #fff !important;
+          border-radius: 10px !important;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.18) !important;
+          padding: 0 !important;
+        }
+        .noc-popup .leaflet-popup-content {
+          margin: 14px 16px !important;
+        }
+        .noc-popup .leaflet-popup-tip { background: #fff !important; }
+        .noc-popup .leaflet-popup-close-button {
+          color: #94a3b8 !important;
+          font-size: 16px !important;
+          top: 6px !important;
+          right: 8px !important;
+        }
       `}</style>
     </div>
   );

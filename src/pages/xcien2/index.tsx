@@ -27,6 +27,7 @@ import InicioHoloSection from './sections/InicioHoloSection';
 import BidrillasSection from './sections/BidrillasSection';
 import AgentesSection from './sections/AgentesSection';
 import RedSection from './sections/RedSection';
+import ReportLabSection from './sections/ReportLabSection';
 import RRHHSection from './sections/RRHHSection';
 import SalaJuntasSection from './sections/SalaJuntasSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
@@ -73,6 +74,7 @@ const NAV: NavEntry[] = [
   { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
   { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
+  { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
   { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
   { id: 'sala_juntas', label: 'Sala de Juntas', icon: '📅', group: 'Administración' },
@@ -104,6 +106,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   merkle: GitBranch,
   gerencia: BarChart2,
   reports: FileText,
+  reportlab: FileText,
   docs: BookOpen,
   rrhh: User,
   sala_juntas: Calendar,
@@ -136,6 +139,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   academia: brand.academiaLabel,
   gerencia: 'Dashboard Gerencial',
   reports: 'Reportes & Gobierno',
+  reportlab: 'PDF Generator',
   bridge: 'Antigravity Data Bridge',
   'war-room': 'Comando Multi-Agente',
   mobile: 'Terminal Móvil',
@@ -409,6 +413,7 @@ function Content({
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'reports' && <ReportesGobierno />}
+      {section === 'reportlab' && <ReportLabSection theme={theme} />}
 
       {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
