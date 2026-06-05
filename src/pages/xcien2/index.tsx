@@ -5,7 +5,7 @@ import {
   GraduationCap, Link2, GitBranch, BarChart2, FileText, BookOpen,
   Shield, Users, User, Calendar, Bot, Zap, Swords, Smartphone, Bell,
   Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
-  Activity, Network, Layers, AlertTriangle,
+  Activity, Network, Layers, AlertTriangle, TrendingUp,
 } from 'lucide-react';
 import HexoField3D from '../../components/HexoField3D';
 import { API_BASE } from '../../config';
@@ -36,6 +36,7 @@ import { NOCCity, NOCAlert } from '@/types/noc';
 import InventarioTransfersSection from './sections/InventarioTransfersSection';
 import XcienTokensSection from './sections/XcienTokensSection';
 import MerkleFeedSection from './sections/MerkleFeedSection';
+import VentasSection from './sections/VentasSection';
 
 // Bridge imports for classic components
 import CallCenter from '../CallCenter';
@@ -73,6 +74,7 @@ const NAV: NavEntry[] = [
   { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
   { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
+  { id: 'ventas',  label: 'Resumen Ventas', icon: '📈', group: 'Administración' },
   { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
   { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
   { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
@@ -105,6 +107,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   transacciones: Link2,
   merkle: GitBranch,
   gerencia: BarChart2,
+  ventas: TrendingUp,
   reports: FileText,
   reportlab: FileText,
   docs: BookOpen,
@@ -138,6 +141,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   adopcion: 'Gestión de Usuarios',
   academia: brand.academiaLabel,
   gerencia: 'Dashboard Gerencial',
+  ventas:   'Resumen de Ventas',
   reports: 'Reportes & Gobierno',
   reportlab: 'PDF Generator',
   bridge: 'Antigravity Data Bridge',
@@ -412,6 +416,7 @@ function Content({
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
+      {section === 'ventas'   && <VentasSection theme={theme} />}
       {section === 'reports' && <ReportesGobierno />}
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
 

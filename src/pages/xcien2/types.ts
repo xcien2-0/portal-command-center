@@ -249,7 +249,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle';
+export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle' | 'ventas';
 
 export interface NavItem {
   id: SectionId;
