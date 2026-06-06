@@ -14,8 +14,35 @@ async function _refresh() {
       fetch(`${API_BASE}/api/noc/cities`),
       fetch(`${API_BASE}/api/noc/alerts?active_only=true`),
     ]);
-    if (citiesRes.ok)  _cities = await citiesRes.json();
-    if (alertsRes.ok)  _alerts = await alertsRes.json();
+    if (citiesRes.ok) {
+      const raw = await citiesRes.json();
+      _cities = raw.map((c: any): NOCCity => ({
+        id:         c.id,
+        name:       c.nombre ?? c.name ?? c.id,
+        lat:        c.lat,
+        lng:        c.lng,
+        score:      Math.round(c.uptime ?? c.score ?? 0),
+        totalHosts: c.nodos   ?? c.totalHosts ?? 0,
+        online:     c.activos ?? c.online     ?? 0,
+        offline:    (c.nodos ?? c.totalHosts ?? 0) - (c.activos ?? c.online ?? 0),
+        alerts:     c.alertas ?? c.alerts     ?? 0,
+        sites:      c.sites   ?? [],
+      }));
+    }
+    if (alertsRes.ok) {
+      const raw = await alertsRes.json();
+      _alerts = raw.map((a: any): NOCAlert => ({
+        id:           a.id ?? String(Math.random()),
+        cityId:       a.cityId   ?? a.ciudad_id ?? '',
+        cityName:     a.cityName ?? a.ciudad    ?? '',
+        siteName:     a.siteName ?? a.sitio     ?? '',
+        hostIp:       a.hostIp   ?? a.ip        ?? '',
+        type:         a.type     ?? a.tipo      ?? 'alert',
+        severity:     a.severity ?? a.severidad ?? 'warning',
+        timestamp:    a.timestamp ?? new Date().toISOString(),
+        ticketCreated: a.ticketCreated ?? false,
+      }));
+    }
     _lastFetch = Date.now();
   } catch (e) {
     console.warn('[NOCBoard] Error fetching via backend:', e);
