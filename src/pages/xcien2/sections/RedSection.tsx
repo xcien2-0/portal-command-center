@@ -349,7 +349,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [showTopo, setShowTopo]         = useState(false);
   const [showDevices, setShowDevices]   = useState(false);
   const [geoDevices, setGeoDevices]     = useState<any[]>([]);
-  const [mainView, setMainView]         = useState<'map' | 'graph'>('map');
+  const [mainView, setMainView]         = useState<'map' | 'graph' | 'dashboard'>('map');
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
   const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
@@ -831,6 +831,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           }}>
             <Share2 size={12} /> Grafo completo
           </button>
+          <button onClick={() => setMainView('dashboard')} style={{
+            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
+            background: mainView === 'dashboard' ? 'rgba(0,166,81,0.15)' : 'transparent',
+            color: mainView === 'dashboard' ? '#00A651' : 'rgba(255,255,255,0.35)',
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}>
+            <Activity size={12} /> Dashboard Nacional
+          </button>
         </div>
 
         {/* Controles de capas — solo en vista mapa */}
@@ -1018,6 +1026,15 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           <div style={{ position: 'absolute', inset: 0 }}>
             <NetworkGraph height="100%" />
           </div>
+        )}
+
+        {/* Dashboard Nacional — iframe Observium */}
+        {mainView === 'dashboard' && (
+          <iframe
+            src="/noc-status.html"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            title="Dashboard Nacional XCIEN"
+          />
         )}
 
         {/* Mapa Leaflet */}
