@@ -17,6 +17,8 @@ import {
 interface InicioHoloSectionProps {
   theme: ThemeConfig;
   backendStatus: 'online' | 'offline';
+  odooStatus?: 'conectado' | 'desconectado';
+  observiumStatus?: 'conectado' | 'desconectado';
   onSelect: (id: any) => void;
   bridgeData?: { current_task: string; status: string; log: string[]; last_update: string };
 }
@@ -25,7 +27,7 @@ const G = '#00ff88';
 const Y = '#ffcc00';
 const R = '#ff3366';
 
-export default function InicioHoloSection({ theme, backendStatus, onSelect, bridgeData }: InicioHoloSectionProps) {
+export default function InicioHoloSection({ theme, backendStatus, odooStatus = 'desconectado', observiumStatus = 'desconectado', onSelect, bridgeData }: InicioHoloSectionProps) {
   const [liveStats, setLiveStats] = useState<any>(null);
   const accent = theme.accent;
 
@@ -121,9 +123,9 @@ export default function InicioHoloSection({ theme, backendStatus, onSelect, brid
                     <div style={{ fontSize: 12, color: theme.dim }}>XML-RPC over HTTPS</div>
                   </div>
                 </div>
-                <div style={{ color: backendStatus === 'online' ? Y : R, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <AlertCircle size={14} />
-                  PENDIENTE PASS
+                <div style={{ color: odooStatus === 'conectado' ? G : R, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {odooStatus === 'conectado' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  {odooStatus === 'conectado' ? 'CONECTADO' : 'DESCONECTADO'}
                 </div>
               </div>
 
@@ -133,13 +135,13 @@ export default function InicioHoloSection({ theme, backendStatus, onSelect, brid
                     <Activity size={20} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>NOCBoard Sync (Real-time)</div>
-                    <div style={{ fontSize: 12, color: theme.dim }}>Sincronización de 142 hosts</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>Observium NMS (Real-time)</div>
+                    <div style={{ fontSize: 12, color: theme.dim }}>172.31.150.244 · 6,408 dispositivos</div>
                   </div>
                 </div>
-                <div style={{ color: G, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CheckCircle2 size={14} />
-                  SINCRONIZADO
+                <div style={{ color: observiumStatus === 'conectado' ? G : R, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {observiumStatus === 'conectado' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  {observiumStatus === 'conectado' ? 'CONECTADO' : 'DESCONECTADO'}
                 </div>
               </div>
             </div>

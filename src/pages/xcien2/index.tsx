@@ -380,8 +380,8 @@ interface ContentProps {
 
 function Content({
   section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
-  cities, alerts, activeTenantId, onTenantChange, bridgeData, backendStatus, onSelect
-}: ContentProps & { backendStatus: 'online' | 'offline', onSelect: (id: SectionId) => void }) {
+  cities, alerts, activeTenantId, onTenantChange, bridgeData, backendStatus, odooStatus, observiumStatus, onSelect
+}: ContentProps & { backendStatus: 'online' | 'offline', odooStatus: 'conectado' | 'desconectado', observiumStatus: 'conectado' | 'desconectado', onSelect: (id: SectionId) => void }) {
   const padding = theme.compact ? 20 : 32;
   const isFullHeight = section === 'red';
   return (
@@ -391,7 +391,7 @@ function Content({
       background: theme.bg, minWidth: 0,
       display: 'flex', flexDirection: 'column',
     }}>
-      {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} onSelect={onSelect} />}
+      {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} onSelect={onSelect} />}
       {section === 'noc' && (
         <NocSection
           theme={theme}
@@ -606,6 +606,8 @@ export default function Xcien2Page() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
+  const [odooStatus, setOdooStatus] = useState<'conectado' | 'desconectado'>('desconectado');
+  const [observiumStatus, setObserviumStatus] = useState<'conectado' | 'desconectado'>('desconectado');
   const [section, setSection] = useState<SectionId>(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('section') as SectionId;
@@ -616,12 +618,18 @@ export default function Xcien2Page() {
     const checkBackend = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
-        if (res.ok) setBackendStatus('online');
-        else setBackendStatus('offline');
+        if (res.ok) {
+          setBackendStatus('online');
+          const data = await res.json();
+          if (data.odoo) setOdooStatus(data.odoo === 'conectado' ? 'conectado' : 'desconectado');
+          if (data.observium) setObserviumStatus(data.observium === 'conectado' ? 'conectado' : 'desconectado');
+        } else {
+          setBackendStatus('offline');
+        }
       } catch { setBackendStatus('offline'); }
     };
     checkBackend();
-    const id = setInterval(checkBackend, 5000);
+    const id = setInterval(checkBackend, 10000);
     return () => clearInterval(id);
   }, []);
 
@@ -831,6 +839,8 @@ export default function Xcien2Page() {
           onTenantChange={setActiveTenantId}
           bridgeData={bridgeData}
           backendStatus={backendStatus}
+          odooStatus={odooStatus}
+          observiumStatus={observiumStatus}
           onSelect={onSelectSection}
         />
       </div>
