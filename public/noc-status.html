@@ -8,8 +8,6 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
          background: #0a0a0f; color: #e8e8ed; min-height:100vh; }
-  
-  /* Header */
   .header { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
              border-bottom: 1px solid rgba(255,255,255,0.08); padding: 28px 40px;
              display:flex; justify-content:space-between; align-items:center; }
@@ -18,460 +16,211 @@
                border-radius:8px; display:flex; align-items:center; justify-content:center;
                font-size:18px; font-weight:800; color:white; }
   .logo-text h1 { font-size:20px; font-weight:700; color:#fff; letter-spacing:-0.3px; }
-  .logo-text p { font-size:12px; color:#8b949e; margin-top:1px; }
+  .logo-text p  { font-size:12px; color:#8b949e; margin-top:1px; }
   .header-right { text-align:right; }
-  .header-right .date { font-size:13px; color:#8b949e; }
+  .header-right .date    { font-size:13px; color:#8b949e; }
   .header-right .updated { font-size:11px; color:#3fb950; margin-top:3px; }
-  
-  /* Status Banner */
-  .status-banner { background: linear-gradient(135deg, #00A651 0%, #007a3d 100%);
-                   padding: 14px 40px; display:flex; align-items:center; gap:10px; }
-  .status-banner.degraded { background: linear-gradient(135deg, #d97706 0%, #92400e 100%); }
+  .status-banner { padding: 14px 40px; display:flex; align-items:center; gap:10px; }
   .status-dot { width:10px; height:10px; background:rgba(255,255,255,0.9); border-radius:50%;
                 box-shadow: 0 0 8px rgba(255,255,255,0.6); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .status-banner span { font-size:14px; font-weight:600; color:white; }
   .status-banner .detail { font-size:12px; color:rgba(255,255,255,0.75); margin-left:auto; }
-  
-  /* Main */
   .main { padding: 32px 40px; max-width: 1400px; }
-  
-  /* KPI Grid */
   .kpi-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:32px; }
   .kpi-card { background: #161b22; border: 1px solid rgba(255,255,255,0.08);
                border-radius:16px; padding:24px; position:relative; overflow:hidden; }
-  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; 
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
                        background: var(--accent); border-radius:16px 16px 0 0; }
   .kpi-card.green  { --accent: #00A651; }
   .kpi-card.red    { --accent: #f85149; }
   .kpi-card.orange { --accent: #d97706; }
   .kpi-card.blue   { --accent: #58a6ff; }
-  .kpi-card.purple { --accent: #8b5cf6; }
   .kpi-label { font-size:11px; color:#8b949e; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; }
   .kpi-value { font-size:36px; font-weight:700; color:var(--accent); letter-spacing:-1px; line-height:1; }
-  .kpi-sub { font-size:12px; color:#8b949e; margin-top:6px; }
+  .kpi-sub   { font-size:12px; color:#8b949e; margin-top:6px; }
   .kpi-badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px;
                 background: rgba(255,255,255,0.06); color:#8b949e; margin-top:8px; }
-  
-  /* Section */
-  .section { margin-bottom:28px; }
-  .section-title { font-size:16px; font-weight:700; color:#e8e8ed; margin-bottom:16px;
-                   display:flex; align-items:center; gap:8px; }
-  .section-title .badge { font-size:10px; padding:3px 10px; border-radius:20px;
-                           background: rgba(0,166,81,0.15); color:#00A651; font-weight:600; }
-  
-  /* Grid 2-col */
   .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-  .grid-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; }
-  
-  /* Panel */
   .panel { background: #161b22; border: 1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; }
   .panel-title { font-size:13px; font-weight:600; color:#8b949e; text-transform:uppercase;
                   letter-spacing:0.6px; margin-bottom:16px; }
-  
-  /* Site rows */
   .site-row { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
   .site-row:last-child { border-bottom:none; }
   .site-indicator { width:10px; height:10px; border-radius:50%; margin-right:12px; flex-shrink:0; }
-  .ind-green { background:#00A651; box-shadow:0 0 6px rgba(0,166,81,0.5); }
+  .ind-green  { background:#00A651; box-shadow:0 0 6px rgba(0,166,81,0.5); }
   .ind-yellow { background:#d97706; box-shadow:0 0 6px rgba(217,119,6,0.5); }
-  .ind-red { background:#f85149; box-shadow:0 0 6px rgba(248,81,73,0.5); }
-  .site-name { font-size:13px; color:#e8e8ed; flex:1; }
-  .site-meta { font-size:11px; color:#8b949e; margin-right:12px; }
+  .ind-red    { background:#f85149; box-shadow:0 0 6px rgba(248,81,73,0.5); }
+  .site-name   { font-size:13px; color:#e8e8ed; flex:1; }
+  .site-meta   { font-size:11px; color:#8b949e; margin-right:12px; }
   .site-status { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
   .s-operational { background:rgba(0,166,81,0.1); color:#00A651; }
-  .s-degraded { background:rgba(217,119,6,0.1); color:#d97706; }
-  .s-outage { background:rgba(248,81,73,0.1); color:#f85149; }
-  
-  /* Alert type bars */
-  .alert-type-row { display:flex; align-items:center; margin-bottom:12px; }
-  .alert-type-label { font-size:12px; color:#8b949e; width:160px; flex-shrink:0; }
-  .alert-type-bar-bg { flex:1; height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; margin:0 12px; }
-  .alert-type-bar { height:100%; border-radius:4px; }
-  .bar-green  { background: linear-gradient(90deg, #00A651, #00d165); }
-  .bar-orange { background: linear-gradient(90deg, #d97706, #f59e0b); }
-  .bar-red    { background: linear-gradient(90deg, #f85149, #ff6b6b); }
-  .bar-blue   { background: linear-gradient(90deg, #58a6ff, #79c0ff); }
-  .bar-gray   { background: linear-gradient(90deg, #6e7681, #8b949e); }
-  .alert-type-pct { font-size:12px; color:#e8e8ed; width:40px; text-align:right; font-weight:600; }
-  
-  /* Monthly chart */
-  .month-chart { display:flex; align-items:flex-end; gap:10px; height:120px; padding-top:10px; }
-  .month-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .month-bar { width:100%; border-radius:6px 6px 0 0; position:relative; transition:opacity 0.2s; }
-  .month-bar:hover { opacity:0.8; }
-  .month-bar-label { font-size:10px; color:#8b949e; }
-  .month-bar-val { font-size:10px; color:#8b949e; font-weight:600; position:absolute; top:-18px; left:50%; transform:translateX(-50%); white-space:nowrap; }
-  
-  /* Device table */
+  .s-degraded    { background:rgba(217,119,6,0.1); color:#d97706; }
+  .s-outage      { background:rgba(248,81,73,0.1); color:#f85149; }
   .dev-table { width:100%; border-collapse:collapse; }
   .dev-table th { font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:#8b949e;
                    padding:8px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
   .dev-table td { font-size:12px; padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.04); color:#c9d1d9; }
   .dev-table tr:last-child td { border-bottom:none; }
-  .dev-table tr:hover td { background:rgba(255,255,255,0.03); }
   .status-pill { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600; }
   .pill-up   { background:rgba(0,166,81,0.12); color:#00A651; }
   .pill-down { background:rgba(248,81,73,0.12); color:#f85149; }
-  
-  /* Alert incident card */
-  .incident-card { background: linear-gradient(135deg, rgba(248,81,73,0.08), rgba(248,81,73,0.03));
-                   border: 1px solid rgba(248,81,73,0.2); border-radius:12px; padding:16px; margin-bottom:12px; }
-  .incident-card.warning { background: linear-gradient(135deg, rgba(217,119,6,0.08), rgba(217,119,6,0.03));
-                            border-color: rgba(217,119,6,0.2); }
-  .incident-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .incident-title { font-size:14px; font-weight:700; color:#f85149; }
-  .incident-card.warning .incident-title { color:#d97706; }
-  .incident-time { font-size:11px; color:#8b949e; }
-  .incident-body { font-size:12px; color:#c9d1d9; line-height:1.6; }
-  .incident-tag { display:inline-block; font-size:10px; padding:2px 8px; border-radius:4px; margin-top:8px;
-                  background:rgba(248,81,73,0.12); color:#f85149; }
-  .incident-card.warning .incident-tag { background:rgba(217,119,6,0.12); color:#d97706; }
-  
-  /* Region map */
-  .region-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; }
-  .region-card { background:#1c2128; border:1px solid rgba(255,255,255,0.06); border-radius:12px;
-                  padding:14px; text-align:center; }
-  .region-icon { font-size:22px; margin-bottom:6px; }
-  .region-name { font-size:12px; font-weight:600; color:#e8e8ed; margin-bottom:4px; }
-  .region-fail { font-size:20px; font-weight:800; margin-bottom:4px; }
-  .region-fail.low { color:#00A651; }
-  .region-fail.med { color:#d97706; }
-  .region-fail.high { color:#f85149; }
-  .region-sub { font-size:10px; color:#8b949e; }
-  
-  /* Footer */
   .footer { border-top:1px solid rgba(255,255,255,0.06); padding:20px 40px; margin-top:40px;
              display:flex; justify-content:space-between; align-items:center; }
-  .footer-left { font-size:11px; color:#8b949e; }
+  .footer-left  { font-size:11px; color:#8b949e; }
   .footer-right { font-size:11px; color:#3fb950; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="logo">
     <div class="logo-dot">X</div>
     <div class="logo-text">
       <h1>XCIEN Network Status</h1>
-      <p>Red Nacional · Observium NMS</p>
+      <p>Red On-Net · Observium NMS · Tiempo real</p>
     </div>
   </div>
   <div class="header-right">
-    <div class="date">Jueves 05 Jun 2026, 14:00 CST</div>
-    <div class="updated">● Última actualización: 13:52 hrs</div>
+    <div class="date" id="fecha">Cargando...</div>
+    <div class="updated" id="updated">● Conectando...</div>
   </div>
 </div>
 
-<!-- STATUS BANNER -->
-<div class="status-banner degraded">
+<div class="status-banner" id="banner" style="background:linear-gradient(135deg,#161b22,#1c2128)">
   <div class="status-dot"></div>
-  <span>Incidente Activo — PODI Datacenter: Fallo AC Detectado</span>
-  <span class="detail">Iniciado 05 Jun 2026 ~14:00 hrs · En atención</span>
+  <span id="banner-text">Conectando con Observium...</span>
+  <span class="detail" id="banner-detail"></span>
 </div>
 
 <div class="main">
-
-  <!-- KPI CARDS -->
   <div class="kpi-grid">
     <div class="kpi-card blue">
-      <div class="kpi-label">Eventos YTD 2026</div>
-      <div class="kpi-value">635K</div>
-      <div class="kpi-sub">01 Ene – 05 Jun 2026</div>
-      <div class="kpi-badge">~3,530 / día promedio</div>
+      <div class="kpi-label">Nodos On-Net</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-ciudades-sub">ciudades monitoreadas</div>
+      <div class="kpi-badge" id="kpi-ciudades">—</div>
     </div>
     <div class="kpi-card green">
-      <div class="kpi-label">Dispositivos UP</div>
-      <div class="kpi-value">2,918</div>
-      <div class="kpi-sub">de 6,408 totales</div>
-      <div class="kpi-badge">45.5% disponibilidad SNMP</div>
+      <div class="kpi-label">Nodos Online</div>
+      <div class="kpi-value" id="kpi-up">—</div>
+      <div class="kpi-sub" id="kpi-uptime-sub">responden SNMP</div>
+      <div class="kpi-badge" id="kpi-uptime">—</div>
     </div>
     <div class="kpi-card red">
-      <div class="kpi-label">Dispositivos DOWN</div>
-      <div class="kpi-value">3,490</div>
-      <div class="kpi-sub">incluye PTP sin agente activo</div>
-      <div class="kpi-badge">54.5% — requiere revisión</div>
+      <div class="kpi-label">Nodos Offline</div>
+      <div class="kpi-value" id="kpi-down">—</div>
+      <div class="kpi-sub">sin respuesta SNMP</div>
+      <div class="kpi-badge" id="kpi-down-pct">—</div>
     </div>
     <div class="kpi-card orange">
       <div class="kpi-label">Mayor tasa fallas</div>
-      <div class="kpi-value">29%</div>
-      <div class="kpi-sub">Reynosa / Tamaulipas</div>
-      <div class="kpi-badge">592 alertas en muestra</div>
-    </div>
-  </div>
-
-  <!-- ACTIVE INCIDENTS -->
-  <div class="section">
-    <div class="section-title">Incidentes Activos <span class="badge">1 CRÍTICO</span></div>
-    <div class="incident-card">
-      <div class="incident-header">
-        <div class="incident-title">🔴 INC-2026-PODI-001 — Fallo AC Datacenter Principal</div>
-        <div class="incident-time">05 Jun 2026 · 14:00 hrs · En atención</div>
-      </div>
-      <div class="incident-body">
-        Pastilla termomagnética en cortocircuito en PODI (Torre Latitud, Monterrey). Sistema de AC fuera de servicio.
-        Temperatura ambiental estimada >35°C. 12 dispositivos de red expuestos. NOC notificado con retraso debido a
-        ausencia de sensores ambientales (Enviromux no instalado). 6 de 12 dispositivos PODI sin reglas de alerta configuradas.
-      </div>
-      <span class="incident-tag">PODI · Datacenter · Térmico · Eléctrico</span>
+      <div class="kpi-value" id="kpi-worst-pct">—</div>
+      <div class="kpi-sub" id="kpi-worst-name">—</div>
+      <div class="kpi-badge" id="kpi-worst-total">—</div>
     </div>
   </div>
 
   <div class="grid-2">
-    <!-- MONTHLY TREND -->
     <div class="panel">
-      <div class="panel-title">Tendencia mensual de eventos 2026</div>
-      <div style="display:flex;align-items:flex-end;gap:8px;height:140px;padding-top:24px;">
-        <!-- Jan: 35k, Feb: 100k, Mar: 120k, Apr: 120k, May: 170k, Jun: 90k(partial) -->
-        <!-- Max = 170k, scale to 110px -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#8b949e;font-weight:600;">35K</div>
-          <div style="width:100%;height:23px;background:linear-gradient(180deg,#58a6ff,#388bfd);border-radius:5px 5px 0 0;"></div>
-          <div style="font-size:10px;color:#8b949e;">Ene</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#8b949e;font-weight:600;">100K</div>
-          <div style="width:100%;height:65px;background:linear-gradient(180deg,#58a6ff,#388bfd);border-radius:5px 5px 0 0;"></div>
-          <div style="font-size:10px;color:#8b949e;">Feb</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#8b949e;font-weight:600;">120K</div>
-          <div style="width:100%;height:78px;background:linear-gradient(180deg,#58a6ff,#388bfd);border-radius:5px 5px 0 0;"></div>
-          <div style="font-size:10px;color:#8b949e;">Mar</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#8b949e;font-weight:600;">120K</div>
-          <div style="width:100%;height:78px;background:linear-gradient(180deg,#58a6ff,#388bfd);border-radius:5px 5px 0 0;"></div>
-          <div style="font-size:10px;color:#8b949e;">Abr</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#d97706;font-weight:600;">170K</div>
-          <div style="width:100%;height:110px;background:linear-gradient(180deg,#f59e0b,#d97706);border-radius:5px 5px 0 0;"></div>
-          <div style="font-size:10px;color:#8b949e;">May</div>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
-          <div style="font-size:9px;color:#00A651;font-weight:600;">90K*</div>
-          <div style="width:100%;height:58px;background:linear-gradient(180deg,#3fb950,#00A651);border-radius:5px 5px 0 0;border:1px dashed rgba(63,185,80,0.4);"></div>
-          <div style="font-size:10px;color:#3fb950;">Jun●</div>
-        </div>
-      </div>
-      <div style="font-size:10px;color:#8b949e;margin-top:8px;">* Junio parcial al 05/06/2026</div>
+      <div class="panel-title">Estado por ciudad (on-net)</div>
+      <div id="regiones-list"><p style="color:#8b949e;font-size:13px;padding:20px 0">Cargando...</p></div>
     </div>
-
-    <!-- ALERT TYPES -->
     <div class="panel">
-      <div class="panel-title">Distribución por tipo de evento</div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">OK / Recuperación</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-green" style="width:45.6%"></div></div>
-        <div class="alert-type-pct">45.6%</div>
-      </div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">FAIL_DELAYED</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-orange" style="width:26.1%"></div></div>
-        <div class="alert-type-pct">26.1%</div>
-      </div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">FAIL (confirmada)</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-red" style="width:10.4%"></div></div>
-        <div class="alert-type-pct">10.4%</div>
-      </div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">ALERT_NOTIFY</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-blue" style="width:10.0%"></div></div>
-        <div class="alert-type-pct">10.0%</div>
-      </div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">REMINDER_NOTIFY</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-gray" style="width:7.2%"></div></div>
-        <div class="alert-type-pct">7.2%</div>
-      </div>
-      <div class="alert-type-row">
-        <div class="alert-type-label">FAIL_SUPPRESSED</div>
-        <div class="alert-type-bar-bg"><div class="alert-type-bar bar-gray" style="width:0.7%"></div></div>
-        <div class="alert-type-pct">0.7%</div>
-      </div>
-      <div style="margin-top:12px;font-size:11px;color:#8b949e;">
-        Muestra: 12,000 eventos · Universo estimado: 635,000 eventos YTD
-      </div>
-    </div>
-  </div>
-
-  <div style="height:20px;"></div>
-
-  <!-- REGIONS -->
-  <div class="section">
-    <div class="section-title">Alertas por Región</div>
-    <div class="region-grid">
-      <div class="region-card">
-        <div class="region-icon">🏭</div>
-        <div class="region-name">Saltillo / Coah</div>
-        <div class="region-fail med">20%</div>
-        <div class="region-sub">7,345 eventos · 61% total</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">🏙️</div>
-        <div class="region-name">Monterrey / NL</div>
-        <div class="region-fail med">24%</div>
-        <div class="region-sub">654 eventos · 5.4% total</div>
-      </div>
-      <div class="region-card" style="border-color:rgba(248,81,73,0.2);">
-        <div class="region-icon">🌵</div>
-        <div class="region-name">Reynosa / Tamps</div>
-        <div class="region-fail high">29%</div>
-        <div class="region-sub">592 eventos · Mayor riesgo</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">🏔️</div>
-        <div class="region-name">Querétaro</div>
-        <div class="region-fail med">25%</div>
-        <div class="region-sub">422 eventos · 3.5% total</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">🏗️</div>
-        <div class="region-name">CDMX / Edomex</div>
-        <div class="region-fail med">25%</div>
-        <div class="region-sub">163 eventos · San Mateo</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">🔩</div>
-        <div class="region-name">Monclova</div>
-        <div class="region-fail low">9%</div>
-        <div class="region-sub">56 eventos · Menor riesgo</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">🌐</div>
-        <div class="region-name">Otras regiones</div>
-        <div class="region-fail med">19%</div>
-        <div class="region-sub">2,175 eventos · 18% total</div>
-      </div>
-      <div class="region-card">
-        <div class="region-icon">❓</div>
-        <div class="region-name">Sin ubicación</div>
-        <div class="region-fail low">18%</div>
-        <div class="region-sub">593 eventos · Revisar config</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SITES STATUS -->
-  <div class="grid-2">
-    <div class="panel">
-      <div class="panel-title">Estado de Sitios Críticos</div>
-      <div class="site-row">
-        <div class="site-indicator ind-red"></div>
-        <div class="site-name">PODI — Datacenter Principal</div>
-        <div class="site-meta">Monterrey</div>
-        <div class="site-status s-outage">Incidente AC</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-green"></div>
-        <div class="site-name">Core Border Saltillo</div>
-        <div class="site-meta">RB Jolla</div>
-        <div class="site-status s-operational">Operacional</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-green"></div>
-        <div class="site-name">QRO-NTI</div>
-        <div class="site-meta">Querétaro</div>
-        <div class="site-status s-operational">Operacional</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-green"></div>
-        <div class="site-name">MTY-NTI</div>
-        <div class="site-meta">Monterrey NL</div>
-        <div class="site-status s-operational">Operacional</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-yellow"></div>
-        <div class="site-name">RB San Mateo (CDMX)</div>
-        <div class="site-meta">Edomex</div>
-        <div class="site-status s-degraded">Alta actividad</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-yellow"></div>
-        <div class="site-name">RB Barrientos II</div>
-        <div class="site-meta">Edomex</div>
-        <div class="site-status s-degraded">Alta actividad</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-yellow"></div>
-        <div class="site-name">Reynosa Libramiento 3</div>
-        <div class="site-meta">Tamaulipas</div>
-        <div class="site-status s-degraded">PTP degradado</div>
-      </div>
-      <div class="site-row">
-        <div class="site-indicator ind-green"></div>
-        <div class="site-name">Monclova</div>
-        <div class="site-meta">Coahuila</div>
-        <div class="site-status s-operational">Operacional</div>
-      </div>
-    </div>
-
-    <!-- TOP NOISY DEVICES -->
-    <div class="panel">
-      <div class="panel-title">Top dispositivos por alertas (muestra)</div>
+      <div class="panel-title">Nodos offline por ciudad</div>
       <table class="dev-table">
-        <thead>
-          <tr><th>Dispositivo</th><th>Sitio</th><th>Estado</th><th>Alertas</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>x100_ptp…blanquita_juarez</td><td>Reynosa</td><td><span class="status-pill pill-down">DOWN</span></td><td>375</td></tr>
-          <tr><td>huus_ptp…esmeralda_logistica</td><td>Rep Esmeralda</td><td><span class="status-pill pill-up">UP</span></td><td>361</td></tr>
-          <tr><td>x100_ptp…twinmex_cedros</td><td>RB Twinmex</td><td><span class="status-pill pill-down">DOWN</span></td><td>360</td></tr>
-          <tr><td>huus_ptp…san_mateo_tul_mx</td><td>RB San Mateo</td><td><span class="status-pill pill-down">DOWN</span></td><td>347</td></tr>
-          <tr><td>airspan</td><td>Sin ubicación</td><td><span class="status-pill pill-down">DOWN</span></td><td>324</td></tr>
-          <tr><td>ap_ubnt_lap120_san_mateo</td><td>RB San Mateo</td><td><span class="status-pill pill-up">UP</span></td><td>256</td></tr>
-          <tr><td>luz_en_rb_san_mateo_cfe</td><td>RB San Mateo</td><td><span class="status-pill pill-up">UP</span></td><td>240</td></tr>
-          <tr><td>huus_ptp…san_mateo_excelencia</td><td>RB San Mateo</td><td><span class="status-pill pill-up">UP</span></td><td>237</td></tr>
-          <tr><td>x100_ptmp_barrientos2_sur</td><td>RB Barrientos</td><td><span class="status-pill pill-up">UP</span></td><td>235</td></tr>
-          <tr><td>huus_ptp…san_mateo_tiba</td><td>Rep San Mateo</td><td><span class="status-pill pill-down">DOWN</span></td><td>227</td></tr>
+        <thead><tr><th>Dispositivo</th><th>Ciudad</th><th>Estado</th></tr></thead>
+        <tbody id="top-offline">
+          <tr><td colspan="3" style="text-align:center;color:#8b949e;padding:20px">Cargando...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-
-  <div style="height:20px;"></div>
-
-  <!-- GAPS / RECOMMENDATIONS -->
-  <div class="section">
-    <div class="section-title">Brechas Críticas de Monitoreo <span class="badge" style="background:rgba(248,81,73,0.1);color:#f85149;">3 CRÍTICAS</span></div>
-    <div class="grid-3">
-      <div class="incident-card">
-        <div class="incident-header">
-          <div class="incident-title">Sin sensores ambientales</div>
-          <div class="incident-time">Brecha 1</div>
-        </div>
-        <div class="incident-body">PODI no tiene sensor Enviromux configurado. El incidente de AC pasó desapercibido para el NOC.</div>
-        <span class="incident-tag">PODI · Thermal · SNMP</span>
-      </div>
-      <div class="incident-card">
-        <div class="incident-header">
-          <div class="incident-title">6 dispositivos sin alertas</div>
-          <div class="incident-time">Brecha 2</div>
-        </div>
-        <div class="incident-body">6 de 12 dispositivos en PODI están DOWN pero sin reglas de alerta en Observium.</div>
-        <span class="incident-tag">Observium · PODI · Config</span>
-      </div>
-      <div class="incident-card warning">
-        <div class="incident-header">
-          <div class="incident-title">3,490 dispositivos DOWN</div>
-          <div class="incident-time">Brecha 3</div>
-        </div>
-        <div class="incident-body">54.5% de la red no responde SNMP. Requiere revisión: depurar inactivos vs. activos sin monitoreo.</div>
-        <span class="incident-tag">Global · SNMP · Inventario</span>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- FOOTER -->
 <div class="footer">
-  <div class="footer-left">XCIEN Networks · Observium NMS · Red Nacional · Datos 01 Ene – 05 Jun 2026 · Confidencial</div>
-  <div class="footer-right">● Sistema operativo · Próxima actualización: 14:30 hrs</div>
+  <div class="footer-left">XCIEN Networks · Observium NMS · Red On-Net Nacional · Confidencial</div>
+  <div class="footer-right" id="footer-ts">● Actualizando...</div>
 </div>
 
+<script>
+const API = window.location.origin;
+
+async function load() {
+  try {
+    const r = await fetch(API + '/api/noc/dashboard-stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    const now = new Date();
+    document.getElementById('fecha').textContent =
+      now.toLocaleDateString('es-MX', {weekday:'long',day:'2-digit',month:'short',year:'numeric'}) +
+      ', ' + now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + ' CST';
+    document.getElementById('updated').textContent =
+      '● Actualizado: ' + now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + ' hrs';
+
+    // Banner
+    const pct = d.uptime_pct;
+    const banner = document.getElementById('banner');
+    banner.style.background = pct >= 75
+      ? 'linear-gradient(135deg,#00A651,#007a3d)'
+      : pct >= 50
+      ? 'linear-gradient(135deg,#d97706,#92400e)'
+      : 'linear-gradient(135deg,#c0392b,#7b241c)';
+    document.getElementById('banner-text').textContent =
+      pct >= 75 ? 'Red On-Net operativa — ' + pct + '% nodos activos'
+                : 'Red On-Net degradada — ' + pct + '% nodos activos';
+    document.getElementById('banner-detail').textContent =
+      d.up + ' online · ' + d.down + ' offline · ' + d.ciudades + ' ciudades';
+
+    // KPIs
+    document.getElementById('kpi-total').textContent = d.total;
+    document.getElementById('kpi-ciudades').textContent = d.ciudades + ' ciudades on-net';
+    document.getElementById('kpi-up').textContent = d.up;
+    document.getElementById('kpi-uptime-sub').textContent = 'de ' + d.total + ' nodos';
+    document.getElementById('kpi-uptime').textContent = pct + '% uptime SNMP';
+    document.getElementById('kpi-down').textContent = d.down;
+    document.getElementById('kpi-down-pct').textContent = (100-pct).toFixed(1) + '% offline';
+
+    const worst = [...d.regiones].sort((a,b) => b.fail_pct - a.fail_pct)[0];
+    if (worst) {
+      document.getElementById('kpi-worst-pct').textContent = worst.fail_pct + '%';
+      document.getElementById('kpi-worst-name').textContent = worst.nombre;
+      document.getElementById('kpi-worst-total').textContent = worst.total + ' nodos en la región';
+    }
+
+    // Regiones
+    const sorted = [...d.regiones].sort((a,b) => b.total - a.total).slice(0,12);
+    document.getElementById('regiones-list').innerHTML = sorted.map(r => {
+      const ic = r.fail_pct >= 50 ? 'ind-red' : r.fail_pct >= 25 ? 'ind-yellow' : 'ind-green';
+      const sc = r.fail_pct >= 50 ? 's-outage' : r.fail_pct >= 25 ? 's-degraded' : 's-operational';
+      const sl = r.fail_pct >= 25 ? r.fail_pct+'% fallas' : 'Operativo';
+      return '<div class="site-row">' +
+        '<div class="site-indicator ' + ic + '"></div>' +
+        '<div class="site-name">' + r.nombre + '</div>' +
+        '<div class="site-meta">' + r.up + ' / ' + r.total + '</div>' +
+        '<div class="site-status ' + sc + '">' + sl + '</div>' +
+        '</div>';
+    }).join('');
+
+    // Top offline
+    document.getElementById('top-offline').innerHTML = d.top_offline.slice(0,10).map(h =>
+      '<tr><td style="font-family:monospace;font-size:11px">' + (h.name||h.ip).substring(0,35) + '</td>' +
+      '<td>' + (h.city||'—') + '</td>' +
+      '<td><span class="status-pill pill-down">DOWN</span></td></tr>'
+    ).join('') || '<tr><td colspan="3" style="color:#3fb950;text-align:center">Sin nodos offline 🎉</td></tr>';
+
+    document.getElementById('footer-ts').textContent =
+      '● En vivo · Observium · ' + now.toLocaleTimeString('es-MX');
+
+  } catch(e) {
+    document.getElementById('banner-text').textContent = 'Backend no disponible — ' + e.message;
+    document.getElementById('updated').textContent = '● Sin conexión';
+  }
+}
+
+load();
+setInterval(load, 30000);
+</script>
 </body>
 </html>
