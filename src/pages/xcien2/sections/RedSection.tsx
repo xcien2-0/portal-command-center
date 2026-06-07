@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
 import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2, Building2 } from 'lucide-react';
@@ -342,6 +342,7 @@ function CityPanel({
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [hosts, setHosts]               = useState<NOCHost[]>([]);
+  const [nocCities, setNocCities]       = useState<any[]>([]);
   const [topoLinks, setTopoLinks]       = useState<TopoLink[]>([]);
   const [loading, setLoading]           = useState(true);
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null);
@@ -374,15 +375,24 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   // ── Cargar datos ─────────────────────────────────────────────────────────────
   const cargar = useCallback(async () => {
     try {
-      const [hostsRes, topoRes, uispRes] = await Promise.all([
+      const [hostsRes, topoRes, uispRes, citiesRes] = await Promise.all([
         fetch(`${API_BASE}/api/noc/hosts`),
         fetch(`${API_BASE}/api/red/topologia-geo`),
         fetch(`${API_BASE}/api/red/uisp-status`),
+        fetch(`${API_BASE}/api/noc/cities`),
       ]);
-      const hostsData = await hostsRes.json();
-      const topoData  = await topoRes.json();
-      const uispData  = uispRes.ok ? await uispRes.json() : null;
+      const hostsData   = await hostsRes.json();
+      const topoData    = await topoRes.json();
+      const uispData    = uispRes.ok ? await uispRes.json() : null;
+      const citiesRaw   = citiesRes.ok ? await citiesRes.json() : [];
       setHosts(Array.isArray(hostsData) ? hostsData : (hostsData.hosts || []));
+      setNocCities(
+        (Array.isArray(citiesRaw) ? citiesRaw : [])
+          .filter((c: any) =>
+            c.tipo === 'on-net' && c.lat && c.lng &&
+            14.5 < c.lat && c.lat < 32.8 && -118.5 < c.lng && c.lng < -86.5
+          )
+      );
       setTopoLinks(Array.isArray(topoData) ? topoData : []);
       if (uispData) setUispStatus(uispData);
       setLastUpdate(new Date());
@@ -428,20 +438,21 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
       .catch(() => {});
   }, []);
 
-  // ── Agrupar por ciudad ────────────────────────────────────────────────────────
-  const cities: CityGroup[] = (() => {
-    const map: Record<string, CityGroup> = {};
-    const filtered = vendorFilter.length === 0 ? hosts : hosts.filter(h => vendorFilter.includes(h.vendor));
-    for (const h of filtered) {
-      const cn = h.city || 'Desconocida';
-      const coords = CITY_COORDS[cn] || { lat: 23.0, lng: -102.0 };
-      if (!map[cn]) map[cn] = { name: cn, lat: coords.lat, lng: coords.lng, hosts: [], online: 0, offline: 0, byVendor: {} };
-      map[cn].hosts.push(h);
-      if (h.status === 'online') map[cn].online++; else map[cn].offline++;
-      map[cn].byVendor[h.vendor] = (map[cn].byVendor[h.vendor] || 0) + 1;
-    }
-    return Object.values(map);
-  })();
+  // ── Ciudades NOCBoard (on-net, solo México) ──────────────────────────────────
+  const cities: CityGroup[] = useMemo(() => nocCities.map((c: any) => {
+    const cityHosts = hosts.filter(h => h.city === c.nombre);
+    const byVendor: Record<string, number> = {};
+    cityHosts.forEach(h => { byVendor[h.vendor] = (byVendor[h.vendor] || 0) + 1; });
+    return {
+      name: c.nombre,
+      lat: c.lat,
+      lng: c.lng,
+      hosts: cityHosts,
+      online: c.activos,
+      offline: c.alertas,
+      byVendor,
+    };
+  }), [nocCities, hosts]);
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
   const visible   = vendorFilter.length === 0 ? hosts : hosts.filter(h => vendorFilter.includes(h.vendor));
@@ -499,11 +510,12 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     else layerRef.current = L.layerGroup().addTo(mapRef.current);
 
     cities.forEach(city => {
-      const pct   = city.online / (city.hosts.length || 1);
+      const total = city.online + city.offline || 1;
+      const pct   = city.online / total;
       const color = pct >= 0.85 ? COLOR_ONLINE : pct >= 0.5 ? COLOR_WARN : COLOR_OFFLINE;
-      const size  = Math.max(14, Math.min(30, 9 + city.hosts.length / 6));
+      const size  = Math.max(14, Math.min(30, 9 + total / 6));
       const top   = Object.entries(city.byVendor).sort((a,b) => b[1]-a[1])[0]?.[0] || 'Unknown';
-      const vc    = VENDOR_COLORS[top] || '#6b7280';
+      const vc    = VENDOR_COLORS[top] || '#00A651';
 
       const icon = L.divIcon({
         className: '',
@@ -512,7 +524,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           background:${color}22;border:2px solid ${vc};
           box-shadow:0 0 ${size/2}px ${color}55;
           display:flex;align-items:center;justify-content:center;
-          font-size:${Math.max(7,size/3)}px;font-weight:700;color:${color}">${city.hosts.length}</div>`,
+          font-size:${Math.max(7,size/3)}px;font-weight:700;color:${color}">${total}</div>`,
       });
 
       const vendorLines = Object.entries(city.byVendor)
