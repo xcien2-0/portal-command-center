@@ -61,7 +61,7 @@ interface NavEntry { id: SectionId; label: string; icon: string; group?: string 
 const NAV: NavEntry[] = [
   { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
 
-  { id: 'noc', label: 'Red en Vivo', icon: '📡', group: 'Operaciones' },
+  { id: 'noc', label: 'NOC VIRTUAL', icon: '📡', group: 'Operaciones' },
   { id: 'red', label: 'Mapa de Red', icon: '🗺️', group: 'Operaciones' },
   { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
   { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
@@ -128,7 +128,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
 
 const SECTION_TITLE: Record<SectionId, string> = {
   inicio: 'Hub Principal',
-  noc: 'Red en Vivo',
+  noc: 'NOC VIRTUAL',
   red: 'Mapa de Red',
   wfm: 'Control Operativo',
   bidrillas: 'Equipos de Campo',

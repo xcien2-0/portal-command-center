@@ -1,293 +1,304 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ThemeConfig } from '../types';
-import { TrendingUp, Package, RefreshCw, DollarSign, X, ChevronRight } from 'lucide-react';
+import { API_BASE } from '../../../config';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from 'recharts';
+import { TrendingUp, DollarSign, Users, Zap, ChevronRight, X, Loader, Filter } from 'lucide-react';
 
 interface Props { theme: ThemeConfig }
 
-// ── Raw data from Google Sheet (Resumen tab, 2026 cut) ────────────────────────
-const KPI = [
-  { label: 'Venta Total',       value: 1_104_196, color: '#00A859', icon: DollarSign,  desc: 'Suma de todas las operaciones del período' },
-  { label: 'Recurrente',        value:   956_099, color: '#00B4D8', icon: RefreshCw,   desc: 'MRR generado por contratos activos' },
-  { label: 'Venta de Equipo',   value:   116_116, color: '#F59E0B', icon: Package,     desc: 'Hardware vendido en el período' },
-  { label: 'Eventual',          value:    31_980, color: '#a855f7', icon: TrendingUp,  desc: 'Ingresos no recurrentes y servicios eventuales' },
-];
+// ── Palettes ──────────────────────────────────────────────────────────────────
+const G   = '#00ff88';
+const B   = '#00b4d8';
+const Y   = '#f59e0b';
+const P   = '#a855f7';
+const R   = '#ef4444';
 
-const TIPO_OP = [
-  { label: 'Renovación',       monto: 502_333, ops: 63, color: '#00B4D8' },
-  { label: 'Upsale',           monto: 434_975, ops: 45, color: '#00A859' },
-  { label: 'Primera Venta',    monto: 383_844, ops: 52, color: '#3B82F6' },
-  { label: 'Upgrade',          monto: 137_280, ops: 18, color: '#F59E0B' },
-  { label: 'Venta de Equipo',  monto: 116_116, ops: 28, color: '#EC4899' },
-  { label: 'Cambio Domicilio', monto:  28_668, ops: 11, color: '#8B5CF6' },
-  { label: 'Decremento',       monto: -31_586, ops:  9, color: '#ef4444' },
-  { label: 'Cortesía',         monto:       0, ops: 15, color: '#475569' },
-];
+const TIPO_COLORS: Record<string, string> = {
+  'UPSALE': '#00ff88', 'RENOVACIÓN': '#00b4d8', 'UPGRADE': '#f59e0b',
+  'PRIMERA VENTA': '#3b82f6', 'VENTA DE EQUIPO': '#ec4899',
+  'CAMBIO DE DOMICILIO': '#8b5cf6', 'DECREMENTO': '#ef4444',
+  'CORTESÍA': '#475569', 'MIGRACIÓN': '#a855f7', 'EVENTUAL': '#fb923c',
+};
 
-const CATEGORIA = [
-  { label: 'Dedicado',               ops: 99, color: '#00A859' },
-  { label: 'Servicios Administrados',ops: 26, color: '#00B4D8' },
-  { label: 'PYME',                   ops: 20, color: '#F59E0B' },
-  { label: 'Satelital',              ops: 14, color: '#8B5CF6' },
-];
+const CAT_COLORS: Record<string, string> = {
+  'DEDICADO': '#00ff88', 'SERVICIOS ADMINISTRADOS': '#00b4d8',
+  'PYME': '#f59e0b', 'SATELITAL': '#8b5cf6',
+};
 
-const VELOCIDADES = [
-  { label: '20 Mbps',  ops: 36, avg_ticket: 6_800,  color: '#3B82F6' },
-  { label: '50 Mbps',  ops: 29, avg_ticket: 9_500,  color: '#00B4D8' },
-  { label: '100 Mbps', ops: 32, avg_ticket: 12_200, color: '#00A859' },
-  { label: '200 Mbps', ops: 18, avg_ticket: 16_400, color: '#F59E0B' },
-  { label: '500 Mbps', ops: 11, avg_ticket: 24_620, color: '#EC4899' },
-  { label: '1 Gbps',   ops:  7, avg_ticket: 23_000, color: '#a855f7' },
-];
+const EMP_COLORS: Record<string, string> = {
+  'XCIEN': '#00ff88', 'LUMINET': '#00b4d8', 'HUUS': '#f59e0b',
+  'MANUFACTURA': '#a855f7', 'OTRO': '#475569',
+};
 
-const CANAL = [
-  { label: 'Venta Directa', ops: 130, color: '#00A859' },
-  { label: 'EAC',            ops:  15, color: '#00B4D8' },
-  { label: 'Distribuidor',   ops:  13, color: '#F59E0B' },
-];
-
-const PLAZO = [
-  { label: '36 meses', ops: 109, color: '#00A859' },
-  { label: '24 meses', ops:  24, color: '#00B4D8' },
-  { label: '12 meses', ops:  23, color: '#F59E0B' },
-  { label: 'Sin plazo',ops:   1, color: '#475569' },
-];
-
-const SUBPRODUCTO = [
-  { label: 'Dedicado',            ops: 71, color: '#00A859' },
-  { label: 'Dedicado / AD',       ops: 23, color: '#00B4D8' },
-  { label: 'PYME',                ops: 20, color: '#F59E0B' },
-  { label: 'Satelital',           ops: 14, color: '#8B5CF6' },
-  { label: 'Telefonía',           ops:  7, color: '#EC4899' },
-  { label: 'WiFi Administrado',   ops:  7, color: '#3B82F6' },
-  { label: 'Alta Disponibilidad', ops:  6, color: '#a855f7' },
-];
-
-const ON_OFF = [
-  { label: 'ON (activos)',  ops: 127, color: '#22c55e' },
-  { label: 'OFF (inactivos)',ops: 24, color: '#ef4444' },
-];
-
-const MONTHLY_COHORT = [
-  { mes: 'Ene 2026', habilitados: 23, mrr: 214_320, acumulado: 214_320 },
-  { mes: 'Feb 2026', habilitados: 31, mrr: 289_410, acumulado: 503_730 },
-  { mes: 'Mar 2026', habilitados: 27, mrr: 251_640, acumulado: 755_370 },
-  { mes: 'Abr 2026', habilitados: 19, mrr: 178_290, acumulado: 933_660 },
-  { mes: 'May 2026', habilitados: 28, mrr: 262_150, acumulado:1_195_810 },
-];
+const FAC_COLORS: Record<string, string> = {
+  'PAGADA': '#00ff88', 'PENDIENTE PAGO': '#f59e0b',
+  'PENDIENTE ELABORACIÓN': '#ef4444', 'CANCELADA': '#475569',
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(n: number) {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+function fmt(n: number, short = false) {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(short ? 1 : 2)}M`;
   if (Math.abs(n) >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
 }
 
-function HBar({ value, max, color, height = 8 }: { value: number; max: number; color: string; height?: number }) {
-  const pct = Math.max(0, (value / max) * 100);
+// ── Custom tooltip ────────────────────────────────────────────────────────────
+function ChartTip({ active, payload, label, color = G }: any) {
+  if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: height, height, overflow: 'hidden', flex: 1 }}>
-      <div style={{
-        width: `${pct}%`, height: '100%', borderRadius: height,
-        background: color, transition: 'width 0.5s ease',
-        boxShadow: `0 0 8px ${color}66`,
-      }} />
+    <div style={{ background: 'rgba(6,12,20,0.95)', border: `1px solid ${color}30`, borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#fff', backdropFilter: 'blur(8px)' }}>
+      {label && <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4, fontSize: 11 }}>{label}</div>}
+      {payload.map((p: any, i: number) => (
+        <div key={i} style={{ color: p.color || color, fontWeight: 700 }}>
+          {typeof p.value === 'number' && p.name?.includes('mrr') ? fmt(p.value) : p.value}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Drill-down modal ──────────────────────────────────────────────────────────
-type DrillTarget = 'tipo_op' | 'categoria' | 'velocidades' | 'canal' | 'plazo' | 'subproducto' | 'cohort' | null;
+// ── Donut Chart ───────────────────────────────────────────────────────────────
+function DonutChart({ data, colors, size = 140 }: { data: { name: string; value: number }[]; colors: Record<string,string>; size?: number }) {
+  const [active, setActive] = useState<number | null>(null);
+  const palette = data.map(d => colors[d.name] || '#475569');
+  return (
+    <PieChart width={size} height={size}>
+      <Pie data={data} cx={size/2 - 1} cy={size/2 - 1} innerRadius={size * 0.32} outerRadius={size * 0.46}
+        dataKey="value" paddingAngle={2}
+        onMouseEnter={(_, i) => setActive(i)}
+        onMouseLeave={() => setActive(null)}
+      >
+        {data.map((_, i) => (
+          <Cell key={i} fill={palette[i]} opacity={active === null || active === i ? 1 : 0.35}
+            stroke={active === i ? palette[i] : 'transparent'} strokeWidth={active === i ? 2 : 0} />
+        ))}
+      </Pie>
+    </PieChart>
+  );
+}
 
-function DrillModal({ target, theme, onClose }: { target: DrillTarget; theme: ThemeConfig; onClose: () => void }) {
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Resumen {
+  total_ordenes: number; mrr: number; mnr: number; vtc: number;
+  por_empresa: Record<string, number>;
+  por_tipo: Record<string, number>;
+  por_categoria: Record<string, number>;
+  por_on_off: Record<string, number>;
+  estatus_factura: Record<string, number>;
+  cliente_nuevo: number;
+  primera_venta_mrr: number;
+}
+interface MesDato   { mes: string; ordenes: number; mrr: number; mnr: number; vtc: number; }
+interface Vendedor  { vendedor: string; ordenes: number; mrr: number; vtc: number; }
+
+// ── Panel wrapper ─────────────────────────────────────────────────────────────
+function Panel({ children, onClick, glow, style }: { children: React.ReactNode; onClick?: () => void; glow?: string; style?: React.CSSProperties }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${hov && glow ? glow + '40' : 'rgba(255,255,255,0.07)'}`,
+        borderRadius: 20,
+        padding: '22px 24px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s',
+        boxShadow: hov && glow ? `0 0 0 1px ${glow}15, 0 8px 32px rgba(0,0,0,0.3)` : '0 2px 12px rgba(0,0,0,0.2)',
+        backdropFilter: 'blur(8px)',
+        position: 'relative',
+        overflow: 'hidden',
+        ...style,
+      }}
+    >
+      {glow && hov && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at top left, ${glow}06 0%, transparent 70%)`, pointerEvents: 'none' }} />}
+      {children}
+    </div>
+  );
+}
+
+// ── KPI Card ──────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, color, icon: Icon, sparkData }: { label: string; value: string; sub?: string; color: string; icon: any; sparkData?: number[] }) {
+  return (
+    <Panel glow={color}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>{label}</div>
+          <div style={{ fontSize: 30, fontWeight: 900, color, letterSpacing: -1, lineHeight: 1 }}>{value}</div>
+          {sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{sub}</div>}
+        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}15`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={18} color={color} />
+        </div>
+      </div>
+      {sparkData && (
+        <div style={{ marginTop: 16, height: 40 }}>
+          <ResponsiveContainer width="100%" height={40}>
+            <AreaChart data={sparkData.map((v, i) => ({ i, v }))} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+              <defs>
+                <linearGradient id={`spark-${label}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#spark-${label})`} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+// ── Drill Modal ───────────────────────────────────────────────────────────────
+type DrillTarget = 'tipo_op' | 'categoria' | 'empresa' | 'factura' | 'vendedores' | null;
+
+function DrillModal({ target, resumen, vendedores, onClose }: { target: DrillTarget; resumen: Resumen; vendedores: Vendedor[]; onClose: () => void }) {
   if (!target) return null;
 
-  const T = theme;
   const titles: Record<NonNullable<DrillTarget>, string> = {
-    tipo_op:    'Tipo de Operación — Detalle',
-    categoria:  'Categoría de Producto — Detalle',
-    velocidades:'Distribución por Velocidad',
-    canal:      'Canal de Venta',
-    plazo:      'Plazo Contractual',
-    subproducto:'Sub-producto',
-    cohort:     'Cohort Mensual — Habilitaciones',
+    tipo_op: 'Tipo de Operación', categoria: 'Categoría de Producto',
+    empresa: 'Desglose por Empresa', factura: 'Estatus Facturación', vendedores: 'Top Vendedores',
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
-      background: 'rgba(0,0,0,0.72)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(4px)',
-    }} onClick={onClose}>
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: T.card, border: `1px solid ${T.border}`,
-          borderRadius: 20, padding: 32, minWidth: 480, maxWidth: 680,
-          maxHeight: '80vh', overflowY: 'auto',
-          boxShadow: `0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px ${T.accent}20`,
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: T.accent, margin: 0 }}>{titles[target]}</h3>
-          <button
-            onClick={onClose}
-            style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', color: T.dim, lineHeight: 1 }}
-          ><X size={16} /></button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(12px)' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 32, minWidth: 520, maxWidth: 700, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 40px 100px rgba(0,0,0,0.8)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0 }}>{titles[target]}</h3>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)' }}><X size={16} /></button>
         </div>
 
-        {/* Content by target */}
-        {target === 'tipo_op' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {TIPO_OP.map(row => {
-              const maxAbs = Math.max(...TIPO_OP.map(r => Math.abs(r.monto)));
-              return (
-                <div key={row.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
-                    <span style={{ color: T.text, fontWeight: 600 }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{fmt(row.monto)}</span>
+        {/* Tipo operación — horizontal bar chart */}
+        {target === 'tipo_op' && (() => {
+          const rows = Object.entries(resumen.por_tipo).sort((a,b)=>b[1]-a[1]);
+          const total = rows.reduce((s,r)=>s+r[1],0);
+          const data = rows.map(([name,value]) => ({ name, value, pct: ((value/total)*100).toFixed(1) }));
+          return (
+            <div>
+              <ResponsiveContainer width="100%" height={data.length * 38 + 20}>
+                <BarChart data={data} layout="vertical" margin={{ left: 130, right: 50, top: 0, bottom: 0 }} barSize={10}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" tick={{ fill: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} width={130} />
+                  <Tooltip content={<ChartTip />} />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                    {data.map((d, i) => <Cell key={i} fill={TIPO_COLORS[d.name] || '#475569'} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                {data.slice(0, 6).map(d => (
+                  <div key={d.name} style={{ fontSize: 11, color: TIPO_COLORS[d.name] || '#475569', background: `${TIPO_COLORS[d.name] || '#475569'}15`, borderRadius: 20, padding: '3px 10px', border: `1px solid ${TIPO_COLORS[d.name] || '#475569'}30` }}>
+                    {d.name} · {d.pct}%
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <HBar value={Math.abs(row.monto)} max={maxAbs} color={row.color} height={10} />
-                    <span style={{ fontSize: 11, color: T.dim, minWidth: 40, textAlign: 'right' }}>{row.ops} ops</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {target === 'categoria' && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ color: T.dim, fontSize: 11, letterSpacing: 1 }}>
-                <th style={{ textAlign: 'left', padding: '0 0 10px', fontWeight: 600 }}>CATEGORÍA</th>
-                <th style={{ textAlign: 'right', padding: '0 0 10px', fontWeight: 600 }}>OPS</th>
-                <th style={{ textAlign: 'right', padding: '0 0 10px', fontWeight: 600 }}>%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CATEGORIA.map(row => {
-                const total = CATEGORIA.reduce((s, r) => s + r.ops, 0);
-                return (
-                  <tr key={row.label} style={{ borderTop: `1px solid ${T.border}` }}>
-                    <td style={{ padding: '10px 0', color: T.text, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: row.color, display: 'inline-block', flexShrink: 0 }} />
-                      {row.label}
-                    </td>
-                    <td style={{ textAlign: 'right', color: row.color, fontWeight: 700, padding: '10px 0' }}>{row.ops}</td>
-                    <td style={{ textAlign: 'right', color: T.dim, padding: '10px 0' }}>{((row.ops / total) * 100).toFixed(1)}%</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-
-        {target === 'velocidades' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-              {VELOCIDADES.map(v => (
-                <div key={v.label} style={{
-                  background: `${v.color}10`, border: `1px solid ${v.color}30`,
-                  borderRadius: 12, padding: '12px 16px',
-                }}>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: v.color, margin: 0 }}>{v.label}</p>
-                  <p style={{ fontSize: 12, color: T.text, margin: '4px 0 2px' }}>{v.ops} operaciones</p>
-                  <p style={{ fontSize: 11, color: T.dim, margin: 0 }}>Ticket prom: {fmt(v.avg_ticket)}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <p style={{ fontSize: 11, color: T.dim, textAlign: 'center' }}>
-              Total: {VELOCIDADES.reduce((s, v) => s + v.ops, 0)} operaciones · Ticket promedio general: {fmt(Math.round(VELOCIDADES.reduce((s, v) => s + v.avg_ticket * v.ops, 0) / VELOCIDADES.reduce((s, v) => s + v.ops, 0)))}
-            </p>
-          </div>
-        )}
+          );
+        })()}
 
-        {target === 'canal' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {CANAL.map(row => {
-              const total = CANAL.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
-                    <span style={{ color: T.text, fontWeight: 600 }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops} ops ({((row.ops / total) * 100).toFixed(1)}%)</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={12} />
-                </div>
-              );
-            })}
-            <p style={{ fontSize: 11, color: T.dim, marginTop: 8 }}>
-              Venta Directa domina con {((130 / 158) * 100).toFixed(0)}% del pipeline.
-              Oportunidad de crecimiento en canal indirecto (EAC + Distribuidor = {((28 / 158) * 100).toFixed(0)}%).
-            </p>
-          </div>
-        )}
-
-        {target === 'plazo' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {PLAZO.map(row => {
-              const total = PLAZO.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
-                    <span style={{ color: T.text, fontWeight: 600 }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops} contratos ({((row.ops / total) * 100).toFixed(1)}%)</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={12} />
-                </div>
-              );
-            })}
-            <p style={{ fontSize: 11, color: T.dim, marginTop: 8 }}>
-              El 69% de los contratos son a 36 meses — excelente retención de ingresos a largo plazo.
-              VTC promedio 36M: {fmt(TIPO_OP.filter(t => t.monto > 0).reduce((s, t) => s + t.monto, 0) / 109 * 36)}.
-            </p>
-          </div>
-        )}
-
-        {target === 'subproducto' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {SUBPRODUCTO.map(row => {
-              const total = SUBPRODUCTO.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: row.color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, color: T.text }}>{row.label}</span>
-                  <HBar value={row.ops} max={total} color={row.color} height={8} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: row.color, minWidth: 32, textAlign: 'right' }}>{row.ops}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {target === 'cohort' && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {MONTHLY_COHORT.map(row => {
-                const maxMrr = Math.max(...MONTHLY_COHORT.map(r => r.mrr));
-                return (
-                  <div key={row.mes}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
-                      <span style={{ color: T.text, fontWeight: 600 }}>{row.mes}</span>
-                      <span style={{ color: T.accent, fontWeight: 700 }}>{fmt(row.mrr)}</span>
-                      <span style={{ color: T.dim }}>{row.habilitados} habilitados</span>
+        {/* Categoría — donut + lista */}
+        {target === 'categoria' && (() => {
+          const rows = Object.entries(resumen.por_categoria).sort((a,b)=>b[1]-a[1]);
+          const total = rows.reduce((s,r)=>s+r[1],0);
+          const data = rows.map(([name,value]) => ({ name, value }));
+          return (
+            <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+              <DonutChart data={data} colors={CAT_COLORS} size={180} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {rows.map(([name, val]) => (
+                  <div key={name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: CAT_COLORS[name] || '#475569', display: 'inline-block' }} />
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{name}</span>
+                      </div>
+                      <span style={{ color: CAT_COLORS[name] || '#475569', fontWeight: 700 }}>{val} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>({((val/total)*100).toFixed(0)}%)</span></span>
                     </div>
-                    <HBar value={row.mrr} max={maxMrr} color={T.accent} height={10} />
+                    <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ width: `${(val/rows[0][1])*100}%`, height: '100%', background: CAT_COLORS[name] || '#475569', borderRadius: 4, boxShadow: `0 0 6px ${CAT_COLORS[name] || '#475569'}88` }} />
+                    </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-            <div style={{ marginTop: 20, padding: '14px 16px', background: `${T.accent}10`, borderRadius: 12, border: `1px solid ${T.accent}25` }}>
-              <p style={{ fontSize: 12, color: T.text, margin: 0 }}>
-                <strong style={{ color: T.accent }}>MRR acumulado al cierre:</strong> {fmt(MONTHLY_COHORT[MONTHLY_COHORT.length - 1].acumulado)}
-              </p>
-              <p style={{ fontSize: 11, color: T.dim, margin: '4px 0 0' }}>
-                Total habilitaciones: {MONTHLY_COHORT.reduce((s, r) => s + r.habilitados, 0)} · Ticket promedio: {fmt(Math.round(MONTHLY_COHORT.reduce((s, r) => s + r.mrr, 0) / MONTHLY_COHORT.reduce((s, r) => s + r.habilitados, 0)))}
-              </p>
+          );
+        })()}
+
+        {/* Empresa — donut + lista */}
+        {target === 'empresa' && (() => {
+          const rows = Object.entries(resumen.por_empresa).sort((a,b)=>b[1]-a[1]);
+          const total = rows.reduce((s,r)=>s+r[1],0);
+          const data = rows.map(([name,value]) => ({ name, value }));
+          return (
+            <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+              <DonutChart data={data} colors={EMP_COLORS} size={180} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {rows.map(([name, val]) => (
+                  <div key={name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: EMP_COLORS[name] || '#475569', display: 'inline-block' }} />
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{name}</span>
+                      </div>
+                      <span style={{ color: EMP_COLORS[name] || '#475569', fontWeight: 700 }}>{val} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>({((val/total)*100).toFixed(0)}%)</span></span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ width: `${(val/rows[0][1])*100}%`, height: '100%', background: EMP_COLORS[name] || '#475569', borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          );
+        })()}
+
+        {/* Factura — donut + lista */}
+        {target === 'factura' && (() => {
+          const rows = Object.entries(resumen.estatus_factura).sort((a,b)=>b[1]-a[1]);
+          const total = rows.reduce((s,r)=>s+r[1],0);
+          const data = rows.map(([name,value]) => ({ name, value }));
+          return (
+            <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+              <DonutChart data={data} colors={FAC_COLORS} size={180} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {rows.map(([name, val]) => (
+                  <div key={name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: FAC_COLORS[name] || '#475569', display: 'inline-block' }} />
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{name}</span>
+                      </div>
+                      <span style={{ color: FAC_COLORS[name] || '#475569', fontWeight: 700 }}>{val} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>({((val/total)*100).toFixed(0)}%)</span></span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ width: `${(val/rows[0][1])*100}%`, height: '100%', background: FAC_COLORS[name] || '#475569', borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Vendedores */}
+        {target === 'vendedores' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {vendedores.map((v, i) => (
+              <div key={v.vendedor} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 14, background: i === 0 ? `${G}08` : 'rgba(255,255,255,0.02)', border: `1px solid ${i < 3 ? G + '20' : 'rgba(255,255,255,0.05)'}` }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: i === 0 ? G : i === 1 ? B : i === 2 ? Y : 'rgba(255,255,255,0.3)', minWidth: 28 }}>#{i+1}</span>
+                <span style={{ flex: 1, fontSize: 13, color: '#fff', fontWeight: 600 }}>{v.vendedor || '—'}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: G }}>{fmt(v.mrr)}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{v.ordenes} órdenes</div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -297,281 +308,265 @@ function DrillModal({ target, theme, onClose }: { target: DrillTarget; theme: Th
 
 // ── Main Section ──────────────────────────────────────────────────────────────
 export default function VentasSection({ theme: T }: Props) {
-  const [drill, setDrill] = useState<DrillTarget>(null);
+  const [resumen,    setResumen]    = useState<Resumen | null>(null);
+  const [meses,      setMeses]      = useState<MesDato[]>([]);
+  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [drill,      setDrill]      = useState<DrillTarget>(null);
+  const [mesFiltro,  setMesFiltro]  = useState('');
 
-  const panelStyle = {
-    background: T.card,
-    border: `1px solid ${T.border}`,
-    borderRadius: 16,
-    padding: '20px 24px',
-    cursor: 'pointer',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  };
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/api/ventas/resumen`).then(r => r.json()),
+      fetch(`${API_BASE}/api/ventas/por-mes`).then(r => r.json()),
+      fetch(`${API_BASE}/api/ventas/top-vendedores`).then(r => r.json()),
+    ]).then(([res, mes, vend]) => { setResumen(res); setMeses(mes); setVendedores(vend); })
+      .catch(console.error).finally(() => setLoading(false));
+  }, []);
 
-  const hoverBorder = { borderColor: `${T.accent}50`, boxShadow: `0 0 0 1px ${T.accent}25` };
-  const [hov, setHov] = useState<string | null>(null);
+  const resFiltrado = useMemo(() => {
+    if (!mesFiltro || !meses.length || !resumen) return resumen;
+    const m = meses.find(x => x.mes === mesFiltro);
+    return m ? { ...resumen, mrr: m.mrr, mnr: m.mnr, vtc: m.vtc, total_ordenes: m.ordenes } : resumen;
+  }, [resumen, meses, mesFiltro]);
 
-  const panel = (id: string, target: DrillTarget, children: React.ReactNode, style?: React.CSSProperties) => (
-    <div
-      style={{ ...panelStyle, ...(hov === id ? hoverBorder : {}), ...style }}
-      onClick={() => setDrill(target)}
-      onDoubleClick={() => setDrill(target)}
-      onMouseEnter={() => setHov(id)}
-      onMouseLeave={() => setHov(null)}
-      title="Haz clic para ver detalle"
-    >
-      {children}
+  const sparkMrr = useMemo(() => meses.map(m => m.mrr), [meses]);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, gap: 12, color: 'rgba(255,255,255,0.4)', flexDirection: 'column' }}>
+      <Loader size={28} style={{ animation: 'spin 1s linear infinite', color: G }} />
+      <span style={{ fontSize: 13 }}>Cargando datos de ventas...</span>
     </div>
   );
 
-  const maxTipoOp = Math.max(...TIPO_OP.map(r => Math.abs(r.monto)));
-  const totalOps = TIPO_OP.reduce((s, r) => s + r.ops, 0);
+  if (!resumen || !resFiltrado) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: R }}>Error cargando datos</div>
+  );
+
+  // Derived data
+  const tipoData = Object.entries(resumen.por_tipo).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name,value]) => ({ name, value }));
+  const catData  = Object.entries(resumen.por_categoria).sort((a,b)=>b[1]-a[1]).map(([name,value]) => ({ name, value }));
+  const empData  = Object.entries(resumen.por_empresa).sort((a,b)=>b[1]-a[1]).map(([name,value]) => ({ name, value }));
+  const onOff    = resumen.por_on_off;
+  const totalOnOff = (onOff['ON']||0) + (onOff['OFF']||0);
+
+  // MRR area chart data
+  const areaData = meses.map(m => ({ mes: m.mes.slice(0,3), mrr: m.mrr, ordenes: m.ordenes, vtc: m.vtc }));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 40, fontFamily: "'Inter', sans-serif" }}>
 
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: T.text, margin: 0 }}>Resumen de Ventas</h1>
-        <p style={{ fontSize: 13, color: T.dim, margin: '4px 0 0' }}>
-          Planeación · {totalOps} operaciones · Datos del Google Sheet · Haz clic en cualquier panel para desglose
-        </p>
-      </div>
-
-      {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {KPI.map(k => {
-          const Icon = k.icon;
-          return (
-            <div
-              key={k.label}
-              style={{
-                background: T.card, border: `1px solid ${T.border}`,
-                borderRadius: 16, padding: '18px 20px',
-                borderTop: `3px solid ${k.color}`,
-              }}
-              title={k.desc}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <span style={{ fontSize: 11, color: T.dim, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>{k.label}</span>
-                <Icon size={14} color={k.color} />
-              </div>
-              <p style={{ fontSize: 24, fontWeight: 800, color: k.color, margin: 0 }}>{fmt(k.value)}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Row 2: Tipo op (wide) + ON/OFF */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-
-        {panel('tipo_op', 'tipo_op', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-              <div>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Tipo de Operación</h2>
-                <p style={{ fontSize: 11, color: T.dim, margin: '2px 0 0' }}>{totalOps} ops · clic para desglose</p>
-              </div>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {TIPO_OP.map(row => (
-                <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 11, color: T.text, minWidth: 130 }}>{row.label}</span>
-                  <HBar value={Math.abs(row.monto)} max={maxTipoOp} color={row.color} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: row.color, minWidth: 60, textAlign: 'right' }}>{fmt(row.monto)}</span>
-                  <span style={{ fontSize: 10, color: T.dim, minWidth: 36, textAlign: 'right' }}>{row.ops}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        ))}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* ON/OFF */}
-          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: '18px 20px', flex: 1 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 16px' }}>Estado Servicios</h2>
-            {ON_OFF.map(row => {
-              const total = ON_OFF.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
-                    <span style={{ color: T.text }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops} ({((row.ops / total) * 100).toFixed(0)}%)</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={10} />
-                </div>
-              );
-            })}
-            <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(34,197,94,0.07)', borderRadius: 10, border: '1px solid rgba(34,197,94,0.2)' }}>
-              <p style={{ fontSize: 12, color: '#22c55e', margin: 0, fontWeight: 700 }}>
-                {((127 / 151) * 100).toFixed(0)}% retención activa
-              </p>
-              <p style={{ fontSize: 10, color: T.dim, margin: '2px 0 0' }}>127 de 151 servicios recurrentes ON</p>
-            </div>
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: -1 }}>
+            Ventas <span style={{ color: G }}>2026</span>
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', margin: '4px 0 0' }}>
+            Archivo Maestro Comercial · {resumen.total_ordenes} órdenes · Ene–Jun 2026
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Filter size={12} color="rgba(255,255,255,0.3)" />
+          <select value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '7px 12px', color: '#fff', fontSize: 12, cursor: 'pointer', outline: 'none' }}>
+            <option value="">Todos los meses</option>
+            {meses.map(m => <option key={m.mes} value={m.mes}>{m.mes}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Row 3: Categoría + Canal + Plazo */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-
-        {panel('categoria', 'categoria', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Categoría Producto</h2>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            {CATEGORIA.map(row => {
-              const total = CATEGORIA.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
-                    <span style={{ color: T.text }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops}</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={8} />
-                </div>
-              );
-            })}
-          </>
-        ))}
-
-        {panel('canal', 'canal', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Canal de Venta</h2>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            {CANAL.map(row => {
-              const total = CANAL.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
-                    <span style={{ color: T.text }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops} ({((row.ops / total) * 100).toFixed(0)}%)</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={8} />
-                </div>
-              );
-            })}
-          </>
-        ))}
-
-        {panel('plazo', 'plazo', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Plazo Contractual</h2>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            {PLAZO.map(row => {
-              const total = PLAZO.reduce((s, r) => s + r.ops, 0);
-              return (
-                <div key={row.label} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
-                    <span style={{ color: T.text }}>{row.label}</span>
-                    <span style={{ color: row.color, fontWeight: 700 }}>{row.ops}</span>
-                  </div>
-                  <HBar value={row.ops} max={total} color={row.color} height={8} />
-                </div>
-              );
-            })}
-          </>
-        ))}
+      {/* KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <KpiCard label="MRR Neto"        value={fmt(resFiltrado.mrr, true)}  sub={`${resFiltrado.total_ordenes} órdenes`}   color={G} icon={DollarSign} sparkData={sparkMrr} />
+        <KpiCard label="No Recurrente"   value={fmt(resFiltrado.mnr, true)}  sub="Equipos y one-time"                        color={B} icon={Zap} />
+        <KpiCard label="VTC Total"       value={fmt(resFiltrado.vtc, true)}  sub="Valor total contratos"                     color={Y} icon={TrendingUp} />
+        <KpiCard label="Clientes Nuevos" value={String(resumen.cliente_nuevo)} sub={`de ${resumen.total_ordenes} órdenes`}  color={P} icon={Users} />
       </div>
 
-      {/* Row 4: Velocidades + Sub-producto */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      {/* MRR Area Chart */}
+      <Panel glow={G} style={{ padding: '24px 28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 800, color: '#fff', margin: 0 }}>MRR Mensual</h2>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '4px 0 0' }}>Ingresos recurrentes generados por mes · Clic en barra para filtrar</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G }}>{fmt(meses.reduce((s,m)=>s+m.mrr,0), true)}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>acumulado 2026</div>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={areaData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+            onClick={(d: any) => d?.activeLabel && setMesFiltro(p => p === meses.find(m => m.mes.slice(0,3) === d.activeLabel)?.mes ? '' : meses.find(m => m.mes.slice(0,3) === d.activeLabel)?.mes || '')}
+          >
+            <defs>
+              <linearGradient id="mrrGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={G} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={G} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="mes" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}K`} width={52} />
+            <Tooltip content={<ChartTip color={G} />} formatter={(v: number) => fmt(v)} />
+            <Area type="monotone" dataKey="mrr" name="mrr" stroke={G} strokeWidth={2.5} fill="url(#mrrGrad)" dot={{ fill: G, r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: G, strokeWidth: 0, filter: `drop-shadow(0 0 6px ${G})` }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Panel>
 
-        {panel('velocidades', 'velocidades', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Velocidades Vendidas</h2>
-                <p style={{ fontSize: 11, color: T.dim, margin: '2px 0 0' }}>Con ticket promedio por tier</p>
-              </div>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {VELOCIDADES.map(row => {
-                const maxOps = Math.max(...VELOCIDADES.map(r => r.ops));
-                return (
-                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 11, color: T.text, minWidth: 72 }}>{row.label}</span>
-                    <HBar value={row.ops} max={maxOps} color={row.color} />
-                    <span style={{ fontSize: 11, color: row.color, fontWeight: 700, minWidth: 26, textAlign: 'right' }}>{row.ops}</span>
-                    <span style={{ fontSize: 10, color: T.dim, minWidth: 54, textAlign: 'right' }}>{fmt(row.avg_ticket)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ))}
+      {/* Row 2: Tipo Operación (bar) + ON/OFF + Empresa */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
 
-        {panel('subproducto', 'subproducto', (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Sub-Producto</h2>
-                <p style={{ fontSize: 11, color: T.dim, margin: '2px 0 0' }}>Desglose por familia de producto</p>
-              </div>
-              <ChevronRight size={16} color={T.dim} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {SUBPRODUCTO.map(row => {
-                const total = SUBPRODUCTO.reduce((s, r) => s + r.ops, 0);
-                return (
-                  <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: row.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: T.text, flex: 1 }}>{row.label}</span>
-                    <HBar value={row.ops} max={total} color={row.color} height={7} />
-                    <span style={{ fontSize: 11, color: row.color, fontWeight: 700, minWidth: 26, textAlign: 'right' }}>{row.ops}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ))}
-      </div>
-
-      {/* Row 5: Cohort */}
-      {panel('cohort', 'cohort', (
-        <>
+        {/* Tipo operación */}
+        <Panel glow={G} onClick={() => setDrill('tipo_op')} style={{ padding: '22px 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Cohort Mensual — MRR por Habilitaciones</h2>
-              <p style={{ fontSize: 11, color: T.dim, margin: '2px 0 0' }}>Ingresos generados mes a mes</p>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: '#fff', margin: 0 }}>Tipo de Operación</h2>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>{resumen.total_ordenes} operaciones totales</p>
             </div>
-            <ChevronRight size={16} color={T.dim} />
+            <ChevronRight size={16} color="rgba(255,255,255,0.3)" />
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', height: 80 }}>
-            {MONTHLY_COHORT.map(row => {
-              const maxMrr = Math.max(...MONTHLY_COHORT.map(r => r.mrr));
-              const heightPct = (row.mrr / maxMrr) * 100;
+          <ResponsiveContainer width="100%" height={tipoData.length * 34}>
+            <BarChart data={tipoData} layout="vertical" barSize={8} margin={{ left: 0, right: 40, top: 0, bottom: 0 }}>
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="name" tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} width={148} />
+              <Tooltip content={<ChartTip />} />
+              <Bar dataKey="value" radius={[0, 8, 8, 0]} label={{ position: 'right', fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                {tipoData.map((d, i) => <Cell key={i} fill={TIPO_COLORS[d.name] || '#475569'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* ON/OFF Net */}
+          <Panel glow={G} style={{ padding: '20px 22px', flex: 1 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: '0 0 16px' }}>ON · OFF Net</h2>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <DonutChart data={[{ name: 'ON', value: onOff['ON']||0 }, { name: 'OFF', value: onOff['OFF']||0 }]} colors={{ ON: '#22c55e', OFF: R }} size={100} />
+              <div style={{ flex: 1 }}>
+                {[['ON', '#22c55e'], ['OFF', R]].map(([k, c]) => (
+                  <div key={k} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 12 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>{k}-Net</span>
+                      <span style={{ color: c, fontWeight: 700 }}>{onOff[k]||0}</span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ width: `${totalOnOff > 0 ? ((onOff[k]||0)/totalOnOff)*100 : 0}%`, height: '100%', background: c, borderRadius: 4, boxShadow: `0 0 6px ${c}88` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Panel>
+
+          {/* Empresa */}
+          <Panel glow={B} onClick={() => setDrill('empresa')} style={{ padding: '20px 22px', flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: 0 }}>Empresa</h2>
+              <ChevronRight size={14} color="rgba(255,255,255,0.3)" />
+            </div>
+            {empData.map(({ name, value }) => {
+              const total = empData.reduce((s,r)=>s+r.value,0);
               return (
-                <div key={row.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 9, color: T.accent, fontWeight: 700 }}>{fmt(row.mrr)}</span>
-                  <div style={{
-                    width: '100%', height: `${heightPct}%`, minHeight: 8,
-                    background: `linear-gradient(180deg, ${T.accent}, ${T.accent}66)`,
-                    borderRadius: '4px 4px 0 0',
-                    boxShadow: `0 0 10px ${T.accent}44`,
-                  }} />
-                  <span style={{ fontSize: 9, color: T.dim }}>{row.mes.split(' ')[0]}</span>
+                <div key={name} style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: EMP_COLORS[name]||'#475569', display: 'inline-block' }} />
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>{name}</span>
+                    </div>
+                    <span style={{ color: EMP_COLORS[name]||B, fontWeight: 700 }}>{value} <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({((value/total)*100).toFixed(0)}%)</span></span>
+                  </div>
+                  <div style={{ height: 3, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{ width: `${(value/empData[0].value)*100}%`, height: '100%', background: EMP_COLORS[name]||B, borderRadius: 3 }} />
+                  </div>
                 </div>
               );
             })}
-          </div>
-          <div style={{ marginTop: 14, display: 'flex', gap: 24, fontSize: 11, color: T.dim }}>
-            <span>Total hab.: <strong style={{ color: T.text }}>{MONTHLY_COHORT.reduce((s, r) => s + r.habilitados, 0)}</strong></span>
-            <span>MRR total: <strong style={{ color: T.accent }}>{fmt(MONTHLY_COHORT.reduce((s, r) => s + r.mrr, 0))}</strong></span>
-            <span>Mejor mes: <strong style={{ color: T.text }}>Feb 2026</strong></span>
-          </div>
-        </>
-      ), { cursor: 'pointer' })}
+          </Panel>
+        </div>
+      </div>
 
-      {/* Drill modal */}
-      <DrillModal target={drill} theme={T} onClose={() => setDrill(null)} />
+      {/* Row 3: Categoría (donut) + Facturación + Vendedores */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+
+        {/* Categoría */}
+        <Panel glow={G} onClick={() => setDrill('categoria')} style={{ padding: '22px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: 0 }}>Categoría</h2>
+            <ChevronRight size={14} color="rgba(255,255,255,0.3)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <DonutChart data={catData} colors={CAT_COLORS} size={120} />
+            <div style={{ flex: 1 }}>
+              {catData.map(({ name, value }) => {
+                const total = catData.reduce((s,r)=>s+r.value,0);
+                return (
+                  <div key={name} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: CAT_COLORS[name]||'#475569', display: 'inline-block' }} />
+                        {name.length > 14 ? name.slice(0,14)+'…' : name}
+                      </span>
+                      <span style={{ color: CAT_COLORS[name]||G, fontWeight: 700 }}>{((value/total)*100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Panel>
+
+        {/* Facturación */}
+        <Panel glow={Y} onClick={() => setDrill('factura')} style={{ padding: '22px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: 0 }}>Facturación</h2>
+            <ChevronRight size={14} color="rgba(255,255,255,0.3)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <DonutChart data={Object.entries(resumen.estatus_factura).map(([name,value])=>({name,value}))} colors={FAC_COLORS} size={120} />
+            <div style={{ flex: 1 }}>
+              {Object.entries(resumen.estatus_factura).sort((a,b)=>b[1]-a[1]).map(([name, val]) => {
+                const total = Object.values(resumen.estatus_factura).reduce((s,v)=>s+v,0);
+                return (
+                  <div key={name} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: FAC_COLORS[name]||'#475569', display: 'inline-block' }} />
+                        {name.length > 16 ? name.slice(0,16)+'…' : name}
+                      </span>
+                      <span style={{ color: FAC_COLORS[name]||Y, fontWeight: 700 }}>{val} <span style={{ color: 'rgba(255,255,255,0.3)' }}>({((val/total)*100).toFixed(0)}%)</span></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Panel>
+
+        {/* Top Vendedores */}
+        <Panel glow={P} onClick={() => setDrill('vendedores')} style={{ padding: '22px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div>
+              <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: 0 }}>Top Vendedores</h2>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>Por MRR generado</p>
+            </div>
+            <ChevronRight size={14} color="rgba(255,255,255,0.3)" />
+          </div>
+          {vendedores.slice(0, 6).map((v, i) => (
+            <div key={v.vendedor} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 900, color: i === 0 ? G : i === 1 ? B : i === 2 ? Y : 'rgba(255,255,255,0.25)', minWidth: 22 }}>#{i+1}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.vendedor || '—'}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: i < 3 ? G : 'rgba(255,255,255,0.4)' }}>{fmt(v.mrr, true)}</span>
+            </div>
+          ))}
+        </Panel>
+      </div>
+
+      {/* Drill Modal */}
+      {drill && <DrillModal target={drill} resumen={resumen} vendedores={vendedores} onClose={() => setDrill(null)} />}
     </div>
   );
 }

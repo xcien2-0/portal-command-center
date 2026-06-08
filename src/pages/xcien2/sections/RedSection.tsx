@@ -68,33 +68,7 @@ interface TopoLink {
   model?: string;
 }
 
-const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
-  'Monterrey':        { lat: 25.6866,  lng: -100.3161 },
-  'Saltillo':         { lat: 25.4232,  lng: -100.9928 },
-  'Piedras Negras':   { lat: 28.7000,  lng: -100.5231 },
-  'San Luis Potosi':  { lat: 22.1565,  lng: -100.9855 },
-  'San Luis Potosí':  { lat: 22.1565,  lng: -100.9855 },
-  'Torreón':          { lat: 25.5428,  lng: -103.4068 },
-  'Torreon':          { lat: 25.5428,  lng: -103.4068 },
-  'Chihuahua':        { lat: 28.6353,  lng: -106.0889 },
-  'Nuevo Laredo':     { lat: 27.4765,  lng:  -99.5151 },
-  'Reynosa':          { lat: 26.0922,  lng:  -98.2772 },
-  'Matamoros':        { lat: 25.8691,  lng:  -97.5027 },
-  'Monclova':         { lat: 26.9083,  lng: -101.4217 },
-  'Sabinas':          { lat: 27.8529,  lng: -101.1191 },
-  'Guadalajara':      { lat: 20.6597,  lng: -103.3496 },
-  'Ciudad de México': { lat: 19.4326,  lng:  -99.1332 },
-  'Querétaro':        { lat: 20.5888,  lng: -100.3899 },
-  'Queretaro':        { lat: 20.5888,  lng: -100.3899 },
-  'Celaya':           { lat: 20.5200,  lng: -100.8161 },
-  'León':             { lat: 21.1221,  lng: -101.6823 },
-  'Leon':             { lat: 21.1221,  lng: -101.6823 },
-  'Tampico':          { lat: 22.2552,  lng:  -97.8686 },
-  'Mérida':           { lat: 20.9674,  lng:  -89.5926 },
-  'Merida':           { lat: 20.9674,  lng:  -89.5926 },
-  'Puebla':           { lat: 19.0414,  lng:  -98.2063 },
-  'Coco':             { lat: 25.5000,  lng: -103.5000 },
-};
+// Coordenadas vienen del backend (NOCBoard + _CITY_META) — no se necesitan aquí
 
 const VENDORS_ALL = ['Mimosa', 'Ubiquiti', 'Cambium', 'MikroTik', 'Unknown'];
 
@@ -853,68 +827,44 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           </button>
         </div>
 
-        {/* Controles de capas — solo en vista mapa */}
+        {/* ── Capas de Monitoreo — solo en vista mapa ── */}
         {mainView === 'map' && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setShowDevices(p => !p)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              background: showDevices ? 'rgba(0,175,240,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${showDevices ? '#00aff0' : 'rgba(255,255,255,0.15)'}`,
-              color: showDevices ? '#00aff0' : 'rgba(255,255,255,0.5)',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <Wifi size={13} /> Dispositivos
-            </button>
-            <button onClick={() => setShowTopo(p => !p)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              background: showTopo ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${showTopo ? '#3b82f6' : 'rgba(255,255,255,0.15)'}`,
-              color: showTopo ? '#3b82f6' : 'rgba(255,255,255,0.5)',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <GitBranch size={13} /> Links
-            </button>
-            <button onClick={() => setShowOdoo(p => !p)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              background: showOdoo ? 'rgba(0,168,89,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${showOdoo ? '#00A859' : 'rgba(255,255,255,0.15)'}`,
-              color: showOdoo ? '#00A859' : 'rgba(255,255,255,0.5)',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <Building2 size={13} />
-              Servicios Odoo
-              {odooServicios.length > 0 && (
-                <span style={{
-                  background: showOdoo ? 'rgba(0,168,89,0.25)' : 'rgba(255,255,255,0.08)',
-                  borderRadius: 8, padding: '0 5px', fontSize: 10,
-                }}>
-                  {odooServicios.filter(s => s.estado === 'active').length}
-                </span>
-              )}
-            </button>
-            {/* Sub-filtros onnet/offnet — solo si Odoo visible */}
-            {showOdoo && (
-              <>
-                {([
-                  { id: 'all',    label: 'Todos',    count: odooServicios.filter(s=>s.estado==='active').length,                            color: '#e2e8f0' },
-                  { id: 'innet',  label: '🟢 On-net', count: odooServicios.filter(s=>s.estado==='active'&&s.entrega==='innet').length,  color: '#00A859' },
-                  { id: 'offnet', label: '🔵 Off-net', count: odooServicios.filter(s=>s.estado==='active'&&s.entrega==='offnet').length, color: '#3b82f6' },
-                ] as const).map(opt => (
-                  <button key={opt.id} onClick={() => setOdooFiltro(opt.id)} style={{
-                    padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
-                    background: odooFiltro === opt.id ? `${opt.color}20` : 'transparent',
-                    border: `1px solid ${odooFiltro === opt.id ? opt.color : `${opt.color}30`}`,
-                    color: odooFiltro === opt.id ? opt.color : `${opt.color}70`,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    {opt.label}
-                    <span style={{ background: `${opt.color}18`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>
-                      {opt.count}
-                    </span>
-                  </button>
-                ))}
-              </>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: 1, textTransform: 'uppercase', marginRight: 2 }}>Capas</span>
+            {([
+              { key: 'nocboard',          label: 'NOCBoard',          color: '#00ff88', active: true,        locked: false, count: hosts.filter(h=>h.status==='online').length + '/' + hosts.length },
+              { key: 'nocboard_wireless', label: 'NOCBoard Wireless', color: '#3b82f6', active: showDevices,  locked: false, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length },
+              { key: 'nocboard_core',     label: 'NOCBoard Core',     color: '#ff3366', active: showTopo,     locked: false, count: hosts.filter(h=>h.status==='offline').length },
+              { key: 'nocboard_energy',   label: 'NOCBoard Energy',   color: '#ffcc00', active: false,        locked: true,  count: null },
+              { key: 'observium',         label: 'Observium',         color: '#a855f7', active: showOdoo,     locked: false, count: null },
+              { key: 'prtg',              label: 'PRTG',              color: '#f97316', active: false,        locked: true,  count: null },
+            ] as const).map(layer => (
+              <button
+                key={layer.key}
+                disabled={layer.locked}
+                onClick={() => {
+                  if (layer.key === 'nocboard_wireless') setShowDevices(p => !p);
+                  else if (layer.key === 'nocboard_core') setShowTopo(p => !p);
+                  else if (layer.key === 'observium') setShowOdoo(p => !p);
+                }}
+                title={layer.locked ? 'Pendiente de configurar' : undefined}
+                style={{
+                  padding: '5px 12px', borderRadius: 20, fontSize: 11, cursor: layer.locked ? 'not-allowed' : 'pointer',
+                  background: layer.active ? `${layer.color}18` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${layer.active ? layer.color : 'rgba(255,255,255,0.12)'}`,
+                  color: layer.locked ? 'rgba(255,255,255,0.2)' : layer.active ? layer.color : 'rgba(255,255,255,0.45)',
+                  display: 'flex', alignItems: 'center', gap: 5, opacity: layer.locked ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: layer.active ? layer.color : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                {layer.label}
+                {layer.count !== null && (
+                  <span style={{ background: `${layer.color}20`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>{layer.count}</span>
+                )}
+                {layer.locked && <span style={{ fontSize: 9, opacity: 0.5 }}>●</span>}
+              </button>
+            ))}
           </div>
         )}
 

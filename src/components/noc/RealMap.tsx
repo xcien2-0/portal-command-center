@@ -13,18 +13,33 @@ function nodeColor(score: number) {
   return R;
 }
 
+const ODOO_COLOR = '#00b4d8';
+
 // ── Types ────────────────────────────────────────────────────────────────────
+export interface OdooServicio {
+  id: number;
+  lat: number;
+  lng: number;
+  nombre: string;
+  cliente: string;
+  bajada?: number;
+  subida?: number;
+  rb?: string;
+}
+
 interface Props {
   cities: NOCCity[];
   onSelectCity: (city: NOCCity) => void;
   selectedCityId: string | null;
+  odooServices?: OdooServicio[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function RealMap({ cities, onSelectCity, selectedCityId }: Props) {
+export default function RealMap({ cities, onSelectCity, selectedCityId, odooServices = [] }: Props) {
   const mapRef        = useRef<any>(null);
   const leafRef       = useRef<any>(null);
   const layerRef      = useRef<any>(null);
+  const odooLayerRef  = useRef<any>(null);
   const svgRef        = useRef<SVGSVGElement | null>(null);
   const citiesRef     = useRef<NOCCity[]>(cities);
   const selectedRef   = useRef<string | null>(selectedCityId);
@@ -139,6 +154,39 @@ export default function RealMap({ cities, onSelectCity, selectedCityId }: Props)
 
     drawArcs(map, L, svg, cities, selectedCityId);
   }, [cities, selectedCityId]);
+
+  // ── Odoo customer layer ───────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const L   = leafRef.current;
+    if (!map || !L) return;
+
+    if (odooLayerRef.current) { odooLayerRef.current.clearLayers(); }
+    if (!odooServices.length) return;
+
+    const group = odooLayerRef.current ?? L.layerGroup().addTo(map);
+    odooLayerRef.current = group;
+    group.clearLayers();
+
+    odooServices.forEach(s => {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:5px;height:5px;border-radius:50%;background:${ODOO_COLOR};opacity:0.75;box-shadow:0 0 4px ${ODOO_COLOR}88;"></div>`,
+        iconSize:   [5, 5],
+        iconAnchor: [2.5, 2.5],
+      });
+      L.marker([s.lat, s.lng], { icon })
+        .bindTooltip(`
+          <div style="font-family:monospace;font-size:11px;background:#000d14;border:1px solid ${ODOO_COLOR}40;border-radius:8px;padding:8px 12px;color:#fff">
+            <div style="font-weight:800;color:${ODOO_COLOR};margin-bottom:4px">${s.cliente || s.nombre}</div>
+            ${s.bajada ? `<div>↓ ${s.bajada} Mbps &nbsp; ↑ ${s.subida} Mbps</div>` : ''}
+            ${s.rb ? `<div style="color:rgba(255,255,255,0.5)">RB: ${s.rb}</div>` : ''}
+          </div>`, {
+          className: 'noc-tooltip', permanent: false, opacity: 1, direction: 'top', offset: [0, -4],
+        })
+        .addTo(group);
+    });
+  }, [odooServices]);
 
   return (
     <>
