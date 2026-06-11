@@ -363,6 +363,43 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
   );
 }
 
+// ── Error Boundary ────────────────────────────────────────────────────────────
+import React from 'react';
+class SectionErrorBoundary extends React.Component<
+  { children: React.ReactNode; section: string },
+  { error: Error | null }
+> {
+  constructor(props: any) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidUpdate(prev: any) {
+    if (prev.section !== this.props.section && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 40, flexDirection: 'column', gap: 16,
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#ff3366', fontFamily: 'monospace' }}>
+            ERROR EN SECCIÓN: {this.props.section.toUpperCase()}
+          </div>
+          <pre style={{
+            background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.3)',
+            borderRadius: 10, padding: '16px 20px', fontSize: 11, color: '#fca5a5',
+            maxWidth: 700, overflowX: 'auto', whiteSpace: 'pre-wrap', fontFamily: 'monospace',
+          }}>
+            {this.state.error.message}{'\n\n'}{this.state.error.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ── Main Content ──────────────────────────────────────────────────────────────
 interface ContentProps {
   section: SectionId;
@@ -826,23 +863,25 @@ export default function Xcien2Page() {
           </div>
         </header>
 
-        <Content
-          section={section}
-          theme={theme}
-          activeThemeId={activeThemeId}
-          onThemeChange={patchTheme}
-          onThemeReset={resetTheme}
-          onApplyPreset={applyPreset}
-          cities={realCities}
-          alerts={realAlerts}
-          activeTenantId={activeTenantId}
-          onTenantChange={setActiveTenantId}
-          bridgeData={bridgeData}
-          backendStatus={backendStatus}
-          odooStatus={odooStatus}
-          observiumStatus={observiumStatus}
-          onSelect={onSelectSection}
-        />
+        <SectionErrorBoundary section={section}>
+          <Content
+            section={section}
+            theme={theme}
+            activeThemeId={activeThemeId}
+            onThemeChange={patchTheme}
+            onThemeReset={resetTheme}
+            onApplyPreset={applyPreset}
+            cities={realCities}
+            alerts={realAlerts}
+            activeTenantId={activeTenantId}
+            onTenantChange={setActiveTenantId}
+            bridgeData={bridgeData}
+            backendStatus={backendStatus}
+            odooStatus={odooStatus}
+            observiumStatus={observiumStatus}
+            onSelect={onSelectSection}
+          />
+        </SectionErrorBoundary>
       </div>
 
       <style>{`

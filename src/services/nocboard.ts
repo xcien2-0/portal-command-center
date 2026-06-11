@@ -7,6 +7,36 @@ let _alerts:   NOCAlert[] | null = null;
 let _lastFetch = 0;
 const TTL = 30_000;
 
+// ── Transform raw backend response to NOCCity shape ───────────────────────────
+function transformCity(raw: any): NOCCity {
+  // Backend uses Spanish field names; frontend expects English
+  const nodos   = raw.nodos   ?? raw.totalHosts ?? 0;
+  const activos = raw.activos ?? raw.online     ?? 0;
+  const offline = nodos - activos;
+  const score   = raw.uptime  ?? raw.score      ?? (nodos > 0 ? Math.round((activos / nodos) * 100) : 0);
+  const sitesRaw: string[] = Array.isArray(raw.sites) ? raw.sites : [];
+
+  return {
+    id:         raw.id         || '',
+    name:       raw.name       || raw.nombre || '',
+    score,
+    totalHosts: nodos,
+    online:     activos,
+    offline:    offline < 0 ? 0 : offline,
+    alerts:     raw.alertas    ?? raw.alerts ?? (offline > 0 ? offline : 0),
+    lat:        raw.lat        ?? 0,
+    lng:        raw.lng        ?? 0,
+    // Convert string site names to NOCSite objects so SiteInspector works
+    sites: sitesRaw.map(siteName => ({
+      id:          siteName,
+      name:        siteName,
+      hosts:       [],
+      hostsOnline:  0,
+      hostsOffline: 0,
+    })),
+  };
+}
+
 async function _refresh() {
   if (Date.now() - _lastFetch < TTL) return;
   try {
@@ -16,33 +46,9 @@ async function _refresh() {
     ]);
     if (citiesRes.ok) {
       const raw = await citiesRes.json();
-      _cities = raw.map((c: any): NOCCity => ({
-        id:         c.id,
-        name:       c.nombre ?? c.name ?? c.id,
-        lat:        c.lat,
-        lng:        c.lng,
-        score:      Math.round(c.uptime ?? c.score ?? 0),
-        totalHosts: c.nodos   ?? c.totalHosts ?? 0,
-        online:     c.activos ?? c.online     ?? 0,
-        offline:    (c.nodos ?? c.totalHosts ?? 0) - (c.activos ?? c.online ?? 0),
-        alerts:     c.alertas ?? c.alerts     ?? 0,
-        sites:      c.sites   ?? [],
-      }));
+      _cities = Array.isArray(raw) ? raw.map(transformCity) : [];
     }
-    if (alertsRes.ok) {
-      const raw = await alertsRes.json();
-      _alerts = raw.map((a: any): NOCAlert => ({
-        id:           a.id ?? String(Math.random()),
-        cityId:       a.cityId   ?? a.ciudad_id ?? '',
-        cityName:     a.cityName ?? a.ciudad    ?? '',
-        siteName:     a.siteName ?? a.sitio     ?? '',
-        hostIp:       a.hostIp   ?? a.ip        ?? '',
-        type:         a.type     ?? a.tipo      ?? 'alert',
-        severity:     a.severity ?? a.severidad ?? 'warning',
-        timestamp:    a.timestamp ?? new Date().toISOString(),
-        ticketCreated: a.ticketCreated ?? false,
-      }));
-    }
+    if (alertsRes.ok)  _alerts = await alertsRes.json();
     _lastFetch = Date.now();
   } catch (e) {
     console.warn('[NOCBoard] Error fetching via backend:', e);

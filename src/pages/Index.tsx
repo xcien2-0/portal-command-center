@@ -8,7 +8,7 @@ import {
   Activity, Users, Wifi, WifiOff, TrendingUp, Clock,
   ChevronRight, Circle, Zap, Tag
 } from 'lucide-react';
-import { getAllCasaData, getAllAlerts } from '@/services/nocboard';
+import { getAllCasaData, getAllAlerts, getRealCities } from '@/services/nocboard';
 import { CASA_TENANTS } from '@/types/tenant';
 import { TENANT_COLORS, FSM_ABRIL_2026 } from '@/data/noc-mock';
 import { ISP_UPTIMES, REVENUE_METRICS } from '@/data/mockGerenciaData';
@@ -142,16 +142,13 @@ export default function Index() {
 
   const fetchData = async () => {
     try {
-      const [citiesRes, alertsRes, summaryRes] = await Promise.all([
-        fetch(`${API_BASE}/api/noc/cities`),
+      // getRealCities() transforms Spanish field names → English (nombre→name, nodos→totalHosts, etc.)
+      const [cities, alertsRes, summaryRes] = await Promise.all([
+        getRealCities(),
         fetch(`${API_BASE}/api/noc/alerts?active_only=true`),
         fetch(`${API_BASE}/api/noc/summary`)
       ]);
-      if (citiesRes.ok) setRealData(prev => ({ ...prev, cities: [] })); // clear old
-      if (citiesRes.ok) {
-        const c = await citiesRes.json();
-        setRealData(d => ({ ...d, cities: c }));
-      }
+      if (cities) setRealData(d => ({ ...d, cities }));
       if (alertsRes.ok) {
         const a = await alertsRes.json();
         setRealData(d => ({ ...d, alerts: a }));
