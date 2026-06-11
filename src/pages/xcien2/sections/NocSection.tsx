@@ -3,7 +3,7 @@ import { ThemeConfig } from '../types';
 import brand from '../../../brand';
 import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
-import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers } from 'lucide-react';
+import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers, Zap, Database, Radio, Eye, Signal } from 'lucide-react';
 import { API_BASE } from '../../../config';
 import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
@@ -778,107 +778,159 @@ function SiteInspector({ city, onClose }: { city: NOCCity; onClose: () => void }
 }
 
 // ── NOCBoard Layers Panel ─────────────────────────────────────────────────────
+const NOC_LAYERS = [
+  { id: 'energia',   label: 'Energía',    icon: Zap,      color: '#ffcc00', desc: 'UPS · PDU · Planta eléctrica' },
+  { id: 'datos',     label: 'Datos',      icon: Database, color: '#00ff88', desc: 'Switches · Routers · Fibra' },
+  { id: 'wl',        label: 'WL',         icon: Signal,   color: '#60a5fa', desc: 'Wireless · APs · Antenas' },
+  { id: 'observium', label: 'Observium',  icon: Eye,      color: '#a78bfa', desc: 'Monitoreo SNMP · Tráfico' },
+  { id: 'prtg',      label: 'PRTG',       icon: Radio,    color: '#fb923c', desc: 'Sensores · Alertas · SLA' },
+] as const;
+
+type LayerId = typeof NOC_LAYERS[number]['id'];
+
 function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectCity: (c: NOCCity) => void }) {
-  const [activeLayers, setActiveLayers] = useState<Set<string>>(() => new Set(cities.map(c => c.id)));
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(
+    () => new Set(NOC_LAYERS.map(l => l.id))
+  );
+  const [selectedLayer, setSelectedLayer] = useState<LayerId | null>(null);
 
-  // sync when cities change (initial load)
-  useEffect(() => {
-    setActiveLayers(new Set(cities.map(c => c.id)));
-  }, [cities.length]);
-
-  const toggleLayer = (id: string) => setActiveLayers(prev => {
-    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
-  });
-  const toggleExpand = (id: string) => setExpanded(prev => {
-    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  const toggleLayer = (id: LayerId) => setActiveLayers(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
   });
 
-  const visible = cities.filter(c => activeLayers.has(c.id));
-  const totalOn  = visible.reduce((a, c) => a + c.online,  0);
-  const totalOff = visible.reduce((a, c) => a + c.offline, 0);
+  const totalOn  = cities.reduce((a, c) => a + c.online,  0);
+  const totalOff = cities.reduce((a, c) => a + c.offline, 0);
 
   return (
     <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, overflow: 'hidden' }}>
+      {/* ── Map ─────────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+        {/* Active layer badge */}
+        {selectedLayer && (() => {
+          const l = NOC_LAYERS.find(x => x.id === selectedLayer)!;
+          const Icon = l.icon;
+          return (
+            <div style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
+              background: `${l.color}12`, border: `1px solid ${l.color}30`,
+              borderRadius: 10, padding: '8px 14px',
+            }}>
+              <Icon size={14} color={l.color} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: l.color, fontFamily: 'monospace' }}>
+                CAPA: {l.label.toUpperCase()}
+              </span>
+              <span style={{ fontSize: 10, color: DIM, marginLeft: 4 }}>{l.desc}</span>
+            </div>
+          );
+        })()}
+
+        <div style={{ flex: 1, borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20`, minHeight: 0 }}>
+          <RealMap cities={cities} onSelectCity={onSelectCity} selectedCityId={null} />
+        </div>
+      </div>
+
       {/* ── Layer list ───────────────────────────────────────────────────── */}
       <div style={{
-        width: 270, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column',
         background: 'rgba(0,8,4,0.8)', border: `1px solid ${G}15`,
         borderRadius: 16, overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${G}10`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${G}10` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
             <Layers size={13} color={G} />
             <span style={{ fontSize: 10, fontWeight: 800, color: G, fontFamily: 'monospace', letterSpacing: 1.5 }}>CAPAS NOCBOARD</span>
           </div>
-          <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>{activeLayers.size}/{cities.length}</span>
+          <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>
+            {activeLayers.size}/{NOC_LAYERS.length} capas activas
+          </div>
         </div>
 
-        {/* Layers list */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {cities.map(city => {
-            const isOn  = activeLayers.has(city.id);
-            const isExp = expanded.has(city.id);
-            const c     = nodeColor(city.score);
-            const upPct = city.totalHosts > 0 ? Math.round((city.online / city.totalHosts) * 100) : 0;
+        {/* Layer toggles */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+          {NOC_LAYERS.map(layer => {
+            const isOn  = activeLayers.has(layer.id);
+            const isSel = selectedLayer === layer.id;
+            const Icon  = layer.icon;
             return (
-              <div key={city.id}>
-                <div style={{
-                  padding: '9px 14px', borderBottom: `1px solid rgba(255,255,255,0.04)`,
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: isOn ? `${c}05` : 'transparent',
-                  opacity: isOn ? 1 : 0.35, transition: 'all 0.15s',
-                }}>
+              <div
+                key={layer.id}
+                onClick={() => setSelectedLayer(isSel ? null : layer.id)}
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: `1px solid rgba(255,255,255,0.04)`,
+                  cursor: 'pointer',
+                  background: isSel ? `${layer.color}10` : isOn ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  opacity: isOn ? 1 : 0.4,
+                  transition: 'all 0.15s',
+                  borderLeft: isSel ? `3px solid ${layer.color}` : '3px solid transparent',
+                }}
+                onMouseEnter={e => { if (!isSel) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (!isSel) (e.currentTarget as HTMLDivElement).style.background = isOn ? 'rgba(255,255,255,0.02)' : 'transparent'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {/* Toggle switch */}
                   <div
-                    onClick={() => toggleLayer(city.id)}
+                    onClick={e => { e.stopPropagation(); toggleLayer(layer.id); }}
                     style={{
-                      width: 30, height: 17, borderRadius: 9, flexShrink: 0, cursor: 'pointer',
-                      background: isOn ? c : 'rgba(255,255,255,0.12)', position: 'relative', transition: 'background 0.2s',
+                      width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer',
+                      background: isOn ? layer.color : 'rgba(255,255,255,0.12)',
+                      position: 'relative', transition: 'background 0.2s',
                     }}
                   >
                     <div style={{
-                      position: 'absolute', top: 2.5, left: isOn ? 14 : 2.5,
+                      position: 'absolute', top: 3, left: isOn ? 15 : 3,
                       width: 12, height: 12, borderRadius: '50%',
                       background: '#fff', transition: 'left 0.2s',
+                      boxShadow: isOn ? `0 0 6px ${layer.color}` : 'none',
                     }} />
                   </div>
 
-                  {/* City info */}
-                  <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => { toggleLayer(city.id); onSelectCity(city); }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: isOn ? '#fff' : DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {city.name}
+                  {/* Icon + label */}
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    background: `${layer.color}15`, border: `1px solid ${layer.color}30`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Icon size={14} color={layer.color} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: isOn ? '#fff' : DIM, letterSpacing: 0.5 }}>
+                      {layer.label}
                     </div>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                      <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>{city.online}↑</span>
-                      {city.offline > 0 && <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>{city.offline}↓</span>}
-                      <span style={{ fontSize: 9, color: DIM }}>{city.totalHosts}h</span>
+                    <div style={{ fontSize: 9, color: DIM, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {layer.desc}
                     </div>
                   </div>
 
-                  {/* Score */}
-                  <span style={{ fontSize: 11, fontWeight: 800, color: c, fontFamily: 'monospace', flexShrink: 0 }}>{upPct}%</span>
-
-                  {/* Expand chevron */}
-                  {city.sites && city.sites.length > 0 && (
-                    <div onClick={() => toggleExpand(city.id)} style={{ cursor: 'pointer', color: DIM, display: 'flex', flexShrink: 0 }}>
-                      {isExp ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                    </div>
-                  )}
+                  {/* Status dot */}
+                  <div style={{
+                    width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                    background: isOn ? layer.color : 'rgba(255,255,255,0.15)',
+                    boxShadow: isOn ? `0 0 6px ${layer.color}` : 'none',
+                  }} />
                 </div>
 
-                {/* Sites expansion */}
-                {isExp && city.sites && city.sites.length > 0 && (
-                  <div style={{ background: 'rgba(0,0,0,0.25)', borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
-                    {city.sites.map(site => (
-                      <div key={site.id} style={{ padding: '5px 14px 5px 54px', display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: G, opacity: 0.5, flexShrink: 0 }} />
-                        <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {site.name}
-                        </span>
+                {/* Expanded detail */}
+                {isSel && isOn && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${layer.color}20` }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ background: `${layer.color}10`, border: `1px solid ${layer.color}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: layer.color, fontFamily: 'monospace' }}>{cities.length}</div>
+                        <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>NODOS</div>
                       </div>
-                    ))}
+                      <div style={{ background: `${G}10`, border: `1px solid ${G}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: G, fontFamily: 'monospace' }}>{totalOn}</div>
+                        <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>ONLINE</div>
+                      </div>
+                      <div style={{ background: `${R}10`, border: `1px solid ${R}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: totalOff > 0 ? R : DIM, fontFamily: 'monospace' }}>{totalOff}</div>
+                        <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>CAÍDOS</div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -886,11 +938,11 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
           })}
         </div>
 
-        {/* Footer totals */}
-        <div style={{ padding: '10px 16px', borderTop: `1px solid ${G}10`, display: 'flex', gap: 16 }}>
+        {/* Footer */}
+        <div style={{ padding: '10px 16px', borderTop: `1px solid ${G}10`, display: 'flex', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <Wifi size={10} color={G} />
-            <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>{totalOn} en línea</span>
+            <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>{totalOn} online</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <WifiOff size={10} color={R} />
@@ -899,10 +951,6 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
         </div>
       </div>
 
-      {/* ── Filtered map ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20`, minHeight: 0 }}>
-        <RealMap cities={visible} onSelectCity={onSelectCity} selectedCityId={null} />
-      </div>
     </div>
   );
 }
