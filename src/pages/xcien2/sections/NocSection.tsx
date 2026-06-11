@@ -3,9 +3,9 @@ import { ThemeConfig } from '../types';
 import brand from '../../../brand';
 import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
-import { Activity, Terminal, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Eye, Layers, Radio, Zap, Database, Network, Lock } from 'lucide-react';
+import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers } from 'lucide-react';
 import { API_BASE } from '../../../config';
-import RealMap, { OdooServicio } from '@/components/noc/RealMap';
+import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -777,396 +777,131 @@ function SiteInspector({ city, onClose }: { city: NOCCity; onClose: () => void }
   );
 }
 
-// ── Capas de Monitoreo ────────────────────────────────────────────────────────
-interface CapasProps {
-  cities: NOCCity[];
-  obsOpen: boolean;
-  onToggleObs: () => void;
-  obsSummary: { total: number; up: number; down: number; availability: number } | null;
-  obsLoading: boolean;
-  odooCount: number;
-  odooOpen: boolean;
-  onToggleOdoo: () => void;
-}
+// ── NOCBoard Layers Panel ─────────────────────────────────────────────────────
+function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectCity: (c: NOCCity) => void }) {
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(() => new Set(cities.map(c => c.id)));
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-const CAPAS = [
-  {
-    key: 'nocboard_wl',
-    nombre: 'NOCBoard WL',
-    version: 'v3.3.2',
-    desc: 'Radios inalámbricos · Backhaul wireless · Rigel Open Labs & Mesquite Tech',
-    icon: Radio,
-    color: '#00ff88',
-    activa: true,
-    locked: false,
-    metrica: (cities: NOCCity[]) => `${cities.length} ciudades · ${cities.reduce((a, c) => a + c.totalHosts, 0)} hosts`,
-  },
-  {
-    key: 'nocboard_datos',
-    nombre: 'NOCBoard Datos',
-    version: 'v2.23.0',
-    desc: 'Red de datos · Core IP · Switches y routers de backbone',
-    icon: Network,
-    color: '#38bdf8',
-    activa: false,
-    locked: true,
-    metrica: () => 'Pendiente de integración',
-  },
-  {
-    key: 'nocboard_energia',
-    nombre: 'NOCBoard Energía',
-    version: 'v3.4.1',
-    desc: 'Monitoreo de energía · UPS · Fuentes y rectificadores',
-    icon: Zap,
-    color: '#facc15',
-    activa: false,
-    locked: true,
-    metrica: () => 'Pendiente de integración',
-  },
-  {
-    key: 'nocboard_cx_radios',
-    nombre: 'NOCBoard CX Radios',
-    version: 'v3.2.2',
-    desc: 'Cross-platform radios · Acceso de última milla',
-    icon: Radio,
-    color: '#a78bfa',
-    activa: false,
-    locked: true,
-    metrica: () => 'Pendiente de integración',
-  },
-  {
-    key: 'nocboard_cx_datos',
-    nombre: 'NOCBoard CX Datos',
-    version: 'v4.4.1',
-    desc: 'Cross-platform datos · Integración multi-vendor',
-    icon: Database,
-    color: '#fb923c',
-    activa: false,
-    locked: true,
-    metrica: () => 'Pendiente de integración',
-  },
-  {
-    key: 'observium',
-    nombre: 'Observium NMS',
-    version: 'Latest',
-    desc: 'Network Management System · 172.31.150.244 · Monitoreo extendido SNMP',
-    icon: Eye,
-    color: '#ef4444',
-    activa: null, // controlled externally
-    locked: false,
-    metrica: (_cities: NOCCity[], obsSummary: any) =>
-      obsSummary ? `${obsSummary.total} dispositivos · ${obsSummary.down} offline` : 'Conectando...',
-  },
-  {
-    key: 'odoo_servicios',
-    nombre: 'Odoo — Servicios en Campo',
-    version: 'wispi17',
-    desc: 'running.services · Clientes activos con coordenadas GPS · ERP Wispi',
-    icon: Database,
-    color: '#00b4d8',
-    activa: null, // controlled externally
-    locked: false,
-    metrica: (_cities: NOCCity[], _obs: any, odooCount: number) =>
-      odooCount > 0 ? `${odooCount.toLocaleString()} servicios activos con coords` : 'Cargando...',
-  },
-  {
-    key: 'prtg',
-    nombre: 'PRTG Network Monitor',
-    version: '—',
-    desc: 'Monitoreo SNMP/WMI · Pendiente de credenciales y URL',
-    icon: Activity,
-    color: '#f97316',
-    activa: false,
-    locked: true,
-    metrica: () => 'Sin configurar',
-  },
-];
+  // sync when cities change (initial load)
+  useEffect(() => {
+    setActiveLayers(new Set(cities.map(c => c.id)));
+  }, [cities.length]);
 
-const COL = 'rgba(255,255,255,0.06)';
-const TH  = { fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.28)', letterSpacing: 1.5, textTransform: 'uppercase' as const, padding: '0 12px' };
+  const toggleLayer = (id: string) => setActiveLayers(prev => {
+    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  });
+  const toggleExpand = (id: string) => setExpanded(prev => {
+    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  });
 
-function CapasDeMonitoreo({ cities, obsOpen, onToggleObs, obsSummary, obsLoading, odooCount, odooOpen, onToggleOdoo }: CapasProps) {
-  const [modo, setModo] = useState<'tabla' | 'cards'>('tabla');
-  const totalHosts  = cities.reduce((a, c) => a + c.totalHosts, 0);
-  const totalOnline = cities.reduce((a, c) => a + c.online, 0);
-  const avgScore    = cities.length ? Math.round(cities.reduce((a, c) => a + c.score, 0) / cities.length) : 0;
+  const visible = cities.filter(c => activeLayers.has(c.id));
+  const totalOn  = visible.reduce((a, c) => a + c.online,  0);
+  const totalOff = visible.reduce((a, c) => a + c.offline, 0);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-      {/* Command center header strip */}
+    <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, overflow: 'hidden' }}>
+      {/* ── Layer list ───────────────────────────────────────────────────── */}
       <div style={{
-        padding: '12px 20px', marginBottom: 2,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        background: 'rgba(0,255,136,0.03)', borderBottom: `1px solid ${G}15`,
+        width: 270, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        background: 'rgba(0,8,4,0.8)', border: `1px solid ${G}15`,
+        borderRadius: 16, overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Layers size={15} color={G} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: G, letterSpacing: 1.5 }}>CAPAS DE MONITOREO</span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>NOCBoard Suite + Integraciones</span>
-        </div>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          {[
-            { label: 'FUENTE PRIMARIA', value: 'NOCBoard WL', color: G },
-            { label: 'HOSTS', value: `${totalOnline}/${totalHosts}`, color: G },
-            { label: 'HEALTH', value: `${avgScore}%`, color: avgScore >= 80 ? G : avgScore >= 60 ? Y : R },
-            { label: 'CIUDADES', value: cities.length, color: '#38bdf8' },
-          ].map(k => (
-            <div key={k.label} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: 1, fontFamily: 'monospace' }}>{k.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: k.color, fontFamily: 'monospace' }}>{k.value}</div>
-            </div>
-          ))}
-          {/* Vista toggle */}
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: 3, borderRadius: 8, gap: 2, marginLeft: 8 }}>
-            {([['tabla', 'Tabla', LayoutGrid], ['cards', 'Cards', Layers]] as const).map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setModo(id)} style={{
-                padding: '4px 10px', fontSize: 9, fontWeight: 700, borderRadius: 5,
-                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                background: modo === id ? G : 'transparent',
-                color: modo === id ? '#000' : 'rgba(255,255,255,0.4)',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                <Icon size={10} />{label}
-              </button>
-            ))}
+        {/* Header */}
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${G}10`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Layers size={13} color={G} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: G, fontFamily: 'monospace', letterSpacing: 1.5 }}>CAPAS NOCBOARD</span>
           </div>
-        </div>
-      </div>
-
-      {/* ── Vista Tabla ── */}
-      {modo === 'tabla' && <div style={{ background: 'rgba(0,8,4,0.5)', border: `1px solid rgba(255,255,255,0.06)`, borderRadius: 14, overflow: 'hidden' }}>
-
-        {/* Column headers */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '32px 2fr 1fr 80px 1fr 2fr 110px',
-          padding: '10px 8px',
-          background: 'rgba(255,255,255,0.02)',
-          borderBottom: `1px solid ${COL}`,
-          alignItems: 'center',
-        }}>
-          <div />
-          <div style={TH}>Capa / Producto</div>
-          <div style={TH}>Fuente</div>
-          <div style={TH}>Versión</div>
-          <div style={TH}>Estado</div>
-          <div style={TH}>Datos en vivo</div>
-          <div style={{ ...TH, textAlign: 'center' as const }}>Control</div>
+          <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>{activeLayers.size}/{cities.length}</span>
         </div>
 
-        {/* Rows */}
-        {CAPAS.map((capa, idx) => {
-          const Icon    = capa.icon;
-          const isActive = capa.key === 'observium' ? obsOpen
-            : capa.key === 'odoo_servicios' ? odooOpen
-            : capa.activa;
-          const color   = capa.color;
-          const metrica = capa.key === 'observium'
-            ? capa.metrica(cities, obsSummary, 0)
-            : capa.key === 'odoo_servicios'
-            ? capa.metrica(cities, null, odooCount)
-            : capa.metrica(cities, null, 0);
-          const isLast  = idx === CAPAS.length - 1;
-
-          // Grupo NOCBoard vs externos
-          const grupo = capa.key.startsWith('nocboard') ? 'NOCBoard' : capa.key === 'observium' ? 'Observium' : 'PRTG';
-          const fuente = capa.key.startsWith('nocboard')
-            ? 'localhost:9401'
-            : capa.key === 'observium'
-            ? '172.31.150.244'
-            : 'No configurado';
-
-          return (
-            <div
-              key={capa.key}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '32px 2fr 1fr 80px 1fr 2fr 110px',
-                padding: '0 8px',
-                height: 52,
-                alignItems: 'center',
-                borderBottom: isLast ? 'none' : `1px solid ${COL}`,
-                background: isActive ? `${color}06` : 'transparent',
-                transition: 'background 0.15s',
-                opacity: capa.locked ? 0.5 : 1,
-              }}
-              onMouseEnter={e => { if (!capa.locked) (e.currentTarget as HTMLDivElement).style.background = `${color}0a`; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = isActive ? `${color}06` : 'transparent'; }}
-            >
-              {/* Icon */}
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* Layers list */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {cities.map(city => {
+            const isOn  = activeLayers.has(city.id);
+            const isExp = expanded.has(city.id);
+            const c     = nodeColor(city.score);
+            const upPct = city.totalHosts > 0 ? Math.round((city.online / city.totalHosts) * 100) : 0;
+            return (
+              <div key={city.id}>
                 <div style={{
-                  width: 26, height: 26, borderRadius: 7,
-                  background: isActive ? `${color}18` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${isActive ? color + '40' : 'rgba(255,255,255,0.08)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '9px 14px', borderBottom: `1px solid rgba(255,255,255,0.04)`,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: isOn ? `${c}05` : 'transparent',
+                  opacity: isOn ? 1 : 0.35, transition: 'all 0.15s',
                 }}>
-                  <Icon size={13} color={isActive ? color : 'rgba(255,255,255,0.3)'} />
-                </div>
-              </div>
-
-              {/* Nombre */}
-              <div style={{ padding: '0 12px' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.6)' }}>
-                  {capa.nombre}
-                </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {capa.desc.split('·')[0].trim()}
-                </div>
-              </div>
-
-              {/* Fuente */}
-              <div style={{ padding: '0 12px', fontSize: 10, fontFamily: 'monospace', color: isActive ? color : 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {fuente}
-              </div>
-
-              {/* Versión */}
-              <div style={{ padding: '0 12px', fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
-                {capa.version}
-              </div>
-
-              {/* Estado */}
-              <div style={{ padding: '0 12px' }}>
-                {capa.locked ? (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px' }}>
-                    <Lock size={9} color="rgba(255,255,255,0.2)" />
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontWeight: 700 }}>PENDIENTE</span>
-                  </div>
-                ) : isActive ? (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${color}12`, borderRadius: 6, padding: '3px 8px', border: `1px solid ${color}25` }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}` }} />
-                    <span style={{ fontSize: 9, color, fontWeight: 800 }}>ACTIVA</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px' }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.15)' }} />
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>INACTIVA</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Datos en vivo */}
-              <div style={{ padding: '0 12px', fontSize: 10, fontFamily: 'monospace', color: isActive ? color : 'rgba(255,255,255,0.2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {capa.key === 'observium' && obsLoading
-                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Loader size={10} style={{ animation: 'spin 1s linear infinite' }} /> cargando...</span>
-                  : metrica
-                }
-              </div>
-
-              {/* Control */}
-              <div style={{ padding: '0 8px', display: 'flex', justifyContent: 'center' }}>
-                {capa.locked ? (
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)', fontFamily: 'monospace' }}>—</span>
-                ) : (
-                  <button
-                    onClick={capa.key === 'observium' ? onToggleObs : capa.key === 'odoo_servicios' ? onToggleOdoo : undefined}
+                  {/* Toggle switch */}
+                  <div
+                    onClick={() => toggleLayer(city.id)}
                     style={{
-                      width: 90, padding: '5px 0', borderRadius: 8, fontSize: 10, fontWeight: 800,
-                      border: `1px solid ${isActive ? color + '50' : 'rgba(255,255,255,0.1)'}`,
-                      background: isActive ? `${color}18` : 'rgba(255,255,255,0.05)',
-                      color: isActive ? color : 'rgba(255,255,255,0.4)',
-                      cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'monospace',
+                      width: 30, height: 17, borderRadius: 9, flexShrink: 0, cursor: 'pointer',
+                      background: isOn ? c : 'rgba(255,255,255,0.12)', position: 'relative', transition: 'background 0.2s',
                     }}
                   >
-                    {isActive ? '◉ APAGAR' : '○ ACTIVAR'}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>}
+                    <div style={{
+                      position: 'absolute', top: 2.5, left: isOn ? 14 : 2.5,
+                      width: 12, height: 12, borderRadius: '50%',
+                      background: '#fff', transition: 'left 0.2s',
+                    }} />
+                  </div>
 
-      {/* ── Vista Cards ── */}
-      {modo === 'cards' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, marginTop: 2 }}>
-          {CAPAS.map(capa => {
-            const Icon     = capa.icon;
-            const isActive = capa.key === 'observium' ? obsOpen
-              : capa.key === 'odoo_servicios' ? odooOpen
-              : capa.activa;
-            const color    = capa.color;
-            const metrica  = capa.key === 'observium'
-              ? capa.metrica(cities, obsSummary, 0)
-              : capa.key === 'odoo_servicios'
-              ? capa.metrica(cities, null, odooCount)
-              : capa.metrica(cities, null, 0);
-            return (
-              <div key={capa.key} style={{
-                padding: '20px 22px', borderRadius: 16,
-                background: isActive ? `${color}08` : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.07)'}`,
-                display: 'flex', flexDirection: 'column', gap: 14,
-                opacity: capa.locked ? 0.55 : 1, transition: 'all 0.2s',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                {isActive && (
-                  <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(ellipse at top left, ${color}06 0%, transparent 70%)` }} />
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${color}15`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon size={18} color={color} />
+                  {/* City info */}
+                  <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => { toggleLayer(city.id); onSelectCity(city); }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: isOn ? '#fff' : DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {city.name}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: isActive ? '#fff' : 'rgba(255,255,255,0.75)' }}>{capa.nombre}</div>
-                      <div style={{ fontSize: 10, color, fontFamily: 'monospace', marginTop: 2, opacity: 0.8 }}>{capa.version}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                      <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>{city.online}↑</span>
+                      {city.offline > 0 && <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>{city.offline}↓</span>}
+                      <span style={{ fontSize: 9, color: DIM }}>{city.totalHosts}h</span>
                     </div>
                   </div>
-                  {capa.locked ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px' }}>
-                      <Lock size={11} color="rgba(255,255,255,0.25)" />
-                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>PENDIENTE</span>
+
+                  {/* Score */}
+                  <span style={{ fontSize: 11, fontWeight: 800, color: c, fontFamily: 'monospace', flexShrink: 0 }}>{upPct}%</span>
+
+                  {/* Expand chevron */}
+                  {city.sites && city.sites.length > 0 && (
+                    <div onClick={() => toggleExpand(city.id)} style={{ cursor: 'pointer', color: DIM, display: 'flex', flexShrink: 0 }}>
+                      {isExp ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     </div>
-                  ) : (
-                    <button onClick={capa.key === 'observium' ? onToggleObs : capa.key === 'odoo_servicios' ? onToggleOdoo : undefined} style={{
-                      padding: '5px 14px', borderRadius: 20, fontSize: 10, fontWeight: 800,
-                      border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.12)'}`,
-                      background: isActive ? `${color}20` : 'rgba(255,255,255,0.04)',
-                      color: isActive ? color : 'rgba(255,255,255,0.4)',
-                      cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 5,
-                    }}>
-                      {capa.key === 'observium' && obsLoading
-                        ? <Loader size={10} style={{ animation: 'spin 1s linear infinite' }} />
-                        : <span style={{ width: 6, height: 6, borderRadius: '50%', background: isActive ? color : 'rgba(255,255,255,0.2)' }} />}
-                      {isActive ? 'ACTIVA' : 'INACTIVA'}
-                    </button>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{capa.desc}</div>
-                <div style={{
-                  padding: '8px 12px', borderRadius: 8,
-                  background: isActive ? `${color}10` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isActive ? color + '20' : 'rgba(255,255,255,0.05)'}`,
-                  fontSize: 11, fontWeight: 600, fontFamily: 'monospace',
-                  color: isActive ? color : 'rgba(255,255,255,0.3)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  {capa.key === 'observium' && obsLoading
-                    ? <><Loader size={10} style={{ animation: 'spin 1s linear infinite' }} /> cargando...</>
-                    : <><span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? color : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />{metrica}</>
-                  }
-                </div>
+
+                {/* Sites expansion */}
+                {isExp && city.sites && city.sites.length > 0 && (
+                  <div style={{ background: 'rgba(0,0,0,0.25)', borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
+                    {city.sites.map(site => (
+                      <div key={site.id} style={{ padding: '5px 14px 5px 54px', display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: G, opacity: 0.5, flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {site.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-      )}
 
-      {/* Footer strip */}
-      <div style={{
-        marginTop: 14, padding: '10px 16px',
-        background: 'rgba(0,255,136,0.02)', borderRadius: 10,
-        border: '1px solid rgba(0,255,136,0.08)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
-          <span style={{ color: G, fontWeight: 700 }}>NOCBoard Suite</span> · Rigel Open Labs & Mesquite Tech · Juan Héctor Medina
-        </span>
-        <span style={{ fontSize: 10, fontFamily: 'monospace', color: G, opacity: 0.6 }}>
-          API · localhost:9401 · key configured ✓
-        </span>
+        {/* Footer totals */}
+        <div style={{ padding: '10px 16px', borderTop: `1px solid ${G}10`, display: 'flex', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Wifi size={10} color={G} />
+            <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>{totalOn} en línea</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <WifiOff size={10} color={R} />
+            <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>{totalOff} caídos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filtered map ────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20`, minHeight: 0 }}>
+        <RealMap cities={visible} onSelectCity={onSelectCity} selectedCityId={null} />
       </div>
     </div>
   );
@@ -1377,52 +1112,6 @@ export default function NocSection({
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
   const [view, setView] = useState<'map' | 'grid' | 'reportes' | 'capas'>('map');
 
-  // ── Observium ──────────────────────────────────────────────────────────────
-  const [obsOpen,    setObsOpen]    = useState(false);
-  const [obsSummary, setObsSummary] = useState<{total:number;up:number;down:number;availability:number}|null>(null);
-  const [obsAlerts,  setObsAlerts]  = useState<any[]>([]);
-  const [obsDown,    setObsDown]    = useState<any[]>([]);
-  const [obsLoading, setObsLoading] = useState(false);
-
-  // ── Odoo Servicios ─────────────────────────────────────────────────────────
-  const [odooOpen,     setOdooOpen]     = useState(false);
-  const [odooServices, setOdooServices] = useState<OdooServicio[]>([]);
-
-  const odooCount = odooServices.length;
-  const odooCustomers = useMemo(
-    () => odooServices.filter((s: any) => s.tipo === 'customer'),
-    [odooServices]
-  );
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/red/odoo-servicios-geo`)
-      .then(r => r.json())
-      .then((d: any[]) => { if (Array.isArray(d)) setOdooServices(d); })
-      .catch(() => {});
-  }, []);
-
-  const fetchObs = useCallback(async () => {
-    setObsLoading(true);
-    try {
-      const [s, a, d] = await Promise.all([
-        fetch(`${API_BASE}/api/observium/summary`).then(r => r.json()),
-        fetch(`${API_BASE}/api/observium/alerts?limit=50`).then(r => r.json()),
-        fetch(`${API_BASE}/api/observium/devices/down?limit=100`).then(r => r.json()),
-      ]);
-      setObsSummary(s);
-      setObsAlerts(Array.isArray(a) ? a : []);
-      setObsDown(Array.isArray(d) ? d : []);
-    } catch(e) { console.error('obs:', e); }
-    finally { setObsLoading(false); }
-  }, []);
-
-  useEffect(() => { if (obsOpen) fetchObs(); }, [obsOpen]);
-  useEffect(() => {
-    if (!obsOpen) return;
-    const t = setInterval(fetchObs, 60_000);
-    return () => clearInterval(t);
-  }, [obsOpen]);
-
   const totalHosts  = useMemo(() => cities.reduce((a, c) => a + c.totalHosts, 0), [cities]);
   const totalOnline = useMemo(() => cities.reduce((a, c) => a + c.online, 0), [cities]);
   const totalOffline = useMemo(() => cities.reduce((a, c) => a + c.offline, 0), [cities]);
@@ -1457,43 +1146,30 @@ export default function NocSection({
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-
-        {/* ── Capas de Monitoreo ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: 1, textTransform: 'uppercase', marginRight: 2 }}>Capas</span>
-          {([
-            { key: 'nocboard', label: 'NOCBoard',        color: G,        active: true,     locked: false, count: `${cities.filter(c=>c.score>=85).length}/${cities.length}` },
-            { key: 'observium',label: 'Observium',       color: '#a855f7', active: obsOpen,  locked: false, count: obsSummary ? `${obsSummary.down}↓` : null },
-            { key: 'prtg',     label: 'PRTG',            color: '#f97316', active: false,    locked: true,  count: null },
-          ] as const).map(layer => (
-            <button
-              key={layer.key}
-              disabled={layer.locked}
-              onClick={() => { if (layer.key === 'observium') setObsOpen(p => !p); }}
-              title={layer.locked ? 'Pendiente de configurar' : undefined}
-              style={{
-                padding: '5px 12px', borderRadius: 20, fontSize: 11,
-                cursor: layer.locked ? 'not-allowed' : 'pointer',
-                background: layer.active ? `${layer.color}18` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${layer.active ? layer.color : 'rgba(255,255,255,0.12)'}`,
-                color: layer.locked ? 'rgba(255,255,255,0.2)' : layer.active ? layer.color : 'rgba(255,255,255,0.45)',
-                display: 'flex', alignItems: 'center', gap: 5,
-                opacity: layer.locked ? 0.5 : 1, transition: 'all 0.15s',
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: layer.active ? layer.color : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
-              {layer.label}
-              {layer.count && <span style={{ background: `${layer.color}20`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>{layer.count}</span>}
-              {obsLoading && layer.key === 'observium' && <Loader size={10} style={{ animation: 'spin 1s linear infinite' }} />}
-              {layer.locked && <span style={{ fontSize: 9, opacity: 0.5 }}>●</span>}
-            </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        {/* Tenant filters */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => onTenantChange?.(null)} style={{
+            padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+            background: activeTenantId === null ? `${G}20` : 'rgba(255,255,255,0.04)',
+            color: activeTenantId === null ? G : DIM,
+            border: `1px solid ${activeTenantId === null ? `${G}40` : 'transparent'}`,
+            fontFamily: 'monospace', transition: 'all 0.15s',
+          }}>GLOBAL</button>
+          {CASA_TENANTS.map(t => (
+            <button key={t.id} onClick={() => onTenantChange?.(t.id)} style={{
+              padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+              background: activeTenantId === t.id ? `${G}20` : 'rgba(255,255,255,0.04)',
+              color: activeTenantId === t.id ? G : DIM,
+              border: `1px solid ${activeTenantId === t.id ? `${G}40` : 'transparent'}`,
+              fontFamily: 'monospace', transition: 'all 0.15s',
+            }}>{t.name.toUpperCase()}</button>
           ))}
         </div>
 
         {/* View toggle */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', padding: 3, borderRadius: 10, gap: 2 }}>
-          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'Capas', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
+          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'Capas NOCBoard', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
             <button key={id} onClick={() => setView(id as any)} style={{
               padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 7,
               border: 'none', cursor: 'pointer', transition: 'all 0.15s',
@@ -1517,12 +1193,7 @@ export default function NocSection({
             {/* Map + alerts side by side */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, overflow: 'hidden' }}>
               <div style={{ flex: '0 0 auto', height: 520, position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20` }}>
-                <RealMap
-                  cities={cities}
-                  onSelectCity={handleSelectCity}
-                  selectedCityId={selectedCity?.id || null}
-                  odooServices={odooOpen ? odooCustomers : []}
-                />
+                <RealMap cities={cities} onSelectCity={handleSelectCity} selectedCityId={selectedCity?.id || null} />
               </div>
               <div style={{ flex: 1, minHeight: 180, overflow: 'hidden' }}>
                 <AlertStream alerts={alerts} />
@@ -1550,112 +1221,9 @@ export default function NocSection({
             )}
           </>
         ) : view === 'capas' ? (
-          <CapasDeMonitoreo
-            cities={cities}
-            obsOpen={obsOpen}
-            onToggleObs={() => setObsOpen(p => !p)}
-            obsSummary={obsSummary}
-            obsLoading={obsLoading}
-            odooCount={odooCount}
-            odooOpen={odooOpen}
-            onToggleOdoo={() => setOdooOpen(p => !p)}
-          />
+          <NocLayersPanel cities={cities} onSelectCity={handleSelectCity} />
         ) : null}
       </div>
-
-      {/* ── Panel Observium ────────────────────────────────────────────────── */}
-      {obsOpen && (
-        <div style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, width: 340, zIndex: 2000,
-          background: 'rgba(8,8,20,0.97)', borderLeft: '1px solid rgba(239,68,68,0.3)',
-          display: 'flex', flexDirection: 'column', backdropFilter: 'blur(16px)',
-          boxShadow: '-8px 0 40px rgba(0,0,0,0.6)',
-        }}>
-          {/* Header */}
-          <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(239,68,68,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Eye size={16} color="#ef4444" />
-              <span style={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: 0.5 }}>Observium — Red en Vivo</span>
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <button onClick={fetchObs} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
-                <Loader size={13} style={{ animation: obsLoading ? 'spin 1s linear infinite' : 'none' }} />
-              </button>
-              <button onClick={() => setObsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* KPIs */}
-            {obsSummary && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Total',         val: obsSummary.total,              color: 'rgba(255,255,255,0.7)' },
-                  { label: 'Online',        val: obsSummary.up,                 color: '#00ff88' },
-                  { label: 'Offline',       val: obsSummary.down,               color: '#ef4444' },
-                  { label: 'Disponibilidad',val: `${obsSummary.availability}%`, color: obsSummary.availability >= 80 ? '#ffcc00' : '#ef4444' },
-                ].map(k => (
-                  <div key={k.label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{k.label}</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: k.color }}>{k.val}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Alertas */}
-            {obsAlerts.length > 0 && (
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <AlertTriangle size={11} color="#ef4444" /> Alertas críticas ({obsAlerts.length})
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {obsAlerts.slice(0, 20).map((a: any, i: number) => (
-                    <div key={i} style={{
-                      background: a.cls === 'red' ? 'rgba(239,68,68,0.08)' : 'rgba(234,179,8,0.08)',
-                      border: `1px solid ${a.cls === 'red' ? 'rgba(239,68,68,0.2)' : 'rgba(234,179,8,0.2)'}`,
-                      borderLeft: `3px solid ${a.cls === 'red' ? '#ef4444' : '#eab308'}`,
-                      borderRadius: 6, padding: '7px 10px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: a.cls === 'red' ? '#ef4444' : '#eab308', textTransform: 'uppercase' }}>
-                          {a.entity_type} · dev {a.device_id}
-                        </span>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>{a.changed}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{a.message || 'Checks failed'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Equipos offline */}
-            {obsDown.length > 0 && (
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <WifiOff size={11} color="#ef4444" /> Offline ({obsDown.length})
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {obsDown.slice(0, 50).map((d: any, i: number) => (
-                    <div key={i} style={{ background: 'rgba(239,68,68,0.05)', borderLeft: '2px solid rgba(239,68,68,0.3)', borderRadius: 5, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{d.hostname}</div>
-                      {d.location && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{d.location}</div>}
-                    </div>
-                  ))}
-                  {obsDown.length > 50 && (
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: 8 }}>
-                      + {obsDown.length - 50} equipos más
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes nocpulse {
