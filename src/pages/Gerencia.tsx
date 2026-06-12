@@ -135,6 +135,7 @@ interface DashData {
   top_vendedores: { nombre: string; ordenes: number; mrr: number }[];
   noc: { total: number; online: number; uptime: number } | null;
   wfm: { total: number; abiertos: number; cerrados: number; alta: number; media: number; baja: number } | null;
+  observium: { total: number; up: number; down: number; availability: number } | null;
 }
 
 export default function Gerencia() {
@@ -217,7 +218,7 @@ export default function Gerencia() {
       </div>
 
       {/* ── KPI Strip ──────────────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
           { label: "MRR Total", value: fmtMXN(dash?.mrr, true), sub: "Ingresos recurrentes mensuales",
             color: T.green, glow: T.greenGlow, icon: "◈" },
@@ -230,6 +231,10 @@ export default function Gerencia() {
           { label: "Tickets WFM", value: dash?.wfm ? `${dash.wfm.abiertos} / ${dash.wfm.total}` : "—",
             sub: dash?.wfm ? `${dash.wfm.alta} alta prioridad` : "Cargando...",
             color: dash?.wfm && dash.wfm.alta > 0 ? T.amber : T.dim, glow: T.amberGlow, icon: "◑" },
+          { label: "Observium SNMP", value: dash?.observium ? `${dash.observium.availability}%` : "—",
+            sub: dash?.observium ? `${dash.observium.up.toLocaleString()} up · ${dash.observium.down.toLocaleString()} down` : "Conectando...",
+            color: dash?.observium ? (dash.observium.availability >= 60 ? T.green : dash.observium.availability >= 40 ? T.amber : T.red) : T.dim,
+            glow: T.greenGlow, icon: "◐" },
         ].map((k, i) => (
           <div key={i} className="g-card" style={{
             padding: "20px 20px 18px", borderRadius: T.r.lg,
@@ -429,12 +434,12 @@ export default function Gerencia() {
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
-              { label: "NOCBoard", sub: `${nocOnline}/${nocTotal} nodos`, ok: nocOnline > 0 },
-              { label: "Odoo ERP", sub: "wispi17 · XML-RPC", ok: (dash?.total_ordenes ?? 0) > 0 },
-              { label: "UISP / Ubiquiti", sub: "xcien.uisp.com", ok: true },
+              { label: "NOCBoard", sub: `${nocOnline}/${nocTotal} nodos · 9401`, ok: nocOnline > 0 },
+              { label: "Odoo ERP", sub: `wispi17 · ${dash?.total_ordenes ?? 0} órdenes`, ok: (dash?.total_ordenes ?? 0) > 0 },
+              { label: "Observium SNMP", sub: dash?.observium ? `${dash.observium.total.toLocaleString()} dispositivos · ${dash.observium.availability}%` : "Conectando...", ok: !!dash?.observium && dash.observium.total > 0 },
+              { label: "UISP / Ubiquiti", sub: "xcien.uisp.com · wireless links", ok: true },
+              { label: "WFM Field Service", sub: dash?.wfm ? `${dash.wfm.abiertos} abiertos · ${dash.wfm.alta} alta prioridad` : "Conectando...", ok: !!dash?.wfm },
               { label: "API Backend", sub: "FastAPI · Puerto 8002", ok: !!dash },
-              { label: "WFM Field Service", sub: dash?.wfm ? `${dash.wfm.total} tickets` : "Conectando...",
-                ok: !!dash?.wfm },
             ].map((s, i, arr) => (
               <div key={s.label}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
