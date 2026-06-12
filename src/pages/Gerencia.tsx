@@ -1,47 +1,133 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
-} from "recharts";
-import { Badge } from "@/components/ui/badge";
-import { AGENTS, ALERTS, ACTIVITY_FEED } from "@/data/mockGerenciaData";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { API_BASE } from "../config";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-type EmpresaId = "todos" | "xcien" | "luminet" | "huus" | "manufactura" | "otro";
-
-const EMPRESA_COLORS: Record<string, string> = {
-  xcien:       "#1B7F4A",
-  luminet:     "#0E6B3A",
-  huus:        "#7C3AED",
-  manufactura: "#EA580C",
-  otro:        "#6E6E73",
+// ─── Design tokens (Apple + UniFi/Ubiquiti) ───────────────────────────────
+const T = {
+  bg:      "#0a0a0f",
+  surface: "rgba(255,255,255,0.035)",
+  surfaceHover: "rgba(255,255,255,0.06)",
+  border:  "rgba(255,255,255,0.08)",
+  borderStrong: "rgba(255,255,255,0.14)",
+  blue:    "#006FFF",
+  blueGlow:"rgba(0,111,255,0.18)",
+  green:   "#1FA649",
+  greenGlow:"rgba(31,166,73,0.2)",
+  amber:   "#F5A623",
+  amberGlow:"rgba(245,166,35,0.2)",
+  red:     "#E8413E",
+  redGlow: "rgba(232,65,62,0.2)",
+  purple:  "#7C3AED",
+  text:    "#F5F5F7",
+  dim:     "#86868B",
+  dimmer:  "#4a4a4f",
+  font:    "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif",
+  mono:    "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace",
+  r:       { sm: 10, md: 16, lg: 20, xl: 24 },
 };
 
-const fmt = new Intl.DateTimeFormat("es-MX", {
-  day: "numeric", month: "short", year: "numeric",
-  hour: "2-digit", minute: "2-digit",
-});
+const EMPRESA_COLORS: Record<string, string> = {
+  xcien: "#1FA649", luminet: "#006FFF", huus: "#7C3AED",
+  manufactura: "#F5A623", otro: "#86868B",
+};
 
-function uptimeColor(v: number) {
-  if (v >= 99) return "hsl(160 70% 37%)";
-  if (v >= 90) return "hsl(37 78% 55%)";
-  return "hsl(0 72% 59%)";
-}
-
-function fmtMXN(v: number | null | undefined) {
+function fmtMXN(v: number | null | undefined, compact = false) {
   if (v == null) return "—";
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-  if (v >= 1_000)     return `$${(v / 1_000).toFixed(0)}k`;
-  return `$${v.toLocaleString("es-MX")}`;
+  if (compact) {
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+    if (v >= 1_000)     return `$${(v / 1_000).toFixed(0)}k`;
+    return `$${v.toLocaleString("es-MX")}`;
+  }
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(v);
 }
 
-interface EmpresaRow {
-  id: string; name: string; color: string; mrr: number; ordenes: number;
+function UptimeDial({ pct }: { pct: number }) {
+  const r = 30, cx = 36, cy = 36, stroke = 5;
+  const circ = 2 * Math.PI * r;
+  const dash = circ * (pct / 100);
+  const color = pct >= 90 ? T.green : pct >= 75 ? T.amber : T.red;
+  return (
+    <svg width={72} height={72} viewBox="0 0 72 72">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={T.border} strokeWidth={stroke} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
+        style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+      />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
+        fill={color} fontSize={13} fontWeight={800} fontFamily={T.mono}>
+        {pct}%
+      </text>
+    </svg>
+  );
 }
-interface MesRow {
-  mes: string; total: number;
-  xcien?: number; luminet?: number; huus?: number; manufactura?: number; otro?: number;
+
+function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  return (
+    <div style={{ height: 4, background: T.border, borderRadius: 99, overflow: "hidden" }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99,
+        boxShadow: `0 0 6px ${color}80`, transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)" }} />
+    </div>
+  );
 }
+
+function MonthBars({ data }: { data: any[] }) {
+  if (!data.length) return null;
+  const max = Math.max(...data.map(d => d.total), 1);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
+      {data.map((d, i) => {
+        const h = Math.max((d.total / max) * 72, 4);
+        const isLatest = i === data.length - 1;
+        return (
+          <div key={d.mes} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{
+              width: "100%", height: h, background: isLatest ? T.blue : T.border,
+              borderRadius: "4px 4px 0 0",
+              boxShadow: isLatest ? `0 0 10px ${T.blueGlow}` : undefined,
+              transition: "height 0.8s cubic-bezier(0.4,0,0.2,1)",
+            }} />
+            <span style={{ fontSize: 9, color: T.dimmer, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {d.mes.slice(0, 3)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Dot({ color, size = 8, glow }: { color: string; size?: number; glow?: string }) {
+  return (
+    <span style={{
+      display: "inline-block", width: size, height: size, borderRadius: "50%",
+      background: color, flexShrink: 0,
+      boxShadow: glow ? `0 0 8px ${glow}` : undefined,
+    }} />
+  );
+}
+
+function PulseDot({ color }: { color: string }) {
+  return (
+    <span style={{ position: "relative", display: "inline-flex", width: 10, height: 10 }}>
+      <span style={{
+        position: "absolute", display: "inline-flex", width: "100%", height: "100%",
+        borderRadius: "50%", background: color, opacity: 0.4,
+        animation: "ping 1.6s cubic-bezier(0,0,0.2,1) infinite",
+      }} />
+      <span style={{ position: "relative", display: "inline-flex", borderRadius: "50%",
+        width: 10, height: 10, background: color }} />
+    </span>
+  );
+}
+
+function Divider() {
+  return <div style={{ width: "100%", height: 1, background: T.border, margin: "4px 0" }} />;
+}
+
+interface EmpresaRow { id: string; name: string; color: string; mrr: number; ordenes: number; }
+interface MesRow { mes: string; total: number; xcien?: number; luminet?: number; huus?: number; manufactura?: number; otro?: number; }
 interface DashData {
   mrr: number; arr: number; vtc: number; total_ordenes: number;
   por_empresa: EmpresaRow[];
@@ -49,432 +135,345 @@ interface DashData {
   top_vendedores: { nombre: string; ordenes: number; mrr: number }[];
   noc: { total: number; online: number; uptime: number } | null;
   wfm: { total: number; abiertos: number; cerrados: number; alta: number; media: number; baja: number } | null;
-  total_servicios: number | null;
 }
 
 export default function Gerencia() {
-  const [activeEmp, setActiveEmp] = useState<EmpresaId>("todos");
-  const [now, setNow]             = useState(new Date());
-  const [fadeKey, setFadeKey]     = useState(0);
-  const [dash, setDash]           = useState<DashData | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [dash, setDash]       = useState<DashData | null>(null);
+  const [noc, setNoc]         = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [tick, setTick]       = useState(0);
+  const prevMrr               = useRef<number | null>(null);
 
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
+  const fetchAll = useCallback(async () => {
+    try {
+      const [dashRes, nocRes] = await Promise.all([
+        fetch(`${API_BASE}/api/gerencia/dashboard`),
+        fetch(`${API_BASE}/api/noc/dashboard-stats`),
+      ]);
+      if (dashRes.ok) { const d = await dashRes.json(); setDash(d); prevMrr.current = d.mrr; }
+      if (nocRes.ok)  { const d = await nocRes.json(); setNoc(d); }
+      setLastRefresh(new Date());
+    } catch { /* silencio */ }
+    setLoading(false);
   }, []);
 
-  const fetchDash = useCallback(() => {
-    setLoading(true);
-    fetch(`${API}/api/gerencia/dashboard`)
-      .then(r => r.json())
-      .then(d => { setDash(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+  useEffect(() => { fetchAll(); const id = setInterval(fetchAll, 90_000); return () => clearInterval(id); }, [fetchAll]);
+  useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 1000); return () => clearInterval(id); }, []);
 
-  useEffect(() => {
-    fetchDash();
-    const id = setInterval(fetchDash, 120_000);
-    return () => clearInterval(id);
-  }, [fetchDash]);
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = now.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  const handleFilter = useCallback((id: EmpresaId) => {
-    setActiveEmp(id);
-    setFadeKey(k => k + 1);
-  }, []);
+  const uptimePct = dash?.noc?.uptime ?? noc?.uptime_pct ?? 0;
+  const nocTotal  = dash?.noc?.total  ?? noc?.total  ?? 0;
+  const nocOnline = dash?.noc?.online ?? noc?.up     ?? 0;
+  const maxEmpMrr = Math.max(...(dash?.por_empresa ?? []).map(e => e.mrr), 1);
 
-  // Filtered empresa rows
-  const empresas: EmpresaRow[] = dash?.por_empresa ?? [];
-  const filteredEmpresas = activeEmp === "todos"
-    ? empresas
-    : empresas.filter(e => e.id === activeEmp);
-
-  // MRR filtered
-  const filteredMRR = activeEmp === "todos"
-    ? dash?.mrr_por_mes ?? []
-    : (dash?.mrr_por_mes ?? []).map(m => ({
-        ...m,
-        total: (m as Record<string, number>)[activeEmp] ?? 0,
-      }));
-
-  // KPIs filtered
-  const mrr = activeEmp === "todos"
-    ? dash?.mrr
-    : filteredEmpresas.reduce((s, e) => s + e.mrr, 0);
-
-  const ISP_FILTERS = [
-    { id: "todos" as EmpresaId, label: "Todos" },
-    ...empresas.map(e => ({ id: e.id as EmpresaId, label: e.name })),
-  ];
+  if (loading) return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center",
+      color: T.dim, fontFamily: T.font, fontSize: 13, letterSpacing: 1 }}>
+      <Dot color={T.blue} size={6} /> &nbsp; CARGANDO DATOS GERENCIALES...
+    </div>
+  );
 
   return (
-    <div className="min-h-screen" style={{ background: "#F5F5F7" }}>
-      {/* ── Sticky Top Bar */}
-      <header
-        className="sticky top-0 z-50 border-b"
-        style={{ background: "rgba(245,245,247,0.72)", backdropFilter: "blur(20px)", borderColor: "#E5E5E7" }}
-      >
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-8 py-3">
-          <div className="flex items-center gap-3">
-            <span className="text-[20px] font-semibold tracking-tight" style={{ color: "#1D1D1F" }}>
-              ISPilot
+    <div style={{ background: T.bg, fontFamily: T.font, color: T.text, padding: "32px 32px 60px", minHeight: "100vh" }}>
+      <style>{`
+        @keyframes ping { 75%, 100% { transform: scale(1.8); opacity: 0; } }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .g-card { transition: border-color 0.2s; }
+        .g-card:hover { border-color: rgba(255,255,255,0.15) !important; }
+      `}</style>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <PulseDot color={T.green} />
+            <span style={{ fontSize: 11, color: T.dim, letterSpacing: 2, textTransform: "uppercase" }}>
+              Live · {dateStr}
             </span>
-            {loading && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "#F0F0F2", color: "#6E6E73" }}>
-                actualizando…
-              </span>
-            )}
-            {!loading && dash && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "hsl(160 70% 93%)", color: "hsl(160 70% 30%)" }}>
-                datos reales
-              </span>
-            )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {ISP_FILTERS.map(f => (
-              <button
-                key={f.id}
-                onClick={() => handleFilter(f.id)}
-                className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-all duration-150"
-                style={
-                  activeEmp === f.id
-                    ? { background: "#1D1D1F", color: "#fff" }
-                    : { background: "transparent", border: "1px solid #E5E5E7", color: "#6E6E73" }
-                }
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <span className="text-[13px] tabular-nums" style={{ color: "#6E6E73" }}>
-            {fmt.format(now)}
-          </span>
+          <h1 style={{ fontSize: 38, fontWeight: 700, margin: 0, letterSpacing: -1.5, lineHeight: 1.05,
+            background: "linear-gradient(135deg, #F5F5F7 0%, #86868B 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Dashboard Gerencial
+          </h1>
+          <p style={{ fontSize: 14, color: T.dim, marginTop: 6, marginBottom: 0 }}>
+            XCIEN / Luminet WAN / Huus · Consorcio XCIEN
+          </p>
         </div>
-      </header>
-
-      <div key={fadeKey} className="mx-auto max-w-[1280px] px-8 pb-20">
-        {/* ── SECTION 1 — INGRESOS */}
-        <section style={{ marginTop: 40 }}>
-          <SectionLabel>INGRESOS</SectionLabel>
-          <div className="grid grid-cols-4 gap-4">
-            <MetricCard
-              label="MRR total"
-              value={fmtMXN(mrr)}
-              sub="MXN / mes"
-              trend={`${filteredEmpresas.reduce((s,e)=>s+e.ordenes,0) || dash?.total_ordenes || 0} órdenes`}
-              trendGood={true}
-            />
-            <MetricCard
-              label="ARR proyectado"
-              value={fmtMXN(dash?.arr)}
-              sub="MXN anual"
-              trend={`${empresas.length} empresas activas`}
-              trendGood={true}
-            />
-            <MetricCard
-              label="VTC (Valor Total Contratos)"
-              value={fmtMXN(dash?.vtc)}
-              sub="MXN acumulado"
-              trend="Archivo Maestro 2026"
-              trendGood={true}
-            />
-            <MetricCard
-              label="Servicios activos"
-              value={dash?.total_servicios != null ? String(dash.total_servicios) : String(dash?.total_ordenes ?? "—")}
-              sub={dash?.total_servicios != null ? "clientes en Odoo" : "órdenes en EAC"}
-              trend="Fuente: Odoo ERP"
-              trendGood={true}
-            />
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 36, fontWeight: 700, fontFamily: T.mono, letterSpacing: -1,
+            color: T.text, lineHeight: 1 }}>{timeStr}</div>
+          <div style={{ fontSize: 11, color: T.dim, marginTop: 4 }}>
+            Última actualización: {lastRefresh.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            <button onClick={fetchAll} style={{ marginLeft: 10, padding: "2px 10px", borderRadius: 99,
+              background: T.surface, border: `1px solid ${T.border}`, color: T.blue, fontSize: 11,
+              cursor: "pointer", fontFamily: T.font }}>↺ Refrescar</button>
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* ── SECTION 2 — OPERACIONES */}
-        <section style={{ marginTop: 48 }}>
-          <SectionLabel>OPERACIONES</SectionLabel>
-          <div className="grid gap-4" style={{ gridTemplateColumns: "2fr 1.5fr 1.5fr" }}>
-            {/* Network Health */}
-            <GCard title="Salud de red">
-              {dash?.noc ? (
-                <>
-                  <p
-                    className="text-[48px] font-semibold leading-none"
-                    style={{ color: uptimeColor(dash.noc.uptime) }}
-                  >
-                    {dash.noc.uptime}%
-                  </p>
-                  <p className="mt-1 text-[13px]" style={{ color: "#6E6E73" }}>
-                    Uptime NOCBoard — {dash.noc.online}/{dash.noc.total} hosts online
-                  </p>
-                  <div className="mt-5">
-                    <div className="flex items-center gap-3">
-                      <span className="w-20 text-[13px] font-medium" style={{ color: "#1D1D1F" }}>NOCBoard</span>
-                      <div className="flex-1 h-2 rounded-full" style={{ background: "#E5E5E7" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${dash.noc.uptime}%`, background: uptimeColor(dash.noc.uptime) }}
-                        />
-                      </div>
-                      <span className="w-12 text-right text-[13px] font-mono tabular-nums" style={{ color: "#1D1D1F" }}>
-                        {dash.noc.uptime}%
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-[12px] italic" style={{ color: "#6E6E73" }}>
-                    {dash.noc.total - dash.noc.online} hosts con alertas
-                  </p>
-                </>
-              ) : (
-                <p className="text-[13px]" style={{ color: "#6E6E73" }}>NOCBoard no disponible</p>
-              )}
-            </GCard>
-
-            {/* Support WFM */}
-            <GCard title="Soporte / WFM">
-              {dash?.wfm ? (
-                <>
-                  <p className="text-[48px] font-semibold leading-none" style={{ color: "#1D1D1F" }}>
-                    {dash.wfm.abiertos}
-                  </p>
-                  <p className="mt-1 text-[13px]" style={{ color: "#6E6E73" }}>tickets abiertos</p>
-                  <div className="mt-5 space-y-2.5">
-                    {[
-                      { label: "Alta prioridad", color: "hsl(0 72% 59%)",  count: dash.wfm.alta },
-                      { label: "Media prioridad", color: "hsl(37 78% 55%)", count: dash.wfm.media },
-                      { label: "Normal",          color: "hsl(0 0% 65%)",   count: dash.wfm.baja },
-                    ].map(p => (
-                      <div key={p.label} className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                        <span className="flex-1 text-[13px]" style={{ color: "#1D1D1F" }}>{p.label}</span>
-                        <span className="text-[13px] font-mono font-medium" style={{ color: "#1D1D1F" }}>{p.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-[12px] italic" style={{ color: "#6E6E73" }}>
-                    {dash.wfm.cerrados} cerrados · {dash.wfm.total} totales
-                  </p>
-                </>
-              ) : (
-                <p className="text-[13px]" style={{ color: "#6E6E73" }}>WFM no disponible</p>
-              )}
-            </GCard>
-
-            {/* Top Vendedores */}
-            <GCard title="Top vendedores">
-              <div className="space-y-3 mt-1">
-                {(dash?.top_vendedores ?? []).map((v, i) => (
-                  <div key={v.nombre} className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono w-4" style={{ color: "#6E6E73" }}>{i+1}</span>
-                    <span className="flex-1 text-[13px] truncate" style={{ color: "#1D1D1F" }}>
-                      {v.nombre.split(' ')[0]} {v.nombre.split(' ')[1] ?? ''}
-                    </span>
-                    <span className="text-[12px] font-mono" style={{ color: "hsl(160 70% 37%)" }}>
-                      {fmtMXN(v.mrr)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </GCard>
+      {/* ── KPI Strip ──────────────────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "MRR Total", value: fmtMXN(dash?.mrr, true), sub: "Ingresos recurrentes mensuales",
+            color: T.green, glow: T.greenGlow, icon: "◈" },
+          { label: "ARR", value: fmtMXN(dash?.arr, true), sub: "Anualizado",
+            color: T.blue, glow: T.blueGlow, icon: "◉" },
+          { label: "VTC Total", value: fmtMXN(dash?.vtc, true), sub: "Valor total del contrato",
+            color: T.purple, glow: "rgba(124,58,237,0.2)", icon: "◇" },
+          { label: "Órdenes", value: dash?.total_ordenes?.toLocaleString() ?? "—", sub: "Contratos activos",
+            color: T.amber, glow: T.amberGlow, icon: "◎" },
+          { label: "Tickets WFM", value: dash?.wfm ? `${dash.wfm.abiertos} / ${dash.wfm.total}` : "—",
+            sub: dash?.wfm ? `${dash.wfm.alta} alta prioridad` : "Cargando...",
+            color: dash?.wfm && dash.wfm.alta > 0 ? T.amber : T.dim, glow: T.amberGlow, icon: "◑" },
+        ].map((k, i) => (
+          <div key={i} className="g-card" style={{
+            padding: "20px 20px 18px", borderRadius: T.r.lg,
+            background: T.surface, border: `1px solid ${T.border}`,
+            display: "flex", flexDirection: "column", gap: 8,
+            animation: `fadeSlide 0.4s ease ${i * 0.07}s both`,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: T.dim, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 600 }}>
+                {k.label}
+              </span>
+              <span style={{ fontSize: 18, color: k.color, opacity: 0.6 }}>{k.icon}</span>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1,
+              color: k.color, textShadow: `0 0 20px ${k.glow}`, fontFamily: T.mono }}>
+              {k.value}
+            </div>
+            <div style={{ fontSize: 11, color: T.dimmer }}>{k.sub}</div>
           </div>
-        </section>
+        ))}
+      </div>
 
-        {/* ── SECTION 3 — CHART + TABLE */}
-        <section style={{ marginTop: 48 }}>
-          <div className="grid gap-6" style={{ gridTemplateColumns: "3fr 2fr" }}>
-            <GCard title="Evolución MRR" subtitle="Por mes · 2026">
-              <div style={{ height: 280 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={filteredMRR} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "#6E6E73" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#6E6E73" }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000).toFixed(0)}k`} />
-                    <Tooltip
-                      contentStyle={{ background: "#fff", border: "1px solid #E5E5E7", borderRadius: 12, fontSize: 12 }}
-                      formatter={(v: number) => [`$${v.toLocaleString("es-MX")}`, undefined]}
-                    />
-                    {activeEmp === "todos" ? (
-                      empresas.map(e => (
-                        <Line key={e.id} type="monotone" dataKey={e.id} name={e.name}
-                          stroke={e.color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                      ))
-                    ) : (
-                      <Line type="monotone" dataKey="total" name={empresas.find(e=>e.id===activeEmp)?.name ?? activeEmp}
-                        stroke={EMPRESA_COLORS[activeEmp] ?? "#1B7F4A"} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    )}
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </GCard>
+      {/* ── Main 3-col grid ───────────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1.2fr 1fr", gap: 16, marginBottom: 16 }}>
 
-            <GCard title="Rendimiento por empresa">
-              <div className="overflow-hidden">
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr style={{ color: "#6E6E73" }}>
-                      <th className="pb-3 text-left font-medium">Empresa</th>
-                      <th className="pb-3 text-right font-medium">MRR</th>
-                      <th className="pb-3 text-right font-medium">Órdenes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEmpresas.map(r => (
-                      <tr key={r.id} className="border-t" style={{ borderColor: "#F0F0F2" }}>
-                        <td className="py-2.5 font-medium flex items-center gap-1.5" style={{ color: "#1D1D1F" }}>
-                          <span className="h-2 w-2 rounded-full inline-block" style={{ background: r.color }} />
-                          {r.name}
-                        </td>
-                        <td className="py-2.5 text-right font-mono" style={{ color: "hsl(160 70% 37%)" }}>
-                          {fmtMXN(r.mrr)}
-                        </td>
-                        <td className="py-2.5 text-right font-mono" style={{ color: "#1D1D1F" }}>
-                          {r.ordenes}
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredEmpresas.length > 1 && (
-                      <tr className="border-t font-semibold" style={{ borderColor: "#E5E5E7", color: "#1D1D1F" }}>
-                        <td className="py-2.5">TOTAL</td>
-                        <td className="py-2.5 text-right font-mono" style={{ color: "hsl(160 70% 37%)" }}>
-                          {fmtMXN(filteredEmpresas.reduce((s,e)=>s+e.mrr,0))}
-                        </td>
-                        <td className="py-2.5 text-right font-mono">
-                          {filteredEmpresas.reduce((s,e)=>s+e.ordenes,0)}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </GCard>
+        {/* Col 1: MRR por empresa */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.3s both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: 0.3, color: T.text }}>
+              MRR por Empresa
+            </h3>
+            <span style={{ fontSize: 11, color: T.blue, fontFamily: T.mono, fontWeight: 600 }}>
+              {fmtMXN(dash?.mrr, true)}
+            </span>
           </div>
-        </section>
-
-        {/* ── SECTION 4 — AGENTS */}
-        <section style={{ marginTop: 48 }}>
-          <SectionLabel>AGENTES IA</SectionLabel>
-          <div className="grid grid-cols-5 gap-4">
-            {AGENTS.map(agent => (
-              <GCard key={agent.name} className="flex flex-col">
-                <div className="flex items-center justify-between">
-                  <span className="text-[17px] font-semibold" style={{ color: "#1D1D1F" }}>{agent.name}</span>
-                  <Badge className="border-0 text-[11px] px-2 py-0.5" style={{ background: "hsl(160 70% 37%)", color: "#fff" }}>
-                    Activo
-                  </Badge>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {(dash?.por_empresa ?? []).filter(e => e.mrr > 0).sort((a, b) => b.mrr - a.mrr).map(emp => (
+              <div key={emp.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Dot color={EMPRESA_COLORS[emp.id] ?? T.dim} size={7} glow={EMPRESA_COLORS[emp.id]} />
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{emp.name}</span>
+                    <span style={{ fontSize: 11, color: T.dimmer }}>{emp.ordenes} órd.</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontFamily: T.mono, fontWeight: 600,
+                    color: EMPRESA_COLORS[emp.id] ?? T.text }}>
+                    {fmtMXN(emp.mrr, true)}
+                  </span>
                 </div>
-                <div className="my-3 h-px" style={{ background: "#E5E5E7" }} />
-                <div className="flex-1 space-y-3">
-                  {agent.metrics.map(m => (
-                    <div key={m.label}>
-                      <p className="text-[12px]" style={{ color: "#6E6E73" }}>{m.label}</p>
-                      <p className="text-[20px] font-semibold" style={{ color: "#1D1D1F" }}>{m.value}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-[12px] italic" style={{ color: "#6E6E73" }}>{agent.insight}</p>
-              </GCard>
+                <MiniBar value={emp.mrr} max={maxEmpMrr} color={EMPRESA_COLORS[emp.id] ?? T.dim} />
+              </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* ── SECTION 5 — ALERTS + FEED */}
-        <section style={{ marginTop: 48 }}>
-          <SectionLabel>REQUIERE ATENCIÓN</SectionLabel>
-          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <GCard>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[15px] font-semibold" style={{ color: "#1D1D1F" }}>Alertas activas</span>
-                <Badge className="border-0 text-[11px] px-2 py-0.5" style={{ background: "hsl(0 72% 59%)", color: "#fff" }}>
-                  {ALERTS.length}
-                </Badge>
-              </div>
-              <div className="space-y-3">
-                {ALERTS.map((a, i) => (
-                  <div key={i} className="flex gap-3 rounded-lg p-3" style={{ background: "#F5F5F7" }}>
-                    <div className="w-[3px] shrink-0 rounded-full"
-                      style={{ background: a.severity === "red" ? "hsl(0 72% 59%)" : "hsl(37 78% 55%)" }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-medium truncate" style={{ color: "#1D1D1F" }}>{a.title}</p>
-                      <p className="text-[12px] mt-0.5" style={{ color: "#6E6E73" }}>{a.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </GCard>
-
-            <GCard>
-              <span className="text-[15px] font-semibold block mb-4" style={{ color: "#1D1D1F" }}>Actividad reciente</span>
-              <div className="space-y-0 max-h-[340px] overflow-y-auto pr-1">
-                {ACTIVITY_FEED.map((item, i) => (
-                  <div key={i} className="flex gap-3 py-2.5">
-                    <div className="flex flex-col items-center">
-                      <div className="h-2 w-2 rounded-full mt-1.5" style={{ background: item.agentColor }} />
-                      {i < ACTIVITY_FEED.length - 1 && <div className="flex-1 w-px mt-1" style={{ background: "#E5E5E7" }} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[12px] font-mono tabular-nums" style={{ color: "#6E6E73" }}>{item.time}</span>
-                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded"
-                          style={{ background: `${item.agentColor}22`, color: item.agentColor }}>
-                          {item.agent}
-                        </span>
-                      </div>
-                      <p className="text-[13px] mt-0.5 truncate" style={{ color: "#1D1D1F" }}>{item.action}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </GCard>
+        {/* Col 2: Red NOC */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.4s both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>Estado de Red</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <UptimeDial pct={Math.round(uptimePct)} />
+            </div>
           </div>
-        </section>
+          <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+            {[
+              { label: "Nodos", value: nocTotal, color: T.dim },
+              { label: "Online", value: nocOnline, color: T.green },
+              { label: "Offline", value: nocTotal - nocOnline, color: T.red },
+            ].map(s => (
+              <div key={s.label} style={{ flex: 1, padding: "10px 12px", borderRadius: T.r.md,
+                background: "rgba(255,255,255,0.025)", border: `1px solid ${T.border}`, textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, fontFamily: T.mono, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 10, color: T.dimmer, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <Divider />
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            {(noc?.regiones ?? []).slice(0, 6).map((r: any) => (
+              <div key={r.nombre}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Dot color={r.fail_pct > 30 ? T.red : r.fail_pct > 15 ? T.amber : T.green}
+                      size={6} glow={r.fail_pct > 30 ? T.redGlow : T.greenGlow} />
+                    <span style={{ fontSize: 12, fontWeight: 500 }}>{r.nombre}</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontFamily: T.mono, color: T.dim }}>
+                    {r.up}/{r.total}
+                  </span>
+                </div>
+                <MiniBar value={r.up} max={r.total}
+                  color={r.fail_pct > 30 ? T.red : r.fail_pct > 15 ? T.amber : T.green} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Col 3: Top vendedores */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.5s both" }}>
+          <h3 style={{ margin: "0 0 20px", fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>
+            Top Vendedores
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {(dash?.top_vendedores ?? []).map((v, i) => (
+              <div key={v.nombre}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0" }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: i === 0 ? T.blueGlow : T.surface,
+                    border: `1px solid ${i === 0 ? T.blue : T.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 700, fontFamily: T.mono, color: i === 0 ? T.blue : T.dim }}>
+                    {i + 1}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
+                      overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {v.nombre.split(" ").slice(0, 2).join(" ")}
+                    </div>
+                    <div style={{ fontSize: 10, color: T.dimmer }}>{v.ordenes} órdenes</div>
+                  </div>
+                  <div style={{ fontSize: 12, fontFamily: T.mono, fontWeight: 700,
+                    color: i === 0 ? T.blue : T.text }}>
+                    {fmtMXN(v.mrr, true)}
+                  </div>
+                </div>
+                {i < (dash?.top_vendedores ?? []).length - 1 && <Divider />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom row: MRR Mensual + Alertas ────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 16 }}>
+
+        {/* MRR por mes */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.6s both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>MRR Mensual</h3>
+            <span style={{ fontSize: 11, color: T.dim }}>2026</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+            <MonthBars data={dash?.mrr_por_mes ?? []} />
+            {/* Breakdown stacked por empresa */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+              {(dash?.mrr_por_mes ?? []).map(m => {
+                const empresasEnMes = Object.entries(m).filter(([k]) =>
+                  k !== "mes" && k !== "total" && (m as any)[k] > 0
+                ) as [string, number][];
+                return (
+                  <div key={m.mes} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 50, fontSize: 10, color: T.dimmer, textTransform: "uppercase",
+                      letterSpacing: 0.5, flexShrink: 0 }}>{m.mes.slice(0, 3)}</span>
+                    <div style={{ flex: 1, height: 6, borderRadius: 99, overflow: "hidden",
+                      display: "flex", background: T.border }}>
+                      {empresasEnMes.map(([empId, val]) => {
+                        const pct = m.total > 0 ? (val / m.total) * 100 : 0;
+                        return (
+                          <div key={empId} style={{ width: `${pct}%`, height: "100%",
+                            background: EMPRESA_COLORS[empId] ?? T.dim }} />
+                        );
+                      })}
+                    </div>
+                    <span style={{ width: 60, fontSize: 11, fontFamily: T.mono, textAlign: "right",
+                      color: T.text }}>{fmtMXN(m.total, true)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Leyenda */}
+            <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
+              {Object.entries(EMPRESA_COLORS).map(([id, color]) => (
+                <div key={id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <Dot color={color} size={6} />
+                  <span style={{ fontSize: 10, color: T.dim, textTransform: "capitalize" }}>
+                    {id === "luminet" ? "Luminet WAN" : id.charAt(0).toUpperCase() + id.slice(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Panel de salud del sistema */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.7s both" }}>
+          <h3 style={{ margin: "0 0 20px", fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>
+            Salud del Sistema
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {[
+              { label: "NOCBoard", sub: `${nocOnline}/${nocTotal} nodos`, ok: nocOnline > 0 },
+              { label: "Odoo ERP", sub: "wispi17 · XML-RPC", ok: (dash?.total_ordenes ?? 0) > 0 },
+              { label: "UISP / Ubiquiti", sub: "xcien.uisp.com", ok: true },
+              { label: "API Backend", sub: "FastAPI · Puerto 8002", ok: !!dash },
+              { label: "WFM Field Service", sub: dash?.wfm ? `${dash.wfm.total} tickets` : "Conectando...",
+                ok: !!dash?.wfm },
+            ].map((s, i, arr) => (
+              <div key={s.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "12px 0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: T.r.sm,
+                      background: s.ok ? T.greenGlow : T.redGlow,
+                      border: `1px solid ${s.ok ? T.green + "40" : T.red + "40"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 14 }}>{s.ok ? "●" : "○"}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{s.label}</div>
+                      <div style={{ fontSize: 10, color: T.dimmer }}>{s.sub}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11,
+                    fontWeight: 600, color: s.ok ? T.green : T.red }}>
+                    {s.ok ? <PulseDot color={T.green} /> : <Dot color={T.red} />}
+                    <span style={{ marginLeft: 4 }}>{s.ok ? "OK" : "ERROR"}</span>
+                  </div>
+                </div>
+                {i < arr.length - 1 && <Divider />}
+              </div>
+            ))}
+          </div>
+          {/* Footer timestamp */}
+          <div style={{ marginTop: 16, padding: "10px 12px", borderRadius: T.r.md,
+            background: "rgba(0,111,255,0.06)", border: `1px solid ${T.blue}25`,
+            display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: T.blue, fontFamily: T.mono }}>
+              AUTO-REFRESH · 90s
+            </span>
+            <span style={{ fontSize: 10, color: T.dimmer, fontFamily: T.mono }}>
+              {timeStr}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
-  );
-}
-
-// ── Shared Components ──────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "#6E6E73" }}>
-      {children}
-    </p>
-  );
-}
-
-function GCard({
-  title, subtitle, children, className = "",
-}: {
-  title?: string; subtitle?: string; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-2xl p-5 ${className}`}
-      style={{ background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)" }}
-    >
-      {title && (
-        <div className="mb-3">
-          <p className="text-[15px] font-semibold" style={{ color: "#1D1D1F" }}>{title}</p>
-          {subtitle && <p className="text-[12px] mt-0.5" style={{ color: "#6E6E73" }}>{subtitle}</p>}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
-function MetricCard({ label, value, sub, trend, trendGood }: {
-  label: string; value: string; sub: string; trend: string; trendGood: boolean;
-}) {
-  return (
-    <GCard>
-      <p className="text-[12px] font-medium" style={{ color: "#6E6E73" }}>{label}</p>
-      <p className="mt-1 text-[28px] font-semibold leading-none tracking-tight" style={{ color: "#1D1D1F" }}>
-        {value}
-      </p>
-      <p className="mt-1 text-[12px]" style={{ color: "#6E6E73" }}>{sub}</p>
-      <p className="mt-2 text-[12px] font-medium"
-        style={{ color: trendGood ? "hsl(160 70% 37%)" : "hsl(0 72% 59%)" }}>
-        {trend}
-      </p>
-    </GCard>
   );
 }
