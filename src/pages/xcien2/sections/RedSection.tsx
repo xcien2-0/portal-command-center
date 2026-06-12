@@ -322,7 +322,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
   const [showTopo, setShowTopo]         = useState(false);
-  const [showDevices, setShowDevices]   = useState(false);
+  const [showDevices, setShowDevices]   = useState(true);
   const [geoDevices, setGeoDevices]     = useState<any[]>([]);
   const [mainView, setMainView]         = useState<'map' | 'graph' | 'dashboard'>('map');
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
