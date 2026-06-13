@@ -624,9 +624,348 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
   );
 }
 
+// ── Organizar Tab ─────────────────────────────────────────────────────────────
+
+const ROLES_DISPONIBLES = ['Auxiliar', 'Técnico FO', 'Técnico RF/Microondas', 'Líder de Cuadrilla'];
+const ZONAS = ['MTY Norte', 'MTY Sur', 'MTY Oriente', 'Saltillo', 'Piedras Negras', 'Nuevo Laredo', 'Reynosa', 'Cd. Victoria'];
+
+const PLANTILLAS = [
+  {
+    id: 'ftth-basica',
+    nombre: 'FTTH Básica',
+    icon: '🔦',
+    color: '#00B4D8',
+    descripcion: 'Instalación residencial last-mile. 2 personas.',
+    perfiles: ['Técnico FO', 'Auxiliar'],
+    sla: '4 h/instalación',
+    capacidad: '3 instalaciones/día',
+  },
+  {
+    id: 'ftth-reforzada',
+    nombre: 'FTTH Reforzada',
+    icon: '⚡',
+    color: '#00C896',
+    descripcion: 'Proyectos empresariales o alta densidad. 3 personas.',
+    perfiles: ['Líder de Cuadrilla', 'Técnico FO', 'Auxiliar'],
+    sla: '6 h/instalación',
+    capacidad: '2 proyectos/día',
+  },
+  {
+    id: 'microondas',
+    nombre: 'RF / Microondas',
+    icon: '📡',
+    color: '#FF6B35',
+    descripcion: 'Enlace inalámbrico punto a punto. 2 personas especializadas.',
+    perfiles: ['Técnico RF/Microondas', 'Técnico RF/Microondas'],
+    sla: '8 h/enlace',
+    capacidad: '1 enlace/día',
+  },
+  {
+    id: 'mantenimiento',
+    nombre: 'Mantenimiento Preventivo',
+    icon: '🔧',
+    color: '#FFB703',
+    descripcion: 'Revisión y limpieza de nodos y splitters. 2 personas.',
+    perfiles: ['Técnico FO', 'Auxiliar'],
+    sla: '2 h/nodo',
+    capacidad: '4 nodos/día',
+  },
+];
+
+interface CuadrillaBuilt {
+  id: string;
+  nombre: string;
+  plantilla: string;
+  color: string;
+  icon: string;
+  zona: string;
+  miembros: { nombre: string; rol: string; odoo_id: number }[];
+  vehiculo: string;
+  estado: 'activa' | 'en-campo' | 'en-pausa';
+  creada: string;
+}
+
+function OrganizarTab({ theme, tecnicosPool }: { theme: ThemeConfig; tecnicosPool: Tecnico[] }) {
+  const [plantillaActiva, setPlantillaActiva] = useState<string | null>(null);
+  const [cuadrillas, setCuadrillas]           = useState<CuadrillaBuilt[]>([]);
+  const [builder, setBuilder]                 = useState<{
+    nombre: string; zona: string; vehiculo: string;
+    miembros: { tecnico: Tecnico | null; rol: string }[];
+  } | null>(null);
+  const [vehiculos, setVehiculos]             = useState<{ nombre: string; placa: string }[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/gps/vehiculos`)
+      .then(r => r.json())
+      .then(d => setVehiculos(d.vehiculos ?? []))
+      .catch(() => {});
+  }, []);
+
+  const plantillaSelected = PLANTILLAS.find(p => p.id === plantillaActiva);
+
+  const iniciarBuilder = (plantilla: typeof PLANTILLAS[0]) => {
+    setPlantillaActiva(plantilla.id);
+    setBuilder({
+      nombre: `${plantilla.nombre} — ${ZONAS[0]}`,
+      zona: ZONAS[0],
+      vehiculo: vehiculos[0]?.nombre ?? '',
+      miembros: plantilla.perfiles.map(rol => ({ tecnico: null, rol })),
+    });
+  };
+
+  const guardarCuadrilla = () => {
+    if (!builder || !plantillaSelected) return;
+    const nueva: CuadrillaBuilt = {
+      id: crypto.randomUUID(),
+      nombre: builder.nombre,
+      plantilla: plantillaSelected.nombre,
+      color: plantillaSelected.color,
+      icon: plantillaSelected.icon,
+      zona: builder.zona,
+      vehiculo: builder.vehiculo,
+      miembros: builder.miembros
+        .filter(m => m.tecnico)
+        .map(m => ({ nombre: m.tecnico!.alias, rol: m.rol, odoo_id: m.tecnico!.odoo_id })),
+      estado: 'activa',
+      creada: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+    };
+    setCuadrillas(prev => [nueva, ...prev]);
+    setBuilder(null);
+    setPlantillaActiva(null);
+  };
+
+  const estadoColor = (e: CuadrillaBuilt['estado']) =>
+    e === 'activa' ? '#00C896' : e === 'en-campo' ? '#FF6B35' : '#FFB703';
+
+  const disponibles = tecnicosPool.filter(t =>
+    !cuadrillas.some(c => c.miembros.some(m => m.odoo_id === t.odoo_id))
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+      {/* KPI bar de cobertura */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {[
+          { label: 'Cuadrillas activas', val: cuadrillas.length, color: '#00C896', icon: '👷' },
+          { label: 'Técnicos en pool',   val: tecnicosPool.length, color: theme.accent, icon: '🧑‍🔧' },
+          { label: 'Disponibles',        val: disponibles.length, color: '#00B4D8', icon: '✅' },
+          { label: 'Zonas cubiertas',    val: new Set(cuadrillas.map(c => c.zona)).size, color: '#FFB703', icon: '📍' },
+        ].map(k => (
+          <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 22 }}>{k.icon}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.color, marginTop: 6 }}>{k.val}</div>
+            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2, fontWeight: 600 }}>{k.label.toUpperCase()}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Plantillas */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: theme.dim, marginBottom: 12, letterSpacing: 1 }}>
+          PLANTILLAS DE CUADRILLA — selecciona una para armar tu equipo
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+          {PLANTILLAS.map(p => {
+            const active = plantillaActiva === p.id;
+            return (
+              <div
+                key={p.id}
+                onClick={() => iniciarBuilder(p)}
+                style={{
+                  padding: '20px 22px', borderRadius: 14, cursor: 'pointer',
+                  background: active ? `${p.color}12` : theme.card,
+                  border: `1.5px solid ${active ? p.color : theme.border}`,
+                  transition: 'all 0.15s', position: 'relative', overflow: 'hidden',
+                }}
+              >
+                {active && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: p.color }} />}
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{p.icon}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: active ? p.color : theme.text }}>{p.nombre}</div>
+                <div style={{ fontSize: 11, color: theme.dim, marginTop: 4, lineHeight: 1.4 }}>{p.descripcion}</div>
+                <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {p.perfiles.map((rol, i) => (
+                    <span key={i} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: `${p.color}20`, color: p.color, fontWeight: 700 }}>{rol}</span>
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, display: 'flex', gap: 16 }}>
+                  <span style={{ fontSize: 9, color: theme.dim }}>⏱ {p.sla}</span>
+                  <span style={{ fontSize: 9, color: theme.dim }}>📦 {p.capacidad}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Builder */}
+      {builder && plantillaSelected && (
+        <div style={{ background: theme.card, border: `1.5px solid ${plantillaSelected.color}50`, borderRadius: 18, padding: 24, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: plantillaSelected.color }} />
+
+          <div style={{ fontSize: 13, fontWeight: 800, color: plantillaSelected.color, marginBottom: 18 }}>
+            {plantillaSelected.icon} ARMAR CUADRILLA — {plantillaSelected.nombre}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
+            {/* Nombre */}
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: theme.dim, marginBottom: 5 }}>NOMBRE DE CUADRILLA</div>
+              <input
+                value={builder.nombre}
+                onChange={e => setBuilder(b => b ? { ...b, nombre: e.target.value } : b)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${theme.border}`, color: theme.text, fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+            {/* Zona */}
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: theme.dim, marginBottom: 5 }}>ZONA / PLAZA</div>
+              <select
+                value={builder.zona}
+                onChange={e => setBuilder(b => b ? { ...b, zona: e.target.value } : b)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text, fontSize: 12, outline: 'none' }}
+              >
+                {ZONAS.map(z => <option key={z} value={z}>{z}</option>)}
+              </select>
+            </div>
+            {/* Vehículo */}
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: theme.dim, marginBottom: 5 }}>VEHÍCULO ASIGNADO</div>
+              <select
+                value={builder.vehiculo}
+                onChange={e => setBuilder(b => b ? { ...b, vehiculo: e.target.value } : b)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text, fontSize: 12, outline: 'none' }}
+              >
+                <option value="">Sin asignar</option>
+                {vehiculos.map(v => <option key={v.placa} value={v.nombre}>{v.nombre} · {v.placa}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Asignación de miembros */}
+          <div style={{ fontSize: 9, fontWeight: 700, color: theme.dim, marginBottom: 10, letterSpacing: 1 }}>ASIGNAR TÉCNICOS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {builder.miembros.map((m, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', border: `1px solid ${theme.border}` }}>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: `${plantillaSelected.color}20`, color: plantillaSelected.color, flexShrink: 0 }}>
+                  {m.rol}
+                </span>
+                <select
+                  value={m.tecnico?.odoo_id ?? ''}
+                  onChange={e => {
+                    const tec = tecnicosPool.find(t => t.odoo_id === Number(e.target.value)) ?? null;
+                    setBuilder(b => {
+                      if (!b) return b;
+                      const miembros = [...b.miembros];
+                      miembros[idx] = { ...miembros[idx], tecnico: tec };
+                      return { ...b, miembros };
+                    });
+                  }}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text, fontSize: 12, outline: 'none' }}
+                >
+                  <option value="">— seleccionar técnico —</option>
+                  {disponibles.map(t => (
+                    <option key={t.odoo_id} value={t.odoo_id}>{t.alias} · {t.abiertos} tareas abiertas</option>
+                  ))}
+                  {m.tecnico && !disponibles.find(d => d.odoo_id === m.tecnico!.odoo_id) && (
+                    <option value={m.tecnico.odoo_id}>{m.tecnico.alias} (en uso)</option>
+                  )}
+                </select>
+                {m.tecnico && (
+                  <span style={{ fontSize: 10, color: m.tecnico.abiertos > 10 ? '#FF4757' : '#00C896', fontWeight: 700, flexShrink: 0 }}>
+                    {m.tecnico.abiertos} abiertas
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <button
+              onClick={guardarCuadrilla}
+              disabled={builder.miembros.every(m => !m.tecnico)}
+              style={{
+                padding: '9px 22px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: plantillaSelected.color, color: '#000', fontWeight: 800, fontSize: 12,
+                opacity: builder.miembros.every(m => !m.tecnico) ? 0.4 : 1,
+              }}
+            >
+              ✅ Activar Cuadrilla
+            </button>
+            <button
+              onClick={() => { setBuilder(null); setPlantillaActiva(null); }}
+              style={{ padding: '9px 18px', borderRadius: 10, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.dim, fontSize: 12, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cuadrillas creadas */}
+      {cuadrillas.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: theme.dim, marginBottom: 12, letterSpacing: 1 }}>
+            CUADRILLAS ACTIVAS — {cuadrillas.length} equipo{cuadrillas.length > 1 ? 's' : ''}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+            {cuadrillas.map(c => (
+              <div key={c.id} style={{ background: theme.card, border: `1px solid ${c.color}40`, borderRadius: 14, padding: 20, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 4, background: c.color }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 18 }}>{c.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: theme.text, marginTop: 4 }}>{c.nombre}</div>
+                    <div style={{ fontSize: 10, color: theme.dim, marginTop: 2 }}>{c.plantilla} · {c.zona}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: `${estadoColor(c.estado)}20`, color: estadoColor(c.estado) }}>
+                      ● {c.estado.toUpperCase()}
+                    </span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {(['activa', 'en-campo', 'en-pausa'] as const).map(e => (
+                        <button key={e} onClick={() => setCuadrillas(prev => prev.map(x => x.id === c.id ? { ...x, estado: e } : x))}
+                          style={{ padding: '2px 7px', borderRadius: 6, border: `1px solid ${c.estado === e ? estadoColor(e) : theme.border}`, background: 'transparent', color: c.estado === e ? estadoColor(e) : theme.dim, fontSize: 8, cursor: 'pointer' }}>
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {c.miembros.map((m, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 8, background: `${c.color}15`, color: c.color, fontWeight: 700, flexShrink: 0 }}>{m.rol}</span>
+                      <span style={{ fontSize: 11, color: theme.text }}>{m.nombre}</span>
+                    </div>
+                  ))}
+                </div>
+                {c.vehiculo && (
+                  <div style={{ marginTop: 12, fontSize: 10, color: theme.dim }}>🚛 {c.vehiculo}</div>
+                )}
+                <div style={{ marginTop: 8, fontSize: 9, color: theme.dim }}>Creada {c.creada}</div>
+                <button
+                  onClick={() => setCuadrillas(prev => prev.filter(x => x.id !== c.id))}
+                  style={{ position: 'absolute', top: 12, right: 12, padding: '2px 8px', borderRadius: 6, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.dim, fontSize: 9, cursor: 'pointer' }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {cuadrillas.length === 0 && !builder && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: theme.dim, fontSize: 12 }}>
+          Selecciona una plantilla arriba para armar tu primera cuadrilla.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Section ──────────────────────────────────────────────────────────────
 export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
-  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno' | 'gps'>('cuadrillas');
+  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno' | 'gps' | 'organizar'>('cuadrillas');
   const [tecnicos, setTecnicos]       = useState<Tecnico[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -677,11 +1016,12 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {([
-          ['cuadrillas', '👷 Cuadrillas',   theme.accent],
-          ['desempeno',  '🏆 Desempeño',    '#FFD700'],
-          ['gps',        '🗺 GPS en Vivo',  '#00ff88'],
+          ['cuadrillas', '👷 Cuadrillas',    theme.accent],
+          ['organizar',  '🏗️ Organizar',     '#00C896'],
+          ['desempeno',  '🏆 Desempeño',     '#FFD700'],
+          ['gps',        '🗺️ GPS en Vivo',   '#FF6B35'],
         ] as const).map(([id, label, col]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === id ? 700 : 400,
@@ -692,6 +1032,9 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
           }}>{label}</button>
         ))}
       </div>
+
+      {/* Organizar tab */}
+      {tab === 'organizar' && <OrganizarTab theme={theme} tecnicosPool={tecnicos} />}
 
       {/* Desempeño tab */}
       {tab === 'desempeno' && <DesempenoTab theme={theme} />}
