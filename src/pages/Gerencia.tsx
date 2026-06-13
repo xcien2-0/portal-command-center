@@ -139,21 +139,27 @@ interface DashData {
 }
 
 export default function Gerencia() {
-  const [dash, setDash]       = useState<DashData | null>(null);
-  const [noc, setNoc]         = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [dash, setDash]         = useState<DashData | null>(null);
+  const [noc, setNoc]           = useState<any>(null);
+  const [latencia, setLatencia] = useState<any>(null);
+  const [trafico, setTrafico]   = useState<any>(null);
+  const [loading, setLoading]   = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [tick, setTick]       = useState(0);
-  const prevMrr               = useRef<number | null>(null);
+  const [tick, setTick]         = useState(0);
+  const prevMrr                 = useRef<number | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [dashRes, nocRes] = await Promise.all([
+      const [dashRes, nocRes, latRes, trafRes] = await Promise.all([
         fetch(`${API_BASE}/api/gerencia/dashboard`),
         fetch(`${API_BASE}/api/noc/dashboard-stats`),
+        fetch(`${API_BASE}/api/noc/latencia`),
+        fetch(`${API_BASE}/api/observium/trafico`),
       ]);
       if (dashRes.ok) { const d = await dashRes.json(); setDash(d); prevMrr.current = d.mrr; }
       if (nocRes.ok)  { const d = await nocRes.json(); setNoc(d); }
+      if (latRes.ok)  { const d = await latRes.json(); setLatencia(d); }
+      if (trafRes.ok) { const d = await trafRes.json(); setTrafico(d); }
       setLastRefresh(new Date());
     } catch { /* silencio */ }
     setLoading(false);
@@ -476,6 +482,171 @@ export default function Gerencia() {
             <span style={{ fontSize: 10, color: T.dimmer, fontFamily: T.mono }}>
               {timeStr}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Latencia + Tráfico ───────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+
+        {/* Latencia RTT — NOCBoard */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.8s both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Latencia RTT · NOCBoard</h3>
+            <div style={{ display: "flex", gap: 12 }}>
+              {[
+                { label: "Avg", value: latencia ? `${latencia.global_avg}ms` : "—",
+                  color: latencia ? (latencia.global_avg > 150 ? T.red : latencia.global_avg > 100 ? T.amber : T.green) : T.dim },
+                { label: "Max", value: latencia ? `${latencia.global_max}ms` : "—", color: T.red },
+                { label: "Alta lat.", value: latencia ? `${latencia.hosts_high_latency}` : "—", color: T.amber },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: T.mono, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 9, color: T.dimmer, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Divider />
+          {/* Por ciudad */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+            {(latencia?.por_ciudad ?? []).slice(0, 8).map((c: any) => {
+              const color = c.avg > 150 ? T.red : c.avg > 120 ? T.amber : T.green;
+              const maxAvg = (latencia?.por_ciudad?.[0]?.avg ?? 200);
+              return (
+                <div key={c.ciudad}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Dot color={color} size={6} />
+                      <span style={{ fontSize: 12, fontWeight: 500 }}>{c.ciudad}</span>
+                      <span style={{ fontSize: 10, color: T.dimmer }}>{c.n} hosts</span>
+                    </div>
+                    <span style={{ fontSize: 11, fontFamily: T.mono, color }}>
+                      {c.avg}ms
+                    </span>
+                  </div>
+                  <MiniBar value={c.avg} max={maxAvg} color={color} />
+                </div>
+              );
+            })}
+          </div>
+          {/* Top hosts con mayor latencia */}
+          {latencia?.top_hosts?.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 10, color: T.dimmer, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
+                Hosts con mayor latencia
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {latencia.top_hosts.slice(0, 5).map((h: any) => (
+                  <div key={h.id} style={{ display: "flex", justifyContent: "space-between",
+                    alignItems: "center", padding: "5px 8px", borderRadius: T.r.sm,
+                    background: "rgba(255,255,255,0.02)" }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, whiteSpace: "nowrap",
+                        overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
+                      <div style={{ fontSize: 10, color: T.dimmer }}>{h.city} · {h.ip}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginLeft: 12, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, fontFamily: T.mono,
+                        color: h.lat_avg > 150 ? T.red : T.amber }}>{h.lat_avg}ms</span>
+                      {h.loss > 0 && (
+                        <span style={{ fontSize: 11, color: T.red, fontFamily: T.mono }}>
+                          loss {h.loss}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tráfico de interfaces — Observium */}
+        <div className="g-card" style={{ borderRadius: T.r.xl, background: T.surface,
+          border: `1px solid ${T.border}`, padding: "24px 24px 20px",
+          animation: "fadeSlide 0.4s ease 0.9s both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Tráfico de Interfaces · Observium</h3>
+            <div style={{ display: "flex", gap: 12 }}>
+              {[
+                { label: "Total", value: trafico ? `${trafico.total_gbps} Gbps` : "—", color: T.blue },
+                { label: "↓ RX", value: trafico ? `${trafico.total_rx_gbps}G` : "—", color: T.green },
+                { label: "↑ TX", value: trafico ? `${trafico.total_tx_gbps}G` : "—", color: T.amber },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: T.mono, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 9, color: T.dimmer, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Barra total RX vs TX */}
+          {trafico && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10,
+                color: T.dimmer, marginBottom: 5 }}>
+                <span>↓ Ingress {trafico.total_rx_gbps} Gbps</span>
+                <span>↑ Egress {trafico.total_tx_gbps} Gbps</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 99, background: T.border, overflow: "hidden",
+                display: "flex" }}>
+                <div style={{ flex: trafico.total_rx_gbps, background: T.green,
+                  boxShadow: `0 0 8px ${T.greenGlow}` }} />
+                <div style={{ flex: trafico.total_tx_gbps, background: T.amber,
+                  boxShadow: `0 0 8px ${T.amberGlow}` }} />
+              </div>
+              <div style={{ fontSize: 10, color: T.dimmer, marginTop: 5 }}>
+                {trafico.interfaces_activas} interfaces activas · {trafico.total_gbps} Gbps total
+              </div>
+            </div>
+          )}
+          <Divider />
+          {/* Top interfaces */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto",
+              gap: "0 12px", fontSize: 9, color: T.dimmer, letterSpacing: 1,
+              textTransform: "uppercase", marginBottom: 8, paddingBottom: 6,
+              borderBottom: `1px solid ${T.border}` }}>
+              <span>Interfaz</span><span>RX</span><span>TX</span><span>Total</span>
+            </div>
+            {(trafico?.top_interfaces ?? []).slice(0, 10).map((iface: any, i: number) => {
+              const maxTotal = trafico?.top_interfaces?.[0]?.total_mbps ?? 1;
+              const utilColor = (iface.util_pct ?? 0) > 80 ? T.red : (iface.util_pct ?? 0) > 50 ? T.amber : T.blue;
+              return (
+                <div key={iface.port_id ?? i}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto",
+                    gap: "0 12px", alignItems: "center", padding: "7px 0" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, whiteSpace: "nowrap",
+                        overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {iface.iface || iface.device}
+                      </div>
+                      <div style={{ fontSize: 9, color: T.dimmer, whiteSpace: "nowrap",
+                        overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {iface.device}{iface.util_pct != null ? ` · ${iface.util_pct}% util` : ""}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 11, fontFamily: T.mono, color: T.green, textAlign: "right" }}>
+                      {iface.rx_mbps >= 1000 ? `${(iface.rx_mbps/1000).toFixed(1)}G` : `${iface.rx_mbps}M`}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: T.mono, color: T.amber, textAlign: "right" }}>
+                      {iface.tx_mbps >= 1000 ? `${(iface.tx_mbps/1000).toFixed(1)}G` : `${iface.tx_mbps}M`}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: T.mono, color: utilColor, textAlign: "right" }}>
+                      {iface.total_mbps >= 1000 ? `${(iface.total_mbps/1000).toFixed(1)}G` : `${iface.total_mbps}M`}
+                    </span>
+                  </div>
+                  <div style={{ height: 2, borderRadius: 99, overflow: "hidden",
+                    background: T.border, marginBottom: 2 }}>
+                    <div style={{ width: `${Math.min((iface.total_mbps/maxTotal)*100,100)}%`,
+                      height: "100%", background: utilColor }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
