@@ -1,4 +1,4 @@
-import { useState, useReducer, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useReducer, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import QRCode from 'qrcode';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -8,42 +8,43 @@ import {
   Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
   Activity, Network, Layers, AlertTriangle, TrendingUp,
 } from 'lucide-react';
-import HexoField3D from '../../components/HexoField3D';
 import { API_BASE } from '../../config';
 import brand from '../../brand';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
-import FloatingChat from './sections/FloatingChat';
-import NocSection from './sections/NocSection';
-import AcademiaSection from './sections/AcademiaSection';
-import AcademiaHoloSection from './sections/AcademiaHoloSection';
-import WFMSection from './sections/WFMSection';
-import FinanzasSection from './sections/FinanzasSection';
-import DevPanel from './DevPanel';
-import FodaSection from './sections/FodaSection';
-import AdopcionSection from './sections/AdopcionSection';
-import TelegramBotSection from './sections/TelegramBotSection';
-import DocsSection from './sections/DocsSection';
-import BackupSection from './sections/BackupSection';
-import InicioHoloSection from './sections/InicioHoloSection';
-import BidrillasSection from './sections/BidrillasSection';
-import AgentesSection from './sections/AgentesSection';
-import RedSection from './sections/RedSection';
-import ReportLabSection from './sections/ReportLabSection';
-import RRHHSection from './sections/RRHHSection';
-import SalaJuntasSection from './sections/SalaJuntasSection';
 import { getRealCities, getRealAlerts } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
-import InventarioTransfersSection from './sections/InventarioTransfersSection';
-import XcienTokensSection from './sections/XcienTokensSection';
-import MerkleFeedSection from './sections/MerkleFeedSection';
-import VentasSection from './sections/VentasSection';
+// ── Siempre visibles — importación estática ───────────────────────────────────
+import FloatingChat from './sections/FloatingChat';
+import DevPanel from './DevPanel';
 
-// Bridge imports for classic components
-import CallCenter from '../CallCenter';
-import InventarioSection from './sections/InventarioSection';
-import Gerencia from '../Gerencia';
-import ReportesGobierno from '../ReportesGobierno';
+// ── Secciones lazy — se cargan solo cuando el usuario las abre ────────────────
+const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
+const InicioHoloSection  = lazy(() => import('./sections/InicioHoloSection'));
+const NocSection         = lazy(() => import('./sections/NocSection'));
+const RedSection         = lazy(() => import('./sections/RedSection'));
+const BidrillasSection   = lazy(() => import('./sections/BidrillasSection'));
+const AcademiaSection    = lazy(() => import('./sections/AcademiaSection'));
+const AcademiaHoloSection= lazy(() => import('./sections/AcademiaHoloSection'));
+const WFMSection         = lazy(() => import('./sections/WFMSection'));
+const RRHHSection        = lazy(() => import('./sections/RRHHSection'));
+const SalaJuntasSection  = lazy(() => import('./sections/SalaJuntasSection'));
+const VentasSection      = lazy(() => import('./sections/VentasSection'));
+const AgentesSection     = lazy(() => import('./sections/AgentesSection'));
+const InventarioSection  = lazy(() => import('./sections/InventarioSection'));
+const InventarioTransfersSection = lazy(() => import('./sections/InventarioTransfersSection'));
+const XcienTokensSection = lazy(() => import('./sections/XcienTokensSection'));
+const MerkleFeedSection  = lazy(() => import('./sections/MerkleFeedSection'));
+const FodaSection        = lazy(() => import('./sections/FodaSection'));
+const AdopcionSection    = lazy(() => import('./sections/AdopcionSection'));
+const TelegramBotSection = lazy(() => import('./sections/TelegramBotSection'));
+const DocsSection        = lazy(() => import('./sections/DocsSection'));
+const BackupSection      = lazy(() => import('./sections/BackupSection'));
+const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
+const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
+const CallCenter         = lazy(() => import('../CallCenter'));
+const Gerencia           = lazy(() => import('../Gerencia'));
+const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
 
 // ── Theme reducer ─────────────────────────────────────────────────────────────
 type ThemeAction = { type: 'patch'; payload: Partial<ThemeConfig> } | { type: 'reset' };
@@ -365,7 +366,6 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
 }
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
-import React from 'react';
 class SectionErrorBoundary extends React.Component<
   { children: React.ReactNode; section: string },
   { error: Error | null }
@@ -401,6 +401,17 @@ class SectionErrorBoundary extends React.Component<
   }
 }
 
+// ── Suspense fallback ─────────────────────────────────────────────────────────
+function SectionSpinner() {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#555', fontSize: 13 }}>
+      <div style={{ width: 16, height: 16, border: '2px solid #00A651', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      Cargando sección...
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
 // ── Main Content ──────────────────────────────────────────────────────────────
 interface ContentProps {
   section: SectionId;
@@ -429,6 +440,7 @@ function Content({
       background: theme.bg, minWidth: 0,
       display: 'flex', flexDirection: 'column',
     }}>
+      <Suspense fallback={<SectionSpinner />}>
       {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} onSelect={onSelect} />}
       {section === 'noc' && (
         <NocSection
@@ -606,6 +618,7 @@ function Content({
           onReset={onThemeReset}
         />
       )}
+      </Suspense>
     </div>
   );
 }

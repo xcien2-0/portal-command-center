@@ -30,4 +30,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Mapas — Leaflet + react-leaflet (~420 KB)
+          'vendor-maps': ['leaflet', 'react-leaflet', '@react-leaflet/core'],
+          // 3D — Three.js (~600 KB)
+          'vendor-three': ['three'],
+          // Gráficas — Recharts + D3 (~200 KB)
+          'vendor-charts': ['recharts', 'd3'],
+          // UI base de React
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 });

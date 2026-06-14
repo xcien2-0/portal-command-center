@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Monitor } from 'lucide-react';
 import { CASA_TENANTS } from '@/types/tenant';
@@ -15,7 +15,7 @@ import { TenantGrid } from '@/components/noc/TenantGrid';
 import { RegionFilter, CITY_REGION, TENANT_NET_TYPE, type Region, type NetworkType } from '@/components/noc/RegionFilter';
 
 import { useViewMode } from "../contexts/ViewModeContext.tsx";
-import NocSection from "./xcien2/sections/NocSection.tsx";
+const NocSection = lazy(() => import('./xcien2/sections/NocSection'));
 import { DEFAULT_THEME } from "./xcien2/types.ts";
 
 export default function NOC() {
@@ -165,13 +165,15 @@ export default function NOC() {
 
   if (mode === 'holo') {
     return (
-      <NocSection 
-        theme={theme} 
-        cities={filteredCities} 
-        alerts={alerts} 
-        activeTenantId={activeTenantId} 
-        onTenantChange={setActiveTenantId}
-      />
+      <Suspense fallback={<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555' }}>Cargando NOC...</div>}>
+        <NocSection
+          theme={theme}
+          cities={filteredCities}
+          alerts={alerts}
+          activeTenantId={activeTenantId}
+          onTenantChange={setActiveTenantId}
+        />
+      </Suspense>
     );
   }
 
