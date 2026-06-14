@@ -4,10 +4,6 @@
 *.mp4
 *.mov
 *.html
-*.py
-*.sh
-*.md
-!README.md
 *.mmd
 backups/
 docs/
@@ -19,12 +15,28 @@ nginx/
 Xcien_Docs/
 xcien-docs-repo
 banco_preguntas.json
-requirements.txt
-ecosystem.config.cjs
 docker-compose.yml
 netlify.toml
-playwright*.ts
-playwright*.config.*
+
+# Scripts standalone de generación de reportes (no son parte del servidor)
+backend/test_*.py
+backend/scratch_*.py
+backend/diag_*.py
+backend/generar_*.py
+backend/reporte_*.py
+backend/graficas_*.py
+backend/bot_iblack.py
+backend/war_room_*.py
+backend/whitepaper_*.py
+backend/xcien_tokens.py
+backend/inventario_tokens.py
+backend/inventario_tokens_api.py
+backend/odoo_adapter.py
+
+# Markdown docs (excepto README)
+*.md
+!README.md
+*.sh
 deploy.sh
 
 # ── Backups y temporales que rompen Vite/TS ───────────────────────────────────
@@ -43,6 +55,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.venv/
+venv/
 dist
 dist-ssr
 *.local

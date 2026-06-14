@@ -3,6 +3,7 @@ import { API_BASE } from '../../../../config';
 import brand from '../../../../brand';
 import type { ThemeConfig } from '../../types';
 import { buildTecnicoList, getLevel, LEVELS, type OdooCurso } from './shared';
+import RutaEmpleado from './RutaEmpleado';
 
 interface Props { theme: ThemeConfig; nombreTecnico: string; onExamen: () => void }
 
@@ -42,6 +43,7 @@ function BarPct({ pct, color }: { pct: number; color: string }) {
 }
 
 export default function AcademiaTecnico({ nombreTecnico, onExamen }: Props) {
+  const [tab, setTab]         = useState<'perfil' | 'ruta'>('perfil');
   const [cursos, setCursos]   = useState<OdooCurso[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,7 +98,32 @@ export default function AcademiaTecnico({ nombreTecnico, onExamen }: Props) {
   const sinCuenta = misCursos.length === 0 && !loading;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+      {/* ── Tab bar ──────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#111827', borderRadius: 12, padding: 4, alignSelf: 'flex-start', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {([
+          { id: 'perfil' as const, label: 'Mi Perfil',        icon: '👤' },
+          { id: 'ruta'   as const, label: 'Mi Ruta',          icon: '🛤️' },
+        ]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ padding: '8px 20px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+              background: tab === t.id ? GREEN : 'transparent',
+              color: tab === t.id ? '#001a12' : DIM,
+            }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Mi Ruta ──────────────────────────────────────────────────── */}
+      {tab === 'ruta' && (
+        <RutaEmpleado nombreUsuario={nombreTecnico} />
+      )}
+
+      {/* ── Mi Perfil ────────────────────────────────────────────────── */}
+      {tab === 'perfil' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       {/* ── Hero: Perfil ─────────────────────────────────────────────── */}
       <div style={{ background: 'linear-gradient(135deg, #0d1117 0%, #111827 100%)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 28, display: 'flex', gap: 28, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -230,6 +257,8 @@ export default function AcademiaTecnico({ nombreTecnico, onExamen }: Props) {
           </div>
         </div>
       </div>
+    </div>
+    )}
     </div>
   );
 }

@@ -1,0 +1,32 @@
+# XCIEN Backend — Dependencias de producción
+# Generado 2026-05-15
+
+# Framework web
+fastapi==0.111.1
+uvicorn[standard]==0.22.0
+starlette==0.37.2
+python-multipart==0.0.9
+
+# IA
+anthropic==0.96.0
+google-generativeai
+
+# Configuración
+python-dotenv==1.0.1
+
+# HTTP
+requests==2.32.5
+httpx==0.28.1
+
+# Validación
+pydantic==2.12.5
+
+# PDF
+reportlab==4.4.10
+
+# Auth (JWT + bcrypt)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Utilidades
+aiofiles==23.2.1

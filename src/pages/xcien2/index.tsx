@@ -6,7 +6,7 @@ import {
   GraduationCap, Link2, GitBranch, BarChart2, FileText, BookOpen,
   Shield, Users, User, Calendar, Bot, Zap, Swords, Smartphone, Bell,
   Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
-  Activity, Network, Layers, AlertTriangle, TrendingUp,
+  Activity, Network, Layers, AlertTriangle, TrendingUp, BellRing,
 } from 'lucide-react';
 import { API_BASE } from '../../config';
 import brand from '../../brand';
@@ -17,6 +17,11 @@ import { NOCCity, NOCAlert } from '@/types/noc';
 // ── Siempre visibles — importación estática ───────────────────────────────────
 import FloatingChat from './sections/FloatingChat';
 import DevPanel from './DevPanel';
+import NotificacionesPanel from './sections/NotificacionesPanel';
+import CommandPalette from './sections/CommandPalette';
+import InicioRol from './sections/InicioRol';
+import { useNotificaciones } from '../../hooks/useNotificaciones';
+import { useAuth } from '../../contexts/AuthContext';
 
 // ── Secciones lazy — se cargan solo cuando el usuario las abre ────────────────
 const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
@@ -42,7 +47,9 @@ const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
-const WarRoomSection     = lazy(() => import('./sections/WarRoomSection'));
+const WarRoomSection      = lazy(() => import('./sections/WarRoomSection'));
+const ReportesKPISection  = lazy(() => import('./sections/ReportesKPISection'));
+const IncidentesSection   = lazy(() => import('./sections/IncidentesSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -78,6 +85,7 @@ const NAV: NavEntry[] = [
   { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
   { id: 'ventas',  label: 'Resumen Ventas', icon: '📈', group: 'Administración' },
+  { id: 'reportes-kpi', label: 'KPI Dashboard', icon: '🎯', group: 'Administración' },
   { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
   { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
   { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
@@ -87,6 +95,7 @@ const NAV: NavEntry[] = [
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
+  { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
   { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
   { id: 'bridge', label: 'Data Bridge', icon: '⚡', group: 'Infraestructura' },
   { id: 'war-room', label: 'Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
@@ -111,6 +120,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   merkle: GitBranch,
   gerencia: BarChart2,
   ventas: TrendingUp,
+  'reportes-kpi': Activity,
   reports: FileText,
   reportlab: FileText,
   docs: BookOpen,
@@ -118,6 +128,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   sala_juntas: Calendar,
   foda: Shield,
   adopcion: Users,
+  incidentes: AlertTriangle,
   agentes: Bot,
   bridge: Zap,
   'war-room': Swords,
@@ -145,9 +156,11 @@ const SECTION_TITLE: Record<SectionId, string> = {
   academia: brand.academiaLabel,
   gerencia: 'Dashboard Gerencial',
   ventas:   'Resumen de Ventas',
+  'reportes-kpi': 'KPI Dashboard Ejecutivo',
   reports: 'Reportes & Gobierno',
   reportlab: 'PDF Generator',
   bridge: 'Antigravity Data Bridge',
+  incidentes: 'Gestor de Incidentes de Red',
   'war-room': 'Comando Multi-Agente',
   mobile: 'Terminal Móvil',
   telegram: 'Monitor de Alarmas',
@@ -442,7 +455,7 @@ function Content({
       display: 'flex', flexDirection: 'column',
     }}>
       <Suspense fallback={<SectionSpinner />}>
-      {section === 'inicio'   && <InicioHoloSection theme={theme} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} onSelect={onSelect} />}
+      {section === 'inicio'   && <InicioRol theme={theme} onNavigate={onSelect} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} />}
       {section === 'noc' && (
         <NocSection
           theme={theme}
@@ -468,6 +481,7 @@ function Content({
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'ventas'   && <VentasSection theme={theme} />}
+      {section === 'reportes-kpi' && <ReportesKPISection theme={theme} />}
       {section === 'reports' && <ReportesGobierno />}
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
 
@@ -536,6 +550,12 @@ function Content({
             </div>
           </div>
         </div>
+      )}
+
+      {section === 'incidentes' && (
+        <Suspense fallback={<SectionSpinner />}>
+          <IncidentesSection theme={theme} />
+        </Suspense>
       )}
 
       {section === 'war-room' && (
@@ -680,7 +700,11 @@ function MobileAccessSection({ theme }: { theme: ThemeConfig }) {
 
 export default function Xcien2Page() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiar } = useNotificaciones();
   const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
   const [odooStatus, setOdooStatus] = useState<'conectado' | 'desconectado'>('desconectado');
@@ -688,7 +712,7 @@ export default function Xcien2Page() {
   const [section, setSection] = useState<SectionId>(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('section') as SectionId;
-    return (s && SECTION_TITLE[s]) ? s : 'noc';
+    return (s && SECTION_TITLE[s]) ? s : 'inicio';
   });
 
   useEffect(() => {
@@ -747,6 +771,18 @@ export default function Xcien2Page() {
     loadRealData();
     const id = setInterval(loadRealData, 30_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Global Cmd+K shortcut for command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdPaletteOpen(p => !p);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   const patchTheme = useCallback((patch: Partial<ThemeConfig>) => dispatch({ type: 'patch', payload: patch }), []);
@@ -818,13 +854,31 @@ export default function Xcien2Page() {
           top: 0,
           zIndex: 100,
         }}>
-          {/* Left: breadcrumb */}
+          {/* Left: breadcrumb + search trigger */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: U.dim }}>{brand.name} {brand.version}</span>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>/</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: U.text }}>
               {SECTION_TITLE[section]}
             </span>
+            <button
+              onClick={() => setCmdPaletteOpen(true)}
+              style={{
+                marginLeft: 12,
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '4px 12px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 8, cursor: 'pointer', color: U.dim,
+                fontSize: 11, fontFamily: 'inherit',
+                transition: 'all 0.15s',
+              }}
+              title="Búsqueda global (Cmd+K)"
+            >
+              <span style={{ opacity: 0.6 }}>🔍</span>
+              <span>Buscar…</span>
+              <kbd style={{ padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 9, fontFamily: 'monospace', color: '#6b7280' }}>⌘K</kbd>
+            </button>
           </div>
 
           {/* Right: status + alerts + user */}
@@ -891,15 +945,75 @@ export default function Xcien2Page() {
               <span style={{ fontSize: 10, fontWeight: 700, color: U.accent, letterSpacing: 0.5 }}>LIVE</span>
             </div>
 
-            {/* User avatar */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: U.accent,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: 10, color: '#0d1117',
-              marginLeft: 4, cursor: 'pointer',
-              flexShrink: 0,
-            }}>JM</div>
+            {/* Notification bell */}
+            <button
+              onClick={() => setNotifPanelOpen(p => !p)}
+              style={{
+                position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34,
+                background: notifPanelOpen
+                  ? 'rgba(255,183,3,0.12)'
+                  : noLeidas > 0 ? 'rgba(255,183,3,0.06)' : 'transparent',
+                border: `1px solid ${notifPanelOpen || noLeidas > 0 ? 'rgba(255,183,3,0.25)' : 'transparent'}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: noLeidas > 0 ? '#FFB703' : U.dim,
+                transition: 'all 0.15s',
+              }}
+              title="Notificaciones"
+            >
+              {noLeidas > 0 ? <BellRing size={15} /> : <Bell size={15} />}
+              {noLeidas > 0 && (
+                <div style={{
+                  position: 'absolute', top: 3, right: 3,
+                  background: '#FFB703', color: '#0d1117',
+                  fontSize: 8, fontWeight: 900,
+                  width: 14, height: 14, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${U.header}`,
+                }}>{noLeidas > 99 ? '99' : noLeidas}</div>
+              )}
+            </button>
+
+            {/* User badge real */}
+            {user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginLeft: 4 }}>
+                <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#e5e7eb' }}>
+                    {user.nombre.split(' ').slice(0, 2).join(' ')}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 9, color: U.dim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {user.rol}
+                  </p>
+                </div>
+                <div style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${U.accent}, #00ff88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: 11, color: '#0d1117',
+                  flexShrink: 0, cursor: 'default',
+                  border: '2px solid rgba(255,255,255,0.1)',
+                }}>
+                  {user.nombre.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <button
+                  onClick={logout}
+                  title="Cerrar sesión"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 28, height: 28, borderRadius: 6,
+                    background: 'rgba(239,68,68,0.06)',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                    color: '#ef4444', cursor: 'pointer', fontSize: 13,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.14)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.06)'; }}
+                >
+                  ⏻
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -923,6 +1037,26 @@ export default function Xcien2Page() {
           />
         </SectionErrorBoundary>
       </div>
+
+      {/* Notificaciones Panel */}
+      <NotificacionesPanel
+        open={notifPanelOpen}
+        notificaciones={notificaciones}
+        noLeidas={noLeidas}
+        onClose={() => setNotifPanelOpen(false)}
+        onMarcarLeida={marcarLeida}
+        onMarcarTodasLeidas={marcarTodasLeidas}
+        onLimpiar={limpiar}
+        onNavigate={(id) => { onSelectSection(id); setNotifPanelOpen(false); }}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette
+        open={cmdPaletteOpen}
+        onClose={() => setCmdPaletteOpen(false)}
+        onNavigate={(id) => { onSelectSection(id); setCmdPaletteOpen(false); }}
+        secciones={NAV}
+      />
 
       <style>{`
         @keyframes pulse-dot {

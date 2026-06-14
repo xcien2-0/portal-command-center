@@ -23,7 +23,7 @@ export interface AcademiaStats {
   level_distribution: Record<string, number>;
 }
 
-// Técnico enriquecido (calculado en el frontend)
+// Empleado enriquecido (calculado en el frontend a partir de Odoo eLearning + RRHH)
 export interface Tecnico {
   name: string;
   avgPct: number;   // promedio de todos sus cursos
@@ -32,6 +32,8 @@ export interface Tecnico {
   levelColor: string;
   levelIcon: string;
   rank: number;
+  plaza: string;    // ubicación (work_location_id) desde RRHH
+  area: string;     // departamento desde RRHH
 }
 
 export const LEVELS = [
@@ -47,8 +49,17 @@ export function getLevel(pct: number) {
   return LEVELS.find(l => pct >= l.min && pct < l.max) ?? LEVELS[0];
 }
 
-// Agrega cursos en lista de técnicos con promedio y nivel
-export function buildTecnicoList(cursos: OdooCurso[]): Tecnico[] {
+/**
+ * Construye lista de empleados inscritos en la Academia desde los cursos Odoo.
+ * Incluye a TODA la organización — técnicos, NOC, WFM, comercial, admin, etc.
+ * El mapa de RRHH enriquece con plaza y área, pero NO excluye a nadie:
+ * si alguien está en los cursos pero no en RRHH, igual aparece (con plaza/area vacíos).
+ */
+export function buildTecnicoList(
+  cursos: OdooCurso[],
+  plazaMapa?: Record<string, string>,
+  areaMapa?: Record<string, string>,
+): Tecnico[] {
   const map: Record<string, { sum: number; count: number }> = {};
   for (const c of cursos) {
     for (const m of c.members_list) {
@@ -62,8 +73,15 @@ export function buildTecnicoList(cursos: OdooCurso[]): Tecnico[] {
   return Object.entries(map)
     .map(([name, { sum, count }]) => {
       const avgPct = count > 0 ? Math.round(sum / count * 10) / 10 : 0;
-      const lv = getLevel(avgPct);
-      return { name, avgPct, cursos: count, level: lv.name, levelColor: lv.color, levelIcon: lv.icon, rank: 0 };
+      const lv    = getLevel(avgPct);
+      const key   = name.toLowerCase();
+      return {
+        name, avgPct, cursos: count,
+        level: lv.name, levelColor: lv.color, levelIcon: lv.icon,
+        rank: 0,
+        plaza: plazaMapa?.[key] ?? '',
+        area:  areaMapa?.[key]  ?? '',
+      };
     })
     .sort((a, b) => b.avgPct - a.avgPct)
     .map((t, i) => ({ ...t, rank: i + 1 }));
