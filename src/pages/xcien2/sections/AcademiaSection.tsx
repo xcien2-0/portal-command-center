@@ -215,6 +215,16 @@ function CursosView() {
   );
 }
 
+// ── Academia Stats (datos reales desde Odoo) ──────────────────────────────────
+interface AcademiaStats {
+  total_tecnicos: number;
+  avance_global: number;
+  total_cursos: number;
+  total_badges: number;
+  top5: { name: string; pct: number; cursos: number; level: string }[];
+  level_distribution: Record<string, number>;
+}
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 const SLIDES = ['intro','problema','comparacion','solucion','niveles','badges','leaderboard','roadmap','cta'] as const;
 type SlideId = typeof SLIDES[number];
@@ -223,40 +233,31 @@ const LABELS: Record<SlideId, string> = {
   niveles: 'Niveles', badges: 'Badges', leaderboard: 'Ranking', roadmap: 'Roadmap', cta: 'Cierre',
 };
 
-interface Level  { name:string; min:number; max:number; icon:string; color:string; accent:string; count:number }
-interface Badge  { icon:string; name:string; desc:string; holders:number; tc:string }
-interface Top    { name:string; plaza:string; role:string; pct:number; badges:number; level:string }
+interface Level  { name:string; min:number; max:number; icon:string; color:string; accent:string }
+interface Badge  { icon:string; name:string; desc:string; tc:string }
 interface Phase  { q:string; done:boolean; color:string; items:string[] }
 
 const LEVELS: Level[] = [
-  { name:'Aprendiz',     min:0,  max:30,  icon:'🌱', color:'#888',    accent:'rgba(255,255,255,0.03)', count:2  },
-  { name:'Técnico',      min:30, max:50,  icon:'🔧', color:'#4FC3F7', accent:'rgba(79,195,247,0.08)',  count:8  },
-  { name:'Especialista', min:50, max:65,  icon:'⚙️', color:'#00C896', accent:'rgba(0,200,150,0.08)',   count:15 },
-  { name:'Avanzado',     min:65, max:80,  icon:'🏆', color:'#7c3aed', accent:'rgba(124,58,237,0.08)',  count:14 },
-  { name:'Experto',      min:80, max:95,  icon:'🎖️', color:'#FFB703', accent:'rgba(255,183,3,0.08)',   count:7  },
-  { name:'Leyenda',      min:95, max:100, icon:'⭐', color:'#FF4757', accent:'rgba(255,71,87,0.08)',   count:1  },
+  { name:'Aprendiz',     min:0,  max:30,  icon:'🌱', color:'#888',    accent:'rgba(255,255,255,0.03)' },
+  { name:'Técnico',      min:30, max:50,  icon:'🔧', color:'#4FC3F7', accent:'rgba(79,195,247,0.08)'  },
+  { name:'Especialista', min:50, max:65,  icon:'⚙️', color:'#00C896', accent:'rgba(0,200,150,0.08)'   },
+  { name:'Avanzado',     min:65, max:80,  icon:'🏆', color:'#7c3aed', accent:'rgba(124,58,237,0.08)'  },
+  { name:'Experto',      min:80, max:95,  icon:'🎖️', color:'#FFB703', accent:'rgba(255,183,3,0.08)'   },
+  { name:'Leyenda',      min:95, max:100, icon:'⭐', color:'#FF4757', accent:'rgba(255,71,87,0.08)'   },
 ];
 
 const BADGES_DATA: Badge[] = [
-  { icon:'🔧', name:'Maestro Instalador', desc:'100% en Instalación',      holders:3,  tc:'#4FC3F7' },
-  { icon:'📡', name:'RF Pro',             desc:'Dominio total Redes RF',   holders:2,  tc:'#7c3aed' },
-  { icon:'⭐', name:`Leyenda ${brand.name}`,  desc:'Avance ≥ 95%',            holders:1,  tc:'#FFB703' },
-  { icon:'🔥', name:'Firewall Hero',      desc:'Habilidad crítica',       holders:4,  tc:'#FF4757' },
-  { icon:'🏅', name:'Top de Plaza',       desc:'Mejor técnico en ciudad', holders:6,  tc:'#00C896' },
-  { icon:'💥', name:'Racha x5',           desc:'5 capacitaciones seguidas',holders:8, tc:'#FFB703' },
-];
-
-const TOP5: Top[] = [
-  { name:'Brian Quintero Choreño',      plaza:'CDMX',       role:'COR', pct:100,   badges:12, level:'Leyenda' },
-  { name:'Jose Guadalupe Balderas',     plaza:'Nuevo León', role:'COR', pct:95.83, badges:10, level:'Leyenda' },
-  { name:'Erik Alberto Silva Olivares', plaza:'Nuevo León', role:'CAE', pct:91.67, badges:9,  level:'Experto' },
-  { name:'Miguel Angel Flores Herrera', plaza:'Nuevo León', role:'COR', pct:91.67, badges:9,  level:'Experto' },
-  { name:'Andres Guadalupe Guardado',   plaza:'Nuevo León', role:'COR', pct:89.58, badges:8,  level:'Experto' },
+  { icon:'🔧', name:'Maestro Instalador', desc:'100% en Instalación',       tc:'#4FC3F7' },
+  { icon:'📡', name:'RF Pro',             desc:'Dominio total Redes RF',    tc:'#7c3aed' },
+  { icon:'⭐', name:`Leyenda ${brand.name}`,  desc:'Avance ≥ 95%',         tc:'#FFB703' },
+  { icon:'🔥', name:'Firewall Hero',      desc:'Habilidad crítica',         tc:'#FF4757' },
+  { icon:'🏅', name:'Top de Plaza',       desc:'Mejor técnico en ciudad',   tc:'#00C896' },
+  { icon:'💥', name:'Racha x5',           desc:'5 capacitaciones seguidas', tc:'#FFB703' },
 ];
 
 const ROADMAP: Phase[] = [
   { q:'Q2 2025', done:true,  color:'#00C896', items:['Matriz de habilidades v1','Sistema de 6 niveles','15 badges definidos','Datos de 47 técnicos'] },
-  { q:'Q3 2025', done:false, color:'#FFB703', items:[`Portal web ${brand.academiaLabel}`,'Exámenes en línea','Integración con Odoo','Login individual'] },
+  { q:'Q3 2025', done:true,  color:'#FFB703', items:[`Portal web ${brand.academiaLabel}`,'Exámenes en línea','Integración con Odoo','Login individual'] },
   { q:'Q4 2025', done:false, color:'#888',    items:['App móvil técnicos','Smart contracts bonos','Certificaciones oficiales','Expansión 100+'] },
 ];
 
@@ -309,9 +310,9 @@ const card: React.CSSProperties = {
   borderRadius: 12, padding: 20,
 };
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.06)', color: DIM }}>
+    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.06)', color: DIM, ...style }}>
       {children}
     </span>
   );
@@ -347,11 +348,18 @@ function SectionTitle({ sub, main, dim }: { sub: string; main: string; dim: stri
 }
 
 // ── Slides ────────────────────────────────────────────────────────────────────
-function SlideIntro() {
+function SlideIntro({ stats }: { stats: AcademiaStats | null }) {
+  const tecnicos = stats?.total_tecnicos ?? '—';
+  const avance   = stats?.avance_global  ?? '—';
+  const cursos   = stats?.total_cursos   ?? '—';
+  const badges   = stats?.total_badges   ?? '—';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 32, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <Chip>Field Services</Chip><Chip>47 técnicos</Chip><Chip>6 plazas · México</Chip>
+        <Chip>Field Services</Chip>
+        <Chip>{tecnicos} técnicos</Chip>
+        <Chip>6 plazas · México</Chip>
+        {stats && <Chip style={{ color: GREEN, borderColor: `${GREEN}40`, background: `${GREEN}10` }}>● Odoo en vivo</Chip>}
       </div>
       <div style={{ fontSize: 'clamp(80px,10vw,120px)', fontWeight: 800, lineHeight: 0.8, letterSpacing: -3, marginBottom: 24, fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 50px rgba(0,255,136,0.3)' }}>
         Academia<br /><span style={{ fontWeight: 400, color: GREEN, textShadow: `0 0 30px ${GREEN}60` }}>{brand.name}</span>
@@ -360,7 +368,12 @@ function SlideIntro() {
         El sistema que convierte capacitación en carrera,<br />esfuerzo en reconocimiento, técnicos en leyendas.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 540 }}>
-        {[['47', '', 'Técnicos'], ['62.3', '%', 'Avance global'], ['48', '', 'Habilidades'], ['15', '', 'Badges']].map(([v, s, l], i) => (
+        {([
+          [String(tecnicos), '',  'Técnicos'],
+          [String(avance),   '%', 'Avance global'],
+          [String(cursos),   '',  'Cursos activos'],
+          [String(badges),   '',  'Quizzes'],
+        ] as [string,string,string][]).map(([v, s, l], i) => (
           <div key={i} style={{ ...card, textAlign: 'center', padding: '16px 10px', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -1, fontFamily: 'Oswald, sans-serif', color: i === 1 ? '#00ff88' : 'inherit' }}>{v}{s}</div>
             <div style={{ fontSize: 10, color: DIM, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{l}</div>
@@ -450,21 +463,32 @@ function SlideSolucion() {
   );
 }
 
-function SlideNiveles() {
+function SlideNiveles({ stats }: { stats: AcademiaStats | null }) {
   const [hov, setHov] = useState<number | null>(null);
+  const dist = stats?.level_distribution ?? {};
   return (
     <div style={{ maxWidth: 800 }}>
       <SectionTitle sub="Sistema de niveles" main="Tu carrera," dim="paso a paso" />
+      {stats && (
+        <div style={{ fontSize: 10, color: GREEN, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>●</span><span>Distribución real · {stats.total_tecnicos} técnicos inscritos en Odoo</span>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-        {LEVELS.map((lv, i) => (
-          <div key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
-            style={{ ...card, cursor: 'pointer', transition: 'all .2s', borderTop: hov === i ? `2px solid ${lv.color}` : '0.5px solid rgba(255,255,255,0.06)', background: hov === i ? lv.accent : '#151515', transform: hov === i ? 'translateY(-3px)' : 'none' }}>
-            <div style={{ fontSize: 22, marginBottom: 12 }}>{lv.icon}</div>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{lv.name}</div>
-            <div style={{ fontSize: 12, color: DIM, marginBottom: 10 }}>{lv.min}–{lv.max}%</div>
-            <span style={{ fontSize: 11, color: lv.color, fontWeight: 500, background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: 20 }}>{lv.count} técnicos</span>
-          </div>
-        ))}
+        {LEVELS.map((lv, i) => {
+          const count = dist[lv.name] ?? 0;
+          return (
+            <div key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
+              style={{ ...card, cursor: 'pointer', transition: 'all .2s', borderTop: hov === i ? `2px solid ${lv.color}` : '0.5px solid rgba(255,255,255,0.06)', background: hov === i ? lv.accent : '#151515', transform: hov === i ? 'translateY(-3px)' : 'none' }}>
+              <div style={{ fontSize: 22, marginBottom: 12 }}>{lv.icon}</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{lv.name}</div>
+              <div style={{ fontSize: 12, color: DIM, marginBottom: 10 }}>{lv.min}–{lv.max}%</div>
+              <span style={{ fontSize: 11, color: lv.color, fontWeight: 500, background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: 20 }}>
+                {stats ? `${count} técnicos` : '— técnicos'}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -475,21 +499,19 @@ function SlideBadges() {
   return (
     <div style={{ maxWidth: 800 }}>
       <SectionTitle sub="Sistema de badges" main="Gana reconocimiento," dim="demuestra tu dominio" />
+      <div style={{ fontSize: 10, color: '#FFB703', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255,183,3,0.07)', borderRadius: 8, border: '0.5px solid rgba(255,183,3,0.2)' }}>
+        <span>⚠</span><span>Sistema de gamificación en desarrollo — los badges se activarán con el módulo de bonos</span>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         {BADGES_DATA.map((b, i) => (
           <div key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
-            style={{ ...card, padding: 16, transition: 'all .2s', transform: hov === i ? 'translateY(-3px)' : 'none', borderColor: hov === i ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+            style={{ ...card, padding: 16, transition: 'all .2s', transform: hov === i ? 'translateY(-3px)' : 'none', borderColor: hov === i ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)', cursor: 'pointer', opacity: 0.85 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0, background: hov === i ? `${b.tc}22` : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, transition: 'background .2s' }}>{b.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 3 }}>{b.name}</div>
                 <div style={{ fontSize: 12, color: DIM, marginBottom: 8, lineHeight: 1.5 }}>{b.desc}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)' }}>
-                    <div style={{ height: '100%', borderRadius: 2, background: b.tc, width: `${(b.holders / 47) * 100}%`, transition: 'width .9s ease' }} />
-                  </div>
-                  <span style={{ fontSize: 11, color: b.tc, fontWeight: 500 }}>{b.holders}</span>
-                </div>
+                <span style={{ fontSize: 10, color: '#FFB703', background: 'rgba(255,183,3,0.08)', padding: '2px 8px', borderRadius: 20 }}>Próximamente</span>
               </div>
             </div>
           </div>
@@ -499,30 +521,45 @@ function SlideBadges() {
   );
 }
 
-function SlideLeaderboard() {
+function SlideLeaderboard({ stats }: { stats: AcademiaStats | null }) {
   const [hov, setHov] = useState<number | null>(null);
   const medals = ['🥇', '🥈', '🥉'];
-  const colors = ['#FFB703', '#aaa', '#FF4757', '#aaa', '#aaa'];
+  const colors = ['#FFB703', '#aaa', '#FF4757', '#4FC3F7', '#00C896'];
+  const top5 = stats?.top5 ?? [];
   return (
     <div style={{ maxWidth: 700 }}>
-      <SectionTitle sub="Leaderboard 2025" main="Top técnicos —" dim="¿dónde estás tú?" />
+      <SectionTitle sub="Leaderboard en vivo" main="Top técnicos —" dim="¿dónde estás tú?" />
+      {stats ? (
+        <div style={{ fontSize: 10, color: GREEN, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>●</span><span>Datos reales de Odoo · Promedio de avance en todos los cursos inscritos</span>
+        </div>
+      ) : (
+        <div style={{ fontSize: 10, color: '#FFB703', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>⚠</span><span>Cargando datos desde Odoo...</span>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {TOP5.map((t, i) => (
+        {top5.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: DIM, fontSize: 13 }}>
+            {stats ? 'Sin técnicos inscritos en Odoo aún.' : 'Cargando leaderboard...'}
+          </div>
+        ) : top5.map((t, i) => (
           <div key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
             style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 12, background: '#151515', border: '0.5px solid rgba(255,255,255,0.06)', transition: 'all .2s', transform: hov === i ? 'translateX(4px)' : 'none', cursor: 'pointer' }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'rgba(255,255,255,0.04)', flexShrink: 0 }}>
               {i < 3 ? medals[i] : i + 1}
             </div>
-            <Ring pct={t.pct} size={40} stroke={3} color={colors[i]} />
+            <Ring pct={t.pct} size={40} stroke={3} color={colors[i] ?? DIM} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                <Chip>{t.role}</Chip><Chip>📍{t.plaza}</Chip><Chip>{t.level}</Chip>
+                <Chip>{t.level}</Chip>
+                <Chip>{t.cursos} cursos</Chip>
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 500 }}>{t.pct === 100 ? '100' : t.pct.toFixed(1)}%</div>
-              <div style={{ fontSize: 11, color: DIM, marginTop: 2 }}>{t.badges} badges</div>
+              <div style={{ fontSize: 11, color: DIM, marginTop: 2 }}>avance promedio</div>
             </div>
           </div>
         ))}
@@ -1095,15 +1132,15 @@ function SlideCTA({ onStartExam }: { onStartExam: () => void }) {
 }
 
 const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
-  intro:       SlideIntro,
-  problema:    SlideProblema,
-  comparacion: SlideComparacion,
-  solucion:    SlideSolucion,
-  niveles:     SlideNiveles,
-  badges:      SlideBadges,
-  leaderboard: SlideLeaderboard,
-  roadmap:     SlideRoadmap,
-  cta:         SlideCTA,
+  intro:       (p) => <SlideIntro       stats={p.stats} />,
+  problema:    ()  => <SlideProblema />,
+  comparacion: ()  => <SlideComparacion />,
+  solucion:    ()  => <SlideSolucion />,
+  niveles:     (p) => <SlideNiveles     stats={p.stats} />,
+  badges:      ()  => <SlideBadges />,
+  leaderboard: (p) => <SlideLeaderboard stats={p.stats} />,
+  roadmap:     ()  => <SlideRoadmap />,
+  cta:         (p) => <SlideCTA onStartExam={p.onStartExam} />,
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -1111,9 +1148,18 @@ interface Props { theme: ThemeConfig; activeThemeId?: string }
 export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const [view, setView] = useState<'dashboard' | 'cursos' | 'exam'>('cursos');
   const [idx, setIdx] = useState(0);
+  const [stats, setStats] = useState<AcademiaStats | null>(null);
   const total = SLIDES.length;
 
   const go = (i: number) => { if (i >= 0 && i < total) setIdx(i); };
+
+  // Fetch stats reales desde Odoo
+  useEffect(() => {
+    fetch(`${API_BASE}/api/academia/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setStats(d); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (view !== 'dashboard') return;
@@ -1176,7 +1222,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
         {view === 'cursos' && <CursosView />}
         {view === 'dashboard' && (
           <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
-            <SlideComp theme={theme} onStartExam={() => setView('exam')} />
+            <SlideComp theme={theme} stats={stats} onStartExam={() => setView('exam')} />
           </div>
         )}
         {view === 'exam' && (
