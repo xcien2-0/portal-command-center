@@ -1282,8 +1282,8 @@ def update_ticket_status(ticket_id: str, req: TicketUpdateStatusRequest):
 NOCBOARD_DIR = os.path.expanduser("~/Library/Application Support/NOCBoard")
 NOCBOARD_HOSTS_FILE   = os.path.join(NOCBOARD_DIR, "hosts.json")
 NOCBOARD_ALERTS_FILE  = os.path.join(NOCBOARD_DIR, "alerts.json")
-NOCBOARD_API_BASE = "http://localhost:9401/api"
-NOCBOARD_API_KEY  = "87a08190b801416392e944ab79c7e3c9"
+NOCBOARD_API_BASE = os.environ.get("NOCBOARD_API_BASE", "http://localhost:9401/api")
+NOCBOARD_API_KEY  = os.environ.get("NOCBOARD_API_KEY", "87a08190b801416392e944ab79c7e3c9")
 
 import requests
 import threading
@@ -4974,9 +4974,6 @@ async def red_dispositivos_geo():
 async def red_host_detalle(host_id: str):
     """Detalle completo de un host: NOCBoard + UISP si es Ubiquiti."""
     import httpx
-
-    NOCBOARD_API_BASE = "http://localhost:9401/api"
-    NOCBOARD_API_KEY  = "87a08190b801416392e944ab79c7e3c9"
 
     # Buscar en NOCBoard
     host = None
