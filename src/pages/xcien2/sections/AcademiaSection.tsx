@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
 import brand from '../../../brand';
@@ -275,6 +275,13 @@ const DIM = '#888';
 const GREEN = '#00C896';
 const RED   = '#FF4757';
 
+// Valores pre-calculados fuera del componente — no se regeneran en cada render
+const MATRIX_COLS = Array.from({ length: 30 }, () => ({
+  duration: 15 + Math.random() * 25,
+  delay:    -Math.random() * 25,
+  chars:    Array.from({ length: 60 }, () => Math.random() > 0.5 ? '1' : '0').join(' '),
+}));
+
 function MatrixBackground() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.1, pointerEvents: 'none', zIndex: 0 }}>
@@ -284,14 +291,14 @@ function MatrixBackground() {
         fontFamily: 'monospace', fontSize: 12, color: '#00ff88', textShadow: '0 0 8px #00ff88',
         whiteSpace: 'nowrap', userSelect: 'none'
       }}>
-        {Array.from({ length: 30 }).map((_, i) => (
-          <div key={i} style={{ 
-            animation: `matrixFall ${15 + Math.random() * 25}s linear infinite`,
-            animationDelay: `${-Math.random() * 25}s`,
+        {MATRIX_COLS.map((col, i) => (
+          <div key={i} style={{
+            animation: `matrixFall ${col.duration}s linear infinite`,
+            animationDelay: `${col.delay}s`,
             writingMode: 'vertical-rl',
             textAlign: 'center'
           }}>
-            {Array.from({ length: 60 }).map(() => Math.random() > 0.5 ? '1' : '0').join(' ')}
+            {col.chars}
           </div>
         ))}
       </div>
@@ -350,7 +357,7 @@ function SectionTitle({ sub, main, dim }: { sub: string; main: string; dim: stri
 // ── Slides ────────────────────────────────────────────────────────────────────
 function SlideIntro({ stats }: { stats: AcademiaStats | null }) {
   const tecnicos = stats?.total_tecnicos ?? '—';
-  const avance   = stats?.avance_global  ?? '—';
+  const avance   = stats ? Math.round(stats.avance_global) : '—';
   const cursos   = stats?.total_cursos   ?? '—';
   const badges   = stats?.total_badges   ?? '—';
   return (
@@ -521,7 +528,7 @@ function SlideBadges() {
   );
 }
 
-function SlideLeaderboard({ stats }: { stats: AcademiaStats | null }) {
+function SlideLeaderboard({ stats, statsLoaded }: { stats: AcademiaStats | null; statsLoaded: boolean }) {
   const [hov, setHov] = useState<number | null>(null);
   const medals = ['🥇', '🥈', '🥉'];
   const colors = ['#FFB703', '#aaa', '#FF4757', '#4FC3F7', '#00C896'];
@@ -541,7 +548,7 @@ function SlideLeaderboard({ stats }: { stats: AcademiaStats | null }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {top5.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: DIM, fontSize: 13 }}>
-            {stats ? 'Sin técnicos inscritos en Odoo aún.' : 'Cargando leaderboard...'}
+            {!statsLoaded ? 'Cargando leaderboard...' : stats ? 'Sin técnicos inscritos en Odoo aún.' : 'No se pudo conectar con Odoo.'}
           </div>
         ) : top5.map((t, i) => (
           <div key={i} onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
@@ -558,7 +565,7 @@ function SlideLeaderboard({ stats }: { stats: AcademiaStats | null }) {
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 500 }}>{t.pct === 100 ? '100' : t.pct.toFixed(1)}%</div>
+              <div style={{ fontSize: 18, fontWeight: 500 }}>{typeof t.pct === 'number' ? (t.pct === 100 ? '100' : t.pct.toFixed(1)) : '—'}%</div>
               <div style={{ fontSize: 11, color: DIM, marginTop: 2 }}>avance promedio</div>
             </div>
           </div>
@@ -597,11 +604,11 @@ function SlideRoadmap() {
 // ── Exam View ─────────────────────────────────────────────────────────────────
 
 // Shared question/answer types (Odoo)
-interface OdooAnswer   { id: number; text: string }
-interface OdooPregunta { id: number; question: string; slide: string; answers: OdooAnswer[] }
-interface OdooExamen   { channel_id: number; name: string; total: number; preguntas: OdooPregunta[] }
-interface OdooResult   { score_pct: number; correctas: number; total: number; nivel: string; xp_awarded: number; aprobado: boolean }
-interface OdooCurso    { id: number; name: string; total_slides: number; lessons: { has_quiz: boolean }[] }
+interface OdooAnswer      { id: number; text: string }
+interface OdooPregunta    { id: number; question: string; slide: string; answers: OdooAnswer[] }
+interface OdooExamen      { channel_id: number; name: string; total: number; preguntas: OdooPregunta[] }
+interface OdooResult      { score_pct: number; correctas: number; total: number; nivel: string; xp_awarded: number; aprobado: boolean }
+interface OdooCursoSlim   { id: number; name: string; total_slides: number; lessons: { has_quiz: boolean }[] }
 
 // Colocación types
 interface ColPregunta  { id: number; competencia_key: string; competencia_label: string; pregunta: string; opciones: string[] }
@@ -918,7 +925,7 @@ function ColocacionFlow({ onBack }: { onBack: () => void }) {
 // ── Odoo Courses Flow ──────────────────────────────────────────────────────────
 function OdooFlow({ onBack }: { onBack: () => void }) {
   const [step, setStep]       = useState<'select' | 'exam' | 'result'>('select');
-  const [cursos, setCursos]   = useState<OdooCurso[]>([]);
+  const [cursos, setCursos]   = useState<OdooCursoSlim[]>([]);
   const [examen, setExamen]   = useState<OdooExamen | null>(null);
   const [result, setResult]   = useState<OdooResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -928,7 +935,7 @@ function OdooFlow({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     fetch(`${API_BASE}/api/academia/cursos`)
       .then(r => r.json())
-      .then((data: OdooCurso[]) => {
+      .then((data: OdooCursoSlim[]) => {
         const wq = data.filter(c => c.lessons.some(l => l.has_quiz));
         setCursos(wq.length > 0 ? wq : data);
       })
@@ -1131,14 +1138,15 @@ function SlideCTA({ onStartExam }: { onStartExam: () => void }) {
   );
 }
 
-const SLIDE_COMPONENTS: Record<SlideId, (props: any) => React.ReactElement> = {
+interface SlideProps { theme: ThemeConfig; stats: AcademiaStats | null; statsLoaded: boolean; onStartExam: () => void }
+const SLIDE_COMPONENTS: Record<SlideId, (props: SlideProps) => React.ReactElement> = {
   intro:       (p) => <SlideIntro       stats={p.stats} />,
   problema:    ()  => <SlideProblema />,
   comparacion: ()  => <SlideComparacion />,
   solucion:    ()  => <SlideSolucion />,
   niveles:     (p) => <SlideNiveles     stats={p.stats} />,
   badges:      ()  => <SlideBadges />,
-  leaderboard: (p) => <SlideLeaderboard stats={p.stats} />,
+  leaderboard: (p) => <SlideLeaderboard stats={p.stats} statsLoaded={p.statsLoaded} />,
   roadmap:     ()  => <SlideRoadmap />,
   cta:         (p) => <SlideCTA onStartExam={p.onStartExam} />,
 };
@@ -1149,27 +1157,29 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const [view, setView] = useState<'dashboard' | 'cursos' | 'exam'>('cursos');
   const [idx, setIdx] = useState(0);
   const [stats, setStats] = useState<AcademiaStats | null>(null);
+  const [statsLoaded, setStatsLoaded] = useState(false);
   const total = SLIDES.length;
 
-  const go = (i: number) => { if (i >= 0 && i < total) setIdx(i); };
+  const go = (i: number) => setIdx(Math.max(0, Math.min(i, total - 1)));
 
   // Fetch stats reales desde Odoo
   useEffect(() => {
     fetch(`${API_BASE}/api/academia/stats`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setStats(d); })
-      .catch(() => {});
+      .catch((e) => { console.warn('[AcademiaSection] stats fetch failed:', e); })
+      .finally(() => setStatsLoaded(true));
   }, []);
 
   useEffect(() => {
     if (view !== 'dashboard') return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') go(idx + 1);
-      if (e.key === 'ArrowLeft')  go(idx - 1);
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft')  setIdx(i => Math.max(i - 1, 0));
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [idx, view]);
+  }, [view, total]);
 
   const SlideComp = SLIDE_COMPONENTS[SLIDES[idx]];
 
@@ -1222,7 +1232,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
         {view === 'cursos' && <CursosView />}
         {view === 'dashboard' && (
           <div key={idx} style={{ minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: theme.animations ? 'slideUp .4s ease' : 'none' }}>
-            <SlideComp theme={theme} stats={stats} onStartExam={() => setView('exam')} />
+            <SlideComp theme={theme} stats={stats} statsLoaded={statsLoaded} onStartExam={() => setView('exam')} />
           </div>
         )}
         {view === 'exam' && (
