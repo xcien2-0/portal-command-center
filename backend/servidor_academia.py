@@ -131,7 +131,8 @@ def _start_kpi_scheduler():
                         if not k["enabled"]:
                             continue
                         try:
-                            r = await client.get(f"http://localhost:8002{k['endpoint']}", timeout=8)
+                            port = os.environ.get("PORT", "8002")
+                            r = await client.get(f"http://localhost:{port}{k['endpoint']}", timeout=8)
                             if r.status_code == 200:
                                 data = r.json()
                                 parts = k["field"].split(".")
@@ -221,9 +222,13 @@ app.add_middleware(
 )
 
 # Montar estáticos (React build y Assets)
-DIST_DIR = os.path.join(BASE_DIR, "..", "dist")
+# En Docker (Railway) el frontend se copia a dist_frontend/; en dev local queda en ../dist
+_dist_local = os.path.join(BASE_DIR, "..", "dist")
+_dist_docker = os.path.join(BASE_DIR, "dist_frontend")
+DIST_DIR = _dist_docker if os.path.exists(_dist_docker) else _dist_local
 
-# Siempre montar /static para archivos legados (Academia, Exam, etc.)
+# Siempre montar /static — creamos el dir si no existe para evitar crash en Railway
+os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if os.path.exists(DIST_DIR):
@@ -5259,9 +5264,9 @@ def _hook_wfm_ticket(ticket: dict, action: str = "created"):
 # ─── Observium ────────────────────────────────────────────────────────────────
 import httpx as _httpx_obs
 
-OBSERVIUM_BASE = "https://172.31.150.244:4301"
-OBSERVIUM_USER = "miguel.macias"
-OBSERVIUM_PASS = "Parley.2392"
+OBSERVIUM_BASE = os.environ.get("OBSERVIUM_URL", "https://172.31.150.244:4301")
+OBSERVIUM_USER = os.environ.get("OBSERVIUM_USER", "")
+OBSERVIUM_PASS = os.environ.get("OBSERVIUM_PASS", "")
 
 async def _obs_get(path: str, params: dict = {}):
     try:
@@ -5874,15 +5879,10 @@ import asyncio as _asyncio
 import uuid as _uuid
 from fastapi.responses import StreamingResponse as _StreamingResponse
 
-# Estado interno del poller de notificaciones
-_noti_state: dict = {
-    "noc_critica_ids":  set(),   # IDs de alertas críticas ya vistas
-    "wfm_urgente_ids":  set(),   # IDs de tickets urgentes ya vistos
-    "kpi_alerts_seen":  set(),   # "kpiId:estado" ya notificados
-}
-
-async def _noti_poller():
-    """Generador SSE que pushea notificaciones al cliente cada 30s."""
+async def _noti_poller(conn_state: dict):
+    """Generador SSE que pushea notificaciones al cliente cada 30s.
+    conn_state es un dict POR CONEXIÓN — cada usuario tiene su propio estado
+    de IDs vistos, evitando que un usuario consuma las alertas de otro."""
     # Ping inicial para confirmar conexión
     yield f"data: {json.dumps({'tipo':'ping','ts': int(_time.time()*1000)})}\n\n"
 
@@ -5897,8 +5897,8 @@ async def _noti_poller():
             for a in raw_alerts:
                 sev   = str(a.get("alert_severity", "")).lower()
                 a_id  = str(a.get("alert_table_id", a.get("id", "")))
-                if sev in ("critical", "high") and a_id and a_id not in _noti_state["noc_critica_ids"]:
-                    _noti_state["noc_critica_ids"].add(a_id)
+                if sev in ("critical", "high") and a_id and a_id not in conn_state["noc_critica_ids"]:
+                    conn_state["noc_critica_ids"].add(a_id)
                     evento = {
                         "id":     f"noc_{a_id}",
                         "tipo":   "noc_critica",
@@ -5923,8 +5923,8 @@ async def _noti_poller():
             ) or []
             for t in tickets:
                 t_id = str(t.get("id", ""))
-                if t_id and t_id not in _noti_state["wfm_urgente_ids"]:
-                    _noti_state["wfm_urgente_ids"].add(t_id)
+                if t_id and t_id not in conn_state["wfm_urgente_ids"]:
+                    conn_state["wfm_urgente_ids"].add(t_id)
                     cliente = t.get("partner_id", [None, ""])[1] if isinstance(t.get("partner_id"), (list, tuple)) else ""
                     evento = {
                         "id":     f"wfm_{t_id}",
@@ -5968,8 +5968,14 @@ async def notificaciones_stream(request: Request, token: Optional[str] = None):
     except Exception:
         from fastapi.responses import JSONResponse as _JR
         return _JR(status_code=401, content={"detail": "Token inválido"})
+    # Estado aislado POR CONEXIÓN — cada usuario ve sus propias alertas nuevas
+    conn_state = {
+        "noc_critica_ids": set(),
+        "wfm_urgente_ids": set(),
+        "kpi_alerts_seen": set(),
+    }
     return _StreamingResponse(
-        _noti_poller(),
+        _noti_poller(conn_state),
         media_type="text/event-stream",
         headers={
             "Cache-Control":  "no-cache",
@@ -6017,7 +6023,7 @@ def _telegram_incidente(inc: dict):
         pass
 
 @app.get("/api/incidentes")
-def get_incidentes():
+def get_incidentes(user: dict = Depends(get_current_user)):
     return _load_incidentes()
 
 class IncidenteCreate(BaseModel):

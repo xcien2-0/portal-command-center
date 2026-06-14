@@ -444,30 +444,29 @@ export default function IncidentesSection({ theme }: Props) {
   const [tab, setTab]               = useState<'activos' | 'historial'>('activos');
   const { user } = useAuth();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<Incidente[]> => {
     try {
       const r = await fetch(`${API_BASE}/api/incidentes`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('xcien_token')}` },
       });
-      if (r.ok) setIncidentes(await r.json());
+      if (r.ok) {
+        const data: Incidente[] = await r.json();
+        setIncidentes(data);
+        return data;
+      }
     } catch (_) {}
     finally { setLoading(false); }
+    return [];
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   // Refrescar el incidente seleccionado tras cambios
   const handleRefresh = async () => {
-    await load();
+    const all = await load();
     if (selected) {
-      const r = await fetch(`${API_BASE}/api/incidentes`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('xcien_token')}` },
-      });
-      if (r.ok) {
-        const all: Incidente[] = await r.json();
-        const updated = all.find(x => x.id === selected.id);
-        if (updated) setSelected(updated);
-      }
+      const updated = all.find(x => x.id === selected.id);
+      if (updated) setSelected(updated);
     }
   };
 

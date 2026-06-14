@@ -9,7 +9,7 @@ python-multipart==0.0.9
 
 # IA
 anthropic==0.96.0
-google-generativeai
+google-generativeai==0.8.5
 
 # Configuración
 python-dotenv==1.0.1
@@ -30,3 +30,4 @@ passlib[bcrypt]==1.7.4
 
 # Utilidades
 aiofiles==23.2.1
+apscheduler==3.10.4

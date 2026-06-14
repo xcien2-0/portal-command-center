@@ -32,9 +32,9 @@ COPY backend/ .
 # Frontend compilado → sirve el backend como archivos estáticos
 COPY --from=frontend-builder /app/dist ./dist_frontend
 
-# Carpeta de base de datos persistente
-RUN mkdir -p db logs
+# Carpeta de base de datos persistente y static (evita crash si no viene del repo)
+RUN mkdir -p db logs static
 
-# Entrypoint
+# Entrypoint — workers=1 obligatorio: SSE y estado en memoria no son compatibles con multi-worker
 EXPOSE 8000
-CMD ["uvicorn", "servidor_academia:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["sh", "-c", "uvicorn servidor_academia:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

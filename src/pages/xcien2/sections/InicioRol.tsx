@@ -225,12 +225,19 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
       })
       .catch(() => {});
 
-    // WFM tickets (se filtrarían por técnico si el endpoint lo soporta)
-    fetch(`${API_BASE}/api/wfm/field-tickets?limit=10`)
+    // WFM tickets filtrados por técnico asignado
+    fetch(`${API_BASE}/api/wfm/field-tickets?limit=100`)
       .then(r => r.ok ? r.json() : { tickets: [] })
-      .then((d: { tickets?: { id: number; name: string; priority?: string; stage_name?: string }[] }) => {
-        setTickets((d.tickets ?? []).slice(0, 5).map(t => ({
-          id: t.id, name: t.name, priority: t.priority ?? '0', stage: t.stage_name ?? '',
+      .then((d: { tickets?: { id: string; nombre?: string; name?: string; prioridad?: string; priority?: string; etapa_op?: string; stage_name?: string; tecnico?: string | null; cerrado?: boolean }[] }) => {
+        const all = d.tickets ?? [];
+        const mine = nombreTecnico
+          ? all.filter(t => {
+              const asignado = t.tecnico ?? '';
+              return !t.cerrado && asignado.toLowerCase().includes(nombreTecnico.toLowerCase().split(' ')[0]);
+            })
+          : all.filter(t => !t.cerrado);
+        setTickets(mine.slice(0, 5).map(t => ({
+          id: t.id as unknown as number, name: t.nombre ?? t.name ?? '', priority: t.prioridad === 'alta' ? '1' : '0', stage: t.etapa_op ?? t.stage_name ?? '',
         })));
       })
       .catch(() => {});
