@@ -3,7 +3,7 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 COPY package*.json bun.lock* ./
-RUN npm install --frozen-lockfile 2>/dev/null || npm install
+RUN npm install --legacy-peer-deps
 
 COPY . .
 RUN npm run build
