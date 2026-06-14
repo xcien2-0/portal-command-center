@@ -42,6 +42,7 @@ const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
+const WarRoomSection     = lazy(() => import('./sections/WarRoomSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -538,68 +539,9 @@ function Content({
       )}
 
       {section === 'war-room' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
-          <div style={{ padding: 20, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#FFB703', marginBottom: 4 }}>⚔️ SALA DE GUERRA: ORQUESTACIÓN</h2>
-            <p style={{ fontSize: 13, color: theme.dim }}>Lluvia de ideas y resolución de procesos críticos.</p>
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingRight: 8 }}>
-            {[
-              { agent: 'Director General', text: 'Agentes, tenemos una degradación del 30% en el nodo "Saltillo-Sur". Odoo reporta 5 tickets de clientes VIP afectados. ¿Propuestas?', color: theme.accent },
-              { agent: 'NOC Agent', text: 'Confirmado. El switch principal del sitio reporta temperatura alta. Es propenso a falla total en 2 horas. Necesitamos reemplazo físico.', color: '#FF4D4D' },
-              { agent: 'WFM Agent', text: 'Tengo a Ana Rodríguez a 15km, pero su camioneta está en mantenimiento. Miguel Ángel está disponible pero a 60km. Sugiero enviar a Miguel con prioridad.', color: '#00B4D8' },
-              { agent: 'Academia Agent', text: '⚠️ Alerta: El equipo en Saltillo-Sur es un Carrier-Grade de nueva generación. Miguel Ángel no ha completado el módulo de certificación 2026 para este modelo. Ana sí lo tiene.', color: '#34D399' },
-              { agent: 'Director General', text: 'Decisión: WFM, coordina con Odoo la renta de un vehículo de emergencia para Ana Rodríguez. Academia, habilita un "Fast-Pass" de repaso para ella en el camino. NOC, mantén el balanceo de carga para minimizar impacto.', color: theme.accent },
-            ].map((m, i) => (
-              <div key={i} style={{ padding: 14, background: `${m.color}08`, border: `1px solid ${m.color}25`, borderRadius: 12, marginLeft: i % 2 === 0 ? 0 : 40, marginRight: i % 2 === 0 ? 40 : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: m.color }} />
-                  <span style={{ fontSize: 10, fontWeight: 800, color: m.color, letterSpacing: '0.05em' }}>{m.agent.toUpperCase()}</span>
-                </div>
-                <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.5 }}>{m.text}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background: '#111', border: `2px solid #FFB703`, borderRadius: 12, padding: '16px 20px', boxShadow: `0 0 20px #FFB70320` }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#FFB703', marginBottom: 8, letterSpacing: '0.1em' }}>INTERVENIR EN LA ORQUESTACIÓN</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ color: '#FFB703', fontSize: 20, fontWeight: 900 }}>{'>'}</span>
-              <input
-                id="war-room-input"
-                placeholder="Da una orden a los agentes (ej: 'Cancela el envío y prioriza Monterrey')"
-                onKeyDown={async (e) => {
-                  if (e.key === 'Enter') {
-                    const el = e.currentTarget;
-                    const val = el.value;
-                    if (!val) return;
-                    el.value = 'Procesando...';
-                    el.disabled = true;
-                    try {
-                      await fetch(`${API_BASE}/api/bridge/command`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command: val, context: 'war_room' })
-                      });
-                      el.value = '✅ Orden enviada — Antigravity la procesará ahora';
-                      setTimeout(() => { el.value = ''; }, 3000);
-                    } catch (err) {
-                      el.value = '❌ Error enviando orden';
-                      setTimeout(() => { el.value = ''; }, 3000);
-                    }
-                    el.disabled = false;
-                    el.focus();
-                  }
-                }}
-                style={{
-                  flex: 1, background: 'transparent', border: 'none',
-                  color: '#fff', outline: 'none', fontSize: 16, fontFamily: 'monospace'
-                }}
-              />
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<SectionSpinner />}>
+          <WarRoomSection theme={theme} />
+        </Suspense>
       )}
 
       {section === 'mobile' && <MobileAccessSection theme={theme} />}
