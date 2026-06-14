@@ -1300,7 +1300,8 @@ def _nocboard_watchdog():
                 raise Exception("status != 200")
         except Exception:
             logger.warning("NOCBoard watchdog: puerto 9401 no responde — reabriendo app...")
-            _sp.Popen(["open", "-a", "NOCBoard"])
+            if sys.platform == "darwin":
+                _sp.Popen(["open", "-a", "NOCBoard"])
         time.sleep(60)
 
 threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
@@ -5024,32 +5025,38 @@ async def red_host_detalle(host_id: str):
 
 
 # ─── Inventario Transfers (tokens de inventario entre almacenes) ───────────────
-import inventario_tokens as inv_tk
-from inventario_tokens import (
-    InventoryTokenCreate, TokenLine,
-    create_token, get_token, list_tokens,
-    confirm_token, ship_token, receive_token, cancel_token,
-    get_virtual_stock, WAREHOUSES, STATES,
-)
+try:
+    import inventario_tokens as inv_tk
+    from inventario_tokens import (
+        InventoryTokenCreate, TokenLine,
+        create_token, get_token, list_tokens,
+        confirm_token, ship_token, receive_token, cancel_token,
+        get_virtual_stock, WAREHOUSES, STATES,
+    )
+    _inv_tk_available = True
+except ImportError:
+    _inv_tk_available = False
+    logger.warning("inventario_tokens no disponible — endpoints /api/inv-transfers/ desactivados")
+
+def _inv_tk_unavailable():
+    raise HTTPException(503, "Módulo inventario_tokens no disponible en este entorno")
 
 @app.post("/api/inv-transfers/", status_code=201)
-def api_inv_create(data: InventoryTokenCreate):
+def api_inv_create(data: dict):
+    if not _inv_tk_available: _inv_tk_unavailable()
     try:
         return create_token(data)
     except ValueError as e:
         raise HTTPException(400, str(e))
 
 @app.get("/api/inv-transfers/")
-def api_inv_list(
-    state: str = None,
-    warehouse: str = None,
-    limit: int = 50,
-    offset: int = 0,
-):
+def api_inv_list(state: str = None, warehouse: str = None, limit: int = 50, offset: int = 0):
+    if not _inv_tk_available: _inv_tk_unavailable()
     return list_tokens(state=state, warehouse=warehouse, limit=limit, offset=offset)
 
 @app.get("/api/inv-transfers/{token_id}")
 def api_inv_get(token_id: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     t = get_token(token_id)
     if not t:
         raise HTTPException(404, "Token no encontrado")
@@ -5057,6 +5064,7 @@ def api_inv_get(token_id: str):
 
 @app.patch("/api/inv-transfers/{token_id}/confirm")
 def api_inv_confirm(token_id: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     try:
         return confirm_token(token_id)
     except ValueError as e:
@@ -5064,6 +5072,7 @@ def api_inv_confirm(token_id: str):
 
 @app.patch("/api/inv-transfers/{token_id}/ship")
 def api_inv_ship(token_id: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     try:
         return ship_token(token_id)
     except ValueError as e:
@@ -5071,6 +5080,7 @@ def api_inv_ship(token_id: str):
 
 @app.patch("/api/inv-transfers/{token_id}/receive")
 def api_inv_receive(token_id: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     try:
         return receive_token(token_id)
     except ValueError as e:
@@ -5078,6 +5088,7 @@ def api_inv_receive(token_id: str):
 
 @app.patch("/api/inv-transfers/{token_id}/cancel")
 def api_inv_cancel(token_id: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     try:
         return cancel_token(token_id)
     except ValueError as e:
@@ -5085,56 +5096,64 @@ def api_inv_cancel(token_id: str):
 
 @app.get("/api/inv-transfers/stock/{warehouse}")
 def api_inv_stock(warehouse: str):
+    if not _inv_tk_available: _inv_tk_unavailable()
     if warehouse not in WAREHOUSES:
         raise HTTPException(400, f"Almacén inválido: {list(WAREHOUSES.keys())}")
     return get_virtual_stock(warehouse)
 
 @app.get("/api/inv-transfers/warehouses/all")
 def api_inv_warehouses():
+    if not _inv_tk_available: _inv_tk_unavailable()
     return [
-        {
-            "code": code,
-            "name": cfg["name"],
-            "city": cfg["city"],
-            "odoo_location_code": cfg["odoo_location_code"],
-            "odoo_connected": cfg["odoo_location_id"] is not None,
-        }
+        {"code": code, "name": cfg["name"], "city": cfg["city"],
+         "odoo_location_code": cfg["odoo_location_code"],
+         "odoo_connected": cfg["odoo_location_id"] is not None}
         for code, cfg in WAREHOUSES.items()
     ]
 
 
 # ─── XCIEN Tokens Unificados ──────────────────────────────────────────────────
-import xcien_tokens as xt
-from xcien_tokens import (
-    Token, TokenCreate, TransitionRequest,
-    create_token as xt_create, get_token as xt_get,
-    list_tokens as xt_list, transition_token as xt_transition,
-    get_token_events as xt_events, get_stats as xt_stats,
-    auto_emit, verify_chain, subscribe as xt_subscribe, unsubscribe as xt_unsubscribe,
-    DOMAINS, ENTITIES,
-)
+try:
+    import xcien_tokens as xt
+    from xcien_tokens import (
+        Token, TokenCreate, TransitionRequest,
+        create_token as xt_create, get_token as xt_get,
+        list_tokens as xt_list, transition_token as xt_transition,
+        get_token_events as xt_events, get_stats as xt_stats,
+        auto_emit, verify_chain, subscribe as xt_subscribe, unsubscribe as xt_unsubscribe,
+        DOMAINS, ENTITIES,
+    )
+    _xt_available = True
+except ImportError:
+    _xt_available = False
+    auto_emit = None
+    logger.warning("xcien_tokens no disponible — endpoints /api/xtokens/ desactivados")
 from fastapi.responses import StreamingResponse
 
+def _xt_unavailable():
+    raise HTTPException(503, "Módulo xcien_tokens no disponible en este entorno")
+
 @app.post("/api/xtokens/", status_code=201)
-def api_xt_create(data: TokenCreate):
+def api_xt_create(data: dict):
+    if not _xt_available: _xt_unavailable()
     try:
         return xt_create(data).model_dump()
     except ValueError as e:
         raise HTTPException(400, str(e))
 
 @app.get("/api/xtokens/")
-def api_xt_list(
-    domain: str = None, entity: str = None, state: str = None,
-    limit: int = 100, offset: int = 0, search: str = None,
-):
+def api_xt_list(domain: str = None, entity: str = None, state: str = None, limit: int = 100, offset: int = 0, search: str = None):
+    if not _xt_available: _xt_unavailable()
     return [t.model_dump() for t in xt_list(domain=domain, entity=entity, state=state, limit=limit, offset=offset, search=search)]
 
 @app.get("/api/xtokens/stats")
 def api_xt_stats():
+    if not _xt_available: _xt_unavailable()
     return xt_stats()
 
 @app.get("/api/xtokens/schema")
 def api_xt_schema():
+    if not _xt_available: _xt_unavailable()
     return {
         "domains": {k: {
             "label": v["label"], "icon": v["icon"], "color": v["color"],
@@ -5148,6 +5167,7 @@ def api_xt_schema():
 
 @app.get("/api/xtokens/{token_id}")
 def api_xt_get(token_id: str):
+    if not _xt_available: _xt_unavailable()
     t = xt_get(token_id)
     if not t:
         raise HTTPException(404, "Token no encontrado")
@@ -5155,10 +5175,12 @@ def api_xt_get(token_id: str):
 
 @app.get("/api/xtokens/{token_id}/events")
 def api_xt_events(token_id: str):
+    if not _xt_available: _xt_unavailable()
     return xt_events(token_id)
 
 @app.post("/api/xtokens/{token_id}/transition")
-def api_xt_transition(token_id: str, req: TransitionRequest):
+def api_xt_transition(token_id: str, req: dict):
+    if not _xt_available: _xt_unavailable()
     try:
         return xt_transition(token_id, req).model_dump()
     except ValueError as e:
@@ -5166,11 +5188,13 @@ def api_xt_transition(token_id: str, req: TransitionRequest):
 
 @app.get("/api/xtokens/chain/verify")
 def api_xt_verify():
+    if not _xt_available: _xt_unavailable()
     return verify_chain()
 
 @app.get("/api/xtokens/stream")
 async def api_xt_stream():
     """SSE — transmite cada evento de token en tiempo real."""
+    if not _xt_available: _xt_unavailable()
     q = xt_subscribe()
     async def event_generator():
         try:
