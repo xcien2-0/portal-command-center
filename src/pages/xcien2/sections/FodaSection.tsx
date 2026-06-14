@@ -2,6 +2,38 @@ import { ThemeConfig } from '../types';
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../../../config';
 
+const FODA_BASE: FodaData = {
+  swot: {
+    fortalezas: [
+      "Integración de última milla con microondas y fibra propia.",
+      "Soporte Nivel 2 altamente capacitado (skillPct promedio > 80%).",
+      "Certificación obligatoria antes de despacho (Academia Digital).",
+      "Tokenización de transacciones para trazabilidad absoluta.",
+    ],
+    oportunidades: [
+      "Migración masiva de clientes de microondas a fibra (Up-selling).",
+      "Automatización del despacho basada en geolocalización.",
+      "Monetización de los tokens de desempeño para retención.",
+    ],
+    debilidades: [
+      "Fragmentación de la información entre Odoo y el Portal.",
+      "Latencia elevada en algunos nodos rurales (NOCBoard alerts).",
+      "Curva de aprendizaje de nuevos estándares técnicos.",
+    ],
+    amenazas: [
+      "Competidores de bajo costo (Starlink/ISPs locales).",
+      "Desgaste de equipos en nodos por clima extremo.",
+      "Rotación de técnicos certificados por alta demanda.",
+    ],
+  },
+  dialogue: [
+    { agente: "Director General", msj: "Equipo, necesitamos un FODA crudo. ¿Cuál es nuestro mayor riesgo ahora?" },
+    { agente: "NOC Agent", msj: "La latencia en los nodos rurales. Si no automatizamos el balanceo de carga, perderemos clientes VIP." },
+    { agente: "WFM Agent", msj: "Y la rotación. Capacitamos técnicos en la Academia y luego se van a la competencia." },
+    { agente: "Academia Agent", msj: "Propongo que el 'Cambio de Área' sea automático al completar certificaciones." },
+  ],
+};
+
 interface FodaData {
   swot: {
     fortalezas: string[];
@@ -13,59 +45,56 @@ interface FodaData {
 }
 
 export default function FodaSection({ theme }: { theme: ThemeConfig }) {
-  const [data, setData] = useState<FodaData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<FodaData>(FODA_BASE);
+  const [source, setSource] = useState<'base' | 'ia'>('base');
+  const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    // Attempt to fetch real context from backend if available, else use default
-    fetch(`${API_BASE}/api/bridge/query`, {
+  const regenerateWithIA = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/agentes/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'get_foda_context' })
-    })
-    .then(r => r.json())
-    .then(res => {
-        if (res.status === 'success' && res.data) setData(res.data);
-        else throw new Error("No real data");
-    })
-    .catch(() => {
-        // FALLBACK to the real data I found in the file system
-        setData({
-            swot: {
-                fortalezas: [
-                    "Integración de última milla con microondas y fibra propia.",
-                    "Soporte Nivel 2 altamente capacitado (skillPct promedio > 80%).",
-                    "Certificación obligatoria antes de despacho (Academia Digital).",
-                    "Tokenización de transacciones para trazabilidad absoluta."
-                ],
-                oportunidades: [
-                    "Migración masiva de clientes de microondas a fibra (Up-selling).",
-                    "Automatización del despacho basada en geolocalización.",
-                    "Monetización de los tokens de desempeño para retención."
-                ],
-                debilidades: [
-                    "Fragmentación de la información entre Odoo y el Portal.",
-                    "Latencia elevada en algunos nodos rurales (NOCBoard alerts).",
-                    "Curva de aprendizaje de nuevos estándares técnicos."
-                ],
-                amenazas: [
-                    "Competidores de bajo costo (Starlink/ISPs locales).",
-                    "Desgaste de equipos en nodos por clima extremo.",
-                    "Rotación de técnicos certificados por alta demanda."
-                ]
-            },
-            dialogue: [
-                { agente: "Director General", msj: "Equipo, necesitamos un FODA crudo. ¿Cuál es nuestro mayor riesgo ahora?" },
-                { agente: "NOC Agent", msj: "La latencia en los nodos rurales. Si no automatizamos el balanceo de carga, perderemos clientes VIP." },
-                { agente: "WFM Agent", msj: "Y la rotación. Capacitamos técnicos en la Academia y luego se van a la competencia." },
-                { agente: "Academia Agent", msj: "Propongo que el 'Cambio de Área' sea automático al completar certificaciones." }
-            ]
-        });
-    })
-    .finally(() => setLoading(false));
-  }, []);
+        body: JSON.stringify({
+          agente_id: 'director',
+          message: 'Genera un análisis FODA actualizado para XCIEN Networks en 2026. Incluye fortalezas, oportunidades, debilidades y amenazas basadas en el contexto operativo real de la empresa: red de telecomunicaciones con fibra y microondas, técnicos de campo, sistema de academia digital, clientes VIP, y competencia de Starlink. Formato: devuelve texto estructurado con secciones FORTALEZAS, OPORTUNIDADES, DEBILIDADES, AMENAZAS, cada una con 3-4 puntos concisos.',
+          history: [],
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const text: string = json.response ?? '';
+        // Parsear respuesta de texto del agente en secciones FODA
+        const parse = (label: string) => {
+          const re = new RegExp(`${label}[:\\s]*\\n([\\s\\S]*?)(?=FORTALEZAS|OPORTUNIDADES|DEBILIDADES|AMENAZAS|$)`, 'i');
+          const m = text.match(re);
+          if (!m) return [];
+          return m[1].split('\n')
+            .map(l => l.replace(/^[-•*\d.]+\s*/, '').trim())
+            .filter(l => l.length > 10)
+            .slice(0, 5);
+        };
+        const fortalezas   = parse('FORTALEZAS');
+        const oportunidades = parse('OPORTUNIDADES');
+        const debilidades   = parse('DEBILIDADES');
+        const amenazas     = parse('AMENAZAS');
 
-  if (loading || !data) return <div style={{ padding: 40, color: theme.dim }}>Sincronizando con War Room...</div>;
+        if (fortalezas.length || oportunidades.length) {
+          setData(prev => ({
+            ...prev,
+            swot: {
+              fortalezas:    fortalezas.length    ? fortalezas    : prev.swot.fortalezas,
+              oportunidades: oportunidades.length ? oportunidades : prev.swot.oportunidades,
+              debilidades:   debilidades.length   ? debilidades   : prev.swot.debilidades,
+              amenazas:      amenazas.length      ? amenazas      : prev.swot.amenazas,
+            },
+          }));
+          setSource('ia');
+        }
+      }
+    } catch { /* mantiene datos base */ }
+    setGenerating(false);
+  };
 
   const accent = theme.accent;
 
@@ -73,15 +102,43 @@ export default function FodaSection({ theme }: { theme: ThemeConfig }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
       <div style={{ borderBottom: `2px solid ${accent}`, paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: theme.text, margin: 0, letterSpacing: -1 }}>🛡️ ANÁLISIS ESTRATÉGICO FODA 2026</h2>
-          <p style={{ fontSize: 13, color: theme.dim, marginTop: 4 }}>Sintetizado por multi-agentes en sesión de Sala de Guerra (War Room).</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: theme.text, margin: 0, letterSpacing: -1 }}>🛡️ ANÁLISIS ESTRATÉGICO FODA 2026</h2>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
+              background: source === 'ia' ? 'rgba(0,200,150,0.12)' : 'rgba(255,183,3,0.12)',
+              color: source === 'ia' ? '#00C896' : '#FFB703',
+              border: `1px solid ${source === 'ia' ? 'rgba(0,200,150,0.3)' : 'rgba(255,183,3,0.3)'}`,
+            }}>
+              {source === 'ia' ? '✦ GENERADO POR IA' : '⚠ CONTENIDO BASE'}
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: theme.dim, marginTop: 0, marginBottom: 0 }}>
+            {source === 'ia'
+              ? 'Análisis generado en tiempo real por el Director General IA con contexto de XCIEN.'
+              : 'Contenido base de referencia. Usa "Regenerar con IA" para actualizar con datos reales.'}
+          </p>
         </div>
-        <button 
-          onClick={() => window.print()}
-          style={{ background: accent, color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 0 15px ${accent}40` }}
-        >
-          🖨️ EXPORTAR PDF
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={regenerateWithIA}
+            disabled={generating}
+            style={{
+              background: generating ? 'rgba(0,200,150,0.2)' : 'rgba(0,200,150,0.15)',
+              color: generating ? '#00C89680' : '#00C896',
+              border: '1px solid rgba(0,200,150,0.3)', borderRadius: 8,
+              padding: '10px 16px', fontWeight: 700, cursor: generating ? 'default' : 'pointer', fontSize: 13,
+            }}
+          >
+            {generating ? '⟳ Generando...' : '✦ Regenerar con IA'}
+          </button>
+          <button
+            onClick={() => window.print()}
+            style={{ background: accent, color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            🖨️ Exportar PDF
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
