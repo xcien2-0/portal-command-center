@@ -1304,7 +1304,9 @@ def _nocboard_watchdog():
                 _sp.Popen(["open", "-a", "NOCBoard"])
         time.sleep(60)
 
-threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
+# NOCBoard watchdog solo corre en macOS local (en Railway no hay NOCBoard)
+if sys.platform == "darwin":
+    threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
 
 def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
@@ -5901,6 +5903,7 @@ def get_ruta_progreso(nombre_usuario: str, _user: dict = Depends(get_current_use
 
 import asyncio as _asyncio
 import uuid as _uuid
+import time as _time
 from fastapi.responses import StreamingResponse as _StreamingResponse
 
 async def _noti_poller(conn_state: dict):
