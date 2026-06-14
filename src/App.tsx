@@ -29,8 +29,29 @@ import Metricas from "./pages/Metricas.tsx";
 import Bitacora from "./pages/Bitacora.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
 import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
+import { AuthProvider, RequireAuth, useAuth } from "./contexts/AuthContext.tsx";
+import Login from "./pages/Login.tsx";
 import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
 import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
+
+function UserBadge() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
+  return (
+    <div className="flex items-center gap-2 ml-2">
+      <span className="text-[11px]" style={{ color: '#5a6a7a' }}>
+        {user.nombre.split(' ')[0]} · <span style={{ color: '#00C896' }}>{user.rol}</span>
+      </span>
+      <button
+        onClick={logout}
+        className="text-[11px] px-2 py-0.5 rounded"
+        style={{ color: '#5a6a7a', border: '1px solid rgba(255,255,255,0.06)', background: 'transparent' }}
+      >
+        Salir
+      </button>
+    </div>
+  );
+}
 
 function HeaderActions() {
   const { mode, toggleMode } = useViewMode();
@@ -65,17 +86,21 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthProvider>
         <Routes>
+          {/* Auth */}
+          <Route path="/login" element={<Login />} />
+
           {/* Main Hub */}
           <Route path="/" element={<Index />} />
-          <Route path="/portal" element={<Xcien2Page />} />
+          <Route path="/portal" element={<RequireAuth><Xcien2Page /></RequireAuth>} />
           <Route path="/invite" element={<InvitePage />} />
 
-          {/* Full-screen routes (no sidebar) */}
-          <Route path="/gerencia" element={<Gerencia />} />
-          <Route path="/scan" element={<Scan />} />
-          <Route path="/noc" element={<NOC />} />
-          <Route path="/dispatch" element={<Dispatch />} />
+          {/* Full-screen routes (no sidebar) — protegidas */}
+          <Route path="/gerencia" element={<RequireAuth><Gerencia /></RequireAuth>} />
+          <Route path="/scan" element={<RequireAuth><Scan /></RequireAuth>} />
+          <Route path="/noc" element={<RequireAuth><NOC /></RequireAuth>} />
+          <Route path="/dispatch" element={<RequireAuth><Dispatch /></RequireAuth>} />
           <Route path="/academia" element={<AcademiaLayout />}>
             <Route index element={<AcademiaDashboard />} />
             <Route path="modulos" element={<AcademiaModulos />} />
@@ -85,15 +110,16 @@ const App = () => (
             <Route path="admin" element={<AcademiaAdmin />} />
           </Route>
 
-          {/* Classic shell with sidebar */}
+          {/* Classic shell with sidebar — protegido */}
           <Route path="*" element={
-            <SidebarProvider>
+            <RequireAuth><SidebarProvider>
               <div className="min-h-screen flex w-full">
                 <AppSidebar />
                 <div className="flex-1 flex flex-col min-w-0">
                   <header className="h-10 flex items-center border-b border-border bg-background px-2">
                     <SidebarTrigger />
                     <HeaderActions />
+                    <UserBadge />
                   </header>
                   <main className="flex-1">
                     <Routes>
@@ -109,9 +135,10 @@ const App = () => (
                   </main>
                 </div>
               </div>
-            </SidebarProvider>
+            </SidebarProvider></RequireAuth>
           } />
         </Routes>
+        </AuthProvider>
       </BrowserRouter>
       <FloatingChat theme={getGlobalTheme()} />
     </TooltipProvider>
