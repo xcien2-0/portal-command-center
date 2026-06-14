@@ -1,4 +1,5 @@
 import { useState, useReducer, useEffect, useCallback, useMemo, useRef } from 'react';
+import QRCode from 'qrcode';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Radio, Map, Settings, Truck, Phone, Package, ArrowLeftRight,
@@ -589,35 +590,7 @@ function Content({
         </div>
       )}
 
-      {section === 'mobile' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 32 }}>
-          <div style={{ textAlign: 'center', maxWidth: 400 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, color: theme.accent, marginBottom: 12 }}>📱 ACCESO MÓVIL</h2>
-            <p style={{ fontSize: 16, color: theme.dim }}>Escanea el código para llevar el centro de mando {brand.name} {brand.version} en tu celular.</p>
-          </div>
-
-          <div style={{
-            background: '#fff', padding: 24, borderRadius: 24,
-            boxShadow: `0 20px 50px ${theme.accent}30`,
-            border: `4px solid ${theme.accent}`
-          }}>
-            <img
-              src="/mobile_qr.png"
-              alt="QR de Acceso"
-              style={{ width: 250, height: 250, imageRendering: 'pixelated' }}
-            />
-          </div>
-
-          <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '16px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 12, color: theme.dim, marginBottom: 4 }}>URL de Red Local:</div>
-            <code style={{ fontSize: 18, fontWeight: 700, color: theme.accent }}>http://192.168.1.75:8080/</code>
-          </div>
-
-          <p style={{ fontSize: 12, color: theme.dim, maxWidth: 300, textAlign: 'center' }}>
-            Asegúrate de que tu celular esté conectado a la misma red Wi-Fi que este equipo.
-          </p>
-        </div>
-      )}
+      {section === 'mobile' && <MobileAccessSection theme={theme} />}
       {section === 'telegram' && <TelegramBotSection theme={theme} />}
       {section === 'docs' && <DocsSection theme={theme} />}
       {section === 'backup' && <BackupSection theme={theme} />}
@@ -638,6 +611,118 @@ function Content({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+// ── Terminal Móvil — QR dinámico ──────────────────────────────────────────────
+function MobileAccessSection({ theme }: { theme: ThemeConfig }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  // URL siempre derivada del hostname actual del browser.
+  // Si estás en localhost → http://localhost:8080/
+  // Si el celular abre 192.168.1.82:8080 → http://192.168.1.82:8080/
+  // Funciona en cualquier red sin configuración extra.
+  const mobileUrl = `${window.location.protocol}//${window.location.hostname}:8080/`;
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, mobileUrl, {
+      width: 260,
+      margin: 2,
+      color: { dark: '#00A651', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    });
+  }, [mobileUrl]);
+
+  const copy = () => {
+    navigator.clipboard.writeText(mobileUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const accent = theme.accent || '#00A651';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 28, fontFamily: "'Inter', sans-serif" }}>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: accent, marginBottom: 8, opacity: 0.7 }}>TERMINAL MÓVIL</div>
+        <h2 style={{ fontSize: 30, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: -1 }}>
+          Acceso desde <span style={{ color: accent }}>cualquier red</span>
+        </h2>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
+          Escanea el código con tu celular en la misma red Wi-Fi
+        </p>
+      </div>
+
+      {/* QR Card */}
+      <div style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${accent}30`,
+        borderRadius: 28,
+        padding: 32,
+        boxShadow: `0 0 80px ${accent}15, 0 30px 60px rgba(0,0,0,0.4)`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Corner accents */}
+        {[{top:0,left:0},{top:0,right:0},{bottom:0,left:0},{bottom:0,right:0}].map((pos, i) => (
+          <div key={i} style={{
+            position: 'absolute', width: 20, height: 20,
+            borderTop: i < 2 ? `2px solid ${accent}` : 'none',
+            borderBottom: i >= 2 ? `2px solid ${accent}` : 'none',
+            borderLeft: i % 2 === 0 ? `2px solid ${accent}` : 'none',
+            borderRight: i % 2 === 1 ? `2px solid ${accent}` : 'none',
+            ...pos,
+          }} />
+        ))}
+
+        <div style={{ background: '#fff', borderRadius: 16, padding: 12, boxShadow: `0 0 30px ${accent}20` }}>
+          <canvas ref={canvasRef} style={{ display: 'block', borderRadius: 8 }} />
+        </div>
+      </div>
+
+      {/* URL pill */}
+      <div
+        onClick={copy}
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${copied ? accent : 'rgba(255,255,255,0.1)'}`,
+          borderRadius: 16, padding: '14px 28px', textAlign: 'center', cursor: 'pointer',
+          transition: 'all 0.2s',
+          boxShadow: copied ? `0 0 20px ${accent}30` : 'none',
+        }}
+      >
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4, letterSpacing: 1 }}>URL DE RED LOCAL</div>
+        <code style={{ fontSize: 18, fontWeight: 700, color: copied ? accent : '#fff', letterSpacing: 0.5 }}>
+          {mobileUrl || '—'}
+        </code>
+        <div style={{ fontSize: 11, color: accent, marginTop: 6, opacity: copied ? 1 : 0, transition: 'opacity 0.2s' }}>
+          ✓ Copiado al portapapeles
+        </div>
+      </div>
+
+      {/* Info pills */}
+      <div style={{ display: 'flex', gap: 12 }}>
+        {[
+          { icon: '📡', label: 'Misma red Wi-Fi' },
+          { icon: '🔒', label: 'Red local privada' },
+          { icon: '⚡', label: 'Sin internet requerido' },
+        ].map(({ icon, label }) => (
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.5)',
+          }}>
+            <span>{icon}</span>{label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Xcien2Page() {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

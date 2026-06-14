@@ -20,6 +20,25 @@ const T = {
   blue:    '#60a5fa',
 };
 
+// ── Odoo types ────────────────────────────────────────────────────────────────
+interface OdooProducto {
+  id: number;
+  name: string;
+  default_code: string | false;
+  categ_id: [number, string] | false;
+  type: string;
+  qty_available: number;
+  virtual_available: number;
+  uom_id: [number, string] | false;
+}
+interface OdooResumen {
+  total_productos: number;
+  con_stock: number;
+  sin_stock: number;
+  total_categorias: number;
+  movimientos_2026: number;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Activo {
   activo_id: string; nombre: string;
@@ -51,6 +70,19 @@ const DAMAGE_OPTIONS = [
 ];
 
 // ── API ───────────────────────────────────────────────────────────────────────
+async function fetchOdooProductos(search = '', offset = 0, limit = 100): Promise<{ productos: OdooProducto[]; total: number }> {
+  try {
+    const p = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (search) p.set('search', search);
+    const r = await fetch(`${API}/api/inventario/odoo/productos?${p}`);
+    return r.ok ? r.json() : { productos: [], total: 0 };
+  } catch { return { productos: [], total: 0 }; }
+}
+async function fetchOdooResumen(): Promise<OdooResumen | null> {
+  try { const r = await fetch(`${API}/api/inventario/odoo/resumen`); return r.ok ? r.json() : null; }
+  catch { return null; }
+}
+
 async function fetchActivos(): Promise<Activo[]> {
   try { const r = await fetch(`${API}/api/activos`); return r.ok ? r.json() : []; }
   catch { return []; }
@@ -72,168 +104,159 @@ async function emitirToken(tipo: string, empresa: string, extra: Record<string, 
   }).catch(() => null);
 }
 
-// ── Sub: Inventory table ──────────────────────────────────────────────────────
-function InventarioTab({ onScanActivo }: { onScanActivo: (a: Activo) => void }) {
-  const [activos, setActivos]   = useState<Activo[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
-  const [filterEst, setFilterEst] = useState('');
-  const [filterCat, setFilterCat] = useState('');
+// ── Sub: Odoo Inventory table ─────────────────────────────────────────────────
+function InventarioTab({ onScanActivo: _onScanActivo }: { onScanActivo: (a: Activo) => void }) {
+  const [productos, setProductos] = useState<OdooProducto[]>([]);
+  const [resumen, setResumen]     = useState<OdooResumen | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState('');
+  const [inputVal, setInputVal]   = useState('');
+  const [total, setTotal]         = useState(0);
+  const [offset, setOffset]       = useState(0);
+  const [filterStock, setFilterStock] = useState<'todos' | 'con_stock' | 'sin_stock'>('con_stock');
+  const LIMIT = 80;
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async (q: string, off: number) => {
     setLoading(true);
-    const data = await fetchActivos();
-    setActivos(data);
+    const [res, sum] = await Promise.all([
+      fetchOdooProductos(q, off, LIMIT),
+      off === 0 ? fetchOdooResumen() : Promise.resolve(null),
+    ]);
+    setProductos(res.productos);
+    setTotal(res.total);
+    if (sum) setResumen(sum);
     setLoading(false);
+  }, []);
+
+  useEffect(() => { load(search, 0); }, []);
+
+  const handleSearch = (v: string) => {
+    setInputVal(v);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setSearch(v);
+      setOffset(0);
+      load(v, 0);
+    }, 350);
   };
-  useEffect(() => { load(); }, []);
 
-  const categorias = [...new Set(activos.map(a => a.categoria_label))];
-  const estados    = [...new Set(activos.map(a => a.estado))];
+  const filtered = filterStock === 'todos' ? productos
+    : filterStock === 'con_stock' ? productos.filter(p => p.qty_available > 0)
+    : productos.filter(p => p.qty_available <= 0);
 
-  const filtered = activos.filter(a => {
-    const q = search.toLowerCase();
-    const matchQ = !q || [a.activo_id, a.nombre, a.site, a.asignado_a, a.marca, a.modelo]
-      .some(v => v?.toLowerCase().includes(q));
-    return matchQ
-      && (!filterEst || a.estado === filterEst)
-      && (!filterCat || a.categoria_label === filterCat);
-  });
-
-  const stats = {
-    total:  activos.length,
-    activo: activos.filter(a => a.estado === 'activo').length,
-    mant:   activos.filter(a => a.estado === 'en_mantenimiento').length,
-    baja:   activos.filter(a => a.estado === 'dado_de_baja').length,
-  };
+  const stockColor = (qty: number) => qty > 10 ? T.teal : qty > 0 ? T.yellow : T.red;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 14 }}>
 
-      {/* KPIs */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        {[
-          { label: 'Total', value: stats.total, color: T.blue },
-          { label: 'Activos', value: stats.activo, color: T.teal },
-          { label: 'Mantenimiento', value: stats.mant, color: T.yellow },
-          { label: 'Baja', value: stats.baja, color: T.red },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{
-            flex: 1, background: T.surface, border: `1px solid ${color}25`,
-            borderRadius: 12, padding: '12px 16px',
-            display: 'flex', flexDirection: 'column', gap: 2,
-          }}>
-            <span style={{ fontSize: 22, fontWeight: 900, color, fontFamily: 'Oswald', lineHeight: 1 }}>{value}</span>
-            <span style={{ fontSize: 9, color: T.dim, fontFamily: 'monospace', letterSpacing: 1 }}>{label.toUpperCase()}</span>
-          </div>
-        ))}
-      </div>
+      {/* KPIs Odoo */}
+      {resumen && (
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[
+            { label: 'Productos', value: resumen.total_productos.toLocaleString(), color: T.blue },
+            { label: 'Con stock', value: resumen.con_stock.toLocaleString(), color: T.teal },
+            { label: 'Sin stock', value: resumen.sin_stock.toLocaleString(), color: T.yellow },
+            { label: 'Movimientos 2026', value: resumen.movimientos_2026.toLocaleString(), color: '#a78bfa' },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{
+              flex: 1, background: T.surface, border: `1px solid ${color}25`,
+              borderRadius: 12, padding: '10px 14px',
+              display: 'flex', flexDirection: 'column', gap: 2,
+            }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color, fontFamily: 'Oswald', lineHeight: 1 }}>{value}</span>
+              <span style={{ fontSize: 9, color: T.dim, fontFamily: 'monospace', letterSpacing: 1 }}>{label.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 8,
           background: T.surface, border: `1px solid ${T.border}`,
-          borderRadius: 10, padding: '0 12px', height: 40,
+          borderRadius: 10, padding: '0 12px', height: 38,
         }}>
-          <Search size={14} color={T.dim} />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar activo, site, asignado..."
+          <Search size={13} color={T.dim} />
+          <input value={inputVal} onChange={e => handleSearch(e.target.value)}
+            placeholder="Buscar producto, SKU..."
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: T.text, fontSize: 13 }} />
-          {search && <button onClick={() => setSearch('')}><X size={12} color={T.dim} /></button>}
+          {inputVal && <button onClick={() => handleSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={12} color={T.dim} /></button>}
         </div>
 
-        <select value={filterEst} onChange={e => setFilterEst(e.target.value)} style={{
-          background: T.surface, border: `1px solid ${T.border}`, color: T.text,
-          borderRadius: 10, padding: '0 12px', fontSize: 12, height: 40, cursor: 'pointer',
-        }}>
-          <option value="">Estado</option>
-          {estados.map(e => <option key={e} value={e}>{e.replace('_', ' ')}</option>)}
-        </select>
+        {(['con_stock', 'todos', 'sin_stock'] as const).map(f => (
+          <button key={f} onClick={() => setFilterStock(f)} style={{
+            background: filterStock === f ? `${T.teal}18` : T.surface,
+            border: `1px solid ${filterStock === f ? T.teal : T.border}`,
+            color: filterStock === f ? T.teal : T.dim,
+            borderRadius: 10, padding: '0 12px', height: 38, fontSize: 11, cursor: 'pointer', fontWeight: filterStock === f ? 700 : 400,
+          }}>
+            {f === 'con_stock' ? 'Con stock' : f === 'sin_stock' ? 'Sin stock' : 'Todos'}
+          </button>
+        ))}
 
-        <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{
-          background: T.surface, border: `1px solid ${T.border}`, color: T.text,
-          borderRadius: 10, padding: '0 12px', fontSize: 12, height: 40, cursor: 'pointer',
-        }}>
-          <option value="">Categoría</option>
-          {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        <button onClick={load} style={{
+        <button onClick={() => load(search, offset)} style={{
           background: T.surface, border: `1px solid ${T.border}`, color: T.dim,
-          borderRadius: 10, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          borderRadius: 10, width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}>
-          <RefreshCw size={14} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
+          <RefreshCw size={13} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
         </button>
       </div>
 
-      {/* Count */}
-      <div style={{ fontSize: 11, color: T.dim, fontFamily: 'monospace' }}>
-        {filtered.length} activos {(search || filterEst || filterCat) ? '(filtrado)' : 'registrados'}
+      {/* Count + fuente */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.dim, fontFamily: 'monospace' }}>
+        <span>{filtered.length} de {total.toLocaleString()} productos · Odoo wispi17</span>
+        {total > LIMIT && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { const o = Math.max(0, offset - LIMIT); setOffset(o); load(search, o); }}
+              disabled={offset === 0} style={{ background: 'none', border: 'none', color: offset === 0 ? T.border : T.teal, cursor: offset === 0 ? 'default' : 'pointer', fontSize: 11 }}>← Anterior</button>
+            <span>{Math.floor(offset / LIMIT) + 1} / {Math.ceil(total / LIMIT)}</span>
+            <button onClick={() => { const o = offset + LIMIT; setOffset(o); load(search, o); }}
+              disabled={offset + LIMIT >= total} style={{ background: 'none', border: 'none', color: offset + LIMIT >= total ? T.border : T.teal, cursor: offset + LIMIT >= total ? 'default' : 'pointer', fontSize: 11 }}>Siguiente →</button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
         {loading ? (
-          <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Cargando inventario...</div>
+          <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Cargando desde Odoo...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Sin resultados</div>
-        ) : filtered.map(a => {
-          const ec = ESTADO_COLOR[a.estado] || T.dim;
+        ) : filtered.map(p => {
+          const sc = stockColor(p.qty_available);
+          const catName = Array.isArray(p.categ_id) ? p.categ_id[1] : '—';
+          const uomName = Array.isArray(p.uom_id) ? p.uom_id[1] : '';
           return (
-            <div key={a.activo_id}
-              onClick={() => onScanActivo(a)}
-              style={{
-                background: T.surface, border: `1px solid ${T.border}`,
-                borderRadius: 12, padding: '12px 16px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 14,
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = `${T.teal}40`; (e.currentTarget as HTMLDivElement).style.background = T.card; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.border; (e.currentTarget as HTMLDivElement).style.background = T.surface; }}
-            >
-              {/* Status dot */}
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: ec, flexShrink: 0, boxShadow: `0 0 6px ${ec}` }} />
+            <div key={p.id} style={{
+              background: T.surface, border: `1px solid ${T.border}`,
+              borderRadius: 10, padding: '10px 14px', cursor: 'default',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              {/* Stock dot */}
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: sc, flexShrink: 0, boxShadow: `0 0 5px ${sc}` }} />
 
-              {/* Main info */}
+              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.nombre}
-                  </span>
-                  <span style={{ fontSize: 9, fontFamily: 'monospace', color: T.dim, flexShrink: 0 }}>{a.activo_id}</span>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                  {p.name}
                 </div>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  {a.site && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: T.dim }}>
-                      <MapPin size={9} />{a.site}
-                    </span>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {p.default_code && (
+                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: T.blue }}>SKU: {p.default_code}</span>
                   )}
-                  {a.asignado_a && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: T.dim }}>
-                      <User size={9} />{a.asignado_a}
-                    </span>
-                  )}
-                  {a.categoria_label && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: T.dim }}>
-                      <Tag size={9} />{a.categoria_label}
-                    </span>
-                  )}
+                  <span style={{ fontSize: 10, color: T.dim }}>{catName}</span>
                 </div>
               </div>
 
-              {/* Right side */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                  background: `${ec}15`, color: ec, border: `1px solid ${ec}30`,
-                }}>
-                  {a.estado.replace('_', ' ').toUpperCase()}
+              {/* Stock */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: sc, fontFamily: 'Oswald' }}>
+                  {p.qty_available % 1 === 0 ? p.qty_available : p.qty_available.toFixed(1)}
                 </span>
-                <span style={{ fontSize: 9, color: T.dim }}>{a.empresa.toUpperCase()}</span>
+                <span style={{ fontSize: 9, color: T.dim }}>{uomName || 'UND'}</span>
               </div>
-
-              <ChevronRight size={14} color={T.dim} />
             </div>
           );
         })}
