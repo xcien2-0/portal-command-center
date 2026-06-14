@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
 import brand from '../../../brand';
+import { useAuth } from '@/contexts/AuthContext';
+import AcademiaGerencial from './academia/AcademiaGerencial';
+import AcademiaTecnico from './academia/AcademiaTecnico';
 
 // ── Odoo eLearning types ──────────────────────────────────────────────────────
 interface OdooLesson {
@@ -1154,6 +1157,16 @@ const SLIDE_COMPONENTS: Record<SlideId, (props: SlideProps) => React.ReactElemen
 // ── Main Component ────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 export default function AcademiaSection({ theme, activeThemeId }: Props) {
+  const { user } = useAuth();
+
+  // Roles gerenciales → vista gerencial
+  const ROLES_GERENCIALES = ['admin', 'director', 'wfm', 'comercial', 'readonly'];
+  const esGerencial = user ? ROLES_GERENCIALES.includes(user.rol) : false;
+
+  // Admin/director pueden cambiar de vista
+  const [forceView, setForceView] = useState<'gerencial' | 'tecnico' | null>(null);
+  const vistaActual = forceView ?? (esGerencial ? 'gerencial' : 'tecnico');
+
   const [view, setView] = useState<'dashboard' | 'cursos' | 'exam'>('cursos');
   const [idx, setIdx] = useState(0);
   const [stats, setStats] = useState<AcademiaStats | null>(null);
@@ -1182,6 +1195,44 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   }, [view, total]);
 
   const SlideComp = SLIDE_COMPONENTS[SLIDES[idx]];
+
+  // ── Vistas nuevas (gerencial / técnico) ──────────────────────────────────
+  if (vistaActual === 'gerencial' || vistaActual === 'tecnico') {
+    return (
+      <div style={{ background: '#0d1117', borderRadius: theme.radius, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Selector de vista para admin/director */}
+        {(user?.rol === 'admin' || user?.rol === 'director') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#151515' }}>
+            <span style={{ fontSize: 11, color: '#6b7280', marginRight: 4 }}>Vista:</span>
+            {(['gerencial', 'tecnico'] as const).map(v => (
+              <button key={v} onClick={() => setForceView(v)}
+                style={{ padding: '5px 14px', borderRadius: 20, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                  background: vistaActual === v ? '#00C896' : 'rgba(255,255,255,0.04)',
+                  color: vistaActual === v ? '#001a12' : '#6b7280',
+                }}>
+                {v === 'gerencial' ? '📊 Gerencial' : '👤 Mi Perfil'}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {vistaActual === 'gerencial'
+            ? <AcademiaGerencial theme={theme} />
+            : <AcademiaTecnico theme={theme} nombreTecnico={user?.nombre ?? ''} onExamen={() => setView('exam')} />
+          }
+        </div>
+        {/* Examen modal si técnico lo solicitó */}
+        {vistaActual === 'tecnico' && view === 'exam' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: 32, maxWidth: 760, width: '95%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+              <button onClick={() => setView('cursos')} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>✕ Cerrar</button>
+              <ExamenView />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#0d1117', borderRadius: theme.radius, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
