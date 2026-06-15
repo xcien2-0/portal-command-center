@@ -1321,7 +1321,7 @@ def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
     try:
         url = f"{NOCBOARD_API_BASE}/{endpoint}"
-        r = requests.get(url, headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=2)
+        r = requests.get(url, headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=10)
         if r.status_code == 200:
             data = r.json()
             if endpoint in data and isinstance(data[endpoint], list):
