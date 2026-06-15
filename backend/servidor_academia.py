@@ -1538,11 +1538,10 @@ def get_noc_cities():
         scores  = [h.get("health_score") or h.get("healthScore", 0) for h in city_hosts_all]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0
         city_alerts = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
-        # Tolerar nombre sin acento buscando también normalizado
-        coord = COORDS.get(city_name) or COORDS.get(
-            city_name.replace("é","e").replace("á","a").replace("ó","o").replace("ú","u").replace("í","i").replace("ñ","n"),
-            {"lat": 23.0, "lng": -102.0}
-        )
+        coord = COORDS.get(city_name) or COORDS.get(_canonical.get(_norm_city(city_name), ""))
+        if not coord:
+            logger.warning(f"Ciudad sin coordenadas: '{city_name}' (norm: '{_norm_city(city_name)}')")
+            coord = {"lat": 23.0, "lng": -102.0}
         # Fuentes de monitoreo que cubren esta ciudad
         city_sources = list({h.get("_source", "") for h in city_hosts_all if h.get("_source")})
 
@@ -1679,14 +1678,14 @@ def get_noc_boards():
             return r.json()
     except Exception as e:
         logger.warning(f"get_noc_boards error: {e}")
-    return {"boards": {}, "error": "Proxy no disponible"}
+    raise HTTPException(status_code=503, detail="Proxy NOCBoard no disponible")
 
 
 @app.post("/api/noc/boards/{board_id}/{action}")
 def toggle_noc_board(board_id: str, action: str):
     """Habilita o deshabilita un NOCBoard (action: enable | disable)."""
     if action not in ("enable", "disable"):
-        return {"error": "Acción inválida — usa enable o disable"}
+        raise HTTPException(status_code=400, detail="Acción inválida — usa enable o disable")
     proxy_base = NOCBOARD_API_BASE[:-4] if NOCBOARD_API_BASE.endswith("/api") else NOCBOARD_API_BASE
     try:
         r = requests.post(f"{proxy_base}/boards/{board_id}/{action}",
@@ -1695,7 +1694,7 @@ def toggle_noc_board(board_id: str, action: str):
             return r.json()
     except Exception as e:
         logger.warning(f"toggle_noc_board {board_id}/{action} error: {e}")
-    return {"error": "No se pudo cambiar el estado del board"}
+    raise HTTPException(status_code=503, detail="No se pudo cambiar el estado del board")
 
 
 # ─── NOC Dashboard Stats (compatible con InicioHoloSection) ──────────────────

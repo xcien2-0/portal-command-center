@@ -809,15 +809,21 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
   const [boards, setBoards] = useState<Record<string, BoardStatus>>({});
   const [selectedLayer, setSelectedLayer] = useState<LayerId | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [proxyError, setProxyError] = useState<string | null>(null);
 
   const fetchBoards = useCallback(async () => {
     try {
       const r = await fetch(`${API_BASE}/api/noc/boards`);
-      if (r.ok) {
-        const data = await r.json();
-        if (data.boards) setBoards(data.boards);
+      const data = await r.json();
+      if (r.ok && data.boards && !data.error) {
+        setBoards(data.boards);
+        setProxyError(null);
+      } else {
+        setProxyError(data.detail || data.error || 'Proxy no disponible');
       }
-    } catch {}
+    } catch {
+      setProxyError('Proxy no disponible');
+    }
   }, []);
 
   useEffect(() => {
@@ -837,16 +843,18 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
 
     try {
       const r = await fetch(`${API_BASE}/api/noc/boards/${id}/${action}`, { method: 'POST' });
-      if (r.ok) {
-        // After toggle, refresh board stats and aggregate data
+      const data = await r.json();
+      if (r.ok && !data.error) {
         await fetchBoards();
-        setTimeout(() => onRefresh?.(), 1500); // let proxy cache clear
+        setTimeout(() => onRefresh?.(), 1500);
       } else {
-        // Rollback
+        // Rollback — proxy respondió con error o HTTP no-ok
         setBoards(prev => ({ ...prev, [id]: { ...prev[id], enabled: !newEnabled } }));
+        setProxyError(data.detail || data.error || 'Error al cambiar estado');
       }
     } catch {
       setBoards(prev => ({ ...prev, [id]: { ...prev[id], enabled: !newEnabled } }));
+      setProxyError('Proxy no disponible');
     } finally {
       setToggling(null);
     }
@@ -904,6 +912,15 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
           <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>
             {enabledCount}/{NOC_LAYERS.length} capas activas
           </div>
+          {proxyError && (
+            <div style={{
+              marginTop: 6, padding: '4px 8px', borderRadius: 6,
+              background: `${R}18`, border: `1px solid ${R}40`,
+              fontSize: 9, color: R, fontFamily: 'monospace',
+            }}>
+              ⚠ {proxyError}
+            </div>
+          )}
         </div>
 
         {/* Layer rows */}
