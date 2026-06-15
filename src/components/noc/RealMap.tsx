@@ -31,7 +31,7 @@ function buildSourceBadges(sources: string[] | undefined): string {
     .filter(s => SOURCE_BADGES[s])
     .map(s => {
       const b = SOURCE_BADGES[s];
-      return `<span style="font-size:7px;color:${b.color};line-height:1;text-shadow:0 0 4px ${b.color}88;" title="${s}">${b.symbol}</span>`;
+      return `<span style="font-size:10px;color:${b.color};line-height:1;text-shadow:0 0 6px ${b.color};" title="${s}">${b.symbol}</span>`;
     })
     .join('');
 }

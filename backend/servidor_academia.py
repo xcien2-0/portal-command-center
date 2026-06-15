@@ -1507,13 +1507,27 @@ def get_noc_cities():
         "Laredo":             {"lat": 27.5306,  "lng": -99.4803 },
     }
 
-    # Agrupar hosts por ciudad → sitio
+    # Normalizar nombre de ciudad (quitar acentos, lower) para deduplicar
+    def _norm_city(name: str) -> str:
+        return (name.replace("é","e").replace("á","a").replace("ó","o")
+                    .replace("ú","u").replace("í","i").replace("ñ","n")
+                    .lower().strip())
+
+    # Mapa normalized → nombre canónico preferido (el que tenga acento si existe en COORDS)
+    _canonical: dict = {}
+    for cn in COORDS:
+        nn = _norm_city(cn)
+        if nn not in _canonical or len(cn) > len(_canonical[nn]):
+            _canonical[nn] = cn
+
+    # Agrupar hosts por ciudad → sitio (usando nombre canónico para evitar duplicados)
     from collections import defaultdict
     city_sites: dict = defaultdict(lambda: defaultdict(list))
     for h in hosts:
         city = h.get("city", "Sin Ciudad")
         site = h.get("site", "Site Principal")
-        city_sites[city][site].append(h)
+        city_canon = _canonical.get(_norm_city(city), city)
+        city_sites[city_canon][site].append(h)
 
     cities = []
     for city_name, sites_dict in city_sites.items():
