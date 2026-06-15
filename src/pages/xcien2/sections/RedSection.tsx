@@ -643,7 +643,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
     // Colores por tipo de entrega (onnet/offnet)
     const COLOR_INNET  = '#00A859';   // verde XCIEN — on-net
-    const COLOR_OFFNET = '#3b82f6';   // azul — off-net (infraestructura de terceros)
+    const COLOR_OFFNET = '#ff3366';   // rojo — off-net (infraestructura de terceros)
     const COLOR_INTER  = '#a855f7';   // morado — intercompañía
     const COLOR_NULL   = '#64748b';   // gris — sin clasificar
 
@@ -839,7 +839,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               { key: 'nocboard_core',     label: 'NOCBoard Core',     color: '#ff3366', active: showTopo,     locked: false, count: hosts.filter(h=>h.status==='offline').length },
               { key: 'nocboard_energy',   label: 'NOCBoard Energy',   color: '#ffcc00', active: false,        locked: true,  count: null },
               { key: 'onnet',             label: 'OnNet',             color: '#00A859', active: showInnet,    locked: false, count: null },
-              { key: 'offnet',            label: 'OffNet',            color: '#3b82f6', active: showOffnet,   locked: false, count: null },
+              { key: 'offnet',            label: 'OffNet',            color: '#ff3366', active: showOffnet,   locked: false, count: null },
               { key: 'prtg',              label: 'PRTG',              color: '#f97316', active: false,        locked: true,  count: null },
             ] as const).map(layer => (
               <button
