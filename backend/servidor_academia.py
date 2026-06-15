@@ -1282,7 +1282,16 @@ def update_ticket_status(ticket_id: str, req: TicketUpdateStatusRequest):
 NOCBOARD_DIR = os.path.expanduser("~/Library/Application Support/NOCBoard")
 NOCBOARD_HOSTS_FILE   = os.path.join(NOCBOARD_DIR, "hosts.json")
 NOCBOARD_ALERTS_FILE  = os.path.join(NOCBOARD_DIR, "alerts.json")
-NOCBOARD_API_BASE = os.environ.get("NOCBOARD_API_BASE", "http://localhost:9401/api")
+# En producción (Railway): NOCBOARD_API_BASE apunta al proxy (sin /api al final)
+# El proxy enruta: /wl/api/* → 9401, /datos/api/* → 9403, etc.
+# En local dev: usa localhost:9401 directamente
+_nocboard_proxy = os.environ.get("NOCBOARD_API_BASE", "")
+if _nocboard_proxy and not _nocboard_proxy.endswith("/api"):
+    # Modo proxy: Railway apunta a https://tunnel.trycloudflare.com
+    NOCBOARD_API_BASE = _nocboard_proxy.rstrip("/") + "/wl/api"
+else:
+    # Modo local: apunta directo a NOCBoard
+    NOCBOARD_API_BASE = _nocboard_proxy or "http://localhost:9401/api"
 NOCBOARD_API_KEY  = os.environ.get("NOCBOARD_API_KEY", "87a08190b801416392e944ab79c7e3c9")
 
 import requests
