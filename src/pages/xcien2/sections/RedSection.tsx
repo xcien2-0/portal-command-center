@@ -645,7 +645,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     const COLOR_INNET  = '#00A859';   // verde XCIEN — on-net
     const COLOR_OFFNET = '#ff3366';   // rojo — off-net (infraestructura de terceros)
     const COLOR_INTER  = '#a855f7';   // morado — intercompañía
-    const COLOR_NULL   = '#64748b';   // gris — sin clasificar
+    const COLOR_NULL   = '#f59e0b';   // ámbar — sin clasificar
 
     const entregaColor = (entrega: string): string => {
       if (entrega === 'innet')  return COLOR_INNET;
