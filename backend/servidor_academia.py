@@ -1566,11 +1566,35 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
+    # Intentar primero el endpoint /summary del proxy (solo conteos, ~200 bytes, rápido)
+    try:
+        r = requests.get(f"{NOCBOARD_API_BASE}/summary",
+                         headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=8)
+        if r.status_code == 200:
+            d = r.json()
+            total   = d.get("total_hosts", 0)
+            online  = d.get("online", 0)
+            offline = d.get("offline", 0)
+            alerts  = d.get("active_alerts", 0)
+            return {
+                "totalHosts":     total,
+                "online":         online,
+                "offline":        offline,
+                "avgHealthScore": round(online / total * 100, 1) if total else 0,
+                "activeAlerts":   alerts,
+                "criticalAlerts": 0,
+                "warningAlerts":  0,
+                "sources":        d.get("sources", []),
+            }
+    except Exception as e:
+        logger.warning(f"NOCBoard summary rápido no disponible: {e}. Usando datos locales.")
+
+    # Fallback: calcular desde hosts y alertas locales
     hosts, alerts = _get_enriched_noc_data()
     active = [a for a in alerts if a.get("state") == "active"]
-    total   = len(hosts)
-    online  = sum(1 for h in hosts if _host_status(h) in ["online", "degraded"])
-    scores  = [h.get("health_score") or h.get("healthScore", 0) for h in hosts]
+    total  = len(hosts)
+    online = sum(1 for h in hosts if _host_status(h) in ["online", "degraded"])
+    scores = [h.get("health_score") or h.get("healthScore", 0) for h in hosts]
     return {
         "totalHosts":     total,
         "online":         online,
