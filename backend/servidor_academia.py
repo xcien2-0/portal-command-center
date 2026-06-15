@@ -1441,30 +1441,70 @@ def get_noc_cities():
 
     active_alerts = [a for a in alerts if a.get("state") == "active"]
 
-    # Coordenadas por ciudad
+    # Coordenadas por ciudad (con y sin acentos para tolerar variantes de NOCBoard)
     COORDS = {
-        "Monterrey":        {"lat": 25.6866,  "lng": -100.3161},
-        "Saltillo":         {"lat": 25.4232,  "lng": -100.9928},
-        "Piedras Negras":   {"lat": 28.7000,  "lng": -100.5231},
-        "San Luis Potosi":  {"lat": 22.1565,  "lng": -100.9855},
-        "San Luis Potosí":  {"lat": 22.1565,  "lng": -100.9855},
-        "Torreón":          {"lat": 25.5428,  "lng": -103.4068},
-        "Torreon":          {"lat": 25.5428,  "lng": -103.4068},
-        "Chihuahua":        {"lat": 28.6353,  "lng": -106.0889},
-        "Nuevo Laredo":     {"lat": 27.4765,  "lng": -99.5151 },
-        "Reynosa":          {"lat": 26.0922,  "lng": -98.2772 },
-        "Matamoros":        {"lat": 25.8691,  "lng": -97.5027 },
-        "Monclova":         {"lat": 26.9083,  "lng": -101.4217},
-        "Sabinas":          {"lat": 27.8529,  "lng": -101.1191},
-        "Guadalajara":      {"lat": 20.6597,  "lng": -103.3496},
-        "Ciudad de México":  {"lat": 19.4326,  "lng": -99.1332 },
-        "Querétaro":        {"lat": 20.5888,  "lng": -100.3899},
-        "Celaya":           {"lat": 20.5200,  "lng": -100.8161},
-        "León":             {"lat": 21.1221,  "lng": -101.6823},
-        "Tampico":          {"lat": 22.2552,  "lng": -97.8686 },
-        "Mérida":           {"lat": 20.9674,  "lng": -89.5926 },
-        "Puebla":           {"lat": 19.0414,  "lng": -98.2063 },
-        "Coco":             {"lat": 25.5000,  "lng": -103.5000},
+        "Monterrey":          {"lat": 25.6866,  "lng": -100.3161},
+        "Saltillo":           {"lat": 25.4232,  "lng": -100.9928},
+        "Piedras Negras":     {"lat": 28.7000,  "lng": -100.5231},
+        "San Luis Potosi":    {"lat": 22.1565,  "lng": -100.9855},
+        "San Luis Potosí":    {"lat": 22.1565,  "lng": -100.9855},
+        "Torreón":            {"lat": 25.5428,  "lng": -103.4068},
+        "Torreon":            {"lat": 25.5428,  "lng": -103.4068},
+        "Chihuahua":          {"lat": 28.6353,  "lng": -106.0889},
+        "Nuevo Laredo":       {"lat": 27.4765,  "lng": -99.5151 },
+        "Reynosa":            {"lat": 26.0922,  "lng": -98.2772 },
+        "Matamoros":          {"lat": 25.8691,  "lng": -97.5027 },
+        "Monclova":           {"lat": 26.9083,  "lng": -101.4217},
+        "Sabinas":            {"lat": 27.8529,  "lng": -101.1191},
+        "Guadalajara":        {"lat": 20.6597,  "lng": -103.3496},
+        "Ciudad de Mexico":   {"lat": 19.4326,  "lng": -99.1332 },
+        "Ciudad de México":   {"lat": 19.4326,  "lng": -99.1332 },
+        "CDMX":               {"lat": 19.4326,  "lng": -99.1332 },
+        "Queretaro":          {"lat": 20.5888,  "lng": -100.3899},
+        "Querétaro":          {"lat": 20.5888,  "lng": -100.3899},
+        "Celaya":             {"lat": 20.5200,  "lng": -100.8161},
+        "Leon":               {"lat": 21.1221,  "lng": -101.6823},
+        "León":               {"lat": 21.1221,  "lng": -101.6823},
+        "Tampico":            {"lat": 22.2552,  "lng": -97.8686 },
+        "Merida":             {"lat": 20.9674,  "lng": -89.5926 },
+        "Mérida":             {"lat": 20.9674,  "lng": -89.5926 },
+        "Puebla":             {"lat": 19.0414,  "lng": -98.2063 },
+        "Coco":               {"lat": 25.5000,  "lng": -103.5000},
+        "Hermosillo":         {"lat": 29.0729,  "lng": -110.9559},
+        "Culiacan":           {"lat": 24.7994,  "lng": -107.3875},
+        "Culiacán":           {"lat": 24.7994,  "lng": -107.3875},
+        "Mazatlan":           {"lat": 23.2494,  "lng": -106.4111},
+        "Mazatlán":           {"lat": 23.2494,  "lng": -106.4111},
+        "Durango":            {"lat": 24.0277,  "lng": -104.6532},
+        "Zacatecas":          {"lat": 22.7709,  "lng": -102.5832},
+        "Aguascalientes":     {"lat": 21.8818,  "lng": -102.2916},
+        "Morelia":            {"lat": 19.7008,  "lng": -101.1844},
+        "Veracruz":           {"lat": 19.1738,  "lng": -96.1342 },
+        "Cancun":             {"lat": 21.1619,  "lng": -86.8515 },
+        "Cancún":             {"lat": 21.1619,  "lng": -86.8515 },
+        "Oaxaca":             {"lat": 17.0669,  "lng": -96.7203 },
+        "Acapulco":           {"lat": 16.8531,  "lng": -99.8237 },
+        "Mexicali":           {"lat": 32.6245,  "lng": -115.4523},
+        "Tijuana":            {"lat": 32.5149,  "lng": -117.0382},
+        "La Paz":             {"lat": 24.1426,  "lng": -110.3128},
+        "Tuxtla Gutierrez":   {"lat": 16.7521,  "lng": -93.1152 },
+        "Tuxtla Gutiérrez":   {"lat": 16.7521,  "lng": -93.1152 },
+        "Villahermosa":       {"lat": 17.9870,  "lng": -92.9303 },
+        "Tepic":              {"lat": 21.5042,  "lng": -104.8945},
+        "Colima":             {"lat": 19.2452,  "lng": -103.7241},
+        "Campeche":           {"lat": 19.8301,  "lng": -90.5349 },
+        "Chetumal":           {"lat": 18.5001,  "lng": -88.2961 },
+        "Pachuca":            {"lat": 20.1011,  "lng": -98.7591 },
+        "Toluca":             {"lat": 19.2826,  "lng": -99.6557 },
+        "Cuernavaca":         {"lat": 18.9261,  "lng": -99.2201 },
+        "Xalapa":             {"lat": 19.5438,  "lng": -96.9102 },
+        "Coatzacoalcos":      {"lat": 18.1500,  "lng": -94.4333 },
+        "Ciudad Juarez":      {"lat": 31.7381,  "lng": -106.4870},
+        "Ciudad Juárez":      {"lat": 31.7381,  "lng": -106.4870},
+        "Parral":             {"lat": 26.9314,  "lng": -105.6657},
+        "Delicias":           {"lat": 28.1928,  "lng": -105.4694},
+        "Brownsville":        {"lat": 25.9017,  "lng": -97.4975 },
+        "Laredo":             {"lat": 27.5306,  "lng": -99.4803 },
     }
 
     # Agrupar hosts por ciudad → sitio
@@ -1484,7 +1524,13 @@ def get_noc_cities():
         scores  = [h.get("health_score") or h.get("healthScore", 0) for h in city_hosts_all]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0
         city_alerts = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
-        coord = COORDS.get(city_name, {"lat": 23.0, "lng": -102.0})
+        # Tolerar nombre sin acento buscando también normalizado
+        coord = COORDS.get(city_name) or COORDS.get(
+            city_name.replace("é","e").replace("á","a").replace("ó","o").replace("ú","u").replace("í","i").replace("ñ","n"),
+            {"lat": 23.0, "lng": -102.0}
+        )
+        # Fuentes de monitoreo que cubren esta ciudad
+        city_sources = list({h.get("_source", "") for h in city_hosts_all if h.get("_source")})
 
         sites_list = []
         for site_name, site_hosts in sites_dict.items():
@@ -1519,6 +1565,7 @@ def get_noc_cities():
             "alerts":      city_alerts,
             "lat":         coord["lat"],
             "lng":         coord["lng"],
+            "sources":     city_sources,
             "sites":       sites_list,
         })
 

@@ -15,6 +15,27 @@ function nodeColor(score: number) {
 
 const ODOO_COLOR = '#00b4d8';
 
+// ── Source badge helpers ──────────────────────────────────────────────────────
+const SOURCE_BADGES: Record<string, { symbol: string; color: string }> = {
+  'WL/WISPI': { symbol: '◉', color: '#60a5fa' },
+  'Datos':    { symbol: '▲', color: '#00ff88' },
+  'Energía':  { symbol: '⚡', color: '#ffcc00' },
+  'CX Datos': { symbol: '◆', color: '#a78bfa' },
+  'CX Radios':{ symbol: '●', color: '#fb923c' },
+  'Central':  { symbol: '★', color: '#f472b6' },
+};
+
+function buildSourceBadges(sources: string[] | undefined): string {
+  if (!sources || sources.length === 0) return '';
+  return sources
+    .filter(s => SOURCE_BADGES[s])
+    .map(s => {
+      const b = SOURCE_BADGES[s];
+      return `<span style="font-size:7px;color:${b.color};line-height:1;text-shadow:0 0 4px ${b.color}88;" title="${s}">${b.symbol}</span>`;
+    })
+    .join('');
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface OdooServicio {
   id: number;
@@ -116,20 +137,25 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
       const c     = nodeColor(city.score);
       const isSelected = city.id === selectedCityId;
       const size  = isSelected ? 18 : Math.max(10, Math.min(20, 8 + city.totalHosts / 20));
+      const badges = buildSourceBadges(city.sources);
+      const totalH = size + (badges ? 10 : 0);
 
       const icon = L.divIcon({
         className: '',
         html: `
-          <div style="
-            width:${size}px;height:${size}px;border-radius:50%;
-            background:${c}22;border:2px solid ${c};
-            box-shadow:0 0 ${isSelected ? 20 : 10}px ${c}88;
-            display:flex;align-items:center;justify-content:center;
-            ${isSelected ? `animation:noc-pulse 1.5s ease-in-out infinite;` : ''}
-          ">
-            <div style="width:${size * 0.35}px;height:${size * 0.35}px;border-radius:50%;background:${c};"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <div style="
+              width:${size}px;height:${size}px;border-radius:50%;
+              background:${c}22;border:2px solid ${c};
+              box-shadow:0 0 ${isSelected ? 20 : 10}px ${c}88;
+              display:flex;align-items:center;justify-content:center;
+              ${isSelected ? `animation:noc-pulse 1.5s ease-in-out infinite;` : ''}
+            ">
+              <div style="width:${size * 0.35}px;height:${size * 0.35}px;border-radius:50%;background:${c};"></div>
+            </div>
+            ${badges ? `<div style="display:flex;gap:2px;line-height:1;">${badges}</div>` : ''}
           </div>`,
-        iconSize:   [size, size],
+        iconSize:   [size, totalH],
         iconAnchor: [size / 2, size / 2],
       });
 
@@ -140,6 +166,7 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
             <div>Score: <b style="color:${c}">${Math.round(city.score)}</b></div>
             <div>Hosts: ${city.online}↑ ${city.offline > 0 ? `<span style="color:${R}">${city.offline}↓</span>` : ''}</div>
             <div>Sitios: ${city.sites?.length || 0}</div>
+            ${city.sources?.length ? `<div style="margin-top:4px;opacity:0.7">${city.sources.join(' · ')}</div>` : ''}
           </div>`, {
           className: 'noc-tooltip',
           permanent: false,

@@ -26,7 +26,7 @@ function transformCity(raw: any): NOCCity {
     alerts:     raw.alertas    ?? raw.alerts ?? (offline > 0 ? offline : 0),
     lat:        raw.lat        ?? 0,
     lng:        raw.lng        ?? 0,
-    // Convert string site names to NOCSite objects so SiteInspector works
+    sources:    Array.isArray(raw.sources) ? raw.sources : [],
     sites: sitesRaw.map(siteName => ({
       id:          siteName,
       name:        siteName,

@@ -26,6 +26,7 @@ export interface NOCCity {
   alerts: number;
   lat: number;
   lng: number;
+  sources?: string[];
 }
 
 export interface NOCAlert {
