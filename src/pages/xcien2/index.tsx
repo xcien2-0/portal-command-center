@@ -11,7 +11,7 @@ import {
 import { API_BASE } from '../../config';
 import brand from '../../brand';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
-import { getRealCities, getRealAlerts } from '@/services/nocboard';
+import { getRealCities, getRealAlerts, invalidateNOCCache } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
 // ── Siempre visibles — importación estática ───────────────────────────────────
@@ -439,11 +439,12 @@ interface ContentProps {
   activeTenantId: string | null;
   onTenantChange: (id: string | null) => void;
   bridgeData: any;
+  onNocRefresh?: () => void;
 }
 
 function Content({
   section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
-  cities, alerts, activeTenantId, onTenantChange, bridgeData, backendStatus, odooStatus, observiumStatus, onSelect
+  cities, alerts, activeTenantId, onTenantChange, bridgeData, onNocRefresh, backendStatus, odooStatus, observiumStatus, onSelect
 }: ContentProps & { backendStatus: 'online' | 'offline', odooStatus: 'conectado' | 'desconectado', observiumStatus: 'conectado' | 'desconectado', onSelect: (id: SectionId) => void }) {
   const padding = theme.compact ? 20 : 32;
   const isFullHeight = section === 'red';
@@ -464,6 +465,7 @@ function Content({
           alerts={alerts}
           activeTenantId={activeTenantId}
           onTenantChange={onTenantChange}
+          onRefresh={onNocRefresh}
         />
       )}
       {section === 'red'      && <RedSection      theme={theme} />}
@@ -767,6 +769,11 @@ export default function Xcien2Page() {
     } catch (e) { console.error("Error loading NOC data in Holo:", e); }
   };
 
+  const refreshNOC = useCallback(async () => {
+    invalidateNOCCache();
+    await loadRealData();
+  }, []);
+
   useEffect(() => {
     loadRealData();
     const id = setInterval(loadRealData, 30_000);
@@ -1030,6 +1037,7 @@ export default function Xcien2Page() {
             activeTenantId={activeTenantId}
             onTenantChange={setActiveTenantId}
             bridgeData={bridgeData}
+            onNocRefresh={refreshNOC}
             backendStatus={backendStatus}
             odooStatus={odooStatus}
             observiumStatus={observiumStatus}

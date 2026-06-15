@@ -77,3 +77,5 @@ export function getAlertsForTenant(tenantId: string) {
   return (_alerts ?? []).filter(a => a.cityId?.includes(tenantId));
 }
 export async function fetchNOCSummary() { return null; }
+
+export function invalidateNOCCache() { _lastFetch = 0; }

@@ -1605,6 +1605,38 @@ def get_noc_summary():
         "warningAlerts":  sum(1 for a in active if a.get("severity") == "warning"),
     }
 
+# ─── NOC Boards — enable / disable por instancia ────────────────────────────
+
+@app.get("/api/noc/boards")
+def get_noc_boards():
+    """Estado de cada NOCBoard instance: enabled, alive, conteos."""
+    proxy_base = NOCBOARD_API_BASE[:-4] if NOCBOARD_API_BASE.endswith("/api") else NOCBOARD_API_BASE
+    try:
+        r = requests.get(f"{proxy_base}/boards",
+                         headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=8)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        logger.warning(f"get_noc_boards error: {e}")
+    return {"boards": {}, "error": "Proxy no disponible"}
+
+
+@app.post("/api/noc/boards/{board_id}/{action}")
+def toggle_noc_board(board_id: str, action: str):
+    """Habilita o deshabilita un NOCBoard (action: enable | disable)."""
+    if action not in ("enable", "disable"):
+        return {"error": "Acción inválida — usa enable o disable"}
+    proxy_base = NOCBOARD_API_BASE[:-4] if NOCBOARD_API_BASE.endswith("/api") else NOCBOARD_API_BASE
+    try:
+        r = requests.post(f"{proxy_base}/boards/{board_id}/{action}",
+                          headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=8)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        logger.warning(f"toggle_noc_board {board_id}/{action} error: {e}")
+    return {"error": "No se pudo cambiar el estado del board"}
+
+
 # ─── NOC Dashboard Stats (compatible con InicioHoloSection) ──────────────────
 
 @app.get("/api/noc/dashboard-stats")

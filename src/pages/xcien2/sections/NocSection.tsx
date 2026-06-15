@@ -3,7 +3,7 @@ import { ThemeConfig } from '../types';
 import brand from '../../../brand';
 import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
-import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers, Zap, Database, Radio, Eye, Signal } from 'lucide-react';
+import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers, Zap, Database, Radio, Eye, Signal, Triangle } from 'lucide-react';
 import { API_BASE } from '../../../config';
 import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
@@ -779,38 +779,91 @@ function SiteInspector({ city, onClose }: { city: NOCCity; onClose: () => void }
 
 // ── NOCBoard Layers Panel ─────────────────────────────────────────────────────
 const NOC_LAYERS = [
-  { id: 'energia',   label: 'Energía',    icon: Zap,      color: '#ffcc00', desc: 'UPS · PDU · Planta eléctrica' },
-  { id: 'datos',     label: 'Datos',      icon: Database, color: '#00ff88', desc: 'Switches · Routers · Fibra' },
-  { id: 'wl',        label: 'WL',         icon: Signal,   color: '#60a5fa', desc: 'Wireless · APs · Antenas' },
-  { id: 'observium', label: 'Observium',  icon: Eye,      color: '#a78bfa', desc: 'Monitoreo SNMP · Tráfico' },
-  { id: 'prtg',      label: 'PRTG',       icon: Radio,    color: '#fb923c', desc: 'Sensores · Alertas · SLA' },
+  { id: 'wl',      label: 'WL/WISPI',  icon: Signal,   color: '#60a5fa', desc: 'Wireless · APs · Antenas' },
+  { id: 'datos',   label: 'Datos',     icon: Triangle, color: '#00ff88', desc: 'Switches · Routers · Fibra' },
+  { id: 'energia', label: 'Energía',   icon: Zap,      color: '#ffcc00', desc: 'UPS · PDU · Planta eléctrica' },
+  { id: 'cxdatos', label: 'CX Datos',  icon: Eye,      color: '#a78bfa', desc: 'Clientes · Datos' },
+  { id: 'cx',      label: 'CX Radios', icon: Radio,    color: '#fb923c', desc: 'Clientes · Radios' },
+  { id: 'central', label: 'Central',   icon: Network,  color: '#f472b6', desc: 'NOC Central' },
 ] as const;
 
 type LayerId = typeof NOC_LAYERS[number]['id'];
 
-function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectCity: (c: NOCCity) => void }) {
-  const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(
-    () => new Set(NOC_LAYERS.map(l => l.id))
-  );
+interface BoardStatus {
+  enabled: boolean;
+  alive: boolean;
+  name: string;
+  port: number;
+  has_key: boolean;
+  total_hosts?: number;
+  online?: number;
+  offline?: number;
+  active_alerts?: number;
+}
+
+function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
+  cities: NOCCity[];
+  onSelectCity: (c: NOCCity) => void;
+  onRefresh?: () => void;
+}) {
+  const [boards, setBoards] = useState<Record<string, BoardStatus>>({});
   const [selectedLayer, setSelectedLayer] = useState<LayerId | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
 
-  const toggleLayer = (id: LayerId) => setActiveLayers(prev => {
-    const s = new Set(prev);
-    s.has(id) ? s.delete(id) : s.add(id);
-    return s;
-  });
+  const fetchBoards = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/noc/boards`);
+      if (r.ok) {
+        const data = await r.json();
+        if (data.boards) setBoards(data.boards);
+      }
+    } catch {}
+  }, []);
 
-  const totalOn  = cities.reduce((a, c) => a + c.online,  0);
-  const totalOff = cities.reduce((a, c) => a + c.offline, 0);
+  useEffect(() => {
+    fetchBoards();
+    const id = setInterval(fetchBoards, 15_000);
+    return () => clearInterval(id);
+  }, [fetchBoards]);
+
+  const toggleLayer = async (id: LayerId) => {
+    const current = boards[id];
+    const newEnabled = current ? !current.enabled : false;
+    const action = newEnabled ? 'enable' : 'disable';
+
+    setToggling(id);
+    // Optimistic update
+    setBoards(prev => ({ ...prev, [id]: { ...prev[id], enabled: newEnabled } }));
+
+    try {
+      const r = await fetch(`${API_BASE}/api/noc/boards/${id}/${action}`, { method: 'POST' });
+      if (r.ok) {
+        // After toggle, refresh board stats and aggregate data
+        await fetchBoards();
+        setTimeout(() => onRefresh?.(), 1500); // let proxy cache clear
+      } else {
+        // Rollback
+        setBoards(prev => ({ ...prev, [id]: { ...prev[id], enabled: !newEnabled } }));
+      }
+    } catch {
+      setBoards(prev => ({ ...prev, [id]: { ...prev[id], enabled: !newEnabled } }));
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  const enabledCount = NOC_LAYERS.filter(l => boards[l.id]?.enabled).length;
+  const totalOn  = Object.values(boards).reduce((a, b) => a + (b.online  ?? 0), 0);
+  const totalOff = Object.values(boards).reduce((a, b) => a + (b.offline ?? 0), 0);
 
   return (
     <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, overflow: 'hidden' }}>
       {/* ── Map ─────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
-        {/* Active layer badge */}
         {selectedLayer && (() => {
           const l = NOC_LAYERS.find(x => x.id === selectedLayer)!;
           const Icon = l.icon;
+          const b = boards[selectedLayer];
           return (
             <div style={{
               flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
@@ -822,6 +875,11 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
                 CAPA: {l.label.toUpperCase()}
               </span>
               <span style={{ fontSize: 10, color: DIM, marginLeft: 4 }}>{l.desc}</span>
+              {b && (
+                <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'monospace', color: b.alive ? G : R }}>
+                  {b.alive ? `● ${b.total_hosts ?? '—'} hosts` : '● offline'}
+                </span>
+              )}
             </div>
           );
         })()}
@@ -833,7 +891,7 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
 
       {/* ── Layer list ───────────────────────────────────────────────────── */}
       <div style={{
-        width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        width: 290, flexShrink: 0, display: 'flex', flexDirection: 'column',
         background: 'rgba(0,8,4,0.8)', border: `1px solid ${G}15`,
         borderRadius: 16, overflow: 'hidden',
       }}>
@@ -844,15 +902,18 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
             <span style={{ fontSize: 10, fontWeight: 800, color: G, fontFamily: 'monospace', letterSpacing: 1.5 }}>CAPAS NOCBOARD</span>
           </div>
           <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace' }}>
-            {activeLayers.size}/{NOC_LAYERS.length} capas activas
+            {enabledCount}/{NOC_LAYERS.length} capas activas
           </div>
         </div>
 
-        {/* Layer toggles */}
+        {/* Layer rows */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
           {NOC_LAYERS.map(layer => {
-            const isOn  = activeLayers.has(layer.id);
+            const b = boards[layer.id];
+            const isOn  = b?.enabled ?? false;
+            const alive = b?.alive   ?? false;
             const isSel = selectedLayer === layer.id;
+            const busy  = toggling === layer.id;
             const Icon  = layer.icon;
             return (
               <div
@@ -863,7 +924,7 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
                   borderBottom: `1px solid rgba(255,255,255,0.04)`,
                   cursor: 'pointer',
                   background: isSel ? `${layer.color}10` : isOn ? 'rgba(255,255,255,0.02)' : 'transparent',
-                  opacity: isOn ? 1 : 0.4,
+                  opacity: busy ? 0.6 : isOn ? 1 : 0.45,
                   transition: 'all 0.15s',
                   borderLeft: isSel ? `3px solid ${layer.color}` : '3px solid transparent',
                 }}
@@ -873,9 +934,10 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {/* Toggle switch */}
                   <div
-                    onClick={e => { e.stopPropagation(); toggleLayer(layer.id); }}
+                    onClick={e => { e.stopPropagation(); if (!busy) toggleLayer(layer.id); }}
                     style={{
-                      width: 32, height: 18, borderRadius: 9, flexShrink: 0, cursor: 'pointer',
+                      width: 32, height: 18, borderRadius: 9, flexShrink: 0,
+                      cursor: busy ? 'not-allowed' : 'pointer',
                       background: isOn ? layer.color : 'rgba(255,255,255,0.12)',
                       position: 'relative', transition: 'background 0.2s',
                     }}
@@ -883,12 +945,12 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
                     <div style={{
                       position: 'absolute', top: 3, left: isOn ? 15 : 3,
                       width: 12, height: 12, borderRadius: '50%',
-                      background: '#fff', transition: 'left 0.2s',
-                      boxShadow: isOn ? `0 0 6px ${layer.color}` : 'none',
+                      background: busy ? '#aaa' : '#fff', transition: 'left 0.2s',
+                      boxShadow: isOn && !busy ? `0 0 6px ${layer.color}` : 'none',
                     }} />
                   </div>
 
-                  {/* Icon + label */}
+                  {/* Icon */}
                   <div style={{
                     width: 30, height: 30, borderRadius: 8, flexShrink: 0,
                     background: `${layer.color}15`, border: `1px solid ${layer.color}30`,
@@ -898,39 +960,48 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: isOn ? '#fff' : DIM, letterSpacing: 0.5 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: isOn ? '#fff' : DIM }}>
                       {layer.label}
                     </div>
                     <div style={{ fontSize: 9, color: DIM, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {layer.desc}
+                      {b ? (
+                        alive
+                          ? `${b.total_hosts ?? '—'} hosts · ${b.online ?? '—'} online`
+                          : 'Sin conexión'
+                      ) : layer.desc}
                     </div>
                   </div>
 
-                  {/* Status dot */}
+                  {/* Alive indicator */}
                   <div style={{
                     width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                    background: isOn ? layer.color : 'rgba(255,255,255,0.15)',
-                    boxShadow: isOn ? `0 0 6px ${layer.color}` : 'none',
+                    background: isOn && alive ? layer.color : 'rgba(255,255,255,0.15)',
+                    boxShadow: isOn && alive ? `0 0 6px ${layer.color}` : 'none',
                   }} />
                 </div>
 
-                {/* Expanded detail */}
-                {isSel && isOn && (
+                {/* Expanded stats when selected and enabled */}
+                {isSel && isOn && b && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${layer.color}20` }}>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <div style={{ background: `${layer.color}10`, border: `1px solid ${layer.color}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: layer.color, fontFamily: 'monospace' }}>{cities.length}</div>
-                        <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>NODOS</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: layer.color, fontFamily: 'monospace' }}>{b.total_hosts ?? '—'}</div>
+                        <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>TOTAL</div>
                       </div>
                       <div style={{ background: `${G}10`, border: `1px solid ${G}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: G, fontFamily: 'monospace' }}>{totalOn}</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: G, fontFamily: 'monospace' }}>{b.online ?? '—'}</div>
                         <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>ONLINE</div>
                       </div>
                       <div style={{ background: `${R}10`, border: `1px solid ${R}25`, borderRadius: 8, padding: '6px 10px', flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: totalOff > 0 ? R : DIM, fontFamily: 'monospace' }}>{totalOff}</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: (b.offline ?? 0) > 0 ? R : DIM, fontFamily: 'monospace' }}>{b.offline ?? '—'}</div>
                         <div style={{ fontSize: 8, color: DIM, marginTop: 1 }}>CAÍDOS</div>
                       </div>
                     </div>
+                    {(b.active_alerts ?? 0) > 0 && (
+                      <div style={{ marginTop: 6, fontSize: 9, color: Y, fontFamily: 'monospace' }}>
+                        ⚠ {b.active_alerts} alertas activas
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -950,7 +1021,6 @@ function NocLayersPanel({ cities, onSelectCity }: { cities: NOCCity[]; onSelectC
           </div>
         </div>
       </div>
-
     </div>
   );
 }
@@ -963,6 +1033,7 @@ interface Props {
   alerts?: NOCAlert[];
   activeTenantId?: string | null;
   onTenantChange?: (id: string | null) => void;
+  onRefresh?: () => void;
 }
 
 // ── Reporte Semanal ───────────────────────────────────────────────────────────
@@ -1156,6 +1227,7 @@ export default function NocSection({
   alerts = [],
   activeTenantId = null,
   onTenantChange,
+  onRefresh,
 }: Props) {
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
   const [view, setView] = useState<'map' | 'grid' | 'reportes' | 'capas'>('map');
@@ -1269,7 +1341,7 @@ export default function NocSection({
             )}
           </>
         ) : view === 'capas' ? (
-          <NocLayersPanel cities={cities} onSelectCity={handleSelectCity} />
+          <NocLayersPanel cities={cities} onSelectCity={handleSelectCity} onRefresh={onRefresh} />
         ) : null}
       </div>
 
