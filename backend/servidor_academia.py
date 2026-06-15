@@ -1695,7 +1695,7 @@ def _load_ventas():
 _MES_ORDER = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]
 
 @app.get("/api/ventas/resumen")
-def get_ventas_resumen(_user: dict = Depends(get_current_user)):
+def get_ventas_resumen():
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -1714,7 +1714,7 @@ def get_ventas_resumen(_user: dict = Depends(get_current_user)):
     }
 
 @app.get("/api/ventas/por-mes")
-def get_ventas_por_mes(_user: dict = Depends(get_current_user)):
+def get_ventas_por_mes():
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -1733,7 +1733,7 @@ def get_ventas_por_mes(_user: dict = Depends(get_current_user)):
     return result
 
 @app.get("/api/ventas/top-vendedores")
-def get_ventas_top_vendedores(_user: dict = Depends(get_current_user)):
+def get_ventas_top_vendedores():
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -1745,7 +1745,7 @@ def get_ventas_top_vendedores(_user: dict = Depends(get_current_user)):
     return grp.rename(columns={"VENDEDOR COMERCIAL/EAC": "vendedor"}).to_dict(orient="records")
 
 @app.get("/api/ventas/ordenes")
-def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: int = 200, _user: dict = Depends(get_current_user)):
+def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: int = 200):
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
