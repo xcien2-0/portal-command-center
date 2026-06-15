@@ -1055,6 +1055,36 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           </div>
         )}
 
+        {/* Leyenda — servicios Odoo OnNet/OffNet */}
+        {showOdoo && (
+          <div style={{
+            position: 'absolute',
+            bottom: showDevices ? 200 : 24,
+            right: 16, zIndex: 999,
+            background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '10px 14px', minWidth: 170,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              Servicios Odoo
+            </div>
+            {[
+              { color: '#00A859', label: 'OnNet',          detail: `${odooServicios.filter(s => s.entrega === 'innet').length.toLocaleString()} servicios` },
+              { color: '#ff3366', label: 'OffNet',         detail: `${odooServicios.filter(s => s.entrega === 'offnet').length.toLocaleString()} servicios` },
+              { color: '#a855f7', label: 'Intercompañía',  detail: `${odooServicios.filter(s => s.entrega === 'inter').length.toLocaleString()} servicios` },
+              { color: '#f59e0b', label: 'Sin clasificar', detail: `${odooServicios.filter(s => !s.entrega).length.toLocaleString()} servicios` },
+            ].map(({ color, label, detail }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginLeft: 5 }}>{detail}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Leyenda — topología + fibra activas */}
         {(showTopo && topoLinks.length > 0) || kmzGroups.some(g => kmzActive[g.id]) ? (
           <div style={{
