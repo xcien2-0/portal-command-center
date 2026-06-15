@@ -333,8 +333,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [kmzActive,       setKmzActive]       = useState<Record<string, boolean>>({});
   const [uispStatus,      setUispStatus]       = useState<{ ok: boolean; error: string | null } | null>(null);
   const [odooServicios,   setOdooServicios]    = useState<any[]>([]);
-  const [showOdoo,        setShowOdoo]         = useState(false);
-  const [odooFiltro,      setOdooFiltro]       = useState<'all' | 'innet' | 'offnet'>('all');
+  const [showInnet,       setShowInnet]        = useState(false);
+  const [showOffnet,      setShowOffnet]       = useState(false);
+  const showOdoo   = showInnet || showOffnet;
+  const odooFiltro = showInnet && showOffnet ? 'all' : showInnet ? 'innet' : 'offnet';
 
   const mapRef       = useRef<any>(null);
   const leafRef      = useRef<any>(null);
@@ -836,7 +838,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               { key: 'nocboard_wireless', label: 'NOCBoard Wireless', color: '#3b82f6', active: showDevices,  locked: false, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length },
               { key: 'nocboard_core',     label: 'NOCBoard Core',     color: '#ff3366', active: showTopo,     locked: false, count: hosts.filter(h=>h.status==='offline').length },
               { key: 'nocboard_energy',   label: 'NOCBoard Energy',   color: '#ffcc00', active: false,        locked: true,  count: null },
-              { key: 'observium',         label: 'Observium',         color: '#a855f7', active: showOdoo,     locked: false, count: null },
+              { key: 'onnet',             label: 'OnNet',             color: '#00A859', active: showInnet,    locked: false, count: null },
+              { key: 'offnet',            label: 'OffNet',            color: '#3b82f6', active: showOffnet,   locked: false, count: null },
               { key: 'prtg',              label: 'PRTG',              color: '#f97316', active: false,        locked: true,  count: null },
             ] as const).map(layer => (
               <button
@@ -845,7 +848,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
                 onClick={() => {
                   if (layer.key === 'nocboard_wireless') setShowDevices(p => !p);
                   else if (layer.key === 'nocboard_core') setShowTopo(p => !p);
-                  else if (layer.key === 'observium') setShowOdoo(p => !p);
+                  else if (layer.key === 'onnet')  setShowInnet(p => !p);
+                  else if (layer.key === 'offnet') setShowOffnet(p => !p);
                 }}
                 title={layer.locked ? 'Pendiente de configurar' : undefined}
                 style={{
