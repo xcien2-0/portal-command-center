@@ -27,6 +27,8 @@ export interface NOCCity {
   lat: number;
   lng: number;
   sources?: string[];
+  priorityScore?: number;                        // score ponderado por prioridad de fuente
+  sourceScores?: Record<string, number>;         // score por fuente: { "Energía": 45, "Datos": 87 }
 }
 
 export interface NOCAlert {

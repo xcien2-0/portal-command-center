@@ -15,6 +15,7 @@ module.exports = {
       max_restarts: 10,
       watch: false,
       max_memory_restart: '1G',
+      env_file: 'backend/.env',
       env: {
         PYTHONUNBUFFERED: '1',
         PORT: 8002,

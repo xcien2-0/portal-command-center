@@ -15,25 +15,44 @@ function nodeColor(score: number) {
 
 const ODOO_COLOR = '#00b4d8';
 
-// ── Source badge helpers ──────────────────────────────────────────────────────
-const SOURCE_BADGES: Record<string, { symbol: string; color: string }> = {
-  'WL/WISPI': { symbol: '◉', color: '#60a5fa' },
-  'Datos':    { symbol: '▲', color: '#00ff88' },
-  'Energía':  { symbol: '⚡', color: '#ffcc00' },
-  'CX Datos': { symbol: '◆', color: '#a78bfa' },
-  'CX Radios':{ symbol: '●', color: '#fb923c' },
-  'Central':  { symbol: '★', color: '#f472b6' },
+// ── Source priority & badge helpers ──────────────────────────────────────────
+// Orden de prioridad: Energía > Datos > WL. Mayor prioridad = badge más grande.
+const SOURCE_META: Record<string, { symbol: string; color: string; priority: number; size: number }> = {
+  'Energía':   { symbol: '⚡', color: '#ffcc00', priority: 1, size: 13 },
+  'Datos':     { symbol: '▲', color: '#00ff88', priority: 2, size: 11 },
+  'WL/WISPI':  { symbol: '◉', color: '#60a5fa', priority: 3, size: 9  },
+  'CX Datos':  { symbol: '◆', color: '#a78bfa', priority: 4, size: 9  },
+  'CX Radios': { symbol: '●', color: '#fb923c', priority: 5, size: 9  },
+  'Central':   { symbol: '★', color: '#f472b6', priority: 6, size: 9  },
 };
 
 function buildSourceBadges(sources: string[] | undefined): string {
   if (!sources || sources.length === 0) return '';
-  return sources
-    .filter(s => SOURCE_BADGES[s])
+  return [...sources]
+    .filter(s => SOURCE_META[s])
+    .sort((a, b) => (SOURCE_META[a]?.priority ?? 9) - (SOURCE_META[b]?.priority ?? 9))
     .map(s => {
-      const b = SOURCE_BADGES[s];
-      return `<span style="font-size:10px;color:${b.color};line-height:1;text-shadow:0 0 6px ${b.color};" title="${s}">${b.symbol}</span>`;
+      const m = SOURCE_META[s];
+      return `<span style="font-size:${m.size}px;color:${m.color};line-height:1;text-shadow:0 0 5px ${m.color}88;" title="${s}">${m.symbol}</span>`;
     })
     .join('');
+}
+
+function buildSourceTooltip(
+  sources: string[] | undefined,
+  sourceScores: Record<string, number> | undefined
+): string {
+  if (!sources || sources.length === 0) return '';
+  return [...sources]
+    .filter(s => SOURCE_META[s])
+    .sort((a, b) => (SOURCE_META[a]?.priority ?? 9) - (SOURCE_META[b]?.priority ?? 9))
+    .map(s => {
+      const m   = SOURCE_META[s];
+      const sc  = sourceScores?.[s];
+      const scStr = sc != null ? ` <b style="color:${m.color}">${Math.round(sc)}</b>` : '';
+      return `<span style="color:${m.color}">${m.symbol} ${s}</span>${scStr}`;
+    })
+    .join(' · ');
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -134,11 +153,13 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
     drawArcs(map, L, svg, cities, selectedCityId);
 
     cities.forEach(city => {
-      const c     = nodeColor(city.score);
+      // Usa priorityScore si está disponible — refleja jerarquía Energía > Datos > WL
+      const displayScore = city.priorityScore ?? city.score;
+      const c     = nodeColor(displayScore);
       const isSelected = city.id === selectedCityId;
       const size  = isSelected ? 18 : Math.max(10, Math.min(20, 8 + city.totalHosts / 20));
       const badges = buildSourceBadges(city.sources);
-      const totalH = size + (badges ? 10 : 0);
+      const totalH = size + (badges ? 14 : 0);
 
       const icon = L.divIcon({
         className: '',
@@ -161,12 +182,11 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
 
       const marker = L.marker([city.lat, city.lng], { icon })
         .bindTooltip(`
-          <div style="font-family:monospace;font-size:11px;background:#000d07;border:1px solid ${c}40;border-radius:8px;padding:8px 12px;color:#fff">
-            <div style="font-weight:800;color:${c};margin-bottom:4px">${city.name.toUpperCase()}</div>
-            <div>Score: <b style="color:${c}">${Math.round(city.score)}</b></div>
+          <div style="font-family:monospace;font-size:11px;background:#000d07;border:1px solid ${c}40;border-radius:8px;padding:8px 12px;color:#fff;min-width:160px">
+            <div style="font-weight:800;color:${c};margin-bottom:5px">${city.name.toUpperCase()}</div>
+            <div>Score: <b style="color:${c}">${Math.round(displayScore)}</b>${city.priorityScore != null && city.priorityScore !== city.score ? ` <span style="opacity:0.45;font-size:9px">(avg ${Math.round(city.score)})</span>` : ''}</div>
             <div>Hosts: ${city.online}↑ ${city.offline > 0 ? `<span style="color:${R}">${city.offline}↓</span>` : ''}</div>
-            <div>Sitios: ${city.sites?.length || 0}</div>
-            ${city.sources?.length ? `<div style="margin-top:4px;opacity:0.7">${city.sources.join(' · ')}</div>` : ''}
+            ${city.sources?.length ? `<div style="margin-top:5px;border-top:1px solid ${c}20;padding-top:4px;font-size:10px">${buildSourceTooltip(city.sources, city.sourceScores)}</div>` : ''}
           </div>`, {
           className: 'noc-tooltip',
           permanent: false,

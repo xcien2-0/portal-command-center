@@ -68,7 +68,7 @@ class OdooConnector:
 
     def search_read(self, model: str, domain: List = [], fields: List = [], limit: int = 80) -> List[Dict]:
         """Busca y lee registros"""
-        result = self.execute(model, 'search_read', domain, {'fields': fields, 'limit': limit})
+        result = self.execute(model, 'search_read', [domain], **{'fields': fields, 'limit': limit})
         return result if result else []
 
 odoo_conn = OdooConnector()

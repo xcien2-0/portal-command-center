@@ -1529,6 +1529,9 @@ def get_noc_cities():
         city_canon = _canonical.get(_norm_city(city), city)
         city_sites[city_canon][site].append(h)
 
+    # Prioridad de fuente para el score ponderado (mayor = más crítico)
+    _SOURCE_PRIORITY = {"Energía": 3, "Datos": 2, "WL/WISPI": 1}
+
     cities = []
     for city_name, sites_dict in city_sites.items():
         city_hosts_all = [h for hs in sites_dict.values() for h in hs]
@@ -1537,6 +1540,19 @@ def get_noc_cities():
         offline = sum(1 for h in city_hosts_all if _host_status(h) == "offline")
         scores  = [h.get("health_score") or h.get("healthScore", 0) for h in city_hosts_all]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0
+
+        # Score ponderado por prioridad de fuente
+        w_sum = w_total = 0.0
+        src_buckets: dict = {}
+        for h in city_hosts_all:
+            src = h.get("_source", "")
+            s   = h.get("health_score") or h.get("healthScore", 0)
+            w   = _SOURCE_PRIORITY.get(src, 1)
+            w_sum   += s * w
+            w_total += w
+            src_buckets.setdefault(src, []).append(s)
+        priority_score = round(w_sum / w_total, 1) if w_total else avg_score
+        source_scores  = {src: round(sum(v)/len(v), 1) for src, v in src_buckets.items() if v and src}
         city_alerts = sum(1 for a in active_alerts if a.get("city") == city_name and a.get("severity") == "critical")
         coord = COORDS.get(city_name) or COORDS.get(_canonical.get(_norm_city(city_name), ""))
         if not coord:
@@ -1571,15 +1587,17 @@ def get_noc_cities():
             "id":          city_name.lower().replace(" ", "-"),
             "name":        city_name,
             "primary_ip":  city_hosts_all[0].get("ip") if city_hosts_all else "0.0.0.0",
-            "score":       avg_score,
-            "totalHosts":  total,
-            "online":      online,
-            "offline":     offline,
-            "alerts":      city_alerts,
-            "lat":         coord["lat"],
-            "lng":         coord["lng"],
-            "sources":     city_sources,
-            "sites":       sites_list,
+            "score":         avg_score,
+            "priorityScore": priority_score,
+            "sourceScores":  source_scores,
+            "totalHosts":    total,
+            "online":        online,
+            "offline":       offline,
+            "alerts":        city_alerts,
+            "lat":           coord["lat"],
+            "lng":           coord["lng"],
+            "sources":       city_sources,
+            "sites":         sites_list,
         })
 
     return sorted(cities, key=lambda c: c["offline"], reverse=True)

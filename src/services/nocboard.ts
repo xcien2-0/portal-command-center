@@ -26,7 +26,9 @@ function transformCity(raw: any): NOCCity {
     alerts:     raw.alertas    ?? raw.alerts ?? (offline > 0 ? offline : 0),
     lat:        raw.lat        ?? 0,
     lng:        raw.lng        ?? 0,
-    sources:    Array.isArray(raw.sources) ? raw.sources : [],
+    sources:       Array.isArray(raw.sources) ? raw.sources : [],
+    priorityScore: typeof raw.priorityScore === 'number' ? raw.priorityScore : undefined,
+    sourceScores:  raw.sourceScores && typeof raw.sourceScores === 'object' ? raw.sourceScores : undefined,
     sites: sitesRaw.map(siteName => ({
       id:          siteName,
       name:        siteName,

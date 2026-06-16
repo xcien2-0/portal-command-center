@@ -773,121 +773,97 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#000d06' }}>
 
-      {/* Header */}
+      {/* Header minimalista — fila única */}
       <div style={{
-        padding: '12px 20px', borderBottom: '1px solid rgba(0,255,136,0.1)',
-        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+        padding: '6px 14px', borderBottom: '1px solid rgba(0,255,136,0.08)',
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        minHeight: 38,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Radio size={18} color={COLOR_ONLINE} />
-          <span style={{ color: COLOR_ONLINE, fontWeight: 700, fontSize: 15 }}>Mapa de Red</span>
+        {/* Título + stats inline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <Radio size={13} color={COLOR_ONLINE} />
+          <span style={{ color: COLOR_ONLINE, fontWeight: 700, fontSize: 12 }}>Red</span>
         </div>
 
-        {/* KPIs */}
-        <div style={{ display: 'flex', gap: 20, flex: 1 }}>
-          {[
-            { label: 'Dispositivos', val: visible.length,  color: 'rgba(255,255,255,0.7)' },
-            { label: 'Online',       val: online,           color: COLOR_ONLINE },
-            { label: 'Offline',      val: offline,          color: COLOR_OFFLINE },
-            { label: 'Uptime',       val: `${uptime}%`,     color: uptime >= 85 ? COLOR_ONLINE : COLOR_WARN },
-            { label: 'Ciudades',     val: cities.length,    color: 'rgba(255,255,255,0.5)' },
-            { label: 'Links',        val: topoLinks.length, color: '#3b82f6' },
-            { label: 'Servicios',    val: odooServicios.filter(s => s.estado === 'active').length, color: '#00A859' },
-          ].map(k => (
-            <div key={k.label} style={{ textAlign: 'center' }}>
-              <div style={{ color: k.color, fontWeight: 700, fontSize: 17 }}>{k.val}</div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{k.label}</div>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11 }}>
+          <span style={{ color: 'rgba(255,255,255,0.55)' }}>{visible.length} disp</span>
+          <span style={{ color: COLOR_ONLINE, fontWeight: 600 }}>{online}↑</span>
+          {offline > 0 && <span style={{ color: COLOR_OFFLINE, fontWeight: 600 }}>{offline}↓</span>}
+          <span style={{ color: uptime >= 85 ? COLOR_ONLINE : COLOR_WARN, fontWeight: 600 }}>{uptime}%</span>
+          <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>{cities.length} ciu</span>
+          {topoLinks.length > 0 && <span style={{ color: '#3b82f6' }}>{topoLinks.length} links</span>}
+          {odooServicios.length > 0 && <span style={{ color: '#00A859' }}>{odooServicios.filter(s => s.estado === 'active').length} svc</span>}
+        </div>
+
+        {/* Separador */}
+        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+        {/* Vista toggle — compacto */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: 2, gap: 1, flexShrink: 0 }}>
+          {([
+            { id: 'map',       icon: <Radio size={11} />,    label: 'Mapa',      c: COLOR_ONLINE },
+            { id: 'graph',     icon: <Share2 size={11} />,   label: 'Grafo',     c: '#00aff0' },
+            { id: 'dashboard', icon: <Activity size={11} />, label: 'Nacional',  c: '#00A651' },
+          ] as const).map(v => (
+            <button key={v.id} onClick={() => setMainView(v.id)} style={{
+              padding: '3px 9px', borderRadius: 4, fontSize: 10, cursor: 'pointer', border: 'none',
+              background: mainView === v.id ? `${v.c}18` : 'transparent',
+              color: mainView === v.id ? v.c : 'rgba(255,255,255,0.3)',
+              display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.12s',
+            }}>
+              {v.icon} {v.label}
+            </button>
           ))}
         </div>
 
-        {/* Vista toggle */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, gap: 2 }}>
-          <button onClick={() => setMainView('map')} style={{
-            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
-            background: mainView === 'map' ? 'rgba(0,255,136,0.15)' : 'transparent',
-            color: mainView === 'map' ? COLOR_ONLINE : 'rgba(255,255,255,0.35)',
-            display: 'flex', alignItems: 'center', gap: 5,
-          }}>
-            <Radio size={12} /> Mapa
-          </button>
-          <button onClick={() => setMainView('graph')} style={{
-            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
-            background: mainView === 'graph' ? 'rgba(0,175,240,0.15)' : 'transparent',
-            color: mainView === 'graph' ? '#00aff0' : 'rgba(255,255,255,0.35)',
-            display: 'flex', alignItems: 'center', gap: 5,
-          }}>
-            <Share2 size={12} /> Grafo completo
-          </button>
-          <button onClick={() => setMainView('dashboard')} style={{
-            padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', border: 'none',
-            background: mainView === 'dashboard' ? 'rgba(0,166,81,0.15)' : 'transparent',
-            color: mainView === 'dashboard' ? '#00A651' : 'rgba(255,255,255,0.35)',
-            display: 'flex', alignItems: 'center', gap: 5,
-          }}>
-            <Activity size={12} /> Dashboard Nacional
-          </button>
-        </div>
+        {/* Separador */}
+        <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
-        {/* ── Capas de Monitoreo — solo en vista mapa ── */}
-        {mainView === 'map' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: 1, textTransform: 'uppercase', marginRight: 2 }}>Capas</span>
-            {([
-              { key: 'nocboard',          label: 'NOCBoard',          color: '#00ff88', active: true,        locked: false, count: hosts.filter(h=>h.status==='online').length + '/' + hosts.length },
-              { key: 'nocboard_wireless', label: 'NOCBoard Wireless', color: '#3b82f6', active: showDevices,  locked: false, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length },
-              { key: 'nocboard_core',     label: 'NOCBoard Core',     color: '#ff3366', active: showTopo,     locked: false, count: hosts.filter(h=>h.status==='offline').length },
-              { key: 'nocboard_energy',   label: 'NOCBoard Energy',   color: '#ffcc00', active: false,        locked: true,  count: null },
-              { key: 'onnet',             label: 'OnNet',             color: '#00A859', active: showInnet,    locked: false, count: null },
-              { key: 'offnet',            label: 'OffNet',            color: '#ff3366', active: showOffnet,   locked: false, count: null },
-              { key: 'inter',             label: 'Intercompañía',     color: '#a855f7', active: showInter,    locked: false, count: null },
-              { key: 'sinclasificar',     label: 'Sin clasificar',    color: '#f59e0b', active: showSinClas,  locked: false, count: null },
-              { key: 'prtg',              label: 'PRTG',              color: '#f97316', active: false,        locked: true,  count: null },
-            ] as const).map(layer => (
-              <button
-                key={layer.key}
-                disabled={layer.locked}
-                onClick={() => {
-                  if (layer.key === 'nocboard_wireless') setShowDevices(p => !p);
-                  else if (layer.key === 'nocboard_core') setShowTopo(p => !p);
-                  else if (layer.key === 'onnet')         setShowInnet(p => !p);
-                  else if (layer.key === 'offnet')        setShowOffnet(p => !p);
-                  else if (layer.key === 'inter')         setShowInter(p => !p);
-                  else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
-                }}
-                title={layer.locked ? 'Pendiente de configurar' : undefined}
-                style={{
-                  padding: '5px 12px', borderRadius: 20, fontSize: 11, cursor: layer.locked ? 'not-allowed' : 'pointer',
-                  background: layer.active ? `${layer.color}18` : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${layer.active ? layer.color : 'rgba(255,255,255,0.12)'}`,
-                  color: layer.locked ? 'rgba(255,255,255,0.2)' : layer.active ? layer.color : 'rgba(255,255,255,0.45)',
-                  display: 'flex', alignItems: 'center', gap: 5, opacity: layer.locked ? 0.5 : 1,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: layer.active ? layer.color : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
-                {layer.label}
-                {layer.count !== null && (
-                  <span style={{ background: `${layer.color}20`, borderRadius: 8, padding: '0 5px', fontSize: 10 }}>{layer.count}</span>
-                )}
-                {layer.locked && <span style={{ fontSize: 9, opacity: 0.5 }}>●</span>}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Capas — solo mapa, etiquetas cortas */}
+        {mainView === 'map' && ([
+          { key: 'nocboard',    label: 'NOC',      color: '#00ff88', active: true,        count: `${hosts.filter(h=>h.status==='online').length}/${hosts.length}` },
+          { key: 'wireless',    label: 'Wireless',  color: '#3b82f6', active: showDevices, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length || null },
+          { key: 'core',        label: 'Core',      color: '#ff3366', active: showTopo,    count: offline > 0 ? offline : null },
+          { key: 'onnet',       label: 'OnNet',     color: '#00A859', active: showInnet,   count: null },
+          { key: 'offnet',      label: 'OffNet',    color: '#ff3366', active: showOffnet,  count: null },
+          { key: 'inter',       label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
+          { key: 'sinclasificar', label: 'Sin cls', color: '#f59e0b', active: showSinClas, count: null },
+        ] as const).map(layer => (
+          <button key={layer.key}
+            onClick={() => {
+              if (layer.key === 'wireless')      setShowDevices(p => !p);
+              else if (layer.key === 'core')     setShowTopo(p => !p);
+              else if (layer.key === 'onnet')    setShowInnet(p => !p);
+              else if (layer.key === 'offnet')   setShowOffnet(p => !p);
+              else if (layer.key === 'inter')    setShowInter(p => !p);
+              else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
+            }}
+            style={{
+              padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
+              background: layer.active ? `${layer.color}15` : 'transparent',
+              border: `1px solid ${layer.active ? layer.color + '80' : 'rgba(255,255,255,0.1)'}`,
+              color: layer.active ? layer.color : 'rgba(255,255,255,0.35)',
+              display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.12s', flexShrink: 0,
+            }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: layer.active ? layer.color : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+            {layer.label}
+            {layer.count !== null && layer.count !== 0 && (
+              <span style={{ color: layer.color, fontWeight: 700, fontSize: 9 }}>{layer.count}</span>
+            )}
+          </button>
+        ))}
 
-
-        {/* Refresh */}
-        <button
-          onClick={() => { setLoading(true); cargar(); }}
+        {/* Refresh — solo ícono */}
+        <button onClick={() => { setLoading(true); cargar(); }}
+          title={lastUpdate ? lastUpdate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Actualizar'}
           style={{
-            padding: '6px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-            background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.2)',
-            color: COLOR_ONLINE, display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          {lastUpdate ? lastUpdate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '...'}
+            marginLeft: 'auto', padding: '4px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+            background: 'transparent', border: '1px solid rgba(0,255,136,0.15)',
+            color: 'rgba(0,255,136,0.5)', display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+          <RefreshCw size={11} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+          {lastUpdate ? lastUpdate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '—'}
         </button>
       </div>
 
