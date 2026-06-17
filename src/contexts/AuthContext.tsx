@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthUser {
   id: string;
@@ -94,26 +93,10 @@ export function useAuth() {
   return ctx;
 }
 
+// AUTH_GATE_DESACTIVADO_TEMPORALMENTE: a petición del usuario (pedía la contraseña
+// cada vez). Para reactivar el gate, restaurar el cuerpo original de esta función
+// (redirige a /login si no hay sesión) — login/token/authFetch siguen intactos.
 /** HOC: redirige a /login si no hay sesión, conservando la ruta de origen */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login', { replace: true, state: { from: location.pathname + location.search } });
-    }
-  }, [user, loading, navigate, location]);
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #00C896', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-  if (!user) return null;
   return <>{children}</>;
 }

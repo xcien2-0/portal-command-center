@@ -106,7 +106,7 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
       });
 
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
         { subdomains: 'abcd', maxZoom: 18 }
       ).addTo(map);
 

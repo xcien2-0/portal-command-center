@@ -22,6 +22,8 @@ import CommandPalette from './sections/CommandPalette';
 import InicioRol from './sections/InicioRol';
 import { useNotificaciones } from '../../hooks/useNotificaciones';
 import { useAuth } from '../../contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Menu, X as CloseIcon } from 'lucide-react';
 
 // ── Secciones lazy — se cargan solo cuando el usuario las abre ────────────────
 const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
@@ -194,9 +196,12 @@ interface SidebarProps {
   backendStatus: 'online' | 'offline';
   collapsed: boolean;
   onToggleCollapse: () => void;
+  isMobile?: boolean;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse }: SidebarProps) {
+function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse, isMobile, mobileOpen, onMobileClose }: SidebarProps) {
   const groups = useMemo(() => {
     const grouped: { label: string | null; items: NavEntry[] }[] = [];
     let current: NavEntry[] = [];
@@ -213,9 +218,31 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
     return grouped;
   }, []);
 
+  const mobileStyle: React.CSSProperties = isMobile ? {
+    position: 'fixed',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 250,
+    maxWidth: '82vw',
+    transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+    transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+    boxShadow: mobileOpen ? '4px 0 24px rgba(0,0,0,0.4)' : 'none',
+    paddingTop: 'env(safe-area-inset-top)',
+    paddingBottom: 'env(safe-area-inset-bottom)',
+  } : {};
+  const effCollapsed = isMobile ? false : collapsed;
+
   return (
+    <>
+    {isMobile && mobileOpen && (
+      <div
+        onClick={onMobileClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }}
+      />
+    )}
     <div style={{
-      width: collapsed ? 56 : 220,
+      width: isMobile ? 250 : (collapsed ? 56 : 220),
       flexShrink: 0,
       background: U.sidebar,
       borderRight: `1px solid ${U.border}`,
@@ -225,20 +252,23 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
       overflow: 'hidden',
       position: 'relative',
       zIndex: 200,
+      ...mobileStyle,
     }}>
       {/* Logo bar */}
       <div style={{
         height: 56,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 10,
         padding: '0 16px',
         borderBottom: `1px solid ${U.border}`,
         flexShrink: 0,
         overflow: 'hidden',
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
         <img src={brand.logo} alt={brand.name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: U.text, letterSpacing: -0.3 }}>{brand.name}</span>
             <span style={{
@@ -248,6 +278,20 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
             }}>{brand.version}</span>
           </div>
         )}
+        </div>
+        {isMobile && (
+          <button
+            onClick={onMobileClose}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 40, height: 40, flexShrink: 0,
+              background: 'transparent', border: 'none', color: U.dim, cursor: 'pointer',
+            }}
+            title="Cerrar menú"
+          >
+            <CloseIcon size={18} />
+          </button>
+        )}
       </div>
 
       {/* Nav items */}
@@ -256,7 +300,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
           <div key={label ?? '__root__'}>
             {/* Group separator / label */}
             {label && (
-              collapsed
+              collapsed && !isMobile
                 ? <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', margin: '6px 8px' }} />
                 : <div style={{
                     padding: '10px 16px 3px',
@@ -274,15 +318,15 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
               return (
                 <button
                   key={item.id}
-                  onClick={() => onSelect(item.id)}
-                  title={collapsed ? item.label : undefined}
+                  onClick={() => { onSelect(item.id); if (isMobile && onMobileClose) onMobileClose(); }}
+                  title={effCollapsed ? item.label : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    justifyContent: effCollapsed ? 'center' : 'flex-start',
                     gap: 10,
                     width: '100%',
-                    padding: collapsed ? '10px 0' : '8px 14px',
+                    padding: effCollapsed ? '10px 0' : (isMobile ? '12px 14px' : '8px 14px'),
                     background: isActive ? U.active : 'transparent',
                     borderTop: 'none',
                     borderRight: 'none',
@@ -305,9 +349,9 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
                     if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
                   }}
                 >
-                  <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
-                  {!collapsed && (
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <Icon size={isMobile ? 17 : 15} strokeWidth={isActive ? 2.2 : 1.8} />
+                  {!effCollapsed && (
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: isMobile ? 13 : 12 }}>
                       {item.label}
                     </span>
                   )}
@@ -321,7 +365,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
       {/* Footer */}
       <div style={{ borderTop: `1px solid ${U.border}`, flexShrink: 0 }}>
         {/* User */}
-        {!collapsed && (
+        {!effCollapsed && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '10px 14px',
@@ -348,34 +392,37 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse 
           </div>
         )}
 
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggleCollapse}
-          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-end',
-            gap: 6,
-            width: '100%',
-            padding: collapsed ? '12px 0' : '10px 14px',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            color: U.dim,
-            fontSize: 11,
-            transition: 'color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = U.text}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = U.dim}
-        >
-          {collapsed
-            ? <ChevronRight size={15} />
-            : <><span>Colapsar</span><ChevronLeft size={15} /></>
-          }
-        </button>
+        {/* Collapse toggle — no aplica en móvil, ahí se cierra con el backdrop o la X */}
+        {!isMobile && (
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-end',
+              gap: 6,
+              width: '100%',
+              padding: collapsed ? '12px 0' : '10px 14px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: U.dim,
+              fontSize: 11,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = U.text}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = U.dim}
+          >
+            {collapsed
+              ? <ChevronRight size={15} />
+              : <><span>Colapsar</span><ChevronLeft size={15} /></>
+            }
+          </button>
+        )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -446,14 +493,16 @@ function Content({
   section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
   cities, alerts, activeTenantId, onTenantChange, bridgeData, onNocRefresh, backendStatus, odooStatus, observiumStatus, onSelect
 }: ContentProps & { backendStatus: 'online' | 'offline', odooStatus: 'conectado' | 'desconectado', observiumStatus: 'conectado' | 'desconectado', onSelect: (id: SectionId) => void }) {
-  const padding = theme.compact ? 20 : 32;
+  const isMobile = useIsMobile();
+  const padding = isMobile ? 16 : (theme.compact ? 20 : 32);
   const isFullHeight = section === 'red';
   return (
     <div style={{
       flex: 1, overflowY: isFullHeight ? 'hidden' : 'auto',
       padding: isFullHeight ? 0 : padding,
-      background: theme.bg, minWidth: 0,
+      background: theme.bg, minWidth: 0, width: '100%',
       display: 'flex', flexDirection: 'column',
+      paddingBottom: isFullHeight ? 0 : `calc(${padding}px + env(safe-area-inset-bottom))`,
     }}>
       <Suspense fallback={<SectionSpinner />}>
       {section === 'inicio'   && <InicioRol theme={theme} onNavigate={onSelect} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} />}
@@ -703,7 +752,9 @@ function MobileAccessSection({ theme }: { theme: ThemeConfig }) {
 export default function Xcien2Page() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiar } = useNotificaciones();
@@ -844,14 +895,21 @@ export default function Xcien2Page() {
         backendStatus={backendStatus}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(p => !p)}
+        isMobile={isMobile}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        {/* UISP-style top header — 48px */}
+        {/* UISP-style top header — 48px (+ safe-area iOS en standalone) */}
         <header style={{
           height: 48,
+          paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
+          minHeight: isMobile ? 'calc(48px + env(safe-area-inset-top))' : 48,
           flexShrink: 0,
-          padding: '0 20px',
+          padding: isMobile
+            ? 'env(safe-area-inset-top) 12px 0 12px'
+            : '0 20px',
           borderBottom: `1px solid ${U.border}`,
           display: 'flex',
           alignItems: 'center',
@@ -861,39 +919,55 @@ export default function Xcien2Page() {
           top: 0,
           zIndex: 100,
         }}>
-          {/* Left: breadcrumb + search trigger */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: U.dim }}>{brand.name} {brand.version}</span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>/</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: U.text }}>
+          {/* Left: hamburger (móvil) + breadcrumb + search trigger */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+            {isMobile && (
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 40, height: 40, flexShrink: 0,
+                  background: 'rgba(255,255,255,0.04)', border: `1px solid ${U.border}`,
+                  borderRadius: 8, color: U.text, cursor: 'pointer', marginRight: 2,
+                }}
+                title="Abrir menú"
+              >
+                <Menu size={18} />
+              </button>
+            )}
+            {!isMobile && <span style={{ fontSize: 11, color: U.dim }}>{brand.name} {brand.version}</span>}
+            {!isMobile && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>/</span>}
+            <span style={{ fontSize: 12, fontWeight: 600, color: U.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
               {SECTION_TITLE[section]}
             </span>
-            <button
-              onClick={() => setCmdPaletteOpen(true)}
-              style={{
-                marginLeft: 12,
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '4px 12px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 8, cursor: 'pointer', color: U.dim,
-                fontSize: 11, fontFamily: 'inherit',
-                transition: 'all 0.15s',
-              }}
-              title="Búsqueda global (Cmd+K)"
-            >
-              <span style={{ opacity: 0.6 }}>🔍</span>
-              <span>Buscar…</span>
-              <kbd style={{ padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 9, fontFamily: 'monospace', color: '#6b7280' }}>⌘K</kbd>
-            </button>
+            {!isMobile && (
+              <button
+                onClick={() => setCmdPaletteOpen(true)}
+                style={{
+                  marginLeft: 12,
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '4px 12px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8, cursor: 'pointer', color: U.dim,
+                  fontSize: 11, fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                }}
+                title="Búsqueda global (Cmd+K)"
+              >
+                <span style={{ opacity: 0.6 }}>🔍</span>
+                <span>Buscar…</span>
+                <kbd style={{ padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 9, fontFamily: 'monospace', color: '#6b7280' }}>⌘K</kbd>
+              </button>
+            )}
           </div>
 
           {/* Right: status + alerts + user */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {/* Backend status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6, flexShrink: 0 }}>
+            {/* Backend status — en móvil solo el punto, sin texto, para ahorrar espacio */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 10px',
+              padding: isMobile ? 6 : '4px 10px',
               background: backendStatus === 'online' ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
               border: `1px solid ${backendStatus === 'online' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
               borderRadius: 20,
@@ -903,13 +977,15 @@ export default function Xcien2Page() {
                 background: backendStatus === 'online' ? '#22c55e' : '#ef4444',
                 boxShadow: backendStatus === 'online' ? '0 0 6px #22c55e' : 'none',
               }} />
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: backendStatus === 'online' ? '#22c55e' : '#ef4444',
-                letterSpacing: 0.5,
-              }}>
-                {backendStatus === 'online' ? 'EN LÍNEA' : 'OFFLINE'}
-              </span>
+              {!isMobile && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700,
+                  color: backendStatus === 'online' ? '#22c55e' : '#ef4444',
+                  letterSpacing: 0.5,
+                }}>
+                  {backendStatus === 'online' ? 'EN LÍNEA' : 'OFFLINE'}
+                </span>
+              )}
             </div>
 
             {/* Alerts bell */}
@@ -940,17 +1016,19 @@ export default function Xcien2Page() {
               )}
             </button>
 
-            {/* Live pulse */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 10px',
-              background: 'rgba(0,175,240,0.06)',
-              border: '1px solid rgba(0,175,240,0.15)',
-              borderRadius: 20,
-            }}>
-              <Activity size={11} color={U.accent} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: U.accent, letterSpacing: 0.5 }}>LIVE</span>
-            </div>
+            {/* Live pulse — oculto en móvil para no saturar el header */}
+            {!isMobile && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px',
+                background: 'rgba(0,175,240,0.06)',
+                border: '1px solid rgba(0,175,240,0.15)',
+                borderRadius: 20,
+              }}>
+                <Activity size={11} color={U.accent} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: U.accent, letterSpacing: 0.5 }}>LIVE</span>
+              </div>
+            )}
 
             {/* Notification bell */}
             <button
@@ -982,9 +1060,10 @@ export default function Xcien2Page() {
               )}
             </button>
 
-            {/* User badge real */}
+            {/* User badge real — en móvil solo el avatar, sin nombre/rol */}
             {user && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginLeft: 4 }}>
+                {!isMobile && (
                 <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
                   <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#e5e7eb' }}>
                     {user.nombre.split(' ').slice(0, 2).join(' ')}
@@ -993,6 +1072,7 @@ export default function Xcien2Page() {
                     {user.rol}
                   </p>
                 </div>
+                )}
                 <div style={{
                   width: 30, height: 30, borderRadius: '50%',
                   background: `linear-gradient(135deg, ${U.accent}, #00ff88)`,

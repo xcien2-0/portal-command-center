@@ -1435,12 +1435,10 @@ def get_noc_hosts():
         for h in hosts
     ]
 
-@app.get("/api/noc/cities")
-def get_noc_cities():
-    hosts, alerts = _get_enriched_noc_data()
-
-    active_alerts = [a for a in alerts if a.get("state") == "active"]
-
+def _aggregate_hosts_to_cities(hosts: list, active_alerts: list) -> list:
+    """Agrupa una lista de hosts (de uno o varios NOCBoards) por ciudad, con
+    coordenadas, scores y conteos — mismo formato que /api/noc/cities. Reusable
+    para graficar capas individuales (ej. solo Energía) en el mapa."""
     # Coordenadas por ciudad (con y sin acentos para tolerar variantes de NOCBoard)
     COORDS = {
         "Monterrey":          {"lat": 25.6866,  "lng": -100.3161},
@@ -1601,6 +1599,31 @@ def get_noc_cities():
         })
 
     return sorted(cities, key=lambda c: c["offline"], reverse=True)
+
+@app.get("/api/noc/cities")
+def get_noc_cities():
+    hosts, alerts = _get_enriched_noc_data()
+    active_alerts = [a for a in alerts if a.get("state") == "active"]
+    return _aggregate_hosts_to_cities(hosts, active_alerts)
+
+@app.get("/api/noc/boards/{board_id}/cities")
+def get_board_cities(board_id: str):
+    """Hosts de un NOCBoard específico (ej. Energía), agregados por ciudad con
+    coordenadas — para graficar esa capa sola en el mapa de NOC Virtual."""
+    if board_id not in ("wl", "datos", "energia", "cxdatos", "cx", "central"):
+        raise HTTPException(status_code=400, detail="board_id inválido")
+    proxy_base = NOCBOARD_API_BASE[:-4] if NOCBOARD_API_BASE.endswith("/api") else NOCBOARD_API_BASE
+    try:
+        r = requests.get(f"{proxy_base}/{board_id}/api/hosts", timeout=8)
+        if not r.ok:
+            raise HTTPException(status_code=503, detail=f"Board {board_id} no disponible")
+        hosts = r.json().get("hosts", [])
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"get_board_cities {board_id} error: {e}")
+        raise HTTPException(status_code=503, detail=f"No se pudo obtener hosts de {board_id}")
+    return _aggregate_hosts_to_cities(hosts, [])
 
 @app.get("/api/noc/alerts")
 def get_noc_alerts(active_only: bool = True, limit: int = 200):

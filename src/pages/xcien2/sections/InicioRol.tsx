@@ -11,6 +11,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { API_BASE } from '../../../config';
 import brand from '../../../brand';
 import type { ThemeConfig, SectionId } from '../types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Props {
   theme: ThemeConfig;
@@ -96,6 +97,7 @@ function SectionBtn({ icon, label, desc, color, onClick }:
 // ─── Vista: Director / Admin ───────────────────────────────────────────────────
 
 function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
+  const isMobile = useIsMobile();
   const [nocStats, setNocStats]     = useState<Record<string, number> | null>(null);
   const [wfmStats, setWfmStats]     = useState<Record<string, number> | null>(null);
   const [acadStats, setAcadStats]   = useState<Record<string, number> | null>(null);
@@ -123,29 +125,30 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       {/* Greeting */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f9fafb' }}>Buenos días, Director</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: C.dim }}>{brand.name} · Centro de Mando · {hora} hrs</p>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Buenos días, Director</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>{brand.name} · Centro de Mando · {hora} hrs</p>
         </div>
         <button onClick={() => onNavigate('war-room')} style={{
           padding: '10px 20px', borderRadius: 10, background: 'rgba(124,58,237,0.15)',
           border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa',
           fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          width: isMobile ? '100%' : 'auto',
         }}>⚔️ Abrir War Room</button>
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 14 }}>
         <KPICard label="Salud de Red" value={nocStats ? `${nocStats.uptime_pct ?? 0}%` : '—'} sub={nocStats ? `${nocStats.up}/${nocStats.total} nodos` : 'cargando'} color={nocStats && (nocStats.uptime_pct ?? 0) >= 90 ? C.green : C.yellow} icon="📡" onClick={() => onNavigate('noc')} />
         <KPICard label="Tickets Abiertos" value={wfmStats?.abiertos ?? '—'} sub={`${wfmStats?.urgentes ?? 0} urgentes`} color={wfmStats && (wfmStats.urgentes ?? 0) > 0 ? C.yellow : C.green} icon="⚙️" onClick={() => onNavigate('wfm')} />
         <KPICard label="Avance Academia" value={acadStats ? `${acadStats.avance_global ?? 0}%` : '—'} sub={`${acadStats?.total_tecnicos ?? 0} técnicos`} color={C.green} icon="🎓" onClick={() => onNavigate('academia')} />
         <KPICard label="MRR" value={ventas?.mrr ? `$${Number(ventas.mrr).toLocaleString()}` : '—'} sub="Ingresos recurrentes" color={C.blue} icon="📈" onClick={() => onNavigate('ventas')} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
         {/* Alertas críticas */}
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -189,6 +192,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
 // ─── Vista: Técnico ────────────────────────────────────────────────────────────
 
 function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onNavigate: (id: SectionId) => void }) {
+  const isMobile = useIsMobile();
   const [perfil, setPerfil]   = useState<{ avgPct: number; rank: number; total: number; cursos: number; completados: number } | null>(null);
   const [tickets, setTickets] = useState<{ id: number; name: string; priority: string; stage: string }[]>([]);
 
@@ -256,14 +260,14 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
     : LEVELS[0];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       {/* Greeting */}
       <div>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f9fafb' }}>Hola, {nombreTecnico.split(' ')[0]} 👋</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 13, color: C.dim }}>Técnico de Campo · {brand.name}</p>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Hola, {nombreTecnico.split(' ')[0]} 👋</h1>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>Técnico de Campo · {brand.name}</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
         {/* Perfil Academia */}
         <Card style={{ background: 'linear-gradient(135deg, #0d1117 0%, #111827 100%)' }}>
           <p style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>🎓 Mi Progreso Academia</p>
@@ -328,6 +332,7 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
 // ─── Vista: NOC Operator ──────────────────────────────────────────────────────
 
 function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
+  const isMobile = useIsMobile();
   const [stats, setStats]   = useState<Record<string, number> | null>(null);
   const [alertas, setAlertas] = useState<{ id: string; entity: string; severity: string; message: string }[]>([]);
 
@@ -343,15 +348,15 @@ function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   const crits = alertas.filter(a => ['critical', 'high'].includes(a.severity.toLowerCase()));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f9fafb' }}>Centro NOC</h1>
-        <button onClick={() => onNavigate('noc')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Centro NOC</h1>
+        <button onClick={() => onNavigate('noc')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
           Ver NOC completo →
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 14 }}>
         <KPICard label="Uptime" value={stats ? `${stats.uptime_pct ?? 0}%` : '—'} sub={`${stats?.up ?? 0}/${stats?.total ?? 0} nodos`} color={(stats?.uptime_pct ?? 0) >= 95 ? C.green : (stats?.uptime_pct ?? 0) >= 80 ? C.yellow : C.red} icon="📡" onClick={() => onNavigate('noc')} />
         <KPICard label="Alertas Críticas" value={crits.length} sub="activas ahora" color={crits.length > 0 ? C.red : C.green} icon="🔴" onClick={() => onNavigate('noc')} />
         <KPICard label="Mapa de Red" value="Ver" sub="Topología en vivo" color={C.blue} icon="🗺️" onClick={() => onNavigate('red')} />
@@ -393,6 +398,7 @@ function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
 // ─── Vista: WFM Operator ──────────────────────────────────────────────────────
 
 function HomeWFM({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
+  const isMobile = useIsMobile();
   const [kpis, setKpis]   = useState<Record<string, number> | null>(null);
   const [tickets, setTickets] = useState<{ id: number; name: string; priority: string; stage: string; partner: string }[]>([]);
 
@@ -411,15 +417,15 @@ function HomeWFM({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   const normales  = tickets.filter(t => t.priority !== '1');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f9fafb' }}>Control WFM</h1>
-        <button onClick={() => onNavigate('wfm')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(255,183,3,0.1)', border: '1px solid rgba(255,183,3,0.3)', color: C.yellow, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Control WFM</h1>
+        <button onClick={() => onNavigate('wfm')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(255,183,3,0.1)', border: '1px solid rgba(255,183,3,0.3)', color: C.yellow, fontSize: 13, fontWeight: 700, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
           Control operativo →
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 14 }}>
         <KPICard label="Total Tickets" value={kpis?.total ?? '—'} sub="en el sistema" color={C.blue} icon="📋" onClick={() => onNavigate('wfm')} />
         <KPICard label="Abiertos" value={kpis?.abiertos ?? '—'} sub="pendientes" color={C.yellow} icon="⏳" onClick={() => onNavigate('wfm')} />
         <KPICard label="Urgentes" value={urgentes.length} sub="requieren atención" color={urgentes.length > 0 ? C.red : C.green} icon="🔥" onClick={() => onNavigate('wfm')} />
@@ -457,6 +463,7 @@ function HomeWFM({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
 
 function HomeGenerico({ onNavigate, backendStatus, odooStatus, observiumStatus }:
   { onNavigate: (id: SectionId) => void; backendStatus: 'online' | 'offline'; odooStatus: string; observiumStatus: string }) {
+  const isMobile = useIsMobile();
 
   const ACCESOS: { icon: string; label: string; desc: string; id: SectionId; color: string }[] = [
     { icon: '📡', label: 'NOC Virtual',      desc: 'Estado de la red en tiempo real', id: 'noc',          color: C.blue   },
@@ -468,30 +475,36 @@ function HomeGenerico({ onNavigate, backendStatus, odooStatus, observiumStatus }
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f9fafb' }}>Centro de Mando</h1>
-        <p style={{ margin: '4px 0 0', fontSize: 13, color: C.dim }}>{brand.name} — Portal de Operaciones</p>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb', letterSpacing: '-0.01em' }}>Centro de Mando</h1>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>{brand.name} — Portal de Operaciones</p>
       </div>
 
       {/* Sistema status */}
-      <Card>
-        <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>Estado de Sistemas</p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <Card style={isMobile ? { padding: 16 } : undefined}>
+        <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#f3f4f6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Estado de Sistemas</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
             { label: 'Backend API', status: backendStatus === 'online', color: C.green },
             { label: 'Odoo ERP', status: odooStatus === 'conectado', color: C.green },
             { label: 'Observium NOC', status: observiumStatus === 'conectado', color: C.green },
           ].map(s => (
-            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRadius: 20, background: s.status ? 'rgba(0,200,150,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${s.status ? 'rgba(0,200,150,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.status ? C.green : C.red, boxShadow: s.status ? `0 0 6px ${C.green}` : 'none' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: s.status ? C.green : C.red }}>{s.label}</span>
+            <div key={s.label} style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: isMobile ? '7px 12px' : '6px 14px', borderRadius: 20,
+              background: s.status ? 'rgba(0,200,150,0.06)' : 'rgba(239,68,68,0.06)',
+              border: `1px solid ${s.status ? 'rgba(0,200,150,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              flex: isMobile ? '1 1 auto' : 'none',
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.status ? C.green : C.red, boxShadow: s.status ? `0 0 6px ${C.green}` : 'none', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: s.status ? C.green : C.red, whiteSpace: 'nowrap' }}>{s.label}</span>
             </div>
           ))}
         </div>
       </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 8 : 10 }}>
         {ACCESOS.map(a => (
           <SectionBtn key={a.id} icon={a.icon} label={a.label} desc={a.desc} color={a.color} onClick={() => onNavigate(a.id)} />
         ))}

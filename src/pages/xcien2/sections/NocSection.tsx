@@ -810,6 +810,21 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
   const [selectedLayer, setSelectedLayer] = useState<LayerId | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [proxyError, setProxyError] = useState<string | null>(null);
+  const [layerCities, setLayerCities] = useState<NOCCity[] | null>(null);
+  const [layerLoading, setLayerLoading] = useState(false);
+
+  // Al seleccionar una capa, graficar solo los hosts de ese NOCBoard en el mapa
+  useEffect(() => {
+    if (!selectedLayer) { setLayerCities(null); return; }
+    let cancelled = false;
+    setLayerLoading(true);
+    fetch(`${API_BASE}/api/noc/boards/${selectedLayer}/cities`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => { if (!cancelled) setLayerCities(data); })
+      .catch(() => { if (!cancelled) setLayerCities([]); })
+      .finally(() => { if (!cancelled) setLayerLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedLayer]);
 
   const fetchBoards = useCallback(async () => {
     try {
@@ -883,17 +898,17 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
                 CAPA: {l.label.toUpperCase()}
               </span>
               <span style={{ fontSize: 10, color: DIM, marginLeft: 4 }}>{l.desc}</span>
-              {b && (
-                <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'monospace', color: b.alive ? G : R }}>
-                  {b.alive ? `● ${b.total_hosts ?? '—'} hosts` : '● offline'}
-                </span>
-              )}
+              <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'monospace', color: layerLoading ? DIM : (b?.alive ? G : R) }}>
+                {layerLoading
+                  ? '● cargando…'
+                  : (layerCities ? `● ${layerCities.length} ciudades graficadas` : (b?.alive ? `● ${b.total_hosts ?? '—'} hosts` : '● offline'))}
+              </span>
             </div>
           );
         })()}
 
         <div style={{ flex: 1, borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20`, minHeight: 0 }}>
-          <RealMap cities={cities} onSelectCity={onSelectCity} selectedCityId={null} />
+          <RealMap cities={layerCities ?? cities} onSelectCity={onSelectCity} selectedCityId={null} />
         </div>
       </div>
 

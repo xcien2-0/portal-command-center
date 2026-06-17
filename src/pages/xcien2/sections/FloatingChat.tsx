@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ThemeConfig, ChatMessage } from '../types';
 import { API_BASE } from '../../../config';
 import brand from '../../../brand';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 async function callDirectorAPI(message: string, history: {role: string, content: string}[], context: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/director/chat`, {
@@ -47,6 +48,22 @@ export default function FloatingChat({ theme, section }: Props) {
     current_task: 'Inactivo', status: 'idle', log: [], last_update: ''
   });
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Altura real visible (se reduce cuando el teclado de iOS sube) — evita que el
+  // teclado tape el input del chat cuando el panel usa una altura fija en vh.
+  const [viewportH, setViewportH] = useState<number>(
+    () => window.visualViewport?.height ?? window.innerHeight
+  );
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const onResize = () => setViewportH(vv?.height ?? window.innerHeight);
+    vv?.addEventListener('resize', onResize);
+    window.addEventListener('resize', onResize);
+    return () => {
+      vv?.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
 
   // Polling for Antigravity Bridge
   useEffect(() => {
@@ -105,11 +122,25 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
 
   const accent = theme.accent;
   const accentGlow = `${accent}30`;
+  const isMobile = useIsMobile();
 
   return (
-    <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+    <div style={{
+      position: 'fixed',
+      bottom: isMobile ? 'calc(16px + env(safe-area-inset-bottom))' : 32,
+      right: isMobile ? 16 : 32,
+      left: isMobile ? 16 : 'auto',
+      zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+    }}>
       {isOpen && (
-        <div style={{ width: 400, height: 650, background: '#0a0a0a', border: `1px solid ${theme.border}`, borderRadius: 16, marginBottom: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', padding: 16 }}>
+        <div style={{
+          width: isMobile ? '100%' : 400,
+          // En móvil usamos la altura real visible (visualViewport), que se
+          // reduce cuando aparece el teclado — así el input nunca queda tapado.
+          height: isMobile ? Math.min(viewportH * 0.7, viewportH - 90) : 650,
+          maxHeight: isMobile ? viewportH - 90 : 650,
+          background: '#0a0a0a', border: `1px solid ${theme.border}`, borderRadius: 16, marginBottom: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', padding: 16,
+        }}>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
@@ -207,7 +238,7 @@ const ts = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-
               borderRadius: theme.radius,
               color: '#00FF65',
               fontWeight: '700',
-              fontSize: '14px',
+              fontSize: isMobile ? '16px' : '14px',
               outline: 'none',
               caretColor: '#00FF65'
             }}
