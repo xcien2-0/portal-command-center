@@ -1738,6 +1738,147 @@ def toggle_noc_board(board_id: str, action: str):
     raise HTTPException(status_code=503, detail="No se pudo cambiar el estado del board")
 
 
+# ─── Energía — UPS / Rectifiers / Inverters (SNMP metrics via NOCBoard) ──────
+
+NOCBOARD_ENERGIA_HOSTS_PATH = os.path.expanduser(
+    "~/Library/Application Support/NOCBoardEnergia/hosts.json"
+)
+NOCBOARD_ENERGIA_API_KEY = "f4f5ef40c4c54aeca1d6a66109e4555d"
+
+def _read_energia_hosts() -> list:
+    try:
+        with open(NOCBOARD_ENERGIA_HOSTS_PATH, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Cannot read NOCBoard Energia hosts.json: {e}")
+        return []
+
+def _fetch_energia_api_hosts() -> list:
+    """Fetch hosts from NOCBoard Energia API, then enrich each with /api/host/:id metrics."""
+    headers = {"X-API-Key": NOCBOARD_ENERGIA_API_KEY}
+    try:
+        r = requests.get("http://localhost:9404/api/hosts", headers=headers, timeout=5)
+        if not r.ok:
+            return []
+        data = r.json()
+        host_list = data.get("hosts", data) if isinstance(data, dict) else data
+    except Exception:
+        return []
+
+    enriched = []
+    for h in host_list:
+        host_id = h.get("id", "")
+        metrics = {}
+        if host_id:
+            try:
+                rd = requests.get(f"http://localhost:9404/api/host/{host_id}", headers=headers, timeout=3)
+                if rd.ok:
+                    detail = rd.json()
+                    metrics = detail.get("metrics", {})
+            except Exception:
+                pass
+        h["_api_metrics"] = metrics
+        enriched.append(h)
+    return enriched
+
+
+@app.get("/api/noc/energia/power")
+def get_energia_power():
+    """Voltaje, batería y métricas de energía de todos los dispositivos con datos SNMP."""
+    hosts = _fetch_energia_api_hosts()
+    if not hosts:
+        hosts = _read_energia_hosts()
+    if not hosts:
+        raise HTTPException(status_code=503, detail="NOCBoard Energía no disponible")
+
+    devices = []
+    for h in hosts:
+        api_m = h.get("_api_metrics", {})
+        file_m = h.get("latestMetrics", {})
+        metrics = api_m if api_m and len([k for k in api_m if k != "timestamp"]) > 0 else file_m
+        metric_keys = [k for k in metrics if k != "timestamp"]
+        ping_raw = h.get("ping", h.get("lastPingResult", {}))
+        device = {
+            "name": h.get("name", h.get("rawName", h.get("display_name", ""))),
+            "ip": h.get("ip", ""),
+            "city": h.get("city", ""),
+            "site": h.get("site", ""),
+            "status": h.get("status", "unknown"),
+            "type": h.get("power_device_type", h.get("powerDeviceType", "")),
+            "vendor": h.get("power_vendor", h.get("powerVendor", "")),
+            "protocol": h.get("poll_protocol", h.get("pollProtocol", "")),
+            "healthScore": h.get("health_score", h.get("healthScore", 0)),
+            "ping": {
+                "reachable": ping_raw.get("reachable", False),
+                "latency": ping_raw.get("latency_avg", ping_raw.get("latencyAvg", 0)),
+                "packetLoss": ping_raw.get("packet_loss", ping_raw.get("packetLoss", 0)),
+            },
+            "lastSNMPPoll": h.get("lastSNMPPoll"),
+            "hasMetrics": len(metric_keys) > 0,
+        }
+        if metric_keys:
+            device["metrics"] = {
+                "batteryVoltage": metrics.get("battery_voltage", metrics.get("batteryVoltage")),
+                "acOutputVoltage": metrics.get("ac_output_voltage", metrics.get("acOutputVoltage")),
+                "mainsVoltage": metrics.get("mains_voltage", metrics.get("mainsVoltage")),
+                "mainsPresent": metrics.get("mains_present", metrics.get("mainsPresent")),
+                "mainsFrequency": metrics.get("mains_frequency", metrics.get("mainsFrequency")),
+                "loadPower": metrics.get("load_power", metrics.get("loadPower")),
+                "batteryRuntimeMinutes": metrics.get("battery_runtime_minutes", metrics.get("batteryRuntimeMinutes")),
+                "batterySOC": metrics.get("battery_soc", metrics.get("batterySOC")),
+                "timestamp": metrics.get("timestamp"),
+            }
+        devices.append(device)
+
+    with_metrics = [d for d in devices if d["hasMetrics"]]
+    return {
+        "total": len(devices),
+        "withMetrics": len(with_metrics),
+        "devices": devices,
+        "timestamp": dt_datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/noc/energia/power/{ip}")
+def get_energia_power_host(ip: str):
+    """Métricas de energía de un dispositivo específico por IP."""
+    hosts = _read_energia_hosts()
+    match = next((h for h in hosts if h.get("ip") == ip), None)
+    if not match:
+        raise HTTPException(status_code=404, detail=f"Host {ip} no encontrado en Energía")
+    metrics = match.get("latestMetrics", {})
+    ping = match.get("lastPingResult", {})
+    return {
+        "name": match.get("rawName", ""),
+        "ip": ip,
+        "city": match.get("city", ""),
+        "site": match.get("site", ""),
+        "status": match.get("status", "unknown"),
+        "type": match.get("powerDeviceType", ""),
+        "vendor": match.get("powerVendor", ""),
+        "healthScore": match.get("healthScore", 0),
+        "ping": {
+            "reachable": ping.get("reachable", False),
+            "latency": ping.get("latencyAvg", 0),
+        },
+        "lastSNMPPoll": match.get("lastSNMPPoll"),
+        "metrics": {k: v for k, v in metrics.items()} if metrics else None,
+    }
+
+
+RADIOBASES_DRIVE_PATH = os.path.join(os.path.dirname(__file__), "data", "radiobases_drive.json")
+
+@app.get("/api/noc/energia/radiobases")
+def get_radiobases_drive():
+    """Radiobases del inventario Drive — contratos, ubicaciones, rentas."""
+    try:
+        with open(RADIOBASES_DRIVE_PATH, "r") as f:
+            sites = json.load(f)
+        return {"total": len(sites), "sites": sites}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"No se pudo leer radiobases: {e}")
+
+
 # ─── NOC Dashboard Stats (compatible con InicioHoloSection) ──────────────────
 
 @app.get("/api/noc/dashboard-stats")

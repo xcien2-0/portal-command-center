@@ -29,6 +29,7 @@ import { Menu, X as CloseIcon } from 'lucide-react';
 const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
 const InicioHoloSection  = lazy(() => import('./sections/InicioHoloSection'));
 const NocSection         = lazy(() => import('./sections/NocSection'));
+const InfraEnergiaSection = lazy(() => import('./sections/InfraEnergiaSection'));
 const RedSection         = lazy(() => import('./sections/RedSection'));
 const BidrillasSection   = lazy(() => import('./sections/BidrillasSection'));
 const AcademiaSection    = lazy(() => import('./sections/AcademiaSection'));
@@ -74,6 +75,7 @@ const NAV: NavEntry[] = [
   { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
 
   { id: 'noc', label: 'NOC VIRTUAL', icon: '📡', group: 'Operaciones' },
+  { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Operaciones' },
   { id: 'red', label: 'Mapa de Red', icon: '🗺️', group: 'Operaciones' },
   { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
   { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
@@ -427,13 +429,13 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
 }
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
-class SectionErrorBoundary extends React.Component<
-  { children: React.ReactNode; section: string },
-  { error: Error | null }
-> {
-  constructor(props: any) { super(props); this.state = { error: null }; }
+type EBProps = { children: React.ReactNode; section: string };
+type EBState = { error: Error | null };
+
+class SectionErrorBoundary extends React.Component<EBProps, EBState> {
+  constructor(props: EBProps) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error: Error) { return { error }; }
-  componentDidUpdate(prev: any) {
+  componentDidUpdate(prev: EBProps) {
     if (prev.section !== this.props.section && this.state.error) {
       this.setState({ error: null });
     }
@@ -517,6 +519,7 @@ function Content({
           onRefresh={onNocRefresh}
         />
       )}
+      {section === 'infra-energia' && <InfraEnergiaSection theme={theme} />}
       {section === 'red'      && <RedSection      theme={theme} />}
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
