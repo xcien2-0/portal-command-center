@@ -1263,6 +1263,28 @@ export default function NocSection({
 }: Props) {
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
   const [view, setView] = useState<'map' | 'grid' | 'reportes' | 'capas'>('map');
+  const [boards, setBoards] = useState<Record<string, { online: number; offline: number; alerts: number; hosts: number; avail: number }>>({});
+
+  useEffect(() => {
+    const fetchBoards = async () => {
+      const keys: Record<string, { port: number; key: string }> = {
+        'Energía': { port: 9404, key: 'f4f5ef40c4c54aeca1d6a66109e4555d' },
+        'Datos': { port: 9403, key: 'e48b0da1798145199ad24639cc70c66b' },
+        'WL': { port: 9401, key: '87a08190b801416392e944ab79c7e3c9' },
+      };
+      const result: typeof boards = {};
+      await Promise.all(Object.entries(keys).map(async ([name, { port, key }]) => {
+        try {
+          const r = await fetch(`${API_BASE}/api/noc/board-status?port=${port}&key=${key}`);
+          if (r.ok) { const d = await r.json(); result[name] = d; }
+        } catch {}
+      }));
+      setBoards(result);
+    };
+    fetchBoards();
+    const iv = setInterval(fetchBoards, 30000);
+    return () => clearInterval(iv);
+  }, []);
 
   const totalHosts  = useMemo(() => cities.reduce((a, c) => a + c.totalHosts, 0), [cities]);
   const totalOnline = useMemo(() => cities.reduce((a, c) => a + c.online, 0), [cities]);
@@ -1296,6 +1318,36 @@ export default function NocSection({
           sub={`${warnCount} warnings`} color={critCount > 0 ? R : G}
           icon={<AlertTriangle size={18} color={critCount > 0 ? R : G} />} />
       </div>
+      {/* Board breakdown */}
+      {Object.keys(boards).length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          {Object.entries(boards).map(([name, b]) => {
+            const pct = b.hosts > 0 ? Math.round((b.online / b.hosts) * 100) : 0;
+            const bc = pct >= 90 ? G : pct >= 70 ? Y : R;
+            return (
+              <div key={name} style={{
+                flex: 1, background: 'rgba(255,255,255,0.02)', border: `1px solid ${bc}20`,
+                borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${bc}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: bc, fontFamily: 'Oswald' }}>{pct}%</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: DIM, letterSpacing: 1, fontFamily: 'monospace' }}>{name.toUpperCase()}</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 3 }}>
+                    <span style={{ fontSize: 10, color: G }}>▲ {b.online}</span>
+                    <span style={{ fontSize: 10, color: R }}>▼ {b.offline}</span>
+                    <span style={{ fontSize: 10, color: Y }}>⚠ {b.alerts}</span>
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, width: 50, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: bc, borderRadius: 4 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>

@@ -69,43 +69,86 @@ interface Radiobase {
 
 type ListItem = (PowerDevice & { _source: 'nocboard'; _key: string }) | (Radiobase & { _source: 'drive'; _key: string });
 
+const TILE_LAYERS: Record<string, { url: string; label: string }> = {
+  dark: { url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', label: 'Oscuro' },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: 'Satélite' },
+  streets: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Calles' },
+  topo: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', label: 'Topo' },
+};
+
+const CITY_COORDS: Record<string, [number, number]> = {
+  'Monterrey': [25.6866, -100.3161], 'Guadalajara': [20.6597, -103.3496],
+  'Querétaro': [20.5888, -100.3899], 'Saltillo': [25.4232, -100.9924],
+  'Guadalupe': [25.6775, -100.2597], 'Pesquería': [25.7758, -100.0461],
+  'Apodaca': [25.7819, -100.1884], 'Chihuahua': [28.6353, -106.0889],
+  'San Luis Potosí': [22.1565, -100.9855], 'Reynosa': [26.0923, -98.2775],
+  'Torreón': [25.5428, -103.4068], 'Piedras Negras': [28.7001, -100.5232],
+  'León': [21.1221, -101.6840], 'Zapopan': [20.7217, -103.3893],
+  'Ramos Arizpe': [25.5384, -100.9488], 'Santa Catarina': [25.6732, -100.4593],
+  'San Pedro': [25.6600, -100.4025], 'Monclova': [26.9069, -101.4214],
+  'Coyotepec': [19.7703, -99.2058], 'San Juan del Río': [20.3893, -99.9960],
+};
+
 function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobases: Radiobase[]; U: any }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileRef = useRef<any>(null);
+  const markersRef = useRef<any>(null);
+  const [mapStyle, setMapStyle] = useState<string>(() => localStorage.getItem('xcien_map_style') || 'dark');
 
+  // Init map ONCE
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     import('leaflet').then(L => {
       const map = L.map(mapRef.current!, { zoomControl: true, attributionControl: false }).setView([24.5, -102], 5);
-      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18, subdomains: 'abcd',
-      }).addTo(map);
+      tileRef.current = L.tileLayer(TILE_LAYERS[mapStyle]?.url || TILE_LAYERS.dark.url, { maxZoom: 18, subdomains: 'abcd' }).addTo(map);
+      markersRef.current = L.layerGroup().addTo(map);
+      const style = document.createElement('style');
+      style.textContent = '.noc-tooltip{background:rgba(10,10,10,0.9)!important;color:#f0f0f0!important;border:1px solid rgba(255,255,255,0.15)!important;border-radius:6px!important;padding:4px 8px!important;font-size:11px!important;font-family:Inter,sans-serif!important;box-shadow:0 2px 8px rgba(0,0,0,0.4)!important}.noc-tooltip::before{border-top-color:rgba(10,10,10,0.9)!important}';
+      document.head.appendChild(style);
+      map.locate({ setView: false, watch: false });
+      map.on('locationfound', (e: any) => {
+        const locMarker = L.circleMarker(e.latlng, { radius: 8, color: '#fff', fillColor: '#3B82F6', fillOpacity: 1, weight: 2 });
+        locMarker.bindTooltip('Mi ubicación', { permanent: false, direction: 'top', className: 'noc-tooltip' });
+        locMarker.addTo(map);
+      });
+      mapInstanceRef.current = map;
+      setTimeout(() => map.invalidateSize(), 200);
+    });
+    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
+  }, []);
 
-      const nocIcon = L.divIcon({ className: '', html: `<div style="width:10px;height:10px;border-radius:50%;background:${CYAN};border:2px solid #fff;box-shadow:0 0 6px ${CYAN}"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
-      const driveIcon = L.divIcon({ className: '', html: `<div style="width:10px;height:10px;border-radius:50%;background:${PURPLE};border:2px solid #fff;box-shadow:0 0 6px ${PURPLE}"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
-      const offlineIcon = L.divIcon({ className: '', html: `<div style="width:10px;height:10px;border-radius:50%;background:${RED};border:2px solid #fff;box-shadow:0 0 6px ${RED}"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] });
+  // Update tile layer when style changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !tileRef.current) return;
+    import('leaflet').then(L => {
+      tileRef.current.remove();
+      tileRef.current = L.tileLayer(TILE_LAYERS[mapStyle]?.url || TILE_LAYERS.dark.url, { maxZoom: 18, subdomains: 'abcd' }).addTo(mapInstanceRef.current);
+    });
+    localStorage.setItem('xcien_map_style', mapStyle);
+  }, [mapStyle]);
 
-      const CITY_COORDS: Record<string, [number, number]> = {
-        'Monterrey': [25.6866, -100.3161], 'Guadalajara': [20.6597, -103.3496],
-        'Querétaro': [20.5888, -100.3899], 'Saltillo': [25.4232, -100.9924],
-        'Guadalupe': [25.6775, -100.2597], 'Pesquería': [25.7758, -100.0461],
-        'Apodaca': [25.7819, -100.1884], 'Chihuahua': [28.6353, -106.0889],
-        'San Luis Potosí': [22.1565, -100.9855], 'Reynosa': [26.0923, -98.2775],
-        'Torreón': [25.5428, -103.4068], 'Piedras Negras': [28.7001, -100.5232],
-        'León': [21.1221, -101.6840], 'Zapopan': [20.7217, -103.3893],
-        'Ramos Arizpe': [25.5384, -100.9488], 'Santa Catarina': [25.6732, -100.4593],
-        'San Pedro': [25.6600, -100.4025], 'Monclova': [26.9069, -101.4214],
-        'Coyotepec': [19.7703, -99.2058], 'San Juan del Río': [20.3893, -99.9960],
-      };
+  // Update markers when data changes (without recreating map)
+  useEffect(() => {
+    if (!mapInstanceRef.current || !markersRef.current) return;
+    import('leaflet').then(L => {
+      markersRef.current.clearLayers();
+      const makeIcon = (color: string, size = 10, glow = true) => L.divIcon({ className: '', html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 ${glow?'8':'4'}px ${color}${glow?'':'80'}"></div>`, iconSize: [size+4, size+4], iconAnchor: [(size+4)/2, (size+4)/2] });
+      const snmpActiveIcon = makeIcon('#00ff88', 12, true);
+      const nocIcon = makeIcon(CYAN, 10, false);
+      const driveIcon = makeIcon(PURPLE, 10, false);
+      const offlineIcon = makeIcon(RED, 10, false);
 
       devices.forEach(d => {
         const coords = CITY_COORDS[d.city];
         if (!coords) return;
         const jitter = () => (Math.random() - 0.5) * 0.02;
-        const icon = d.status === 'online' ? nocIcon : offlineIcon;
+        const icon = d.status !== 'online' ? offlineIcon : d.hasMetrics ? snmpActiveIcon : nocIcon;
         const marker = L.marker([coords[0] + jitter(), coords[1] + jitter()], { icon });
-        marker.bindPopup(`<b>${d.name.replace(/_/g, ' ')}</b><br>${d.ip}<br>${d.city} · ${d.status}`);
-        marker.addTo(map);
+        const label = d.name.replace(/_/g, ' ').replace(/MONTERREY /g,'').replace(/QUERÉTARO /g,'QRO ');
+        marker.bindTooltip(label, { permanent: false, direction: 'top', className: 'noc-tooltip', offset: [0, -8] });
+        marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px;min-width:180px"><b>${d.name.replace(/_/g, ' ')}</b><br><span style="color:#888">${d.ip}</span><br>${d.city} · <b style="color:${d.status==='online'?'#00C896':'#FF4757'}">${d.status}</b>${d.hasMetrics && d.metrics ? `<br>Bat: <b>${d.metrics.batteryVoltage??'—'}V</b>` : ''}</div>`);
+        markersRef.current.addLayer(marker);
       });
 
       radiobases.forEach(rb => {
@@ -113,24 +156,38 @@ function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobas
         if (!coords) return;
         const jitter = () => (Math.random() - 0.5) * 0.015;
         const marker = L.marker([coords[0] + jitter(), coords[1] + jitter()], { icon: driveIcon });
-        marker.bindPopup(`<b>${rb.name}</b><br>${rb.city}, ${rb.state}<br>${rb.estatus}`);
-        marker.addTo(map);
+        marker.bindTooltip(rb.name, { permanent: false, direction: 'top', className: 'noc-tooltip', offset: [0, -8] });
+        marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px;min-width:180px"><b>${rb.name}</b><br><span style="color:#888">${rb.city}, ${rb.state}</span><br>${rb.estatus}</div>`);
+        markersRef.current.addLayer(marker);
       });
-
-      mapInstanceRef.current = map;
-      setTimeout(() => map.invalidateSize(), 200);
     });
-    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
   }, [devices, radiobases]);
 
   return (
     <div style={{ background: U.card, border: `1px solid ${U.border}`, borderRadius: 14, overflow: 'hidden', marginTop: 16 }}>
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>MAPA DE INFRAESTRUCTURA</div>
-        <div style={{ display: 'flex', gap: 12, fontSize: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>MAPA DE INFRAESTRUCTURA</div>
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: 2, gap: 2 }}>
+            {Object.entries(TILE_LAYERS).map(([key, { label }]) => (
+              <button key={key} onClick={() => setMapStyle(key)} style={{
+                padding: '3px 8px', fontSize: 9, fontWeight: 600, borderRadius: 4, border: 'none', cursor: 'pointer',
+                background: mapStyle === key ? GREEN : 'transparent',
+                color: mapStyle === key ? '#000' : U.dim,
+                transition: 'all 0.15s',
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 12, fontSize: 10, color: U.dim }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} /> SNMP Activo</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: CYAN }} /> NOCBoard</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: PURPLE }} /> Radiobase</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: RED }} /> Offline</span>
+          <button onClick={() => { if (mapInstanceRef.current) mapInstanceRef.current.locate({ setView: true, maxZoom: 13 }); }} style={{
+            padding: '3px 8px', fontSize: 9, fontWeight: 600, borderRadius: 4, border: `1px solid ${BLUE}40`,
+            background: `${BLUE}15`, color: BLUE, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+          }}>📍 Mi ubicación</button>
         </div>
       </div>
       <div ref={mapRef} style={{ height: 400, width: '100%' }} />
@@ -147,6 +204,14 @@ export default function InfraEnergiaSection({ theme }: Props) {
   const [filter, setFilter] = useState<'all' | 'revisada' | 'por_revisar' | 'online' | 'offline' | 'nocboard' | 'drive'>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'city' | 'status' | 'type'>('city');
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>(() => { try { return JSON.parse(localStorage.getItem('xcien_infra_notes') || '{}'); } catch { return {}; } });
+
+  const saveNote = (key: string, note: string) => {
+    const next = { ...notes, [key]: note };
+    setNotes(next);
+    localStorage.setItem('xcien_infra_notes', JSON.stringify(next));
+  };
 
   const U = { bg: theme.bg, card: theme.card, text: theme.text, dim: theme.dim || '#8090a8', accent: theme.accent, border: theme.border || 'rgba(255,255,255,0.06)' };
 
@@ -454,17 +519,40 @@ export default function InfraEnergiaSection({ theme }: Props) {
               const srcColor = isNoc ? CYAN : PURPLE;
               const srcLabel = isNoc ? 'NOCBoard' : 'Radiobase';
 
+              const isEditing = editingKey === item._key;
+              const noteVal = notes[item._key] || '';
+
+              const editPanel = isEditing ? (
+                <tr key={item._key + '-edit'} style={{ borderBottom: `1px solid ${U.border}`, borderLeft: `3px solid ${srcColor}` }}>
+                  <td colSpan={6} style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: U.dim, marginBottom: 4, fontWeight: 600 }}>NOTAS / OBSERVACIONES</div>
+                        <textarea
+                          defaultValue={noteVal}
+                          onBlur={e => saveNote(item._key, e.target.value)}
+                          placeholder="Escribe notas sobre este dispositivo..."
+                          style={{ width: '100%', minHeight: 60, background: 'rgba(255,255,255,0.04)', border: `1px solid ${U.border}`, borderRadius: 8, padding: 8, color: U.text, fontSize: 11, resize: 'vertical', outline: 'none', fontFamily: 'Inter, sans-serif' }}
+                        />
+                      </div>
+                      <button onClick={() => setEditingKey(null)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 10, background: 'rgba(255,255,255,0.06)', border: `1px solid ${U.border}`, color: U.dim, cursor: 'pointer' }}>Cerrar</button>
+                    </div>
+                  </td>
+                </tr>
+              ) : null;
+
               if (isNoc) {
                 const d = item as PowerDevice & { _source: 'nocboard'; _key: string };
                 const vc = VENDOR_COLORS[d.vendor] || VENDOR_COLORS.unknown;
-                return (
-                  <tr key={item._key} style={{ borderBottom: `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}` }}
+                return (<>
+                  <tr key={item._key} onClick={() => setEditingKey(isEditing ? null : item._key)} style={{ borderBottom: isEditing ? 'none' : `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}`, cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: `${srcColor}20`, color: srcColor, fontWeight: 700 }}>{srcLabel}</span>
                         <span style={{ fontWeight: 600, color: U.text }}>{d.name.replace(/_/g, ' ')}</span>
+                        {noteVal && <span style={{ fontSize: 8, color: YELLOW }}>●</span>}
                       </div>
                       <div style={{ fontSize: 10, color: U.dim, marginTop: 2 }}>{d.ip} · {d.site}</div>
                     </td>
@@ -491,7 +579,7 @@ export default function InfraEnergiaSection({ theme }: Props) {
                         </div>
                       ) : <span style={{ fontSize: 10, color: U.dim }}>—</span>}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       <button onClick={() => toggleReview(item._key)} style={{
                         padding: '5px 14px', borderRadius: 20, fontSize: 10, fontWeight: 700,
                         cursor: 'pointer', border: 'none', transition: 'all 0.2s',
@@ -502,19 +590,21 @@ export default function InfraEnergiaSection({ theme }: Props) {
                       </button>
                     </td>
                   </tr>
-                );
+                  {editPanel}
+                </>);
               }
 
               const rb = item as Radiobase & { _source: 'drive'; _key: string };
               const esVigente = rb.estatus.toUpperCase().includes('VIGENTE');
-              return (
-                <tr key={item._key} style={{ borderBottom: `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}` }}
+              return (<>
+                <tr key={item._key} onClick={() => setEditingKey(isEditing ? null : item._key)} style={{ borderBottom: isEditing ? 'none' : `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}`, cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: `${srcColor}20`, color: srcColor, fontWeight: 700 }}>{srcLabel}</span>
                       <span style={{ fontWeight: 600, color: U.text }}>{rb.name}</span>
+                      {noteVal && <span style={{ fontSize: 8, color: YELLOW }}>●</span>}
                     </div>
                     <div style={{ fontSize: 10, color: U.dim, marginTop: 2 }}>{rb.direccion || '—'}</div>
                   </td>
@@ -539,7 +629,7 @@ export default function InfraEnergiaSection({ theme }: Props) {
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 10, color: U.dim }}>Sin SNMP</span>
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => toggleReview(item._key)} style={{
                       padding: '5px 14px', borderRadius: 20, fontSize: 10, fontWeight: 700,
                       cursor: 'pointer', border: 'none', transition: 'all 0.2s',
@@ -550,7 +640,8 @@ export default function InfraEnergiaSection({ theme }: Props) {
                     </button>
                   </td>
                 </tr>
-              );
+                {editPanel}
+              </>);
             })}
           </tbody>
         </table>

@@ -1738,6 +1738,26 @@ def toggle_noc_board(board_id: str, action: str):
     raise HTTPException(status_code=503, detail="No se pudo cambiar el estado del board")
 
 
+@app.get("/api/noc/board-status")
+def get_board_status(port: int, key: str):
+    """Proxy status de un NOCBoard individual por puerto y API key."""
+    try:
+        r = requests.get(f"http://localhost:{port}/api/status",
+                         headers={"X-API-Key": key}, timeout=3)
+        if r.ok:
+            d = r.json()
+            return {
+                "online": d.get("online", 0),
+                "offline": d.get("offline", 0),
+                "alerts": d.get("active_alerts", 0),
+                "hosts": d.get("total_hosts", 0),
+                "avail": d.get("availability", 0),
+            }
+    except Exception:
+        pass
+    return {"online": 0, "offline": 0, "alerts": 0, "hosts": 0, "avail": 0}
+
+
 # ─── Energía — UPS / Rectifiers / Inverters (SNMP metrics via NOCBoard) ──────
 
 NOCBOARD_ENERGIA_HOSTS_PATH = os.path.expanduser(
