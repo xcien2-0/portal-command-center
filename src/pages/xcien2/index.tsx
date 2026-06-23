@@ -30,6 +30,7 @@ const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
 const InicioHoloSection  = lazy(() => import('./sections/InicioHoloSection'));
 const NocSection         = lazy(() => import('./sections/NocSection'));
 const InfraEnergiaSection = lazy(() => import('./sections/InfraEnergiaSection'));
+const ProyectosSection    = lazy(() => import('./sections/ProyectosSection'));
 const RedSection         = lazy(() => import('./sections/RedSection'));
 const BidrillasSection   = lazy(() => import('./sections/BidrillasSection'));
 const AcademiaSection    = lazy(() => import('./sections/AcademiaSection'));
@@ -94,15 +95,13 @@ const NAV: NavEntry[] = [
   { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
   { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
-  { id: 'sala_juntas', label: 'Sala de Juntas', icon: '📅', group: 'Administración' },
 
+  { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
   { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
   { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
-  { id: 'bridge', label: 'Data Bridge', icon: '⚡', group: 'Infraestructura' },
-  { id: 'war-room', label: 'Multi-Agente', icon: '⚔️', group: 'Infraestructura' },
   { id: 'mobile', label: 'Terminal Móvil', icon: '📱', group: 'Infraestructura' },
   { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
   { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
@@ -527,6 +526,7 @@ function Content({
       {section === 'rrhh'      && <RRHHSection      theme={theme} />}
       {section === 'sala_juntas' && <SalaJuntasSection theme={theme} />}
       {section === 'agentes'   && <AgentesSection   theme={theme} />}
+      {section === 'proyectos' && <ProyectosSection theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
@@ -1187,7 +1187,6 @@ export default function Xcien2Page() {
           />
         </>
       )}
-      <FloatingChat theme={theme} section={section} />
     </div>
   );
 }

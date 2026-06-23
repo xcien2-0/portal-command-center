@@ -331,13 +331,13 @@ export default function InfraEnergiaSection({ theme }: Props) {
         </p>
       </div>
 
-      {/* KPI Cards Row — Ventas style */}
+      {/* KPI Cards Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 20 }}>
         {[
-          { label: 'TOTAL SITIOS', value: totalAll, sub: `${totalNoc} NOCBoard + ${totalDrive} Drive`, color: CYAN, icon: '⚡' },
+          { label: 'DISPOSITIVOS', value: totalNoc, sub: `${online} online · ${offline} offline`, color: CYAN, icon: '⚡' },
+          { label: 'SNMP ACTIVO', value: snmpOk, sub: `${snmpPct}% del total`, color: GREEN, icon: '📡' },
+          { label: 'DISPONIBILIDAD', value: `${availPct}%`, sub: `${online} de ${totalNoc}`, color: availPct >= 90 ? GREEN : availPct >= 70 ? YELLOW : RED, icon: '✓' },
           { label: 'RADIOBASES', value: totalDrive, sub: `${vigentes} vigentes`, color: PURPLE, icon: '📋' },
-          { label: 'EN LÍNEA', value: online, sub: `${availPct}% disponibilidad`, color: GREEN, icon: '✓' },
-          { label: 'REVISADAS', value: reviewed, sub: `${reviewPct}% de ${totalAll}`, color: ORANGE, icon: '📡' },
         ].map((kpi, i) => (
           <div key={i} style={cardStyle({ position: 'relative', overflow: 'hidden' })}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -350,132 +350,93 @@ export default function InfraEnergiaSection({ theme }: Props) {
                 {kpi.icon}
               </div>
             </div>
-            <div style={{ marginTop: 16 }}>
-              <SparkBar data={byCity.slice(0, 8).map(c => i === 0 ? c.total : i === 1 ? c.online : i === 2 ? Math.min(c.online, 2) : c.reviewed)} color={kpi.color} height={32} />
-            </div>
           </div>
         ))}
       </div>
 
-      {/* Progress + Donut Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-        {/* Avance de revisión */}
+      {/* Mapa — primero lo visual */}
+      <MapPanel devices={devices} radiobases={dedupedBases} U={U} />
+
+      {/* SNMP Status + Disponibilidad — lado a lado */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 16 }}>
+        {/* SNMP Status */}
         <div style={cardStyle()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: U.text, letterSpacing: '-0.01em' }}>AVANCE DE REVISIÓN FÍSICA</div>
-              <div style={{ fontSize: 11, color: U.dim, marginTop: 2 }}>Progreso por ciudad · Clic en chip para marcar</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>ESTADO SNMP</div>
+              <div style={{ fontSize: 11, color: U.dim, marginTop: 2 }}>{totalNoc} dispositivos NOCBoard</div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{reviewPct}%</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: snmpPct >= 50 ? GREEN : snmpPct >= 25 ? YELLOW : RED, fontFamily: 'JetBrains Mono' }}>{snmpPct}%</div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, height: 12, overflow: 'hidden', marginBottom: 16 }}>
-            <div style={{ width: `${reviewPct}%`, height: '100%', background: `linear-gradient(90deg, ${GREEN}, #00E5A0)`, borderRadius: 8, transition: 'width 0.5s ease' }} />
-          </div>
-          {byCity.slice(0, 8).map(c => (
-            <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: U.dim, width: 100, textAlign: 'right' }}>{c.city}</span>
-              <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ width: `${c.total > 0 ? (c.reviewed / c.total) * 100 : 0}%`, height: '100%', background: GREEN, borderRadius: 3, transition: 'width 0.4s' }} />
-              </div>
-              <span style={{ fontSize: 10, color: c.reviewed === c.total && c.total > 0 ? GREEN : YELLOW, fontWeight: 600, fontFamily: 'JetBrains Mono', width: 35 }}>{c.reviewed}/{c.total}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div style={{ background: `${GREEN}10`, border: `1px solid ${GREEN}30`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{snmpOk}</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: GREEN, marginTop: 4 }}>ACTIVO</div>
             </div>
-          ))}
+            <div style={{ background: `${YELLOW}10`, border: `1px solid ${YELLOW}30`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: YELLOW, fontFamily: 'JetBrains Mono' }}>{snmpPending}</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: YELLOW, marginTop: 4 }}>PENDIENTE</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${U.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: U.dim, fontFamily: 'JetBrains Mono' }}>{snmpNone}</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: U.dim, marginTop: 4 }}>SIN SNMP</div>
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 6, height: 10, overflow: 'hidden', display: 'flex' }}>
+            <div style={{ width: `${(snmpOk / totalNoc) * 100}%`, height: '100%', background: GREEN }} />
+            <div style={{ width: `${(snmpPending / totalNoc) * 100}%`, height: '100%', background: YELLOW }} />
+          </div>
         </div>
 
-        {/* Disponibilidad + Vendor */}
+        {/* Disponibilidad + Fabricantes compacto */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Donut disponibilidad */}
-          <div style={cardStyle({ display: 'flex', alignItems: 'center', gap: 24 })}>
+          <div style={cardStyle({ display: 'flex', alignItems: 'center', gap: 16, flex: 1 })}>
             <div style={{ position: 'relative' }}>
-              <DonutChart pct={availPct} color={GREEN} size={90} stroke={10} />
+              <DonutChart pct={availPct} color={GREEN} size={70} stroke={8} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{availPct}%</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{availPct}%</span>
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>DISPONIBILIDAD</div>
-              <div style={{ fontSize: 11, color: U.dim, marginTop: 4 }}>
-                <span style={{ color: GREEN }}>{online} online</span> · <span style={{ color: RED }}>{offline} offline</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <div style={{ padding: '2px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: 'rgba(0,200,150,0.1)', color: GREEN }}>Online {online}</div>
-                <div style={{ padding: '2px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: 'rgba(255,71,87,0.1)', color: RED }}>Offline {offline}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: U.text }}>DISPONIBILIDAD</div>
+              <div style={{ fontSize: 10, color: U.dim, marginTop: 4 }}>
+                <span style={{ color: GREEN }}>▲ {online}</span> · <span style={{ color: RED }}>▼ {offline}</span>
               </div>
             </div>
           </div>
-
-          {/* Vendor bars */}
-          <div style={cardStyle()}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: U.text, marginBottom: 12 }}>POR FABRICANTE</div>
-            {byVendor.map(v => (
-              <div key={v.vendor} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: U.dim, width: 70, textTransform: 'uppercase', fontWeight: 600 }}>{v.vendor}</span>
-                <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${(v.count / maxVendor) * 100}%`, height: '100%', background: VENDOR_COLORS[v.vendor] || CYAN, borderRadius: 4 }} />
+          <div style={cardStyle({ flex: 1 })}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: U.dim, marginBottom: 8, letterSpacing: '0.05em' }}>FABRICANTES</div>
+            {byVendor.slice(0, 5).map(v => (
+              <div key={v.vendor} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: U.dim, width: 55, fontWeight: 600, textTransform: 'uppercase' }}>{v.vendor}</span>
+                <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${(v.count / maxVendor) * 100}%`, height: '100%', background: VENDOR_COLORS[v.vendor] || CYAN, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: VENDOR_COLORS[v.vendor] || CYAN, fontFamily: 'JetBrains Mono', width: 28, textAlign: 'right' }}>{v.count}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: VENDOR_COLORS[v.vendor] || CYAN, fontFamily: 'JetBrains Mono', width: 20, textAlign: 'right' }}>{v.count}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Tipo de dispositivo */}
+      {/* Avance de revisión — compacto */}
       <div style={cardStyle({ marginTop: 16 })}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>TIPO DE DISPOSITIVO</div>
-          <span style={{ fontSize: 11, color: U.dim }}>{totalAll} dispositivos totales</span>
+          <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>AVANCE DE REVISIÓN FÍSICA</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{reviewPct}%</div>
         </div>
-        {byType.map(t => (
-          <div key={t.type} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: U.dim, width: 110, fontWeight: 600 }}>{TYPE_LABELS[t.type] || t.type}</span>
-            <div style={{ flex: 1, height: 22, background: 'rgba(255,255,255,0.04)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-              <div style={{ width: `${(t.count / maxType) * 100}%`, height: '100%', background: `linear-gradient(90deg, ${CYAN}80, ${CYAN})`, borderRadius: 6 }} />
-              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, fontWeight: 700, color: U.text }}>{t.count}</span>
+        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 6, height: 10, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ width: `${reviewPct}%`, height: '100%', background: `linear-gradient(90deg, ${GREEN}, #00E5A0)`, borderRadius: 6, transition: 'width 0.5s ease' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 6 }}>
+          {byCity.slice(0, 10).map(c => (
+            <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: U.dim, flex: 1 }}>{c.city}</span>
+              <span style={{ fontSize: 10, color: c.reviewed === c.total && c.total > 0 ? GREEN : YELLOW, fontWeight: 600, fontFamily: 'JetBrains Mono' }}>{c.reviewed}/{c.total}</span>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* SNMP Status Module */}
-      <div style={cardStyle({ marginTop: 16 })}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: U.text }}>ESTADO SNMP</div>
-            <div style={{ fontSize: 11, color: U.dim, marginTop: 2 }}>Configuración y telemetría de {totalNoc} dispositivos NOCBoard</div>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: snmpPct >= 50 ? GREEN : snmpPct >= 25 ? YELLOW : RED, fontFamily: 'JetBrains Mono' }}>{snmpPct}%</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-          <div style={{ background: `${GREEN}10`, border: `1px solid ${GREEN}30`, borderRadius: 10, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: GREEN, fontFamily: 'JetBrains Mono' }}>{snmpOk}</div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: GREEN, marginTop: 4 }}>SNMP ACTIVO</div>
-            <div style={{ fontSize: 9, color: U.dim, marginTop: 2 }}>Reportan métricas</div>
-          </div>
-          <div style={{ background: `${YELLOW}10`, border: `1px solid ${YELLOW}30`, borderRadius: 10, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: YELLOW, fontFamily: 'JetBrains Mono' }}>{snmpPending}</div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: YELLOW, marginTop: 4 }}>SNMP PENDIENTE</div>
-            <div style={{ fontSize: 9, color: U.dim, marginTop: 2 }}>Protocolo OK, sin datos</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${U.border}`, borderRadius: 10, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: U.dim, fontFamily: 'JetBrains Mono' }}>{snmpNone}</div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: U.dim, marginTop: 4 }}>SIN SNMP</div>
-            <div style={{ fontSize: 9, color: U.dim, marginTop: 2 }}>Solo ICMP / Modbus</div>
-          </div>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, height: 14, overflow: 'hidden', display: 'flex' }}>
-          <div style={{ width: `${(snmpOk / totalNoc) * 100}%`, height: '100%', background: GREEN, transition: 'width 0.5s' }} />
-          <div style={{ width: `${(snmpPending / totalNoc) * 100}%`, height: '100%', background: YELLOW, transition: 'width 0.5s' }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: U.dim }}>
-          <span><span style={{ color: GREEN }}>&#9679;</span> Activo {snmpOk}</span>
-          <span><span style={{ color: YELLOW }}>&#9679;</span> Pendiente {snmpPending}</span>
-          <span><span style={{ color: U.dim }}>&#9679;</span> Sin SNMP {snmpNone}</span>
+          ))}
         </div>
       </div>
-
-      {/* Mapa */}
-      <MapPanel devices={devices} radiobases={dedupedBases} U={U} />
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginTop: 24, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
