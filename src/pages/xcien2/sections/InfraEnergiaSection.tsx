@@ -383,8 +383,8 @@ export default function InfraEnergiaSection({ theme }: Props) {
             </div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 6, height: 10, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${(snmpOk / totalNoc) * 100}%`, height: '100%', background: GREEN }} />
-            <div style={{ width: `${(snmpPending / totalNoc) * 100}%`, height: '100%', background: YELLOW }} />
+            <div style={{ width: `${totalNoc > 0 ? (snmpOk / totalNoc) * 100 : 0}%`, height: '100%', background: GREEN }} />
+            <div style={{ width: `${totalNoc > 0 ? (snmpPending / totalNoc) * 100 : 0}%`, height: '100%', background: YELLOW }} />
           </div>
         </div>
 

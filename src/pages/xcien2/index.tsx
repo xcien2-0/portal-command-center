@@ -15,7 +15,6 @@ import { getRealCities, getRealAlerts, invalidateNOCCache } from '@/services/noc
 import { NOCCity, NOCAlert } from '@/types/noc';
 
 // ── Siempre visibles — importación estática ───────────────────────────────────
-import FloatingChat from './sections/FloatingChat';
 import DevPanel from './DevPanel';
 import NotificacionesPanel from './sections/NotificacionesPanel';
 import CommandPalette from './sections/CommandPalette';
