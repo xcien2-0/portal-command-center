@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+// recharts removed — Dashboard uses custom RingChart/GlassCard components
 import { API_BASE } from '../../../../config';
 import brand from '../../../../brand';
 import type { ThemeConfig } from '../../types';
@@ -12,16 +12,6 @@ const GREEN = '#00C896';
 const DIM   = '#6b7280';
 
 // ── Mini componentes ──────────────────────────────────────────────────────────
-function KPICard({ label, value, sub, color = GREEN }: { label: string; value: string | number; sub?: string; color?: string }) {
-  return (
-    <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '20px 24px' }}>
-      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
-      <p style={{ margin: '8px 0 0', fontSize: 36, fontWeight: 800, color, lineHeight: 1, letterSpacing: -1 }}>{value}</p>
-      {sub && <p style={{ margin: '6px 0 0', fontSize: 12, color: DIM }}>{sub}</p>}
-    </div>
-  );
-}
-
 function Bar2({ pct, color }: { pct: number; color: string }) {
   return (
     <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden', flex: 1 }}>
@@ -39,10 +29,11 @@ function LevelBadge({ level, color, icon }: { level: string; color: string; icon
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'leaderboard' | 'cursos' | 'plazas' | 'areas';
+type Tab = 'dashboard' | 'ruta' | 'leaderboard' | 'cursos' | 'plazas' | 'areas';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',   icon: '📊' },
+  { id: 'ruta',        label: 'Ruta',        icon: '🛤️' },
   { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
   { id: 'cursos',      label: 'Cursos',      icon: '📚' },
   { id: 'areas',       label: 'Por Área',    icon: '🏢' },
@@ -81,7 +72,46 @@ function RutasEditorOverlay({ areas, cursosOdoo, onClose }: { areas: string[]; c
   );
 }
 
-// ── Dashboard Tab ─────────────────────────────────────────────────────────────
+// ── Premium Components ───────────────────────────────────────────────────────
+function RingChart({ pct, size = 72, stroke = 5, color = GREEN }: { pct: number; size?: number; stroke?: number; color?: string }) {
+  const [p, setP] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setP(pct), 120); return () => clearTimeout(t); }, [pct]);
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${(p/100)*circ} ${circ}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 1.4s cubic-bezier(.4,0,.2,1)' }} />
+    </svg>
+  );
+}
+
+function GlassCard({ children, style, glow, hoverable, onClick }: { children: React.ReactNode; style?: React.CSSProperties; glow?: string; hoverable?: boolean; onClick?: () => void }) {
+  return (
+    <div onClick={onClick}
+      style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 24,
+        boxShadow: glow ? `0 0 40px ${glow}08, inset 0 1px 0 rgba(255,255,255,0.04)` : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+        cursor: onClick ? 'pointer' : 'default', transition: 'all 0.2s', ...style }}
+      onMouseEnter={hoverable ? e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.borderColor = `${glow || GREEN}40`; } : undefined}
+      onMouseLeave={hoverable ? e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)'; } : undefined}
+    >{children}</div>
+  );
+}
+
+function AnimNum({ value, suffix = '', style }: { value: number; suffix?: string; style?: React.CSSProperties }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    let rafId = 0; const dur = 1200; const t0 = performance.now();
+    const tick = (now: number) => { const p = Math.min((now - t0) / dur, 1); setV(Math.round(p * value * 10) / 10); if (p < 1) rafId = requestAnimationFrame(tick); };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [value]);
+  return <span style={style}>{v % 1 === 0 ? Math.round(v) : v.toFixed(1)}{suffix}</span>;
+}
+
+// ── Dashboard Tab (redesigned) ───────────────────────────────────────────────
 function TabDashboard({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tecnico[] }) {
   const levelDist = useMemo(() => {
     const dist: Record<string, number> = {};
@@ -89,85 +119,307 @@ function TabDashboard({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tec
     return LEVELS.map(l => ({ name: l.name, icon: l.icon, color: l.color, count: dist[l.name] ?? 0 }));
   }, [tecnicos]);
 
-  const avgGlobal = tecnicos.length
-    ? Math.round(tecnicos.reduce((a, t) => a + t.avgPct, 0) / tecnicos.length * 10) / 10
-    : 0;
-
-  const cursosRezago = useMemo(() =>
-    [...cursos].sort((a, b) => a.avg_completion - b.avg_completion).slice(0, 5),
-    [cursos]
-  );
-
+  const avgGlobal = tecnicos.length ? Math.round(tecnicos.reduce((a, t) => a + t.avgPct, 0) / tecnicos.length * 10) / 10 : 0;
+  const published = cursos.filter(c => c.published).length;
   const expertosMas = tecnicos.filter(t => ['Experto', 'Leyenda'].includes(t.level)).length;
+  const expertoPct = tecnicos.length ? Math.round(expertosMas / tecnicos.length * 100) : 0;
+  const cursosRezago = useMemo(() => [...cursos].filter(c => c.published && c.members > 0 && c.members_list?.length > 0).sort((a, b) => a.avg_completion - b.avg_completion).slice(0, 5), [cursos]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* KPIs */}
+      {/* Hero KPIs with Ring Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <KPICard label="Personas en Academia" value={tecnicos.length} sub="Toda la organización" />
-        <KPICard label="Avance global"      value={`${avgGlobal}%`}   sub="Promedio todos los cursos" color="#4FC3F7" />
-        <KPICard label="Cursos activos"     value={cursos.filter(c => c.published).length} sub={`de ${cursos.length} totales`} color="#7c3aed" />
-        <KPICard label="Experto + Leyenda"  value={expertosMas}       sub={`${Math.round(expertosMas / (tecnicos.length || 1) * 100)}% del equipo`} color="#FFB703" />
+        {([
+          { label: 'PERSONAS EN ACADEMIA', value: tecnicos.length, pct: 100, color: GREEN, sub: 'Toda la organizacion', suffix: '' },
+          { label: 'AVANCE GLOBAL', value: avgGlobal, pct: avgGlobal, color: '#4FC3F7', sub: 'Promedio todos los cursos', suffix: '%' },
+          { label: 'CURSOS ACTIVOS', value: published, pct: cursos.length ? (published / cursos.length) * 100 : 0, color: '#7c3aed', sub: `de ${cursos.length} totales`, suffix: '' },
+          { label: 'EXPERTO + LEYENDA', value: expertosMas, pct: expertoPct, color: '#FFB703', sub: `${expertoPct}% del equipo`, suffix: '' },
+        ] as const).map((kpi, i) => (
+          <GlassCard key={i} glow={kpi.color} style={{ padding: '20px 22px', animation: `fadeSlide .5s ease ${i * 80}ms both` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <RingChart pct={kpi.pct} size={64} stroke={4} color={kpi.color} />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AnimNum value={kpi.pct} suffix="%" style={{ fontSize: 13, fontWeight: 800, color: kpi.color, fontFamily: 'system-ui' }} />
+                </div>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</p>
+                <AnimNum value={kpi.value} suffix={kpi.suffix} style={{ fontSize: 32, fontWeight: 800, color: kpi.color, lineHeight: 1.1, letterSpacing: -1, display: 'block', marginTop: 4 }} />
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: DIM }}>{kpi.sub}</p>
+              </div>
+            </div>
+          </GlassCard>
+        ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Distribución de niveles */}
-        <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 24 }}>
-          <p style={{ margin: '0 0 20px', fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>Distribución de Niveles</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={levelDist} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: DIM }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: DIM }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ background: '#1f2937', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
-                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                formatter={(v: number) => [`${v} técnicos`, '']}
-              />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {levelDist.map((l, i) => <Cell key={i} fill={l.color} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Cursos con más rezago */}
-        <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 24 }}>
-          <p style={{ margin: '0 0 20px', fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>Cursos con Más Rezago</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {cursosRezago.map((c, i) => {
-              const color = c.avg_completion < 30 ? '#FF4757' : c.avg_completion < 60 ? '#FFB703' : GREEN;
+        {/* Level Distribution — horizontal bars */}
+        <GlassCard>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#e5e7eb' }}>Distribucion de Niveles</p>
+            <span style={{ fontSize: 11, color: DIM, background: 'rgba(255,255,255,0.04)', padding: '3px 10px', borderRadius: 20 }}>{tecnicos.length} personas</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {levelDist.map((l, i) => {
+              const pct = tecnicos.length ? (l.count / tecnicos.length) * 100 : 0;
               return (
-                <div key={i}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: 12, color: '#d1d5db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{c.name}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color }}>{c.avg_completion}%</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 14, width: 22, textAlign: 'center', flexShrink: 0 }}>{l.icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#d1d5db', width: 80, flexShrink: 0 }}>{l.name}</span>
+                  <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.04)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${l.color}90, ${l.color})`, borderRadius: 4, transition: 'width 1.2s cubic-bezier(.4,0,.2,1)' }} />
                   </div>
-                  <Bar2 pct={c.avg_completion} color={color} />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: l.color, width: 28, textAlign: 'right', flexShrink: 0, fontFamily: 'system-ui' }}>{l.count}</span>
+                  <span style={{ fontSize: 10, color: DIM, width: 32, textAlign: 'right', flexShrink: 0 }}>{pct.toFixed(0)}%</span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </GlassCard>
+
+        {/* Top Performers — podium style */}
+        <GlassCard>
+          <p style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#e5e7eb' }}>Top Performers</p>
+          {/* Podium */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
+            {[1, 0, 2].map(rank => {
+              const t = tecnicos[rank];
+              if (!t) return null;
+              const medals = ['🥇', '🥈', '🥉'];
+              const isFirst = rank === 0;
+              return (
+                <div key={rank} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 14px', background: `${t.levelColor}08`, borderRadius: 14, border: `1px solid ${t.levelColor}20`, flex: 1, marginTop: isFirst ? 0 : 16 }}>
+                  <div style={{ position: 'relative' }}>
+                    <RingChart pct={t.avgPct} size={isFirst ? 56 : 44} stroke={3} color={t.levelColor} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: isFirst ? 16 : 13, fontWeight: 800, color: t.levelColor }}>{t.avgPct}%</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: isFirst ? 16 : 14 }}>{medals[rank]}</span>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#f3f4f6', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{t.name}</p>
+                  <LevelBadge level={t.level} color={t.levelColor} icon={t.levelIcon} />
+                </div>
+              );
+            })}
+          </div>
+          {/* Ranks 4-10 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {tecnicos.slice(3, 10).map((t, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: DIM, width: 22, textAlign: 'center' }}>#{i + 4}</span>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: `${t.levelColor}15`, border: `1.5px solid ${t.levelColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: t.levelColor, flexShrink: 0 }}>{t.name.charAt(0)}</div>
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: '#e5e7eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                <div style={{ width: 80, height: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ width: `${t.avgPct}%`, height: '100%', background: t.levelColor, borderRadius: 2, transition: 'width 1s ease' }} />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 800, color: t.levelColor, width: 36, textAlign: 'right', fontFamily: 'system-ui' }}>{t.avgPct}%</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
       </div>
 
-      {/* Top 10 rápido */}
-      <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 24 }}>
-        <p style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>Top 10 Técnicos</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-          {tecnicos.slice(0, 10).map((t, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#0d1117', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFB703' : DIM, width: 20, textAlign: 'center' }}>
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#f3f4f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: DIM }}>{t.cursos} cursos · {t.level}</p>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: t.levelColor }}>{t.avgPct}%</span>
-            </div>
-          ))}
+      {/* Cursos que requieren atencion */}
+      <GlassCard>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#e5e7eb' }}>Cursos que Requieren Atencion</p>
+          <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,71,87,0.1)', color: '#FF4757', fontWeight: 600 }}>menor avance</span>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
+          {cursosRezago.map((c, i) => {
+            const color = c.avg_completion < 15 ? '#FF4757' : c.avg_completion < 40 ? '#FFB703' : GREEN;
+            const rezagados = (c.members_list ?? []).filter(m => (m.pct ?? 0) < 30).length;
+            return (
+              <div key={i} style={{ background: '#0d1117', borderRadius: 14, padding: 16, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, animation: `fadeSlide .4s ease ${i * 60}ms both` }}>
+                <div style={{ position: 'relative' }}>
+                  <RingChart pct={c.avg_completion} size={56} stroke={4} color={color} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color, fontFamily: 'system-ui' }}>{c.avg_completion}%</span>
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#d1d5db', textAlign: 'center', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{c.name}</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 10, color: DIM }}>{c.members} inscritos</span>
+                  {rezagados > 0 && <span style={{ fontSize: 10, color: '#FF4757' }}>{rezagados} rezagados</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
+
+    </div>
+  );
+}
+
+// ── Ruta de Profesionalizacion ────────────────────────────────────────────────
+function TabRuta({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tecnico[] }) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'avance' | 'rezago' | 'name'>('avance');
+
+  const backbone = useMemo(() =>
+    cursos.find(c => c.name.toLowerCase().includes('gestion de proyecto') || c.name.toLowerCase().includes('gestión de proyecto')),
+    [cursos]
+  );
+
+  const modules = useMemo(() => {
+    if (!backbone) return [];
+    return (backbone as any).lessons?.filter((l: any) => l.name?.startsWith('MODULO') || l.name?.startsWith('MÓDULO')) ?? [];
+  }, [backbone]);
+
+  const totalModules = modules.length || 10;
+
+  const enrolled = useMemo(() => {
+    if (!backbone) return [];
+    const techMap = new Map(tecnicos.map(t => [t.name.toLowerCase(), t]));
+    return (backbone.members_list ?? [])
+      .map(m => {
+        const pct = m.pct ?? 0;
+        const tech = techMap.get(m.name.toLowerCase());
+        const completed = Math.floor((pct / 100) * totalModules);
+        return { name: m.name, pct, completed, plaza: tech?.plaza || '', area: tech?.area || '', level: tech?.level || 'Aprendiz', levelColor: tech?.levelColor || DIM, levelIcon: tech?.levelIcon || '' };
+      })
+      .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => sortBy === 'avance' ? b.pct - a.pct : sortBy === 'rezago' ? a.pct - b.pct : a.name.localeCompare(b.name));
+  }, [backbone, tecnicos, search, sortBy, totalModules]);
+
+  const avgCompletion = backbone?.avg_completion ?? 0;
+  const completaron100 = enrolled.filter(e => e.pct >= 95).length;
+  const operCursos = useMemo(() => cursos.filter(c => c.published && c.members > 3 && c.total_slides > 0).sort((a, b) => b.members - a.members).slice(0, 6), [cursos]);
+
+  if (!backbone) return (
+    <GlassCard style={{ textAlign: 'center', padding: 40 }}>
+      <p style={{ fontSize: 16, color: '#e5e7eb', fontWeight: 600, marginBottom: 8 }}>Curso backbone no encontrado</p>
+      <p style={{ fontSize: 12, color: DIM }}>El curso "Gestion de Proyectos" no esta en Odoo. Verifica que este publicado.</p>
+    </GlassCard>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Hero banner */}
+      <GlassCard glow="#7c3aed" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08) 0%, #111827 60%)', padding: '28px 32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <RingChart pct={avgCompletion} size={100} stroke={6} color="#7c3aed" />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <AnimNum value={avgCompletion} suffix="%" style={{ fontSize: 22, fontWeight: 800, color: '#7c3aed' }} />
+              <span style={{ fontSize: 8, color: DIM, marginTop: 2 }}>AVANCE</span>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em' }}>RUTA DE PROFESIONALIZACION</p>
+            <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#f9fafb' }}>{backbone.name}</h3>
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: DIM }}>{totalModules} modulos  ·  {enrolled.length} inscritos  ·  Profesionalizacion operativa de tecnicos y lideres de campo</p>
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
+            {([
+              { label: 'Inscritos', value: enrolled.length, color: GREEN },
+              { label: 'Completaron', value: completaron100, color: '#FFB703' },
+              { label: 'Modulos', value: totalModules, color: '#4FC3F7' },
+            ]).map((pill, i) => (
+              <div key={i} style={{ background: `${pill.color}10`, border: `1px solid ${pill.color}25`, borderRadius: 12, padding: '10px 16px', textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: pill.color, lineHeight: 1 }}>{pill.value}</p>
+                <p style={{ margin: '4px 0 0', fontSize: 9, color: DIM, fontWeight: 600, textTransform: 'uppercase' }}>{pill.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Otros cursos operativos */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+        {operCursos.map((c, i) => {
+          const color = c.avg_completion < 20 ? '#FF4757' : c.avg_completion < 50 ? '#FFB703' : GREEN;
+          return (
+            <GlassCard key={i} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }} glow={color}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <RingChart pct={c.avg_completion} size={40} stroke={3} color={color} />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color }}>{c.avg_completion}%</span>
+                </div>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: '#d1d5db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 10, color: DIM }}>{c.members} inscritos</p>
+              </div>
+            </GlassCard>
+          );
+        })}
       </div>
+
+      {/* Filter bar */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar tecnico..."
+          style={{ flex: 1, minWidth: 200, background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '9px 14px', color: '#f3f4f6', fontSize: 13, outline: 'none' }} />
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+          style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '9px 14px', color: '#f3f4f6', fontSize: 13, outline: 'none' }}>
+          <option value="avance">Mas avanzado</option>
+          <option value="rezago">Menor avance</option>
+          <option value="name">Nombre</option>
+        </select>
+        <span style={{ fontSize: 12, color: DIM }}>{enrolled.length} en la ruta</span>
+      </div>
+
+      {/* Journey timeline */}
+      <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Header row */}
+        <div style={{ display: 'grid', gridTemplateColumns: `200px repeat(${totalModules}, 1fr) 70px`, gap: 0, padding: '12px 16px', background: '#0d1117', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: DIM, textTransform: 'uppercase' }}>Tecnico</span>
+          {Array.from({ length: totalModules }, (_, i) => (
+            <span key={i} style={{ fontSize: 9, fontWeight: 600, color: DIM, textAlign: 'center' }}>M{i + 1}</span>
+          ))}
+          <span style={{ fontSize: 10, fontWeight: 700, color: DIM, textTransform: 'uppercase', textAlign: 'right' }}>Avance</span>
+        </div>
+
+        {/* Rows */}
+        {enrolled.map((e, idx) => (
+          <div key={idx} style={{ display: 'grid', gridTemplateColumns: `200px repeat(${totalModules}, 1fr) 70px`, gap: 0, padding: '10px 16px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent', animation: `fadeSlide .3s ease ${idx * 30}ms both` }}>
+            {/* Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: `${e.levelColor}15`, border: `1.5px solid ${e.levelColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: e.levelColor, flexShrink: 0 }}>{e.name.charAt(0)}</div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#e5e7eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</p>
+                <p style={{ margin: 0, fontSize: 9, color: DIM }}>{e.plaza || e.area || e.level}</p>
+              </div>
+            </div>
+            {/* Module dots */}
+            {Array.from({ length: totalModules }, (_, m) => {
+              const done = m < e.completed;
+              const current = m === e.completed && e.pct < 100;
+              return (
+                <div key={m} style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{
+                    width: done ? 18 : current ? 16 : 14,
+                    height: done ? 18 : current ? 16 : 14,
+                    borderRadius: '50%',
+                    background: done ? GREEN : current ? `${GREEN}40` : 'rgba(255,255,255,0.06)',
+                    border: current ? `2px solid ${GREEN}` : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 8, fontWeight: 700,
+                    color: done ? '#001a12' : current ? GREEN : 'rgba(255,255,255,0.2)',
+                    animation: current ? 'pulse 2s ease infinite' : 'none',
+                    transition: 'all 0.3s',
+                  }}>
+                    {done ? '✓' : m + 1}
+                  </div>
+                </div>
+              );
+            })}
+            {/* Percentage */}
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: e.pct >= 80 ? GREEN : e.pct >= 40 ? '#FFB703' : '#FF4757', fontFamily: 'system-ui' }}>{e.pct}%</span>
+            </div>
+          </div>
+        ))}
+
+        {enrolled.length === 0 && (
+          <div style={{ padding: 40, textAlign: 'center', color: DIM, fontSize: 13 }}>
+            {search ? 'Sin resultados para la busqueda' : 'No hay tecnicos inscritos en esta ruta'}
+          </div>
+        )}
+      </GlassCard>
+
     </div>
   );
 }
@@ -723,7 +975,7 @@ export default function AcademiaGerencial({ theme }: Props) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, color: DIM }}>
       <div style={{ width: 18, height: 18, border: `2px solid ${GREEN}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
       Cargando datos de Odoo eLearning...
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}`}</style>
     </div>
   );
 
@@ -780,6 +1032,7 @@ export default function AcademiaGerencial({ theme }: Props) {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'dashboard'   && <TabDashboard cursos={cursos} tecnicos={tecnicos} />}
+        {tab === 'ruta'        && <TabRuta cursos={cursos} tecnicos={tecnicos} />}
         {tab === 'leaderboard' && <TabLeaderboard tecnicos={tecnicos} plazas={plazas} areas={areas} />}
         {tab === 'cursos'      && <TabCursos cursos={cursos} />}
         {tab === 'areas'       && <TabAreas tecnicos={tecnicos} areas={areas} />}

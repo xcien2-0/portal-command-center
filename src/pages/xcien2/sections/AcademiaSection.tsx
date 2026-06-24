@@ -1161,7 +1161,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
 
   // Roles gerenciales → vista gerencial
   const ROLES_GERENCIALES = ['admin', 'director', 'wfm', 'comercial', 'readonly'];
-  const esGerencial = user ? ROLES_GERENCIALES.includes(user.rol) : false;
+  const esGerencial = user ? ROLES_GERENCIALES.includes(user.rol) : true;
 
   // Admin/director pueden cambiar de vista
   const [forceView, setForceView] = useState<'gerencial' | 'tecnico' | null>(null);
@@ -1201,7 +1201,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
     return (
       <div style={{ background: '#0d1117', borderRadius: theme.radius, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Selector de vista para admin/director */}
-        {(user?.rol === 'admin' || user?.rol === 'director') && (
+        {(esGerencial || user?.rol === 'admin' || user?.rol === 'director') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#151515' }}>
             <span style={{ fontSize: 11, color: '#6b7280', marginRight: 4 }}>Vista:</span>
             {(['gerencial', 'tecnico'] as const).map(v => (
