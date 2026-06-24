@@ -6490,6 +6490,16 @@ def eliminar_incidente(inc_id: str, user: dict = Depends(require_rol("admin", "d
     return {"status": "ok"}
 
 
+# ─── Alarm Metrics System ─────────────────────────────────────────────────────
+try:
+    from alarm_endpoints import router as alarm_router
+    app.include_router(alarm_router)
+    from alarm_ingestion import start_alarm_ingestion
+    start_alarm_ingestion()
+    logger.info("Alarm ingestion engine started")
+except Exception as e:
+    logger.warning(f"Alarm system not started: {e}")
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
