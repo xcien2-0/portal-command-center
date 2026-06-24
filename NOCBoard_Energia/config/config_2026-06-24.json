@@ -1,0 +1,504 @@
+{
+  "ai": {
+    "apiKey": "",
+    "baseURL": "http://localhost:4000",
+    "enabled": false,
+    "maxTokens": 2048,
+    "model": "gpt-3.5-turbo"
+  },
+  "api": {
+    "apiKey": "f4f5ef40c4c54aeca1d6a66109e4555d",
+    "enableWebhooks": false,
+    "enabled": true,
+    "port": 9404,
+    "webhookURLs": []
+  },
+  "autoReport": {
+    "enabled": false,
+    "frequency": "Daily",
+    "outputDirectory": ""
+  },
+  "branding": {
+    "accentColorHex": "00D9D9",
+    "ispName": "",
+    "logoFileName": "",
+    "showLogoInReports": true,
+    "showLogoInSidebar": true,
+    "showLogoInWallboard": true
+  },
+  "customPowerProfiles": [
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 100,
+          "id": "3C5E896B-ACFE-47A7-91A8-3828929F3109",
+          "kind": "number",
+          "metric": "batteryVoltage",
+          "oid": "1.3.6.1.4.1.12148.10.10.5.5.0"
+        },
+        {
+          "divisor": 1,
+          "id": "A61839B7-6314-47B2-8A6B-4B938A7D4E2D",
+          "kind": "number",
+          "metric": "batteryCurrent",
+          "oid": "1.3.6.1.4.1.12148.10.10.6.5.0"
+        },
+        {
+          "divisor": 1,
+          "id": "857A7AEF-7442-49FD-939A-7A57A9E63807",
+          "kind": "number",
+          "metric": "batteryTemperature",
+          "oid": "1.3.6.1.4.1.12148.10.10.7.5.0"
+        },
+        {
+          "divisor": 1,
+          "id": "46F90062-1FED-4D7F-829F-86101A77E524",
+          "kind": "number",
+          "metric": "batterySOC",
+          "oid": "1.3.6.1.4.1.12148.10.10.9.5.0"
+        },
+        {
+          "divisor": 100,
+          "id": "7233F51B-6908-42F5-AE21-46C061990C1B",
+          "kind": "number",
+          "metric": "rectifierOutputVoltage",
+          "oid": "1.3.6.1.4.1.12148.10.10.5.5.0"
+        },
+        {
+          "divisor": 10,
+          "id": "FF5E6955-2EB8-4773-B0C2-92E081093FEE",
+          "kind": "number",
+          "metric": "rectifierOutputCurrent",
+          "oid": "1.3.6.1.4.1.12148.10.5.2.5.0"
+        },
+        {
+          "divisor": 1,
+          "id": "5492A81D-CFFC-40DF-84F3-81A31FC8DB71",
+          "kind": "number",
+          "metric": "rectifierCount",
+          "oid": "1.3.6.1.4.1.12148.10.5.5.0"
+        },
+        {
+          "divisor": 10,
+          "id": "B585ED8E-B965-48ED-BAFE-FA16CAAC2D88",
+          "kind": "number",
+          "metric": "loadCurrent",
+          "oid": "1.3.6.1.4.1.12148.10.9.2.5.0"
+        },
+        {
+          "divisor": 1,
+          "id": "F985E715-7D8A-4D5E-9DD4-25D6857C829E",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.12148.10.3.4.1.6.1"
+        }
+      ],
+      "id": "84E04426-25C8-47E7-B5A1-79828EDA885D",
+      "name": "Eltek (integrado)",
+      "vendor": "eltek"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 1,
+          "id": "DC95E570-3501-4511-B4D2-59828863D8F5",
+          "kind": "number",
+          "metric": "rectifierOutputVoltage",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.2.1.2.1"
+        },
+        {
+          "divisor": 1,
+          "id": "82236C15-273D-40E3-A8BE-60FE7A6197DD",
+          "kind": "number",
+          "metric": "loadCurrent",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.2.1.2.2"
+        },
+        {
+          "divisor": 1,
+          "id": "A0CF798E-27A2-49C8-BE51-92408B44D780",
+          "kind": "number",
+          "metric": "batteryCurrent",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.3.1.2.1"
+        },
+        {
+          "divisor": 1,
+          "id": "072F2561-008C-478A-9520-ACBE72602AC5",
+          "kind": "number",
+          "metric": "batterySOC",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.3.1.2.5"
+        },
+        {
+          "divisor": 1,
+          "id": "57D3B517-9900-4C31-A5F1-6C531D9B024C",
+          "kind": "number",
+          "metric": "batteryTemperature",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.3.1.2.3"
+        },
+        {
+          "divisor": 1,
+          "id": "2CE705C0-C828-4829-ACFA-034A44E552C4",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.4.1.2.1"
+        },
+        {
+          "divisor": 1,
+          "id": "FAC6154E-B8B5-4E98-B50C-21CB9363E239",
+          "kind": "number",
+          "metric": "rectifierCount",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.5.1.2.1"
+        },
+        {
+          "divisor": 1,
+          "id": "4CC3BFD5-D0D7-4283-B364-DFC5711FFD35",
+          "kind": "number",
+          "metric": "rectifierFailCount",
+          "oid": "1.3.6.1.4.1.6302.2.1.2.5.1.2.2"
+        },
+        {
+          "divisor": 1,
+          "id": "DEAEE2AB-A698-42E2-B3E3-41E0DD417BE9",
+          "kind": "boolNonZero",
+          "metric": "generalAlarmActive",
+          "oid": "1.3.6.1.4.1.6302.2.1.1.3.0"
+        }
+      ],
+      "id": "2C7DBAB8-5594-4A39-A60E-1AFEE96C7786",
+      "name": "Vertiv / Emerson (integrado)",
+      "vendor": "vertiv"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 1000,
+          "id": "102DABBF-D64D-4D11-9332-0A3856AD242D",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.21940.2.3.1.2.1.0"
+        },
+        {
+          "divisor": 1000,
+          "id": "FFED517C-570E-479F-A15F-4A5FE7395FCA",
+          "kind": "number",
+          "metric": "mainsFrequency",
+          "oid": "1.3.6.1.4.1.21940.2.3.1.2.7.0"
+        },
+        {
+          "divisor": 1000,
+          "id": "DBE31561-B55C-4FE2-9BE9-BC1A735C87D2",
+          "kind": "number",
+          "metric": "rectifierOutputVoltage",
+          "oid": "1.3.6.1.4.1.21940.2.4.2.1.0"
+        },
+        {
+          "divisor": 1000,
+          "id": "585E9CCA-A7DD-4D0B-ABE5-3814128B870E",
+          "kind": "number",
+          "metric": "rectifierOutputCurrent",
+          "oid": "1.3.6.1.4.1.21940.2.4.2.2.0"
+        }
+      ],
+      "id": "402E7A43-F2A1-44E6-B872-46E4F0515FE2",
+      "name": "MEI (integrado)",
+      "vendor": "mei"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 10,
+          "id": "2BBFB0D7-7E7B-40E7-9801-4421F923F040",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.49075.1.3.1.2.0"
+        },
+        {
+          "divisor": 10,
+          "id": "C0A86719-5795-4023-8C51-1500797F552D",
+          "kind": "number",
+          "metric": "mainsFrequency",
+          "oid": "1.3.6.1.4.1.49075.1.3.1.10.0"
+        },
+        {
+          "divisor": 10,
+          "id": "F67F0741-16FB-4FE7-8FB7-8630AAB6D1F7",
+          "kind": "number",
+          "metric": "acOutputVoltage",
+          "oid": "1.3.6.1.4.1.49075.1.3.1.2.0"
+        },
+        {
+          "divisor": 10,
+          "id": "37991FDA-CC54-435D-A9B9-A36E021F7946",
+          "kind": "number",
+          "metric": "loadPower",
+          "oid": "1.3.6.1.4.1.49075.1.3.1.4.0"
+        },
+        {
+          "divisor": 10,
+          "id": "16316F74-67EA-40C3-B423-622CEC22A1E9",
+          "kind": "number",
+          "metric": "batteryVoltage",
+          "oid": "1.3.6.1.4.1.49075.1.3.2.1.0"
+        },
+        {
+          "divisor": 1,
+          "id": "A92356D5-C550-444D-A17B-EF30F5FA3C90",
+          "kind": "boolNonZero",
+          "metric": "mainsPresent",
+          "oid": "1.3.6.1.4.1.49075.1.3.3.4.0"
+        }
+      ],
+      "id": "0184D112-1080-4566-8875-DDD45F054937",
+      "name": "Samlex (integrado)",
+      "vendor": "samlex"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 1000,
+          "id": "0D2E8AC6-503E-4273-91B7-153CDBAD01BE",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.49136.100.3.5.0"
+        },
+        {
+          "divisor": 1000,
+          "id": "65AD6D49-E937-4376-B4DB-D10E4C84A6BB",
+          "kind": "number",
+          "metric": "batteryVoltage",
+          "oid": "1.3.6.1.4.1.49136.100.3.6.0"
+        },
+        {
+          "divisor": 1,
+          "id": "7169F4FB-297B-43B6-A620-EAF26BFDFFD4",
+          "kind": "number",
+          "metric": "temperature",
+          "oid": "1.3.6.1.4.1.49136.100.3.1.0"
+        },
+        {
+          "divisor": 1,
+          "id": "E58C8A54-D5B0-4CA2-B3A9-980D4D5DEA56",
+          "kind": "number",
+          "metric": "humidity",
+          "oid": "1.3.6.1.4.1.49136.100.3.4.0"
+        },
+        {
+          "divisor": 1,
+          "id": "CA77B3BF-49EF-4575-AB01-FF5DA42E42A1",
+          "kind": "number",
+          "metric": "doorOpen",
+          "oid": "1.3.6.1.4.1.49136.100.3.10.0"
+        }
+      ],
+      "id": "376EB6A2-3D47-4EEF-BE42-AE8E4AC731C2",
+      "name": "ALG Site Monitor (integrado)",
+      "vendor": "alg"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 10,
+          "id": "FFAE8151-2C96-425F-8475-3354723A141F",
+          "kind": "number",
+          "metric": "batteryVoltage",
+          "oid": "1.3.6.1.4.1.49136.1.1.1.0"
+        },
+        {
+          "divisor": 10,
+          "id": "A71237ED-5805-4890-85F4-704706BAFD70",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.49136.1.1.2.0"
+        }
+      ],
+      "id": "0BF909C1-6CD4-4534-85A2-C5C2F88C9C17",
+      "name": "ALG DC UPS (integrado)",
+      "vendor": "algUps"
+    },
+    {
+      "enabled": true,
+      "entries": [
+        {
+          "divisor": 10,
+          "id": "B2CD2190-4E8D-4ED8-BDB2-6FAFA8237D35",
+          "kind": "number",
+          "metric": "temperature",
+          "oid": "1.3.6.1.4.1.21239.5.1.2.1.5.1"
+        },
+        {
+          "divisor": 1,
+          "id": "26DCBBFF-1E2C-4549-B15C-AAAF6CB93EBC",
+          "kind": "number",
+          "metric": "humidity",
+          "oid": "1.3.6.1.4.1.21239.5.1.2.1.6.1"
+        },
+        {
+          "divisor": 1,
+          "id": "018631A4-3B22-4F96-A2EF-9D8195E792B5",
+          "kind": "number",
+          "metric": "mainsVoltage",
+          "oid": "1.3.6.1.4.1.21239.5.1.11.1.5.1"
+        },
+        {
+          "divisor": 1,
+          "id": "F2A7A08E-8B56-43C1-A3CF-8B8424E1F172",
+          "kind": "number",
+          "metric": "batteryVoltage",
+          "oid": "1.3.6.1.4.1.21239.5.1.11.1.5.2"
+        },
+        {
+          "divisor": 1,
+          "id": "5F9B5C0A-B309-4476-B1EF-C57E14D533DA",
+          "kind": "number",
+          "metric": "doorOpen",
+          "oid": "1.3.6.1.4.1.21239.5.1.11.1.5.3"
+        }
+      ],
+      "id": "812758D9-C4FA-4724-BDD5-7C1E0FFB3F7A",
+      "name": "WatchDog (integrado)",
+      "vendor": "watchdog"
+    }
+  ],
+  "growattCloud": {
+    "baseURL": "https://openapi.growatt.com",
+    "deviceDetailMinGapSeconds": 15,
+    "enabled": false,
+    "pollIntervalSeconds": 120,
+    "requestTimeoutSeconds": 20
+  },
+  "healthWeights": {
+    "cpu": 10,
+    "latency": 15,
+    "memory": 10,
+    "packetLoss": 20,
+    "reachability": 30,
+    "signal": 15
+  },
+  "history": {
+    "enableHistory": true,
+    "retention": "7d",
+    "sampleIntervalSeconds": 60
+  },
+  "hostGroups": [],
+  "lastImportedFiles": [],
+  "license": {
+    "licenseKey": "",
+    "quasarBaseURL": "http://localhost:9440",
+    "validationIntervalHours": 4
+  },
+  "monitoring": {
+    "enablePing": true,
+    "enableSNMP": true,
+    "maxConcurrentPings": 80,
+    "maxConcurrentSNMP": 20,
+    "metricsHistoryMinutes": 60,
+    "pingCount": 1,
+    "pingIntervalSeconds": 20,
+    "pingTimeout": 2,
+    "snmpIntervalSeconds": 60
+  },
+  "notifications": {
+    "enableNotifications": true,
+    "notifyOnDegraded": false,
+    "notifyOnOffline": true,
+    "notifyOnRecovery": true
+  },
+  "snmp": {
+    "cityOverrides": {
+      "Monterrey": {
+        "community": "snmpxcien"
+      }
+    },
+    "globalCommunity": "snmpxcien",
+    "hostOverrides": {
+      "172.30.111.54": {
+        "community": "read"
+      },
+      "172.30.90.102": {
+        "community": "read"
+      }
+    },
+    "port": 161,
+    "retries": 2,
+    "siteOverrides": {},
+    "timeout": 5,
+    "v3": {
+      "authPassphrase": "",
+      "authProtocol": "SHA",
+      "privPassphrase": "",
+      "privProtocol": "AES",
+      "securityLevel": "authNoPriv",
+      "username": ""
+    },
+    "version": "2c"
+  },
+  "syslog": {
+    "enableForwarding": false,
+    "enableServer": true,
+    "forwardMetrics": false,
+    "forwardStateChanges": true,
+    "listenPort": 514,
+    "remoteHost": "",
+    "remotePort": 514,
+    "retentionDays": 7
+  },
+  "telegram": {
+    "botToken": "8781558312:AAE7r09v5COAxpAhBjpc95-7-ZXUrmwb-GM",
+    "chatID": "-1003763039964",
+    "enabled": true,
+    "notifyMonitoringEvents": true,
+    "notifyOnCFEOutage": true,
+    "notifyOnDegraded": false,
+    "notifyOnOffline": true,
+    "notifyOnRecovery": true
+  },
+  "thresholds": {
+    "batterySOCCritical": 20,
+    "batterySOCWarning": 40,
+    "batteryVoltageCritical": 46,
+    "batteryVoltageWarning": 51,
+    "cfeClearReadings": 2,
+    "cfeConfirmReadings": 3,
+    "cpuCritical": 90,
+    "cpuWarning": 70,
+    "latencyCritical": 200,
+    "latencyWarning": 50,
+    "loadOverloadPercent": 100,
+    "mainsOutageMinutes": 5,
+    "memoryCritical": 90,
+    "memoryWarning": 75,
+    "packetLossCritical": 20,
+    "packetLossWarning": 5,
+    "rssiMax": -30,
+    "rssiMin": -90,
+    "signalCritical": -85,
+    "signalWarning": -75,
+    "siteMultiDownThreshold": 3,
+    "voltageTolerancePct": 10
+  },
+  "ticker": {
+    "enableAlertSound": true,
+    "height": 44,
+    "showLiveCounters": true,
+    "speed": 50
+  },
+  "wallboard": {
+    "autoRotate": true,
+    "enabledPages": [
+      "globalSummary",
+      "criticalHosts",
+      "cityMap",
+      "siteCards",
+      "trends",
+      "alerts",
+      "vendorOverview",
+      "ptpLinks"
+    ],
+    "rotationIntervalSeconds": 15
+  }
+}
