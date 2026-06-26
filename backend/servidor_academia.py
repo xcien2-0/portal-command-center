@@ -6500,6 +6500,297 @@ try:
 except Exception as e:
     logger.warning(f"Alarm system not started: {e}")
 
+# ─── Supercerebro Contextual ───────────────────────────────────────────────────
+
+CEREBRO_PROVIDERS = {
+    "claude": {
+        "id": "claude", "name": "Claude Sonnet", "icon": "🧠",
+        "description": "Anthropic Claude — razonamiento profundo",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
+        "default_model": "claude-sonnet-4-6",
+    },
+    "litellm": {
+        "id": "litellm", "name": "LiteLLM Gateway", "icon": "⚡",
+        "description": "Gateway unificado — OpenAI, Gemini, Mistral y más",
+        "status": "configured" if os.environ.get("LITELLM_API_KEY") else "needs_key",
+        "models": ["gpt-4o", "gpt-4o-mini", "gemini/gemini-2.0-flash", "mistral/mistral-large"],
+        "default_model": "gpt-4o",
+    },
+    "ollama": {
+        "id": "ollama", "name": "Ollama Local", "icon": "🦙",
+        "description": "Modelos locales — privado, sin latencia de red",
+        "status": "local",
+        "models": [],
+        "default_model": "llama3.2",
+    },
+    "perplexity": {
+        "id": "perplexity", "name": "Perplexity", "icon": "🔍",
+        "description": "Búsqueda aumentada con IA — datos en tiempo real",
+        "status": "configured" if os.environ.get("PERPLEXITY_API_KEY") else "needs_key",
+        "models": ["sonar", "sonar-pro", "sonar-reasoning"],
+        "default_model": "sonar-pro",
+    },
+    "antigravity": {
+        "id": "antigravity", "name": "Antigravity Director", "icon": "🚀",
+        "description": "Director General de Antigravity — contexto XCIEN nativo",
+        "status": "configured",
+        "models": ["director-general"],
+        "default_model": "director-general",
+    },
+    "openclaw": {
+        "id": "openclaw", "name": "OpenClaw", "icon": "🦀",
+        "description": "Ecosistema agéntico — pendiente de configuración",
+        "status": "pending",
+        "models": [],
+        "default_model": "",
+    },
+}
+
+CEREBRO_CONTEXT_MODULES = {
+    "noc":        {"label": "NOC / Alertas",     "icon": "🖥️",  "endpoint": "/api/noc/alerts"},
+    "wfm":        {"label": "Campo WFM",          "icon": "🔧",  "endpoint": "/api/wfm/tickets"},
+    "inventario": {"label": "Inventario",         "icon": "📦",  "endpoint": "/api/inventario/odoo/productos"},
+    "ventas":     {"label": "Ventas / MRR",       "icon": "💰",  "endpoint": "/api/ventas/mrr"},
+    "rrhh":       {"label": "RRHH",               "icon": "👤",  "endpoint": "/api/rrhh/empleados"},
+    "incidentes": {"label": "Incidentes activos", "icon": "🚨",  "endpoint": "/api/incidentes"},
+}
+
+async def _assemble_context(modules: List[str], request: Request) -> str:
+    """Fetch summaries from requested context modules and build system context string."""
+    parts: List[str] = [
+        "Eres el Supercerebro de XCIEN Networks. Tienes acceso al estado operativo en tiempo real "
+        "de la empresa. Responde de forma concisa, técnica y orientada a decisiones.\n"
+        f"Fecha y hora: {dt_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    ]
+    base = f"http://127.0.0.1:{int(os.environ.get('PORT', 8002))}"
+    async with _httpx_obs.AsyncClient(timeout=5) as client:
+        for mod in modules:
+            cfg = CEREBRO_CONTEXT_MODULES.get(mod)
+            if not cfg:
+                continue
+            try:
+                r = await client.get(f"{base}{cfg['endpoint']}")
+                if r.status_code == 200:
+                    data = r.json()
+                    # compact summary
+                    summary = json.dumps(data, ensure_ascii=False)[:2000]
+                    parts.append(f"[{cfg['label']}]\n{summary}")
+            except Exception as e:
+                parts.append(f"[{cfg['label']}] No disponible: {str(e)[:80]}")
+    return "\n\n".join(parts)
+
+class CerebroRequest(BaseModel):
+    message: str
+    provider: str = "claude"
+    model: Optional[str] = None
+    context_modules: List[str] = []
+    history: List[Dict[str, str]] = []
+    temperature: float = 0.7
+
+@app.get("/api/cerebro/providers")
+async def cerebro_providers():
+    providers = dict(CEREBRO_PROVIDERS)
+    # Check Ollama models live
+    try:
+        async with _httpx_obs.AsyncClient(timeout=3) as client:
+            r = await client.get("http://localhost:11434/api/tags")
+            if r.status_code == 200:
+                models = [m["name"] for m in r.json().get("models", [])]
+                providers["ollama"]["models"] = models or ["llama3.2"]
+                providers["ollama"]["status"] = "online"
+            else:
+                providers["ollama"]["status"] = "offline"
+    except Exception:
+        providers["ollama"]["status"] = "offline"
+    return providers
+
+@app.post("/api/cerebro/chat")
+async def cerebro_chat(req: CerebroRequest, request: Request):
+    provider_id = req.provider
+    if provider_id not in CEREBRO_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"Proveedor '{provider_id}' no válido")
+    if CEREBRO_PROVIDERS[provider_id]["status"] == "pending":
+        raise HTTPException(status_code=503, detail=f"{provider_id} aún no está configurado")
+
+    system_ctx = await _assemble_context(req.context_modules, request)
+    model = req.model or CEREBRO_PROVIDERS[provider_id]["default_model"]
+    messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
+    messages.append({"role": "user", "content": req.message})
+
+    # ── Claude ──
+    if provider_id == "claude":
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY no configurado")
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": model, "max_tokens": 2048, "system": system_ctx,
+                      "messages": messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["content"][0]["text"], "provider": "claude", "model": model}
+
+    # ── LiteLLM (OpenAI-compatible) ──
+    elif provider_id == "litellm":
+        api_key = os.environ.get("LITELLM_API_KEY", "no-key")
+        base_url = os.environ.get("LITELLM_BASE_URL", "http://localhost:4000")
+        oai_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": oai_messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["choices"][0]["message"]["content"], "provider": "litellm", "model": model}
+
+    # ── Ollama ──
+    elif provider_id == "ollama":
+        ollama_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=120) as client:
+            r = await client.post(
+                "http://localhost:11434/api/chat",
+                json={"model": model, "messages": ollama_messages, "stream": False,
+                      "options": {"temperature": req.temperature}},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["message"]["content"], "provider": "ollama", "model": model}
+
+    # ── Perplexity ──
+    elif provider_id == "perplexity":
+        api_key = os.environ.get("PERPLEXITY_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="PERPLEXITY_API_KEY no configurado")
+        pplx_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": pplx_messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            data = r.json()
+            text = data["choices"][0]["message"]["content"]
+            citations = data.get("citations", [])
+            if citations:
+                text += "\n\n**Fuentes:**\n" + "\n".join(f"- {c}" for c in citations[:5])
+            return {"response": text, "provider": "perplexity", "model": model}
+
+    # ── Antigravity Director ──
+    elif provider_id == "antigravity":
+        trigger_id = "trig_01A1VdoN9yfwyoUFWChXbn3g"
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY requerido para Antigravity")
+        full_msg = f"{system_ctx}\n\n---\nMensaje del usuario: {req.message}"
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
+                         "anthropic-beta": "interleaved-thinking-2025-05-14",
+                         "content-type": "application/json"},
+                json={
+                    "model": "claude-sonnet-4-6",
+                    "max_tokens": 2048,
+                    "system": [{"type": "text", "text": full_msg,
+                                "cache_control": {"type": "ephemeral"}}],
+                    "messages": [{"role": "user", "content": req.message}],
+                },
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            content = r.json().get("content", [])
+            text = " ".join(b["text"] for b in content if b.get("type") == "text")
+            return {"response": text, "provider": "antigravity", "model": "director-general"}
+
+    raise HTTPException(status_code=400, detail="Proveedor no implementado")
+
+# ─── Super Admin Tracking ──────────────────────────────────────────────────────
+import hashlib
+
+ADMIN_LOG_FILE = os.path.join(BASE_DIR, "admin_usage.jsonl")
+ADMIN_PIN_HASH = hashlib.sha256(
+    os.environ.get("ADMIN_PIN", "xcien2030").encode()
+).hexdigest()
+
+def _verify_pin(pin: str) -> bool:
+    return hashlib.sha256(pin.encode()).hexdigest() == ADMIN_PIN_HASH
+
+class TrackEvent(BaseModel):
+    section: str
+    user_agent: Optional[str] = None
+
+@app.post("/api/admin/track")
+async def track_section(event: TrackEvent, request: Request):
+    entry = {
+        "ts": datetime.now().isoformat(),
+        "section": event.section,
+        "ip": request.client.host if request.client else "unknown",
+        "ua": (event.user_agent or "")[:120],
+    }
+    with open(ADMIN_LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+    return {"ok": True}
+
+@app.get("/api/admin/stats")
+def admin_stats(pin: str = ""):
+    if not _verify_pin(pin):
+        raise HTTPException(status_code=403, detail="PIN incorrecto")
+
+    logs = []
+    if os.path.exists(ADMIN_LOG_FILE):
+        with open(ADMIN_LOG_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        logs.append(json.loads(line))
+                    except Exception:
+                        pass
+
+    from collections import Counter
+    from datetime import timedelta
+
+    now = datetime.now()
+    today = now.date().isoformat()
+    week_ago = (now - timedelta(days=7)).isoformat()
+
+    section_counts: Counter = Counter()
+    daily_counts: Counter = Counter()
+    ip_counts: Counter = Counter()
+    hourly_counts: Counter = Counter()
+    recent: list = []
+
+    for e in logs:
+        section_counts[e.get("section", "?")] += 1
+        day = e.get("ts", "")[:10]
+        daily_counts[day] += 1
+        ip_counts[e.get("ip", "?")] += 1
+        hour = e.get("ts", "")[:13]
+        hourly_counts[hour] += 1
+        if e.get("ts", "") >= week_ago:
+            recent.append(e)
+
+    top_sections = [{"section": s, "visits": c} for s, c in section_counts.most_common(10)]
+    daily_activity = [{"date": d, "visits": c} for d, c in sorted(daily_counts.items())[-14:]]
+
+    return {
+        "total_visits": len(logs),
+        "today_visits": daily_counts.get(today, 0),
+        "week_visits": len(recent),
+        "unique_ips": len(ip_counts),
+        "top_sections": top_sections,
+        "daily_activity": daily_activity,
+        "recent_events": recent[-20:][::-1],
+    }
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")

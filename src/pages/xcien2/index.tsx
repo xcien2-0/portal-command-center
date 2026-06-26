@@ -45,6 +45,8 @@ const XcienTokensSection = lazy(() => import('./sections/XcienTokensSection'));
 const MerkleFeedSection  = lazy(() => import('./sections/MerkleFeedSection'));
 const FodaSection        = lazy(() => import('./sections/FodaSection'));
 const Estrategia2030Section = lazy(() => import('./sections/Estrategia2030Section'));
+const SuperAdminSection     = lazy(() => import('./sections/SuperAdminSection'));
+const CerebroSection        = lazy(() => import('./sections/CerebroSection'));
 const AdopcionSection    = lazy(() => import('./sections/AdopcionSection'));
 const TelegramBotSection = lazy(() => import('./sections/TelegramBotSection'));
 const DocsSection        = lazy(() => import('./sections/DocsSection'));
@@ -102,11 +104,13 @@ const NAV: NavEntry[] = [
   { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
   { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
+  { id: 'cerebro', label: 'Supercerebro', icon: '🧠', group: 'Infraestructura' },
   { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
   { id: 'mobile', label: 'Terminal Móvil', icon: '📱', group: 'Infraestructura' },
   { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
   { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
   { id: 'editor', label: 'Configuración', icon: '🎨', group: 'Sistema' },
+  { id: 'superadmin', label: 'Super Admin', icon: '🔐', group: 'Sistema' },
 ];
 
 // ── Lucide icon map ───────────────────────────────────────────────────────────
@@ -540,6 +544,8 @@ function Content({
       {section === 'reportes-kpi' && <ReportesKPISection theme={theme} />}
       {section === 'reports' && <ReportesGobierno />}
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
+      {section === 'superadmin' && <SuperAdminSection theme={theme} />}
+      {section === 'cerebro'    && <CerebroSection    theme={theme} />}
 
       {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
@@ -881,6 +887,11 @@ export default function Xcien2Page() {
   const onSelectSection = useCallback((id: SectionId) => {
     setSection(id);
     navigate(`?section=${id}`, { replace: true });
+    fetch('/api/admin/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section: id, user_agent: navigator.userAgent }),
+    }).catch(() => {});
   }, [navigate]);
 
   const alertCount = realAlerts.filter(a => a.severity === 'critical' || a.severity === 'warning').length;
