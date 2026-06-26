@@ -44,6 +44,7 @@ const InventarioTransfersSection = lazy(() => import('./sections/InventarioTrans
 const XcienTokensSection = lazy(() => import('./sections/XcienTokensSection'));
 const MerkleFeedSection  = lazy(() => import('./sections/MerkleFeedSection'));
 const FodaSection        = lazy(() => import('./sections/FodaSection'));
+const Estrategia2030Section = lazy(() => import('./sections/Estrategia2030Section'));
 const AdopcionSection    = lazy(() => import('./sections/AdopcionSection'));
 const TelegramBotSection = lazy(() => import('./sections/TelegramBotSection'));
 const DocsSection        = lazy(() => import('./sections/DocsSection'));
@@ -96,6 +97,7 @@ const NAV: NavEntry[] = [
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
 
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
+  { id: 'estrategia2030', label: 'Estrategia 2030', icon: '🚀', group: 'Planeación' },
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
@@ -526,6 +528,7 @@ function Content({
       {section === 'sala_juntas' && <SalaJuntasSection theme={theme} />}
       {section === 'agentes'   && <AgentesSection   theme={theme} />}
       {section === 'proyectos' && <ProyectosSection theme={theme} />}
+      {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
