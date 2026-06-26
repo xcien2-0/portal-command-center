@@ -53,7 +53,7 @@ export default function Estrategia2030Section({ theme }: Props) {
   };
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '24px 28px' }}>
 
       {/* ── Header ── */}
       <div style={{ marginBottom: 24 }}>
