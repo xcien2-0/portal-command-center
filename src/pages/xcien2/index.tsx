@@ -764,6 +764,8 @@ export default function Xcien2Page() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
+  // embed=1 → running inside native macOS app; hide the web sidebar
+  const embedMode = new URLSearchParams(window.location.search).get('embed') === '1';
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
@@ -904,17 +906,19 @@ export default function Xcien2Page() {
       color: U.text,
       background: U.bg,
     }}>
-      <Sidebar
-        active={section}
-        onSelect={onSelectSection}
-        theme={theme}
-        backendStatus={backendStatus}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(p => !p)}
-        isMobile={isMobile}
-        mobileOpen={mobileNavOpen}
-        onMobileClose={() => setMobileNavOpen(false)}
-      />
+      {!embedMode && (
+        <Sidebar
+          active={section}
+          onSelect={onSelectSection}
+          theme={theme}
+          backendStatus={backendStatus}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(p => !p)}
+          isMobile={isMobile}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+        />
+      )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         {/* UISP-style top header — 48px (+ safe-area iOS en standalone) */}

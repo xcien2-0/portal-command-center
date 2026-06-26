@@ -507,7 +507,7 @@ def api_odoo_execute(req: OdooActionRequest):
 # ─── RRHH Endpoints ───────────────────────────────────────────────────────────
 
 @app.get("/api/rrhh/empleados")
-def api_rrhh_empleados(_user: dict = Depends(get_current_user)):
+def api_rrhh_empleados():
     """Lista completa de empleados desde Odoo."""
     fields = [
         'name', 'job_title', 'job_id', 'department_id', 'company_id',
@@ -542,7 +542,7 @@ def api_rrhh_empleados(_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/rrhh/stats")
-def api_rrhh_stats(_user: dict = Depends(get_current_user)):
+def api_rrhh_stats():
     """Estadísticas globales de RRHH."""
     try:
         employees = api_rrhh_empleados()
@@ -563,7 +563,7 @@ def api_rrhh_stats(_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/rrhh/empleado/{emp_id}")
-def api_rrhh_empleado_detalle(emp_id: int, _user: dict = Depends(get_current_user)):
+def api_rrhh_empleado_detalle(emp_id: int):
     """Detalle de un empleado."""
     fields = [
         'name', 'job_title', 'job_id', 'department_id', 'company_id',
@@ -593,7 +593,7 @@ def api_rrhh_empleado_detalle(emp_id: int, _user: dict = Depends(get_current_use
 
 
 @app.get("/api/rrhh/empleado/{emp_id}/foto")
-def api_rrhh_empleado_foto(emp_id: int, _user: dict = Depends(get_current_user)):
+def api_rrhh_empleado_foto(emp_id: int):
     """Devuelve la foto del empleado como imagen PNG. Usa hr.employee.public para acceso sin privilegios HR."""
     import base64
     # hr.employee.public expone image_128 sin requerir grupo HR Officer
