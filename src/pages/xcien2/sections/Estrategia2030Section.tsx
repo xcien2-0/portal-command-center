@@ -44,7 +44,7 @@ export default function Estrategia2030Section({ theme }: Props) {
   const [tab, setTab]       = useState<Tab>('vision');
   const [objSel, setObjSel] = useState<number | null>(null);
 
-  const G = theme.glow;
+  const G = theme.accent;
   const card: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.1)',

@@ -4,8 +4,6 @@ import type { DailyAvailability, GobIncident, SLATerm } from '@/data/mockGobiern
 import { GOB_CLIENT, MONTHS_ES } from '@/data/mockGobiernoData';
 
 const NAVY = '#1a3a5c';
-const FOOTER_TEXT = 'CONFIDENCIAL — Este documento contiene información privilegiada. Queda prohibida su reproducción o distribución sin autorización escrita.';
-
 function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   const h = doc.internal.pageSize.getHeight();
   const w = doc.internal.pageSize.getWidth();
@@ -14,7 +12,6 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   doc.line(20, h - 20, w - 20, h - 20);
   doc.setFontSize(6);
   doc.setTextColor(NAVY);
-  doc.text(FOOTER_TEXT, w / 2, h - 15, { align: 'center', maxWidth: w - 40 });
   doc.text(`Página ${pageNum} de ${totalPages}`, w - 20, h - 10, { align: 'right' });
 }
 
