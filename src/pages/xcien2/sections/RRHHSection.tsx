@@ -289,6 +289,7 @@ export default function RRHHSection({ theme }: Props) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [photoZoom,   setPhotoZoom]   = useState(false);
   const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas'>('arbol');
+  const [selectedDept, setSelectedDept] = useState<string | null>(null);
 
   const openEmp = (emp: Empleado) => {
     setSelectedEmp(emp);
@@ -543,19 +544,30 @@ export default function RRHHSection({ theme }: Props) {
             </div>
 
             <div>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: text, marginBottom: 12 }}>🗂️ Departamentos (Top 20)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: text, marginBottom: 12 }}>🗂️ Departamentos — clic para ver integrantes</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8 }}>
                 {stats.by_department.map((item, i) => {
                   const palette = ['#00A859','#00B4D8','#8B5CF6','#F97316','#EC4899','#EAB308','#14B8A6','#6366F1','#F43F5E','#84CC16'];
                   const c = palette[i % palette.length];
                   const pct = Math.round((item.count / stats.total) * 100);
+                  const isSelected = selectedDept === item.name;
                   return (
-                    <div key={item.name} style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div key={item.name}
+                      onClick={() => setSelectedDept(isSelected ? null : item.name)}
+                      style={{
+                        background: isSelected ? `${c}18` : card,
+                        border: `1px solid ${isSelected ? c : border}`,
+                        borderRadius: radius, padding: '12px 14px',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        boxShadow: isSelected ? `0 0 0 2px ${c}40` : 'none',
+                      }}
+                    >
                       <div style={{ width: 34, height: 34, borderRadius: 8, background: `${c}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                         {['👔','🔧','📞','💻','📊','🌐','📦','🏗️','🎯','🔍'][i] || '👥'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? c : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {shortDept(item.name)}
                         </div>
                         <div style={{ background: `${c}20`, borderRadius: 3, height: 4, marginTop: 5, overflow: 'hidden' }}>
@@ -567,6 +579,63 @@ export default function RRHHSection({ theme }: Props) {
                   );
                 })}
               </div>
+
+              {/* Panel de integrantes del departamento seleccionado */}
+              {selectedDept && (() => {
+                const palette = ['#00A859','#00B4D8','#8B5CF6','#F97316','#EC4899','#EAB308','#14B8A6','#6366F1','#F43F5E','#84CC16'];
+                const idx = stats.by_department.findIndex(d => d.name === selectedDept);
+                const c = palette[idx % palette.length] || accent;
+                const deptEmps = empleados.filter(e => e.department === selectedDept);
+                return (
+                  <div style={{ marginTop: 16, background: card, border: `1px solid ${c}50`, borderRadius: radius, overflow: 'hidden' }}>
+                    {/* Header del panel */}
+                    <div style={{ background: `${c}15`, borderBottom: `1px solid ${c}30`, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: c }}>{shortDept(selectedDept)}</span>
+                        <span style={{ fontSize: 11, color: dim, marginLeft: 8 }}>{deptEmps.length} integrante{deptEmps.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <button
+                        onClick={() => setSelectedDept(null)}
+                        style={{ background: 'transparent', border: 'none', color: dim, fontSize: 16, cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                      >✕</button>
+                    </div>
+                    {/* Lista de empleados */}
+                    <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                      {deptEmps.length === 0 ? (
+                        <div style={{ padding: 24, textAlign: 'center', color: dim, fontSize: 12 }}>Sin empleados registrados</div>
+                      ) : (
+                        deptEmps.map((emp, j) => (
+                          <div key={emp.id}
+                            onClick={() => openEmp(emp)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              padding: '10px 16px',
+                              borderBottom: j < deptEmps.length - 1 ? `1px solid ${border}` : 'none',
+                              cursor: 'pointer', transition: 'background 0.1s',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = `${c}08`)}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <Avatar emp={emp} size={32} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {emp.name}
+                              </div>
+                              <div style={{ fontSize: 11, color: dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {emp.job_title || '—'}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                              {emp.email && <div style={{ fontSize: 10, color: dim }}>{emp.email}</div>}
+                              {emp.phone && <div style={{ fontSize: 10, color: dim }}>{emp.phone}</div>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {stats.by_location.length > 0 && (

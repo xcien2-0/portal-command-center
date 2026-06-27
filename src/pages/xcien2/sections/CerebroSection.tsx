@@ -58,8 +58,8 @@ function fmtTime(ts: string) {
 export default function CerebroSection({ theme }: Props) {
   const G = theme.accent;
   const [providers, setProviders] = useState<Record<string, Provider>>({});
-  const [activeProvider, setActiveProvider] = useState('claude');
-  const [activeModel, setActiveModel] = useState('');
+  const [activeProvider, setActiveProvider] = useState('ollama');
+  const [activeModel, setActiveModel] = useState('llama3.2:3b');
   const [activeModules, setActiveModules] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');

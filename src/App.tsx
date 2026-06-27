@@ -31,7 +31,6 @@ import { useViewMode } from "./contexts/ViewModeContext.tsx";
 import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
 import { AuthProvider, RequireAuth, useAuth } from "./contexts/AuthContext.tsx";
 import Login from "./pages/Login.tsx";
-import FloatingChat from "./pages/xcien2/sections/FloatingChat.tsx";
 import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
 
 function UserBadge() {
@@ -140,7 +139,6 @@ const App = () => (
         </Routes>
         </AuthProvider>
       </BrowserRouter>
-      <FloatingChat theme={getGlobalTheme()} />
     </TooltipProvider>
   </QueryClientProvider>
   </ViewModeProvider>

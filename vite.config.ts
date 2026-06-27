@@ -48,12 +48,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Nunca cachear /api — los datos de NOC/Odoo/UISP siempre deben ser frescos
+        // SW activo toma control inmediato — sin esperar navegación
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/api\//],
+        // JS excluido del precache: nunca se sirve versión cacheada de chunks
+        globIgnores: ['**/*.js'],
         runtimeCaching: [
+          // API siempre desde red
+          { urlPattern: /^\/api\//, handler: 'NetworkOnly' },
+          // JS: red primero, cache solo como fallback offline
           {
-            urlPattern: /^\/api\//,
-            handler: "NetworkOnly",
+            urlPattern: /\.js$/,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'xcien-js', networkTimeoutSeconds: 5 },
           },
         ],
       },

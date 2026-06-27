@@ -6522,7 +6522,7 @@ CEREBRO_PROVIDERS = {
         "description": "Modelos locales — privado, sin latencia de red",
         "status": "local",
         "models": [],
-        "default_model": "llama3.2",
+        "default_model": "llama3.2:3b",
     },
     "perplexity": {
         "id": "perplexity", "name": "Perplexity", "icon": "🔍",
