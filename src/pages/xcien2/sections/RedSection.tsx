@@ -10,6 +10,10 @@ const COLOR_ONLINE  = '#00ff88';
 const COLOR_OFFLINE = '#ff3366';
 const COLOR_WARN    = '#ffcc00';
 
+// Sitios telecom (KMZ portfolios)
+const COLOR_SITIO_MTP   = '#c8ff00'; // lime eléctrico — MTP
+const COLOR_SITIO_CAPSA = '#facc15'; // amarillo brillante — CAPSA
+
 const VENDOR_COLORS: Record<string, string> = {
   Mimosa:   '#f97316',
   Ubiquiti: '#3b82f6',
@@ -337,6 +341,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [showOffnet,      setShowOffnet]       = useState(false);
   const [showInter,       setShowInter]        = useState(false);
   const [showSinClas,     setShowSinClas]      = useState(false);
+  const [showSitios,      setShowSitios]       = useState(false);
   const showOdoo = showInnet || showOffnet || showInter || showSinClas;
 
   const mapRef       = useRef<any>(null);
@@ -345,6 +350,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const topoLayer    = useRef<any>(null);
   const devicesLayer = useRef<any>(null);
   const odooLayer    = useRef<any>(null);
+  const sitiosLayer  = useRef<any>(null);
+  const sitiosCache  = useRef<any>(null);
   const tileRef   = useRef<any>(null);
   const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
   const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
@@ -714,6 +721,56 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     });
   }, [showOdoo, odooServicios, showInnet, showOffnet, showInter, showSinClas]);
 
+  // ── Renderizar sitios telecom (KMZ portfolios MTP / CAPSA) ──────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (sitiosLayer.current) { sitiosLayer.current.clearLayers(); }
+    else { sitiosLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showSitios) return;
+
+    const render = (geojson: any) => {
+      L.geoJSON(geojson, {
+        pointToLayer: (feat: any, latlng: any) => {
+          const isMTP = feat.properties?.portfolio === 'MTP';
+          const color = isMTP ? COLOR_SITIO_MTP : COLOR_SITIO_CAPSA;
+          return L.circleMarker(latlng, {
+            radius: 4,
+            fillColor: color,
+            color: '#000',
+            weight: 0.5,
+            fillOpacity: 0.88,
+            opacity: 1,
+          });
+        },
+        onEachFeature: (feat: any, layer: any) => {
+          const p = feat.properties;
+          const color = p.portfolio === 'MTP' ? COLOR_SITIO_MTP : COLOR_SITIO_CAPSA;
+          layer.bindTooltip(
+            `<div style="font-weight:700;color:${color};margin-bottom:3px">📡 ${p.id}</div>
+             <div style="color:rgba(255,255,255,0.85);font-size:11px;font-weight:600">${p.nombre}</div>
+             <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:2px">${p.municipio}, ${p.estado}</div>
+             <div style="font-size:10px;margin-top:4px">
+               <span style="background:${color}22;color:${color};padding:1px 7px;border-radius:8px;font-weight:700">${p.portfolio}</span>
+             </div>`,
+            { className: 'noc-tooltip', sticky: true }
+          );
+        },
+      }).addTo(sitiosLayer.current);
+    };
+
+    if (sitiosCache.current) {
+      render(sitiosCache.current);
+    } else {
+      fetch('/sitios_telecom.geojson')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) { sitiosCache.current = data; render(data); } })
+        .catch(() => {});
+    }
+  }, [showSitios]);
+
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
     if (!mapRef.current || !leafRef.current) return;
@@ -825,19 +882,21 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           { key: 'nocboard',    label: 'NOC',      color: '#00ff88', active: true,        count: `${hosts.filter(h=>h.status==='online').length}/${hosts.length}` },
           { key: 'wireless',    label: 'Wireless',  color: '#3b82f6', active: showDevices, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length || null },
           { key: 'core',        label: 'Core',      color: '#ff3366', active: showTopo,    count: offline > 0 ? offline : null },
-          { key: 'onnet',       label: 'OnNet',     color: '#00A859', active: showInnet,   count: null },
-          { key: 'offnet',      label: 'OffNet',    color: '#ff3366', active: showOffnet,  count: null },
-          { key: 'inter',       label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
-          { key: 'sinclasificar', label: 'Sin cls', color: '#f59e0b', active: showSinClas, count: null },
+          { key: 'onnet',         label: 'OnNet',     color: '#00A859', active: showInnet,   count: null },
+          { key: 'offnet',        label: 'OffNet',    color: '#ff3366', active: showOffnet,  count: null },
+          { key: 'inter',         label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
+          { key: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b', active: showSinClas, count: null },
+          { key: 'sitios',        label: 'Sitios',    color: '#c8ff00', active: showSitios,  count: 3727 },
         ] as const).map(layer => (
           <button key={layer.key}
             onClick={() => {
-              if (layer.key === 'wireless')      setShowDevices(p => !p);
-              else if (layer.key === 'core')     setShowTopo(p => !p);
-              else if (layer.key === 'onnet')    setShowInnet(p => !p);
-              else if (layer.key === 'offnet')   setShowOffnet(p => !p);
-              else if (layer.key === 'inter')    setShowInter(p => !p);
+              if (layer.key === 'wireless')           setShowDevices(p => !p);
+              else if (layer.key === 'core')          setShowTopo(p => !p);
+              else if (layer.key === 'onnet')         setShowInnet(p => !p);
+              else if (layer.key === 'offnet')        setShowOffnet(p => !p);
+              else if (layer.key === 'inter')         setShowInter(p => !p);
               else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
+              else if (layer.key === 'sitios')        setShowSitios(p => !p);
             }}
             style={{
               padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
@@ -1053,6 +1112,34 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               { color: '#ff3366', label: 'OffNet',         detail: `${odooServicios.filter(s => s.entrega === 'offnet').length.toLocaleString()} servicios` },
               { color: '#a855f7', label: 'Intercompañía',  detail: `${odooServicios.filter(s => s.entrega === 'inter').length.toLocaleString()} servicios` },
               { color: '#f59e0b', label: 'Sin clasificar', detail: `${odooServicios.filter(s => !s.entrega).length.toLocaleString()} servicios` },
+            ].map(({ color, label, detail }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginLeft: 5 }}>{detail}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Leyenda — sitios telecom */}
+        {showSitios && (
+          <div style={{
+            position: 'absolute',
+            bottom: (() => { let b = 24; if (showOdoo) b += 176; if (showDevices) b += 176; return b; })(),
+            right: 16, zIndex: 999,
+            background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(200,255,0,0.15)',
+            borderRadius: 12, padding: '10px 14px', minWidth: 170,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              Sitios Telecom
+            </div>
+            {[
+              { color: COLOR_SITIO_MTP,   label: 'MTP',  detail: '3,323 sitios' },
+              { color: COLOR_SITIO_CAPSA, label: 'CAPSA', detail: '404 sitios' },
             ].map(({ color, label, detail }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, flexShrink: 0 }} />
