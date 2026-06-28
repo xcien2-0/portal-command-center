@@ -2704,7 +2704,91 @@ def director_chat(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ─── Comité de Dirección ──────────────────────────────────────────────────────
+class ComiteRequest(BaseModel):
+    tema: str
+    titulo: str = "Comité de Dirección"
+    participantes: list = []
+
+AGENTE_PROMPTS_COMITE: dict = {
+    "director":  ("💎 Director General", "Eres el Director General de XCIEN Networks. Abres y cierras el comité de dirección. Sintetizas las perspectivas de cada área y das la directriz final con acciones concretas. Eres directo, estratégico y orientado a resultados. Máximo 3 párrafos."),
+    "noc":       ("📡 NOC", "Eres el Agente NOC de XCIEN. Analizas el escenario desde la perspectiva de red, infraestructura técnica y monitoreo. Identifies riesgos técnicos y propones acciones operativas concretas. Máximo 2 párrafos."),
+    "dispatch":  ("🚚 Dispatch", "Eres el Agente Dispatch de XCIEN. Analizas el escenario desde logística de campo, disponibilidad de cuadrillas y asignación de técnicos. Propones acciones de campo con tiempos estimados. Máximo 2 párrafos."),
+    "comercial": ("💼 Comercial", "Eres el Agente Comercial de XCIEN. Analizas el escenario desde ventas, relación con clientes, CRM y impacto en ingresos. Cuantificas riesgos comerciales y propones acciones. Máximo 2 párrafos."),
+    "rrhh":      ("🎓 RRHH/Academia", "Eres el Agente RRHH y Academia de XCIEN. Analizas el escenario desde capital humano, capacitación, protocolos de personal y desarrollo organizacional. Máximo 2 párrafos."),
+    "legal":     ("⚖️ Legal", "Eres el Agente Legal de XCIEN. Analizas el escenario desde contratos, cumplimiento regulatorio (IFT/SCT), SLAs, penalizaciones y riesgos legales. Siempre recomiendas validar con abogado certificado. Máximo 2 párrafos."),
+    "preventa":  ("📐 Preventa", "Eres el Agente Preventa de XCIEN. Analizas el escenario desde factibilidad técnica, diseño de red, coordenadas y radioenlaces. Máximo 2 párrafos."),
+    "odoo":      ("🔗 Odoo ERP", "Eres el Agente Odoo de XCIEN (wispi17). Analizas el escenario desde el ERP: registro de tickets, módulos afectados, automatizaciones y datos operativos. Propones acciones en el sistema. Máximo 2 párrafos."),
+}
+
+@app.post("/api/agentes/comite")
+def agentes_comite(req: ComiteRequest):
+    """Ejecuta un comité de dirección multi-agente sobre un tema dado."""
+    participantes = req.participantes if req.participantes else list(AGENTE_PROMPTS_COMITE.keys())
+    turnos = []
+
+    # Garantizar que el Director abre primero
+    orden = []
+    if "director" in participantes:
+        orden.append("director")
+    for p in participantes:
+        if p != "director":
+            orden.append(p)
+    if "director" in participantes:
+        orden.append("director")  # El Director cierra también
+
+    for i, ag_id in enumerate(orden):
+        if ag_id not in AGENTE_PROMPTS_COMITE:
+            continue
+        nombre, system_prompt = AGENTE_PROMPTS_COMITE[ag_id]
+        es_cierre = (ag_id == "director" and i > 0)
+
+        if es_cierre:
+            resumen_turnos = "\n".join([f"- {t['nombre']}: {t['contenido'][:120]}..." for t in turnos if t['agente_id'] != 'director'])
+            user_msg = (
+                f"TEMA DEL COMITÉ: {req.titulo}\n{req.tema}\n\n"
+                f"INTERVENCIONES DE LOS DEPARTAMENTOS:\n{resumen_turnos}\n\n"
+                "Como Director General, da el cierre del comité: resume los acuerdos, asigna responsabilidades "
+                "y establece los próximos pasos con fechas concretas."
+            )
+        else:
+            user_msg = (
+                f"TEMA DEL COMITÉ: {req.titulo}\n{req.tema}\n\n"
+                "Da tu perspectiva departamental sobre este tema. Sé específico y propón acciones concretas."
+            )
+
+        try:
+            contenido = ask_claude_with_system(system_prompt, user_msg)
+        except Exception as e:
+            contenido = f"[{nombre}] no pudo responder: {str(e)}"
+
+        turnos.append({
+            "agente_id": ag_id,
+            "nombre": nombre,
+            "contenido": contenido,
+        })
+
+    return {"titulo": req.titulo, "tema": req.tema, "turnos": turnos}
+
+
+# ─── Token AI Usage Analytics ─────────────────────────────────────────────────
+try:
+    from token_usage_tracker import get_stats as _get_token_stats
+    _token_tracker_available = True
+except ImportError:
+    _token_tracker_available = False
+
+@app.get("/api/cerebro/usage")
+def cerebro_usage(days: int = 30):
+    """Devuelve estadísticas de consumo de tokens AI."""
+    if not _token_tracker_available:
+        raise HTTPException(status_code=503, detail="Token tracker no disponible")
+    return _get_token_stats(days)
+
+
 @app.post("/api/devops/chat")
+
 def devops_chat(request: ChatRequest):
     try:
         respuesta = sre_agent.analizar_y_responder(request.message, request.history)

@@ -53,9 +53,11 @@ const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
-const WarRoomSection      = lazy(() => import('./sections/WarRoomSection'));
-const ReportesKPISection  = lazy(() => import('./sections/ReportesKPISection'));
-const IncidentesSection   = lazy(() => import('./sections/IncidentesSection'));
+const WarRoomSection          = lazy(() => import('./sections/WarRoomSection'));
+const ReportesKPISection      = lazy(() => import('./sections/ReportesKPISection'));
+const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'));
+const ComiteSection           = lazy(() => import('./sections/ComiteSection'));
+const TokenConsumptionSection = lazy(() => import('./sections/TokenConsumptionSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -105,7 +107,9 @@ const NAV: NavEntry[] = [
 
   { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
   { id: 'cerebro', label: 'Supercerebro', icon: '🧠', group: 'Infraestructura' },
-  { id: 'agentes', label: 'Agentes IA', icon: '🤖', group: 'Infraestructura' },
+  { id: 'agentes',  label: 'Agentes IA',       icon: '🤖', group: 'Infraestructura' },
+  { id: 'comite',   label: 'Comité de Dirección', icon: '🏛️', group: 'Infraestructura' },
+  { id: 'token-ai', label: 'Consumo de Tokens',  icon: '📈', group: 'Infraestructura' },
   { id: 'mobile', label: 'Terminal Móvil', icon: '📱', group: 'Infraestructura' },
   { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
   { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
@@ -531,6 +535,8 @@ function Content({
       {section === 'rrhh'      && <RRHHSection      theme={theme} />}
       {section === 'sala_juntas' && <SalaJuntasSection theme={theme} />}
       {section === 'agentes'   && <AgentesSection   theme={theme} />}
+      {section === 'comite'    && <ComiteSection    theme={theme} />}
+      {section === 'token-ai'  && <TokenConsumptionSection theme={theme} />}
       {section === 'proyectos' && <ProyectosSection theme={theme} />}
       {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
