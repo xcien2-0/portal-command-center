@@ -73,6 +73,10 @@ def ask_claude(prompt: str) -> str:
         logger.error(f"Error en comunicación con Claude: {e}")
         return '{"titulo": "Error de Conexión", "preguntas": []}'
 
+class ClaudeAPIError(Exception):
+    """Raised when the Anthropic API call fails for any reason."""
+
+
 def ask_claude_with_system(system: str, prompt: str) -> str:
     try:
         msg = _claude_client.messages.create(
@@ -84,7 +88,7 @@ def ask_claude_with_system(system: str, prompt: str) -> str:
         return msg.content[0].text
     except Exception as e:
         logger.error(f"Error en ask_claude_with_system: {e}")
-        return f"No se pudo procesar la consulta: {str(e)}"
+        raise ClaudeAPIError(str(e)) from e
 
 from fastapi import BackgroundTasks
 
@@ -2738,6 +2742,8 @@ def agentes_comite(req: ComiteRequest):
     if "director" in participantes:
         orden.append("director")  # El Director cierra también
 
+    agentes_fallidos = []
+
     for i, ag_id in enumerate(orden):
         if ag_id not in AGENTE_PROMPTS_COMITE:
             continue
@@ -2758,14 +2764,12 @@ def agentes_comite(req: ComiteRequest):
                 "Da tu perspectiva departamental sobre este tema. Sé específico y propón acciones concretas."
             )
 
-        contenido = ask_claude_with_system(system_prompt, user_msg)
-
-        # Si Claude devuelve un error (créditos, auth, rate-limit) usar fallback del frontend
-        if contenido.startswith("No se pudo procesar la consulta:"):
-            raise HTTPException(
-                status_code=503,
-                detail="Claude API no disponible. El comité usará modo fallback.",
-            )
+        try:
+            contenido = ask_claude_with_system(system_prompt, user_msg)
+        except ClaudeAPIError as e:
+            logger.warning(f"Agente {ag_id} no disponible, se omite: {e}")
+            agentes_fallidos.append(ag_id)
+            continue
 
         turnos.append({
             "agente_id": ag_id,
@@ -2773,7 +2777,18 @@ def agentes_comite(req: ComiteRequest):
             "contenido": contenido,
         })
 
-    return {"titulo": req.titulo, "tema": req.tema, "turnos": turnos}
+    if not turnos:
+        raise HTTPException(
+            status_code=503,
+            detail="Claude API no disponible. El comité usará modo fallback.",
+        )
+
+    return {
+        "titulo": req.titulo,
+        "tema": req.tema,
+        "turnos": turnos,
+        "agentes_fallidos": agentes_fallidos or None,
+    }
 
 
 # ─── Token AI Usage Analytics ─────────────────────────────────────────────────

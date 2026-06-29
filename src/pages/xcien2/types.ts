@@ -249,7 +249,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'reportes-kpi' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'incidentes' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle' | 'ventas' | 'estrategia2030' | 'superadmin' | 'cerebro' | 'comite' | 'token-ai' | 'proyectos' | 'infra-energia';
+export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'reportes-kpi' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'incidentes' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle' | 'ventas' | 'estrategia2030' | 'superadmin' | 'cerebro' | 'comite' | 'token-ai' | 'proyectos' | 'infra-energia' | 'backup';
 
 export interface NavItem {
   id: SectionId;
