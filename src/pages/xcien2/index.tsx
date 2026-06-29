@@ -182,6 +182,16 @@ const SECTION_TITLE: Record<SectionId, string> = {
   backup: 'Migración & Redundancia',
   editor: 'Configuración',
   agentes: 'Agentes IA',
+  comite: 'Comité de Dirección',
+  'token-ai': 'Consumo de Tokens AI',
+  proyectos: 'Tablero de Proyectos',
+  'infra-energia': 'Infraestructura Energía',
+  cerebro: 'Supercerebro',
+  'inv-transfers': 'Transferencias de Inventario',
+  merkle: 'Merkle Feed',
+  estrategia2030: 'Estrategia 2030',
+  superadmin: 'Super Admin',
+  holo: 'Academia Holográfica',
 };
 
 // ── UISP color constants ──────────────────────────────────────────────────────

@@ -2758,10 +2758,14 @@ def agentes_comite(req: ComiteRequest):
                 "Da tu perspectiva departamental sobre este tema. Sé específico y propón acciones concretas."
             )
 
-        try:
-            contenido = ask_claude_with_system(system_prompt, user_msg)
-        except Exception as e:
-            contenido = f"[{nombre}] no pudo responder: {str(e)}"
+        contenido = ask_claude_with_system(system_prompt, user_msg)
+
+        # Si Claude devuelve un error (créditos, auth, rate-limit) usar fallback del frontend
+        if contenido.startswith("No se pudo procesar la consulta:"):
+            raise HTTPException(
+                status_code=503,
+                detail="Claude API no disponible. El comité usará modo fallback.",
+            )
 
         turnos.append({
             "agente_id": ag_id,
