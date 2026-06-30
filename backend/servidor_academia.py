@@ -1317,9 +1317,9 @@ def _nocboard_watchdog():
                 _sp.Popen(["open", "-a", "NOCBoard"])
         time.sleep(60)
 
-# NOCBoard watchdog solo corre en macOS local (en Railway no hay NOCBoard)
-if sys.platform == "darwin":
-    threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
+# NOCBoard watchdog desactivado — el NOCBoard se gestiona manualmente
+# if sys.platform == "darwin":
+#     threading.Thread(target=_nocboard_watchdog, daemon=True, name="nocboard-watchdog").start()
 
 def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
