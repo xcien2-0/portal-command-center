@@ -1,6 +1,6 @@
 // Tipos y constantes compartidos entre vistas de Academia
 
-export interface OdooMember { name: string; pct: number; status: string }
+export interface OdooMember { partner_id: number | null; name: string; pct: number; status: string }
 
 export interface OdooCurso {
   id: number;
@@ -16,11 +16,15 @@ export interface OdooCurso {
 
 export interface AcademiaStats {
   total_tecnicos: number;
+  total_activos: number;
   avance_global: number;
+  avance_activos: number;
   total_cursos: number;
   total_badges: number;
   top5: { name: string; pct: number; cursos: number; level: string }[];
   level_distribution: Record<string, number>;
+  mayor_avance: { name: string; pct: number } | null;
+  menor_avance: { name: string; pct: number } | null;
 }
 
 // Empleado enriquecido (calculado en el frontend a partir de Odoo eLearning + RRHH)
@@ -55,32 +59,51 @@ export function getLevel(pct: number) {
  * El mapa de RRHH enriquece con plaza y área, pero NO excluye a nadie:
  * si alguien está en los cursos pero no en RRHH, igual aparece (con plaza/area vacíos).
  */
+function fuzzyLookup(map: Record<string, string> | undefined, nameKey: string): string {
+  if (!map) return '';
+  if (map[nameKey]) return map[nameKey];
+  // Intenta coincidencia por prefijo (ej. "jose miguel macias" ↔ "jose miguel macias contreras")
+  for (const [k, v] of Object.entries(map)) {
+    if (k.startsWith(nameKey) || nameKey.startsWith(k)) return v;
+  }
+  return '';
+}
+
 export function buildTecnicoList(
   cursos: OdooCurso[],
   plazaMapa?: Record<string, string>,
   areaMapa?: Record<string, string>,
 ): Tecnico[] {
-  const map: Record<string, { sum: number; count: number }> = {};
+  // Agrupa por partner_id cuando está disponible; fallback a nombre normalizado.
+  // Esto evita duplicados cuando la misma persona tiene ligeras variantes de nombre en Odoo.
+  const map: Record<string | number, { name: string; sum: number; count: number }> = {};
+
   for (const c of cursos) {
     for (const m of c.members_list) {
       const name = (m.name ?? '').trim();
       if (!name || name === '—') continue;
-      if (!map[name]) map[name] = { sum: 0, count: 0 };
-      map[name].sum += typeof m.pct === 'number' ? m.pct : 0;
-      map[name].count += 1;
+      const key: string | number = m.partner_id ?? name.toLowerCase();
+      if (!map[key]) {
+        map[key] = { name, sum: 0, count: 0 };
+      } else if (name.length > map[key].name.length) {
+        map[key].name = name; // conservar nombre más completo
+      }
+      map[key].sum   += typeof m.pct === 'number' ? m.pct : 0;
+      map[key].count += 1;
     }
   }
-  return Object.entries(map)
-    .map(([name, { sum, count }]) => {
+
+  return Object.values(map)
+    .map(({ name, sum, count }) => {
       const avgPct = count > 0 ? Math.round(sum / count * 10) / 10 : 0;
-      const lv    = getLevel(avgPct);
-      const key   = name.toLowerCase();
+      const lv     = getLevel(avgPct);
+      const nameKey = name.toLowerCase();
       return {
         name, avgPct, cursos: count,
         level: lv.name, levelColor: lv.color, levelIcon: lv.icon,
         rank: 0,
-        plaza: plazaMapa?.[key] ?? '',
-        area:  areaMapa?.[key]  ?? '',
+        plaza: fuzzyLookup(plazaMapa, nameKey),
+        area:  fuzzyLookup(areaMapa, nameKey),
       };
     })
     .sort((a, b) => b.avgPct - a.avgPct)

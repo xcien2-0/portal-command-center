@@ -58,6 +58,7 @@ const ReportesKPISection      = lazy(() => import('./sections/ReportesKPISection
 const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'));
 const ComiteSection           = lazy(() => import('./sections/ComiteSection'));
 const TokenConsumptionSection = lazy(() => import('./sections/TokenConsumptionSection'));
+const ImpactoSection          = lazy(() => import('./sections/ImpactoSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -77,7 +78,8 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 interface NavEntry { id: SectionId; label: string; icon: string; group?: string }
 
 const NAV: NavEntry[] = [
-  { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
+  { id: 'inicio',  label: 'Hub Principal',     icon: '🏠' },
+  { id: 'impacto', label: 'Impacto Operacional', icon: '🚀' },
 
   { id: 'noc', label: 'NOC VIRTUAL', icon: '📡', group: 'Operaciones' },
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Operaciones' },
@@ -526,6 +528,7 @@ function Content({
     }}>
       <Suspense fallback={<SectionSpinner />}>
       {section === 'inicio'   && <InicioRol theme={theme} onNavigate={onSelect} backendStatus={backendStatus} odooStatus={odooStatus} observiumStatus={observiumStatus} />}
+      {section === 'impacto'  && <ImpactoSection />}
       {section === 'noc' && (
         <NocSection
           theme={theme}

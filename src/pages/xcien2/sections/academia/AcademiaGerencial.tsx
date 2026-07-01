@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { API_BASE } from '../../../../config';
 import brand from '../../../../brand';
 import type { ThemeConfig } from '../../types';
-import { buildTecnicoList, getLevel, LEVELS, type OdooCurso, type Tecnico } from './shared';
+import { buildTecnicoList, getLevel, LEVELS, type OdooCurso, type Tecnico, type AcademiaStats } from './shared';
 import RutasEditor from './RutasEditor';
 
 interface Props { theme: ThemeConfig }
@@ -112,17 +112,18 @@ function AnimNum({ value, suffix = '', style }: { value: number; suffix?: string
 }
 
 // ── Dashboard Tab (redesigned) ───────────────────────────────────────────────
-function TabDashboard({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tecnico[] }) {
+function TabDashboard({ cursos, tecnicos, stats }: { cursos: OdooCurso[]; tecnicos: Tecnico[]; stats: import('./shared').AcademiaStats | null }) {
   const levelDist = useMemo(() => {
     const dist: Record<string, number> = {};
     for (const t of tecnicos) dist[t.level] = (dist[t.level] ?? 0) + 1;
     return LEVELS.map(l => ({ name: l.name, icon: l.icon, color: l.color, count: dist[l.name] ?? 0 }));
   }, [tecnicos]);
 
-  const avgGlobal = tecnicos.length ? Math.round(tecnicos.reduce((a, t) => a + t.avgPct, 0) / tecnicos.length * 10) / 10 : 0;
-  const published = cursos.filter(c => c.published).length;
+  const activos    = stats?.total_activos ?? tecnicos.filter(t => t.avgPct > 0).length;
+  const avActivos  = stats?.avance_activos ?? (activos ? Math.round(tecnicos.filter(t => t.avgPct > 0).reduce((a, t) => a + t.avgPct, 0) / activos * 10) / 10 : 0);
+  const published  = cursos.filter(c => c.published).length;
   const expertosMas = tecnicos.filter(t => ['Experto', 'Leyenda'].includes(t.level)).length;
-  const expertoPct = tecnicos.length ? Math.round(expertosMas / tecnicos.length * 100) : 0;
+  const expertoPct  = tecnicos.length ? Math.round(expertosMas / tecnicos.length * 100) : 0;
   const cursosRezago = useMemo(() => [...cursos].filter(c => c.published && c.members > 0 && c.members_list?.length > 0).sort((a, b) => a.avg_completion - b.avg_completion).slice(0, 5), [cursos]);
 
   return (
@@ -130,8 +131,8 @@ function TabDashboard({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tec
       {/* Hero KPIs with Ring Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         {([
-          { label: 'PERSONAS EN ACADEMIA', value: tecnicos.length, pct: 100, color: GREEN, sub: 'Toda la organizacion', suffix: '' },
-          { label: 'AVANCE GLOBAL', value: avgGlobal, pct: avgGlobal, color: '#4FC3F7', sub: 'Promedio todos los cursos', suffix: '%' },
+          { label: 'PERSONAS EN ACADEMIA', value: tecnicos.length, pct: activos / (tecnicos.length || 1) * 100, color: GREEN, sub: `${activos} con avance activo`, suffix: '' },
+          { label: 'AVANCE ACTIVOS', value: avActivos, pct: avActivos, color: '#4FC3F7', sub: `${activos} personas con progreso`, suffix: '%' },
           { label: 'CURSOS ACTIVOS', value: published, pct: cursos.length ? (published / cursos.length) * 100 : 0, color: '#7c3aed', sub: `de ${cursos.length} totales`, suffix: '' },
           { label: 'EXPERTO + LEYENDA', value: expertosMas, pct: expertoPct, color: '#FFB703', sub: `${expertoPct}% del equipo`, suffix: '' },
         ] as const).map((kpi, i) => (
@@ -219,6 +220,26 @@ function TabDashboard({ cursos, tecnicos }: { cursos: OdooCurso[]; tecnicos: Tec
           </div>
         </GlassCard>
       </div>
+
+      {/* Mayor / Menor avance individual */}
+      {(stats?.mayor_avance || stats?.menor_avance) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {stats.mayor_avance && (
+            <GlassCard glow={GREEN} style={{ padding: '18px 22px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 700, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏆 Mayor Avance</p>
+              <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stats.mayor_avance.name}</p>
+              <span style={{ fontSize: 28, fontWeight: 900, color: GREEN, fontFamily: 'system-ui' }}>{stats.mayor_avance.pct}%</span>
+            </GlassCard>
+          )}
+          {stats.menor_avance && (
+            <GlassCard glow="#FF4757" style={{ padding: '18px 22px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 700, color: DIM, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📉 Menor Avance Activo</p>
+              <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stats.menor_avance.name}</p>
+              <span style={{ fontSize: 28, fontWeight: 900, color: '#FF4757', fontFamily: 'system-ui' }}>{stats.menor_avance.pct}%</span>
+            </GlassCard>
+          )}
+        </div>
+      )}
 
       {/* Cursos que requieren atencion */}
       <GlassCard>
@@ -948,6 +969,7 @@ export default function AcademiaGerencial({ theme }: Props) {
   const [areaMapa, setAreaMapa]   = useState<Record<string, string> | undefined>(undefined);
   const [plazas, setPlazas]       = useState<string[]>([]);
   const [areas, setAreas]         = useState<string[]>([]);
+  const [stats, setStats]         = useState<AcademiaStats | null>(null);
   const [loading, setLoading]     = useState(true);
   const [showRutasEditor, setShowRutasEditor] = useState(false);
 
@@ -955,7 +977,8 @@ export default function AcademiaGerencial({ theme }: Props) {
     Promise.all([
       fetch(`${API_BASE}/api/academia/cursos`).then(r => r.ok ? r.json() : []),
       fetch(`${API_BASE}/api/academia/tecnicos-plaza`).then(r => r.ok ? r.json() : null),
-    ]).then(([cs, pd]) => {
+      fetch(`${API_BASE}/api/academia/stats`).then(r => r.ok ? r.json() : null),
+    ]).then(([cs, pd, st]) => {
       setCursos(cs ?? []);
       if (pd?.mapa) {
         setPlazaMapa(pd.mapa);
@@ -965,6 +988,7 @@ export default function AcademiaGerencial({ theme }: Props) {
         setAreaMapa(pd.mapa_area);
         setAreas(pd.areas ?? []);
       }
+      if (st) setStats(st);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -1031,7 +1055,7 @@ export default function AcademiaGerencial({ theme }: Props) {
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {tab === 'dashboard'   && <TabDashboard cursos={cursos} tecnicos={tecnicos} />}
+        {tab === 'dashboard'   && <TabDashboard cursos={cursos} tecnicos={tecnicos} stats={stats} />}
         {tab === 'ruta'        && <TabRuta cursos={cursos} tecnicos={tecnicos} />}
         {tab === 'leaderboard' && <TabLeaderboard tecnicos={tecnicos} plazas={plazas} areas={areas} />}
         {tab === 'cursos'      && <TabCursos cursos={cursos} />}

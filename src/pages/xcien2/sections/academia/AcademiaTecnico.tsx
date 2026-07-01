@@ -55,16 +55,20 @@ export default function AcademiaTecnico({ nombreTecnico, onExamen }: Props) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Cursos donde este técnico está inscrito
-  const misCursos = useMemo(() =>
-    cursos
+  // Cursos donde este técnico está inscrito — búsqueda flexible por nombre
+  const misCursos = useMemo(() => {
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+    const myName = norm(nombreTecnico);
+    return cursos
       .map(c => {
-        const m = c.members_list.find(x => x.name?.trim().toLowerCase() === nombreTecnico.trim().toLowerCase());
+        const m = c.members_list.find(x => {
+          const n = norm(x.name ?? '');
+          return n === myName || n.startsWith(myName) || myName.startsWith(n);
+        });
         return m ? { ...c, miPct: m.pct ?? 0 } : null;
       })
-      .filter(Boolean) as (OdooCurso & { miPct: number })[],
-    [cursos, nombreTecnico]
-  );
+      .filter(Boolean) as (OdooCurso & { miPct: number })[];
+  }, [cursos, nombreTecnico]);
 
   // Rank global
   const todos        = useMemo(() => buildTecnicoList(cursos), [cursos]);
