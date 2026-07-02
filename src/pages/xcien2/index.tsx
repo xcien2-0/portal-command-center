@@ -45,6 +45,7 @@ const XcienTokensSection = lazy(() => import('./sections/XcienTokensSection'));
 const MerkleFeedSection  = lazy(() => import('./sections/MerkleFeedSection'));
 const FodaSection        = lazy(() => import('./sections/FodaSection'));
 const Estrategia2030Section = lazy(() => import('./sections/Estrategia2030Section'));
+const ProyectosDashboardSection = lazy(() => import('./sections/ProyectosDashboardSection'));
 const SuperAdminSection     = lazy(() => import('./sections/SuperAdminSection'));
 const CerebroSection        = lazy(() => import('./sections/CerebroSection'));
 const AdopcionSection    = lazy(() => import('./sections/AdopcionSection'));
@@ -102,6 +103,7 @@ const NAV: NavEntry[] = [
   { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
   { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
 
+  { id: 'plan2026',  label: 'Plan 2026 · ClickUp',   icon: '🎯', group: 'Planeación' },
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
   { id: 'estrategia2030', label: 'Estrategia 2030', icon: '🚀', group: 'Planeación' },
   { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
@@ -186,6 +188,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   agentes: 'Agentes IA',
   comite: 'Comité de Dirección',
   'token-ai': 'Consumo de Tokens AI',
+  plan2026:  'Plan de Trabajo 2026',
   proyectos: 'Tablero de Proyectos',
   'infra-energia': 'Infraestructura Energía',
   cerebro: 'Supercerebro',
@@ -550,6 +553,7 @@ function Content({
       {section === 'agentes'   && <AgentesSection   theme={theme} />}
       {section === 'comite'    && <ComiteSection    theme={theme} />}
       {section === 'token-ai'  && <TokenConsumptionSection theme={theme} />}
+      {section === 'plan2026'  && <ProyectosDashboardSection />}
       {section === 'proyectos' && <ProyectosSection theme={theme} />}
       {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}

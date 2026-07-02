@@ -1,0 +1,183 @@
+{
+  "space_id": "90146298766",
+  "lists": [
+    {
+      "nombre": "P1 — Academia XCIEN",
+      "list_id": "901417731953",
+      "tasks": [
+        {
+          "fase": "Diseño curricular 8 áreas",
+          "id": "86baq5gz5"
+        },
+        {
+          "fase": "Creación cursos módulos 1–12",
+          "id": "86baq5gze"
+        },
+        {
+          "fase": "Creación cursos módulos 13–24",
+          "id": "86baq5gzw"
+        },
+        {
+          "fase": "Evaluaciones y exámenes",
+          "id": "86baq5h05"
+        },
+        {
+          "fase": "Piloto y ajustes",
+          "id": "86baq5h0e"
+        },
+        {
+          "fase": "Lanzamiento formal",
+          "id": "86baq5h14"
+        },
+        {
+          "fase": "Certificaciones y métricas",
+          "id": "86baq5h1c"
+        }
+      ]
+    },
+    {
+      "nombre": "P2 — Plazas Foráneas",
+      "list_id": "901417731955",
+      "tasks": [
+        {
+          "fase": "Diagnóstico y priorización",
+          "id": "86baq5h1q"
+        },
+        {
+          "fase": "Visitas plazas prioridad alta",
+          "id": "86baq5h1w"
+        },
+        {
+          "fase": "Recuperación nodos offline",
+          "id": "86baq5h29"
+        },
+        {
+          "fase": "Visitas plazas prioridad media",
+          "id": "86baq5h2e"
+        },
+        {
+          "fase": "Activación comercial",
+          "id": "86baq5h2p"
+        },
+        {
+          "fase": "Seguimiento y métricas",
+          "id": "86baq5h2x"
+        }
+      ]
+    },
+    {
+      "nombre": "P3 — Fibra Piedras Negras",
+      "list_id": "901417731957",
+      "tasks": [
+        {
+          "fase": "Levantamiento y diseño",
+          "id": "86baq5h33"
+        },
+        {
+          "fase": "Permisos y gestión municipal",
+          "id": "86baq5h3a"
+        },
+        {
+          "fase": "Obra civil",
+          "id": "86baq5h3e"
+        },
+        {
+          "fase": "Tendido de fibra",
+          "id": "86baq5h3g"
+        },
+        {
+          "fase": "Iluminación y equipos activos",
+          "id": "86baq5h3n"
+        },
+        {
+          "fase": "Pruebas OTDR y certificación",
+          "id": "86baq5h3u"
+        },
+        {
+          "fase": "Entrega y primeros clientes",
+          "id": "86baq5h3x"
+        }
+      ]
+    },
+    {
+      "nombre": "P4 — Tamaulipas Mejora de Red",
+      "list_id": "901417731963",
+      "tasks": [
+        {
+          "fase": "Diagnóstico remoto NOC/SNMP",
+          "id": "86baq5h42"
+        },
+        {
+          "fase": "Visita Reynosa",
+          "id": "86baq5h46"
+        },
+        {
+          "fase": "Visita Tampico",
+          "id": "86baq5h4c"
+        },
+        {
+          "fase": "Visita Matamoros y Nuevo Laredo",
+          "id": "86baq5h4m"
+        },
+        {
+          "fase": "Plan de mejoras y presupuesto",
+          "id": "86baq5h4q"
+        },
+        {
+          "fase": "Implementación de mejoras",
+          "id": "86baq5h4x"
+        },
+        {
+          "fase": "Seguimiento y recuperación",
+          "id": "86baq5h4y"
+        }
+      ]
+    },
+    {
+      "nombre": "P5 — iBlack + Cuadrillas.mx",
+      "list_id": "901417731965",
+      "tasks": [
+        {
+          "fase": "iBlack: alcance y arquitectura",
+          "id": "86baq5h52"
+        },
+        {
+          "fase": "iBlack: portal cliente",
+          "id": "86baq5h53"
+        },
+        {
+          "fase": "iBlack: integración UISP+Odoo",
+          "id": "86baq5h55"
+        },
+        {
+          "fase": "iBlack: NOC operadores",
+          "id": "86baq5h56"
+        },
+        {
+          "fase": "iBlack: pruebas y lanzamiento",
+          "id": "86baq5h57"
+        },
+        {
+          "fase": "Cuadrillas: órdenes y asignación",
+          "id": "86baq5h59"
+        },
+        {
+          "fase": "Cuadrillas: app móvil técnicos",
+          "id": "86baq5h5b"
+        },
+        {
+          "fase": "Cuadrillas: integración Odoo",
+          "id": "86baq5h5f"
+        },
+        {
+          "fase": "Lanzamiento y cliente piloto",
+          "id": "86baq5h5p"
+        },
+        {
+          "fase": "Estabilización y métricas",
+          "id": "86baq5h5r"
+        }
+      ]
+    }
+  ]
+}

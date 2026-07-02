@@ -7063,6 +7063,104 @@ async def get_impacto_resumen():
     return resultado
 
 
+# ─── Plan de Trabajo 2026 / ClickUp Dashboard ────────────────────────────────
+
+CLICKUP_IDS = {
+    "space_id": "90146298766",
+    "lists": [
+        {"nombre": "Academia XCIEN",       "code": "P1", "color": "#00A859", "list_id": "901417731953"},
+        {"nombre": "Plazas Foráneas",      "code": "P2", "color": "#0D6EFD", "list_id": "901417731955"},
+        {"nombre": "Fibra Piedras Negras", "code": "P3", "color": "#F97316", "list_id": "901417731957"},
+        {"nombre": "Tamaulipas",           "code": "P4", "color": "#8B5CF6", "list_id": "901417731963"},
+        {"nombre": "iBlack + Cuadrillas",  "code": "P5", "color": "#06B6D4", "list_id": "901417731965"},
+    ],
+}
+
+@app.get("/api/proyectos2026/dashboard")
+async def proyectos_dashboard():
+    """Lee tareas de ClickUp y calcula % avance por proyecto."""
+    import httpx
+    api_key = os.getenv("CLICKUP_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="CLICKUP_API_KEY no configurada")
+
+    headers = {"Authorization": api_key}
+    resultado = []
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        for lst in CLICKUP_IDS["lists"]:
+            try:
+                r = await client.get(
+                    f"https://api.clickup.com/api/v2/list/{lst['list_id']}/task",
+                    headers=headers,
+                    params={"include_closed": "true"},
+                )
+                data = r.json()
+                tasks = data.get("tasks", [])
+
+                total     = len(tasks)
+                completadas = sum(1 for t in tasks if t.get("status", {}).get("type") == "closed")
+                en_progreso = sum(1 for t in tasks if "progress" in t.get("status", {}).get("status", "").lower()
+                                   or "progreso" in t.get("status", {}).get("status", "").lower())
+
+                pct = round((completadas / total * 100) if total else 0)
+
+                tareas_detalle = [
+                    {
+                        "id":        t.get("id"),
+                        "nombre":    t.get("name"),
+                        "status":    t.get("status", {}).get("status", "to do"),
+                        "status_type": t.get("status", {}).get("type", "open"),
+                        "due_date":  t.get("due_date"),
+                        "start_date": t.get("start_date"),
+                        "url":       t.get("url"),
+                        "asignados": [a.get("username", "") for a in t.get("assignees", [])],
+                    }
+                    for t in tasks
+                ]
+
+                resultado.append({
+                    "code":       lst["code"],
+                    "nombre":     lst["nombre"],
+                    "color":      lst["color"],
+                    "list_id":    lst["list_id"],
+                    "total":      total,
+                    "completadas": completadas,
+                    "en_progreso": en_progreso,
+                    "pct":        pct,
+                    "tareas":     tareas_detalle,
+                })
+            except Exception as e:
+                resultado.append({
+                    "code": lst["code"], "nombre": lst["nombre"],
+                    "color": lst["color"], "list_id": lst["list_id"],
+                    "total": 0, "completadas": 0, "en_progreso": 0, "pct": 0,
+                    "tareas": [], "error": str(e),
+                })
+
+    return {"proyectos": resultado, "space_id": CLICKUP_IDS["space_id"]}
+
+
+@app.post("/api/proyectos2026/tarea/{task_id}/status")
+async def update_task_status(task_id: str, body: dict):
+    """Actualiza el status de una tarea en ClickUp."""
+    import httpx
+    api_key = os.getenv("CLICKUP_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="CLICKUP_API_KEY no configurada")
+
+    nuevo_status = body.get("status", "to do")
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.put(
+            f"https://api.clickup.com/api/v2/task/{task_id}",
+            headers={"Authorization": api_key, "Content-Type": "application/json"},
+            json={"status": nuevo_status},
+        )
+    if r.status_code >= 400:
+        raise HTTPException(status_code=r.status_code, detail=r.text)
+    return {"ok": True, "task_id": task_id, "status": nuevo_status}
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
