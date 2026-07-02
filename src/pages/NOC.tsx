@@ -73,7 +73,7 @@ export default function NOC() {
       const cityTenant: Record<string, string> = {
         'monterrey': 'xcien', 'saltillo': 'xcien', 'piedras-negras': 'xcien',
         'san-luis-potosi': 'xcien', 'coco': 'xcien',
-        'guadalajara': 'wispi', 'querétaro': 'wispi',
+        'guadalajara': 'isp1', 'querétaro': 'isp1',
         'torreón': 'luminet', 'monclova': 'luminet',
         'cdmx': 'huus', 'guanajuato': 'huus',
       };

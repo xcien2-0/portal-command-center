@@ -13,7 +13,7 @@ export const CITY_REGION: Record<string, Region> = {
 // Tenant → network type
 export const TENANT_NET_TYPE: Record<string, NetworkType> = {
   xcien: 'empresarial',
-  wispi: 'residencial',
+  isp1: 'residencial',
   luminet: 'empresarial',
   huus: 'residencial',
   sandur: 'residencial',

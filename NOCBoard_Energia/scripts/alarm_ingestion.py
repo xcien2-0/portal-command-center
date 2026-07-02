@@ -27,6 +27,13 @@ HOSTS_FALLBACK = os.path.expanduser("~/Library/Application Support/NOCBoardEnerg
 CASCADE_WINDOW = 120
 CASCADE_THRESHOLD = 5
 
+# BUG-001: holdoff before emitting hostOffline — absorbs VPN reconnect flaps
+OFFLINE_HOLDOFF = 60  # seconds before a transient offline becomes a real alarm
+
+# BUG-003: auto-clear stale power alarms for long-offline hosts
+STALE_ALARM_HOURS = 4  # hours after which an active power alarm on an offline host is stale
+POWER_ALARM_TYPES = {"mainsOutage", "siteOnBatteryBackup", "batteryVoltageLow", "batterySOCLow"}
+
 ALARM_TYPE_MAP = {
     "hostOffline":         ("communicationsAlarm",  "communicationsSubsystemFailure", "critical"),
     "hostRecovered":       ("communicationsAlarm",  "communicationsSubsystemFailure", "cleared"),
@@ -182,16 +189,32 @@ def derive_state(host: dict) -> HostState:
     ping = host.get("ping", host.get("lastPingResult", {}))
     metrics = host.get("_api_metrics", host.get("latestMetrics", {}))
     status = host.get("status", "unknown")
+    device_type = host.get("power_device_type", host.get("powerDeviceType", ""))
     alerts = []
-    mains = metrics.get("mains_present", metrics.get("mainsPresent"))
-    if mains is not None and not mains:
-        alerts.append("mainsOutage")
-    mv = metrics.get("mains_voltage", metrics.get("mainsVoltage"))
-    if mv is not None and mv == 0:
-        alerts.append("mainsOutage")
+
+    # BUG-002: Samlex inverters (powerDeviceType="inverter") are DC-AC — no mains input.
+    # Checking mainsPresent/mainsVoltage on an inverter always triggers false mainsOutage.
+    is_inverter = device_type == "inverter"
+
+    if not is_inverter:
+        mains = metrics.get("mains_present", metrics.get("mainsPresent"))
+        if mains is not None and not mains:
+            alerts.append("mainsOutage")
+        mv = metrics.get("mains_voltage", metrics.get("mainsVoltage"))
+        if mv is not None and mv == 0:
+            alerts.append("mainsOutage")
+    else:
+        mains = None  # inverters have no mains to report
+
     bv = metrics.get("battery_voltage", metrics.get("batteryVoltage"))
-    if bv is not None and isinstance(bv, (int, float)) and bv < 46:
-        alerts.append("batteryVoltageLow")
+    if bv is not None and isinstance(bv, (int, float)):
+        # BUG-002: use voltage-aware threshold — 24V systems nominal ~27V, 48V nominal ~54V
+        # Infer system voltage from measured battery voltage
+        system_24v = bv < 35  # clearly a 24V battery (nominal 24–29V)
+        low_threshold = 23.0 if system_24v else 46.0
+        if bv < low_threshold:
+            alerts.append("batteryVoltageLow")
+
     soc = metrics.get("battery_soc", metrics.get("batterySOC"))
     if soc is not None and isinstance(soc, (int, float)) and soc < 20:
         alerts.append("batterySOCLow")
@@ -223,6 +246,8 @@ class AlarmPoller:
         self.prev_snapshots: Dict[str, str] = {}
         self.pending_raises: List[dict] = []
         self.flap_counters: Dict[str, List[float]] = defaultdict(list)
+        # BUG-001: holdoff buffer — key=host_id, value=(went_offline_ts, meta, raw_data)
+        self.offline_holdoff: Dict[str, tuple] = {}
         self.poll_count = 0
         self._running = False
 
@@ -339,27 +364,30 @@ class AlarmPoller:
 
             transitions += 1
 
-            # Host went offline
+            # Host went offline — BUG-001: buffer into holdoff instead of emitting immediately
             if state.status == "offline" and prev.status != "offline":
                 if self._check_flap(hid, now_ts):
                     logger.info(f"FLAP suppressed: {meta['host_name']}")
                     continue
-                cid = str(uuid.uuid4())
-                self.pending_raises.append({"ts": now_ts, "city": meta["city"], "host_id": hid})
-                cascade_id = self._check_cascade(now_ts)
-                if cascade_id:
-                    cid = cascade_id
-                self._emit_event(meta, "hostOffline", "raise", cid,
-                                 f"{meta['host_name']} no responde", h)
+                self.offline_holdoff[hid] = (now_ts, meta, h)
+                logger.info(f"HOLDOFF started: {meta['host_name']} (waiting {OFFLINE_HOLDOFF}s)")
 
             # Host came back online
             elif state.status == "online" and prev.status == "offline":
-                open_alarm = self.conn.execute(
-                    "SELECT correlation_id FROM alarm_active WHERE host_id = ? AND raw_alert_type = 'hostOffline'",
-                    (hid,)).fetchone()
-                cid = open_alarm[0] if open_alarm else str(uuid.uuid4())
-                self._emit_event(meta, "hostRecovered", "clear", cid,
-                                 f"{meta['host_name']} recuperado", h)
+                if hid in self.offline_holdoff:
+                    # Recovered within holdoff window — suppress both events (VPN flap)
+                    elapsed = now_ts - self.offline_holdoff[hid][0]
+                    logger.info(f"HOLDOFF suppressed: {meta['host_name']} back in {elapsed:.0f}s")
+                    del self.offline_holdoff[hid]
+                else:
+                    open_alarm = self.conn.execute(
+                        "SELECT correlation_id FROM alarm_active WHERE host_id = ? AND raw_alert_type = 'hostOffline'",
+                        (hid,)).fetchone()
+                    cid = open_alarm[0] if open_alarm else str(uuid.uuid4())
+                    self._emit_event(meta, "hostRecovered", "clear", cid,
+                                     f"{meta['host_name']} recuperado", h)
+                    # BUG-003: host came back online — clear any stale power alarms for it
+                    self._clear_stale_power_alarms(hid, meta, h)
 
             # New alerts appeared
             new_alerts = state.alerts - prev.alerts
@@ -382,8 +410,59 @@ class AlarmPoller:
 
             self.prev_states[hid] = state
 
+        # BUG-001: flush holdoff buffer — emit offline events that survived the window
+        self._flush_offline_holdoff(now_ts)
+
+        # BUG-003: sweep stale power alarms every 60 polls (~30 min)
+        if self.poll_count % 60 == 0:
+            self._sweep_stale_power_alarms()
+
         if transitions:
             logger.info(f"Poll #{self.poll_count}: {transitions} transitions from {len(hosts)} hosts")
+
+    def _flush_offline_holdoff(self, now_ts: float):
+        """BUG-001: emit hostOffline for hosts that stayed offline past OFFLINE_HOLDOFF."""
+        expired = [hid for hid, (t, _, _) in self.offline_holdoff.items()
+                   if now_ts - t >= OFFLINE_HOLDOFF]
+        for hid in expired:
+            _, meta, raw = self.offline_holdoff.pop(hid)
+            cid = str(uuid.uuid4())
+            self.pending_raises.append({"ts": now_ts, "city": meta["city"], "host_id": hid})
+            cascade_id = self._check_cascade(now_ts)
+            if cascade_id:
+                cid = cascade_id
+            self._emit_event(meta, "hostOffline", "raise", cid,
+                             f"{meta['host_name']} no responde", raw)
+            logger.info(f"HOLDOFF expired: emitting hostOffline for {meta['host_name']}")
+
+    def _clear_stale_power_alarms(self, host_id: str, meta: dict, raw: dict):
+        """BUG-003: clear open power alarms for a host that just came back online."""
+        rows = self.conn.execute(
+            "SELECT correlation_id, raw_alert_type FROM alarm_active WHERE host_id = ? AND raw_alert_type IN ({})".format(
+                ",".join("?" * len(POWER_ALARM_TYPES))),
+            (host_id, *POWER_ALARM_TYPES)).fetchall()
+        for cid, alert_type in rows:
+            self._emit_event(meta, alert_type, "clear", cid,
+                             f"{meta['host_name']}: stale power alarm cleared on recovery", raw)
+        if rows:
+            logger.info(f"Cleared {len(rows)} stale power alarm(s) for {meta['host_name']}")
+
+    def _sweep_stale_power_alarms(self):
+        """BUG-003: auto-suppress power alarms open longer than STALE_ALARM_HOURS."""
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=STALE_ALARM_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows = self.conn.execute(
+            "SELECT correlation_id, host_id, host_name, city, site, vendor, device_type, raw_alert_type "
+            "FROM alarm_active WHERE raised_at < ? AND raw_alert_type IN ({})".format(
+                ",".join("?" * len(POWER_ALARM_TYPES))),
+            (cutoff, *POWER_ALARM_TYPES)).fetchall()
+        for row in rows:
+            cid, host_id, host_name, city, site, vendor, device_type, alert_type = row
+            meta = {"host_id": host_id, "host_ip": "", "host_name": host_name,
+                    "city": city, "site": site, "vendor": vendor, "device_type": device_type}
+            self._emit_event(meta, alert_type, "clear", cid,
+                             f"Stale alarm auto-cleared after {STALE_ALARM_HOURS}h (host offline)", {})
+        if rows:
+            logger.warning(f"Stale sweep: cleared {len(rows)} power alarm(s) older than {STALE_ALARM_HOURS}h")
 
     def run(self):
         self._running = True

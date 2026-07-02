@@ -754,7 +754,7 @@ function ColocacionFlow({ onBack }: { onBack: () => void }) {
           Examen de Colocación
         </div>
         <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8, maxWidth: 440, margin: '0 auto' }}>
-          Evalúa tus conocimientos en las <strong style={{ color: '#fff' }}>13 competencias técnicas</strong> de la Matriz de Habilidades XCIEN.<br />
+          Evalúa tus conocimientos en las <strong style={{ color: '#fff' }}>13 competencias técnicas</strong> de la Matriz de Habilidades.<br />
           <span style={{ fontSize: 12 }}>~26 preguntas · Generadas por IA · Nivel de campo real</span>
         </p>
       </div>

@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import brand from '@/brand';
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -62,7 +63,7 @@ export default function Login() {
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#00C896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 style={{ color: '#f0f4f8', fontSize: 20, fontWeight: 700, margin: 0 }}>XCIEN Command Center</h1>
+          <h1 style={{ color: '#f0f4f8', fontSize: 20, fontWeight: 700, margin: 0 }}>{brand.name} Command Center</h1>
           <p style={{ color: '#5a6a7a', fontSize: 13, marginTop: 6 }}>Inicia sesión para continuar</p>
         </div>
 
@@ -77,7 +78,7 @@ export default function Login() {
               onChange={e => setEmail(e.target.value)}
               required
               autoFocus
-              placeholder="usuario@xcien.com"
+              placeholder={`usuario@${brand.emailDomain}`}
               style={{
                 width: '100%',
                 padding: '10px 14px',
@@ -166,7 +167,7 @@ export default function Login() {
         </form>
 
         <p style={{ color: '#3a4a58', fontSize: 11, textAlign: 'center', marginTop: 24, marginBottom: 0 }}>
-          XCIEN Networks — Acceso restringido
+          {brand.orgName} — Acceso restringido
         </p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

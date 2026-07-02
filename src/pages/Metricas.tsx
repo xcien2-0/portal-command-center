@@ -247,7 +247,7 @@ export default function Metricas() {
                   ['3. Asignar área y responsable', 'Un solo responsable por KPI. El área valida mensualmente.'],
                   ['4. Establecer objetivo y SLA', 'Objetivo = qué queremos lograr. SLA = compromiso mínimo.'],
                   ['5. Definir frecuencia', 'Tiempo real / Diario / Semanal / Mensual. Depende del impacto.'],
-                  ['6. Conectar a Odoo', 'Identificar el modelo y campo en wispi17 que alimenta la métrica.'],
+                  ['6. Conectar a Odoo', 'Identificar el modelo y campo en ERP que alimenta la métrica.'],
                 ].map(([titulo, desc]) => (
                   <div key={titulo} className="border-l-2 border-primary pl-3">
                     <p className="font-medium text-xs">{titulo}</p>

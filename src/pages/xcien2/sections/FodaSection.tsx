@@ -1,6 +1,7 @@
 import { ThemeConfig } from '../types';
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 const FODA_BASE: FodaData = {
   swot: {
@@ -57,7 +58,7 @@ export default function FodaSection({ theme }: { theme: ThemeConfig }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agente_id: 'director',
-          message: 'Genera un análisis FODA actualizado para XCIEN Networks en 2026. Incluye fortalezas, oportunidades, debilidades y amenazas basadas en el contexto operativo real de la empresa: red de telecomunicaciones con fibra y microondas, técnicos de campo, sistema de academia digital, clientes VIP, y competencia de Starlink. Formato: devuelve texto estructurado con secciones FORTALEZAS, OPORTUNIDADES, DEBILIDADES, AMENAZAS, cada una con 3-4 puntos concisos.',
+          message: `Genera un análisis FODA actualizado para ${brand.orgName} en 2026. Incluye fortalezas, oportunidades, debilidades y amenazas basadas en el contexto operativo real de la empresa: red de telecomunicaciones con fibra y microondas, técnicos de campo, sistema de academia digital, clientes VIP, y competencia de Starlink. Formato: devuelve texto estructurado con secciones FORTALEZAS, OPORTUNIDADES, DEBILIDADES, AMENAZAS, cada una con 3-4 puntos concisos.`,
           history: [],
         }),
       });
@@ -115,7 +116,7 @@ export default function FodaSection({ theme }: { theme: ThemeConfig }) {
           </div>
           <p style={{ fontSize: 13, color: theme.dim, marginTop: 0, marginBottom: 0 }}>
             {source === 'ia'
-              ? 'Análisis generado en tiempo real por el Director General IA con contexto de XCIEN.'
+              ? `Análisis generado en tiempo real por el Director General IA con contexto de ${brand.name}.`
               : 'Contenido base de referencia. Usa "Regenerar con IA" para actualizar con datos reales.'}
           </p>
         </div>

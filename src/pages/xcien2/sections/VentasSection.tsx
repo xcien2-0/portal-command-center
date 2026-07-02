@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -29,7 +30,7 @@ const CAT_COLORS: Record<string, string> = {
 };
 
 const EMP_COLORS: Record<string, string> = {
-  'XCIEN': '#00ff88', 'LUMINET': '#00b4d8', 'HUUS': '#f59e0b',
+  'XCIEN': brand.accentColor, 'ISP 2': '#00b4d8', 'ISP 3': '#f59e0b',
   'MANUFACTURA': '#a855f7', 'OTRO': '#475569',
 };
 

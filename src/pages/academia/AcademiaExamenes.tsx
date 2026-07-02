@@ -47,7 +47,7 @@ export default function AcademiaExamenes() {
     setShowFeedback(false);
     setResult(null);
     setQuestions([
-      { id: 'q1', pregunta: '¿Cuál es el ángulo correcto para las retenidas de un mástil tensado?', opciones: ['30°', '45°', '60°', '90°'], respuesta_correcta: 1, explicacion: 'El estándar XCIEN establece 45° para las retenidas de tensado.' },
+      { id: 'q1', pregunta: '¿Cuál es el ángulo correcto para las retenidas de un mástil tensado?', opciones: ['30°', '45°', '60°', '90°'], respuesta_correcta: 1, explicacion: 'El estándar establece 45° para las retenidas de tensado.' },
       { id: 'q2', pregunta: '¿Cuál es el rango de RSRP óptimo para una instalación correcta?', opciones: ['-35 a -45 dBi', '-65 a -75 dBi', '-85 a -95 dBi', '-20 a -30 dBi'], respuesta_correcta: 0, explicacion: 'El rango óptimo es -35 a -45 dBi. Mínimo aceptable: -65 dBi.' },
       { id: 'q3', pregunta: '¿Qué acción es obligatoria antes de cerrar un ticket en Odoo?', opciones: ['Llamar al cliente', 'Tomar evidencia fotográfica y verificar Cero Basura', 'Reportar al Director General', 'Esperar la aprobación del NOC'], respuesta_correcta: 1, explicacion: 'Evidencia fotográfica + Cero Basura son requisitos obligatorios de cierre.' },
     ]);

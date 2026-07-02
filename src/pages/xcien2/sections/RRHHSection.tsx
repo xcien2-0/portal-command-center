@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { API_BASE } from '../../../config';
 import { ThemeConfig } from '../types';
 import OrgTreeView from './OrgTreeView';
+import brand from '../../../brand';
 
 interface Empleado {
   id: number;
@@ -45,8 +46,8 @@ const COMPANY_SHORT: Record<string, string> = {
 };
 
 const COMPANY_COLOR: Record<string, string> = {
-  WISPI: '#00A859', LUMINET: '#00B4D8', SANDUR: '#8B5CF6',
-  MAS: '#F97316', SENEL: '#EC4899', HUUS: '#EAB308',
+  SANDUR: '#8B5CF6',
+  MAS: '#F97316', SENEL: '#EC4899',
 };
 
 const COMPANY_DESC: Record<string, string> = {
@@ -67,7 +68,7 @@ function companyColor(name: string, fallback: string): string {
 }
 
 function avatarColor(name: string): string {
-  const palette = ['#00A859','#00B4D8','#8B5CF6','#F97316','#EC4899','#EAB308','#14B8A6','#6366F1'];
+  const palette = [brand.accentColor,'#00B4D8','#8B5CF6','#F97316','#EC4899','#EAB308','#14B8A6','#6366F1'];
   let hash = 0;
   for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
   return palette[Math.abs(hash) % palette.length];

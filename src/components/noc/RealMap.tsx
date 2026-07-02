@@ -20,7 +20,7 @@ const ODOO_COLOR = '#00b4d8';
 const SOURCE_META: Record<string, { symbol: string; color: string; priority: number; size: number }> = {
   'Energía':   { symbol: '⚡', color: '#ffcc00', priority: 1, size: 13 },
   'Datos':     { symbol: '▲', color: '#00ff88', priority: 2, size: 11 },
-  'WL/WISPI':  { symbol: '◉', color: '#60a5fa', priority: 3, size: 9  },
+  'ISP Principal':  { symbol: '◉', color: '#60a5fa', priority: 3, size: 9  },
   'CX Datos':  { symbol: '◆', color: '#a78bfa', priority: 4, size: 9  },
   'CX Radios': { symbol: '●', color: '#fb923c', priority: 5, size: 9  },
   'Central':   { symbol: '★', color: '#f472b6', priority: 6, size: 9  },

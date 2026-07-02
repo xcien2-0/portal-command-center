@@ -10,12 +10,13 @@ export interface Tenant {
   nocboardApiKey?: string;
 }
 
+// NOTE: los slugs de estos tenants también se usan como keys en src/data/noc-mock.ts
+// (MOCK_NOC_DATA, TENANT_COLORS). Si cambias estos ids/slugs, actualiza ese archivo también.
 export const CASA_TENANTS: Tenant[] = [
-  { id: 'xcien',   name: 'XCIEN',       type: 'casa', slug: 'xcien' },
-  { id: 'wispi',   name: 'Wispi',       type: 'casa', slug: 'wispi' },
-  { id: 'luminet', name: 'Luminet WAN', type: 'casa', slug: 'luminet' },
-  { id: 'huus',    name: 'Huus',        type: 'casa', slug: 'huus' },
-  { id: 'sandur',  name: 'Sandur',      type: 'casa', slug: 'sandur' },
+  { id: 'isp1',   name: 'ISP Principal', type: 'casa', slug: 'isp1' },
+  { id: 'isp2',   name: 'ISP 2',         type: 'casa', slug: 'isp2' },
+  { id: 'isp3',   name: 'ISP 3',         type: 'casa', slug: 'isp3' },
+  { id: 'sandur', name: 'Sandur',        type: 'casa', slug: 'sandur' },
 ];
 
 export interface AdBanner {

@@ -104,7 +104,7 @@ const modulos: ModuloOdoo[] = [
 
 const checklistInicial: CheckItem[] = [
   // PRE-MIGRACIÓN
-  { id: 'p1', fase: 'pre', area: 'TI', descripcion: 'Backup completo de wispi17 verificado y restaurable', responsable: 'Gerente TI', completado: false, critico: true },
+  { id: 'p1', fase: 'pre', area: 'TI', descripcion: 'Backup completo de ERP verificado y restaurable', responsable: 'Gerente TI', completado: false, critico: true },
   { id: 'p2', fase: 'pre', area: 'TI', descripcion: 'Ambiente de staging con nueva versión Odoo levantado', responsable: 'Gerente TI', completado: false, critico: true },
   { id: 'p3', fase: 'pre', area: 'Datos', descripcion: 'Contactos zombies identificados y archivados (≥67)', responsable: 'Gerente TI', completado: false, critico: true },
   { id: 'p4', fase: 'pre', area: 'Datos', descripcion: 'Empleados inactivos +180 días marcados como archivados', responsable: 'RRHH', completado: false, critico: true },

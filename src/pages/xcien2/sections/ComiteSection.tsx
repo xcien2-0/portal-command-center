@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ComiteMsg {
@@ -30,7 +31,7 @@ const AGENTES_COMITE: Agente[] = [
   { id: 'rrhh',        nombre: 'RRHH / Academia',    icon: '🎓', color: '#FB923C', rol: 'Capital Humano' },
   { id: 'legal',       nombre: 'Legal',              icon: '⚖️', color: '#F472B6', rol: 'Contratos y Regulatorio' },
   { id: 'preventa',    nombre: 'Preventa',           icon: '📐', color: '#34D399', rol: 'Factibilidad Técnica' },
-  { id: 'odoo',        nombre: 'Odoo',               icon: '🔗', color: '#60A5FA', rol: 'ERP wispi17' },
+  { id: 'odoo',        nombre: 'Odoo',               icon: '🔗', color: '#60A5FA', rol: `ERP ${brand.odooDb || 'ERP'}` },
 ];
 
 // ─── Scenarios del comité ─────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ export default function ComiteSection({ theme }: { theme: ThemeConfig }) {
       legal:     `${sc.id === 'proveedor_falla' || sc.id === 'incidente_red' ? 'Revisé el contrato. La cláusula 8.3 establece penalización de 5% mensual por SLA incumplido. Si el tiempo de restauración supera 6h, el cliente puede exigir crédito. Recomiendo documentar el incidente desde este momento.' : 'No identifico riesgos contractuales relevantes en el escenario planteado. Estoy disponible si necesitan revisión.'}`,
       rrhh:      `${sc.id === 'baja_rendimiento' ? 'Los indicadores del técnico reflejan un patrón de 6 semanas. Recomiendo iniciar protocolo de acompañamiento: sesión de retroalimentación + módulo de refuerzo en Academia. No es causa de baja inmediata según nuestro reglamento.' : 'Capital humano disponible para cualquier refuerzo o capacitación que requiera el equipo de campo.'}`,
       preventa:  `${sc.id === 'expansion_plaza' ? 'Analicé las coordenadas de Monterrey Norte. Hay línea de vista viable desde el edificio Cima Torre. Pérdidas por trayecto estimadas: 142 dB a 5.8GHz. Necesitamos antena directiva mínimo 25 dBi. Puedo tener el radioenlace modelado en 48h.' : 'Desde factibilidad puedo dar soporte técnico en lo que se necesite para este escenario.'}`,
-      odoo:      `En wispi17 ya tengo el ticket registrado bajo el proyecto correcto. Actualizo el estado a "En atención" y asigno a la cuadrilla correspondiente. Si el Director General autoriza, ejecuto la actualización de contrato en el módulo de Field Service.`,
+      odoo:      `En ${brand.odooDb || 'ERP'} ya tengo el ticket registrado bajo el proyecto correcto. Actualizo el estado a "En atención" y asigno a la cuadrilla correspondiente. Si el Director General autoriza, ejecuto la actualización de contrato en el módulo de Field Service.`,
     };
 
     for (const ag of participantes.filter(a => a.id !== 'director')) {

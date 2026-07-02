@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import brand from '../brand';
 import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/data/mockOperationsData';
 import { MessageSquare, Phone, Ticket, Bot, AlertTriangle, CheckCircle2, Clock, Send, User, Building2, ChevronRight, PanelRightOpen, PanelRightClose, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -104,8 +105,8 @@ export default function CallCenter() {
   useEffect(() => {
     setCompanies([
       { id: 'comp-1', name: 'Wispi', color: '#1D9E75' },
-      { id: 'comp-2', name: 'XCIEN', color: '#2563eb' },
-      { id: 'comp-3', name: 'Luminet', color: '#9333ea' },
+      { id: 'comp-2', name: brand.name, color: '#2563eb' },
+      { id: 'comp-3', name: 'ISP 2', color: '#9333ea' },
     ]);
     setAgents([{ id: 'agent-1', name: 'Agente NOC', is_online: true }]);
     setConversations(MOCK_CONVERSATIONS as any);

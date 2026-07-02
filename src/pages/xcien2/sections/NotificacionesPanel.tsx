@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Notificacion, NotiTipo } from '../../../hooks/useNotificaciones';
 import type { SectionId } from '../types';
+import brand from '../../../brand';
 
 interface Props {
   open: boolean;
@@ -202,7 +203,7 @@ export default function NotificacionesPanel({
         {/* Footer */}
         <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.04)', flexShrink: 0 }}>
           <p style={{ margin: 0, fontSize: 10, color: '#374151', textAlign: 'center' }}>
-            Actualización en tiempo real vía SSE · XCIEN Centro de Mando
+            Actualización en tiempo real vía SSE · {brand.name} Centro de Mando
           </p>
         </div>
       </div>

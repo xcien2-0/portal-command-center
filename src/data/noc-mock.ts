@@ -45,23 +45,23 @@ export const mockNOCData: Record<string, NOCTenantData> = {
       buildCity('saltillo', 'Saltillo',        89,  22,  0, 1, 25.4232, -100.9928),
     ],
   },
-  // WISPI — Nuevo León / Jalisco
-  wispi: {
+  // ISP Principal — Nuevo León / Jalisco
+  isp1: {
     cities: [
       buildCity('gdl', 'Guadalajara', 88, 42, 3, 1, 20.6597, -103.3496),
       buildCity('qro', 'Querétaro',   91, 34, 2, 0, 20.5888, -100.3899),
     ],
   },
-  // LUMINET WAN — Coahuila | Abril 2026: 80 tareas, 6% cumplimiento
-  luminet: {
+  // ISP 2 — Coahuila | Abril 2026: 80 tareas, 6% cumplimiento
+  isp2: {
     cities: [
       buildCity('trc',  'Torreón',        27, 18, 14, 6, 25.5428, -103.4068),
       buildCity('mxcl', 'Monclova',       31, 10,  8, 3, 26.9055, -101.4222),
       buildCity('snpm', 'San Pedro',      45, 12,  5, 2, 25.7556, -102.9939),
     ],
   },
-  // HUUS — CDMX / Gto / Qro | Abril 2026: 14 tareas, 43% cumplimiento
-  huus: {
+  // ISP 3 — CDMX / Gto / Qro | Abril 2026: 14 tareas, 43% cumplimiento
+  isp3: {
     cities: [
       buildCity('cdmx', 'CDMX',       79, 45, 8, 3, 19.4326,  -99.1332),
       buildCity('gto',  'Guanajuato', 83, 22, 3, 1, 21.0190, -101.2574),
@@ -80,9 +80,9 @@ export const mockNOCData: Record<string, NOCTenantData> = {
 
 export const TENANT_COLORS: Record<string, string> = {
   xcien:  '#1B7F4A',   // verde XCIEN
-  luminet:'#0E6B3A',   // verde Luminet
-  wispi:  '#0EA5E9',   // azul cielo Wispi
-  huus:   '#7C3AED',   // morado Huus
+  isp2:   '#0E6B3A',   // verde ISP 2
+  isp1:   '#0EA5E9',   // azul cielo ISP Principal
+  isp3:   '#7C3AED',   // morado ISP 3
   sandur: '#EA580C',   // naranja Sandur
 };
 
@@ -92,18 +92,18 @@ export const mockAlerts: NOCAlert[] = [
   { id: 'a1', cityId: 'mty_snd',  cityName: 'Monterrey (SANDUR)',   siteName: 'Site Apodaca',        hostIp: '172.31.5.2',  type: 'No Visitada',       severity: 'critical', timestamp: new Date(Date.now() - 300000).toISOString(),   ticketCreated: false },
   { id: 'a2', cityId: 'apodaca',  cityName: 'Apodaca (SANDUR)',     siteName: 'Site Escobedo',       hostIp: '172.31.6.8',  type: 'Tarea sin cerrar',  severity: 'warning',  timestamp: new Date(Date.now() - 600000).toISOString(),   ticketCreated: false },
   { id: 'a3', cityId: 'mty_snd',  cityName: 'Monterrey (SANDUR)',   siteName: 'Site Principal',      hostIp: '172.31.5.22', type: 'Backlog crítico',    severity: 'critical', timestamp: new Date(Date.now() - 120000).toISOString(),   ticketCreated: true  },
-  // LUMINET — 1 no visitada, 74 pendientes (93%)
-  { id: 'a4', cityId: 'trc',      cityName: 'Torreón (LUMINET)',    siteName: 'Site Torreón Norte',  hostIp: '10.40.1.15',  type: 'No Visitada',       severity: 'critical', timestamp: new Date(Date.now() - 900000).toISOString(),   ticketCreated: false },
-  { id: 'a5', cityId: 'trc',      cityName: 'Torreón (LUMINET)',    siteName: 'Site Principal',      hostIp: '10.40.2.3',   type: 'Backlog crítico',    severity: 'critical', timestamp: new Date(Date.now() - 450000).toISOString(),   ticketCreated: false },
-  { id: 'a6', cityId: 'mxcl',     cityName: 'Monclova (LUMINET)',   siteName: 'Site Monclova',       hostIp: '10.41.1.10',  type: 'Tarea sin cerrar',  severity: 'warning',  timestamp: new Date(Date.now() - 1800000).toISOString(),  ticketCreated: false },
-  // HUUS — 8 pendientes
-  { id: 'a7', cityId: 'cdmx',     cityName: 'CDMX (HUUS)',          siteName: 'Site CDMX Sur',       hostIp: '10.20.1.12',  type: 'Tarea sin cerrar',  severity: 'warning',  timestamp: new Date(Date.now() - 2400000).toISOString(),  ticketCreated: false },
+  // ISP 2 — 1 no visitada, 74 pendientes (93%)
+  { id: 'a4', cityId: 'trc',      cityName: 'Torreón',              siteName: 'Site Torreón Norte',  hostIp: '10.40.1.15',  type: 'No Visitada',       severity: 'critical', timestamp: new Date(Date.now() - 900000).toISOString(),   ticketCreated: false },
+  { id: 'a5', cityId: 'trc',      cityName: 'Torreón',              siteName: 'Site Principal',      hostIp: '10.40.2.3',   type: 'Backlog crítico',    severity: 'critical', timestamp: new Date(Date.now() - 450000).toISOString(),   ticketCreated: false },
+  { id: 'a6', cityId: 'mxcl',     cityName: 'Monclova',             siteName: 'Site Monclova',       hostIp: '10.41.1.10',  type: 'Tarea sin cerrar',  severity: 'warning',  timestamp: new Date(Date.now() - 1800000).toISOString(),  ticketCreated: false },
+  // ISP 3 — 8 pendientes
+  { id: 'a7', cityId: 'cdmx',     cityName: 'CDMX',                 siteName: 'Site CDMX Sur',       hostIp: '10.20.1.12',  type: 'Tarea sin cerrar',  severity: 'warning',  timestamp: new Date(Date.now() - 2400000).toISOString(),  ticketCreated: false },
 ];
 
 export const alertTenantMap: Record<string, string> = {
   a1: 'sandur', a2: 'sandur', a3: 'sandur',
-  a4: 'luminet', a5: 'luminet', a6: 'luminet',
-  a7: 'huus',
+  a4: 'isp2', a5: 'isp2', a6: 'isp2',
+  a7: 'isp3',
 };
 
 // Resumen operaciones campo Abril 2026 — directo de Odoo FSM
@@ -116,14 +116,14 @@ export const FSM_ABRIL_2026 = {
   cumplimiento: 24,
   porEmpresa: [
     { empresa: 'SANDUR',     total: 316, completadas: 87, pendientes: 223, noVisitadas: 6, pct: 27 },
-    { empresa: 'LUMINET WAN',total:  80, completadas:  5, pendientes:  74, noVisitadas: 1, pct:  6 },
-    { empresa: 'HUUS VAS',   total:  14, completadas:  6, pendientes:   8, noVisitadas: 0, pct: 43 },
+    { empresa: 'ISP 2',       total:  80, completadas:  5, pendientes:  74, noVisitadas: 1, pct:  6 },
+    { empresa: 'ISP 3',       total:  14, completadas:  6, pendientes:   8, noVisitadas: 0, pct: 43 },
     { empresa: 'SENEL',      total:   1, completadas:  0, pendientes:   1, noVisitadas: 0, pct:  0 },
   ],
   topTecnicos: [
-    { nombre: 'Guillermo Hernández Flores',         tareas: 40, completadas:  6, empresa: 'LUMINET/HUUS' },
+    { nombre: 'Guillermo Hernández Flores',         tareas: 40, completadas:  6, empresa: 'ISP 2/ISP 3' },
     { nombre: 'Jhony Gabriel Collazo Collazo',      tareas: 37, completadas: 12, empresa: 'SANDUR'       },
-    { nombre: 'Ricardo Fidel Cisneros Cárdenas',    tareas: 37, completadas:  2, empresa: 'LUMINET'      },
+    { nombre: 'Ricardo Fidel Cisneros Cárdenas',    tareas: 37, completadas:  2, empresa: 'ISP 2'        },
     { nombre: 'Jesús Andrés Marroquín Corona',      tareas: 30, completadas:  0, empresa: 'SANDUR'       },
     { nombre: 'Francisco Javier Marines Olivares',  tareas: 30, completadas:  8, empresa: 'SANDUR'       },
     { nombre: 'Rogelio Robles Covarrubias',         tareas: 28, completadas: 12, empresa: 'SANDUR'       },

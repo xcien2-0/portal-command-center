@@ -38,7 +38,7 @@ export default function InvitePage() {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center font-sans">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#00A859] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" style={{ borderColor: brand.accentColor, borderTopColor: 'transparent' }} />
           <p className="text-[#808080] font-medium">Validando invitación...</p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function InvitePage() {
           <p className="text-[#808080] mb-8">Esta invitación ha expirado o no existe en nuestros registros.</p>
           <button 
             onClick={() => navigate('/')}
-            className="w-full bg-[#00A859] text-black font-bold py-3 rounded-xl hover:opacity-90 transition-all"
+            className="w-full text-black font-bold py-3 rounded-xl hover:opacity-90 transition-all" style={{ background: brand.accentColor }}
           >
             Volver al Inicio
           </button>
@@ -67,13 +67,13 @@ export default function InvitePage() {
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center font-sans p-6">
       <div className="max-w-xl w-full bg-[#151515] border border-white/5 rounded-3xl p-10 relative overflow-hidden shadow-2xl">
         {/* Glow effect */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#00A859] opacity-10 blur-[100px] -mr-32 -mt-32" />
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-10 blur-[100px] -mr-32 -mt-32" style={{ background: brand.accentColor }} />
         
         <div className="relative z-10">
           <img src={brand.logo} alt={brand.name} className="h-10 mb-8" />
 
           <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-            ¡Bienvenido a <span className="text-[#00A859]">{brand.name} {brand.version}</span>!
+            ¡Bienvenido a <span style={{ color: brand.accentColor }}>{brand.name} {brand.version}</span>!
           </h1>
           
           <p className="text-[#808080] text-lg mb-8 leading-relaxed">
@@ -93,7 +93,7 @@ export default function InvitePage() {
 
           <button 
             onClick={() => navigate('/portal')}
-            className="w-full bg-[#00A859] text-black font-black py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,168,89,0.3)] text-lg"
+            className="w-full text-black font-black py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,168,89,0.3)] text-lg" style={{ background: brand.accentColor }}
           >
             Entrar al Centro de Comando
           </button>

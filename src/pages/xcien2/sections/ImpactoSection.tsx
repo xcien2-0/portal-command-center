@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE } from '../../../config';
+import brand from '../../../brand';
 
 const GREEN   = '#00C896';
 const BLUE    = '#38BDF8';
@@ -155,7 +156,7 @@ export default function ImpactoSection() {
             Impacto Operacional
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: 14, color: DIM }}>
-            Ecosistema digital XCIEN Networks · Datos en vivo · {data.fecha}
+            Ecosistema digital {brand.orgName} · Datos en vivo · {data.fecha}
           </p>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -199,7 +200,7 @@ export default function ImpactoSection() {
 
       {/* Academia */}
       <div>
-        <SectionTitle icon="🎓" label="Academia XCIEN" color={GREEN} />
+        <SectionTitle icon="🎓" label={brand.academiaLabel} color={GREEN} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           <KPICard icon="📚" label="Cursos activos" value={ac.cursos_activos} color={GREEN}
             sub="Con evaluaciones reales en Odoo" />
@@ -267,7 +268,7 @@ export default function ImpactoSection() {
         borderRadius: 16, padding: '20px 28px', textAlign: 'center',
       }}>
         <p style={{ margin: 0, fontSize: 13, color: DIM }}>
-          Datos en tiempo real desde Odoo · Observium · Sistema XCIEN 2.0
+          Datos en tiempo real desde Odoo · Observium · Sistema {brand.name} 2.0
         </p>
         <p style={{ margin: '6px 0 0', fontSize: 12, color: `${DIM}80` }}>
           Todo lo que aparece aquí opera de forma continua — sin intervención manual.

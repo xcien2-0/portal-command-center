@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ThemeConfig } from '../types';
+import brand from '../../../brand';
 
 interface Props { theme: ThemeConfig }
 
@@ -169,7 +170,7 @@ export default function ProyectosSection({ theme }: Props) {
       </div>
 
       <div style={{ marginTop: 14, fontSize: 10, color: U.dim, textAlign: 'right' }}>
-        XCIEN 2.0 · {PROJECTS.length} secciones · {new Date().toLocaleString('es-MX')}
+        {brand.name} 2.0 · {PROJECTS.length} secciones · {new Date().toLocaleString('es-MX')}
       </div>
     </div>
   );

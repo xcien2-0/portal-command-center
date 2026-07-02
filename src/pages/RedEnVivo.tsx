@@ -9,10 +9,10 @@ const R = '#ff3366';
 
 const ISP_COLORS: Record<string, string> = {
   Xcien:   '#00aaff',
-  Luminet: '#aa66ff',
+  ISP2:    '#aa66ff',
   Wispi:   '#0EA5E9',
   Sandur:  '#FF6B35',
-  Huus:    '#9B59D7',
+  ISP3:    '#9B59D7',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

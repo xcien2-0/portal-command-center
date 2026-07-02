@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import brand from '@/brand';
 import {
   Home, Radio, FileText, Presentation, Satellite, UserPlus, Shield, Phone,
   BarChart3, LayoutDashboard, ScanLine, Monitor, Send, GraduationCap,
@@ -68,7 +69,7 @@ const estrategiaGroup: { label: string; icon: any; children: Item[] } = {
 };
 
 const academiaGroup: { label: string; icon: any; main: Item; children: Item[] } = {
-  label: 'Academia XCIEN',
+  label: brand.academiaLabel,
   icon: GraduationCap,
   main: { title: 'Dashboard', url: '/academia', icon: Home },
   children: [
@@ -189,10 +190,15 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest">
             {collapsed ? (
-              <img src="/xcien.png" alt="XCIEN" className="h-6 w-6 object-contain mx-auto" />
+              brand.logo
+                ? <img src={brand.logo} alt={brand.name} className="h-6 w-6 object-contain mx-auto" />
+                : <span style={{ background: brand.accentColor, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 4, color: '#fff', fontWeight: 700, fontSize: 10 }}>{brand.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
             ) : (
               <div className="flex items-center gap-2 py-1">
-                <img src="/xcien.png" alt="XCIEN" className="h-7 w-auto object-contain" />
+                {brand.logo
+                  ? <img src={brand.logo} alt={brand.name} className="h-7 w-auto object-contain" />
+                  : <span style={{ background: brand.accentColor, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '2px 6px', borderRadius: 4, color: '#fff', fontWeight: 700, fontSize: 11 }}>{brand.name.split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase()}</span>
+                }
                 <span className="text-[11px] font-semibold tracking-widest text-sidebar-foreground">2.0</span>
               </div>
             )}

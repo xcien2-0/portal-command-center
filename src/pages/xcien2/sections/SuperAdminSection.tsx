@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
+import brand from '../../../brand';
 
 interface Props { theme: ThemeConfig }
 
@@ -139,7 +140,7 @@ export default function SuperAdminSection({ theme }: Props) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 style={{ color: G }} className="text-2xl font-bold">Super Admin</h1>
-          <p style={{ color: theme.dim }} className="text-sm">Estadísticas de uso · XCIEN 2.0</p>
+          <p style={{ color: theme.dim }} className="text-sm">Estadísticas de uso · {brand.name} 2.0</p>
         </div>
         <button
           onClick={loadStats}

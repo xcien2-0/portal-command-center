@@ -1,21 +1,21 @@
 // Executive dashboard mock data for ISPilot /gerencia route
 
-export type IspId = "todos" | "empresa_a" | "empresa_b" | "luminet" | "huus" | "sandur";
+export type IspId = "todos" | "empresa_a" | "empresa_b" | "isp2" | "isp3" | "sandur";
 
 export const ISP_FILTERS: { id: IspId; label: string }[] = [
   { id: "todos",     label: "Todos" },
   { id: "empresa_a", label: "Empresa A" },
   { id: "empresa_b", label: "Empresa B" },
-  { id: "luminet",   label: "Luminet WAN" },
-  { id: "huus",      label: "Huus" },
+  { id: "isp2",      label: "ISP 2" },
+  { id: "isp3",      label: "ISP 3" },
   { id: "sandur",    label: "Sandur" },
 ];
 
 export const ISP_COLORS: Record<string, string> = {
   empresa_a: "#1B7F4A",
-  luminet:   "#0E6B3A",
+  isp2:      "#0E6B3A",
   empresa_b: "#0EA5E9",
-  huus:      "#7C3AED",
+  isp3:      "#7C3AED",
   sandur:    "#EA580C",
 };
 
@@ -39,9 +39,9 @@ export const REVENUE_METRICS: RevenueMetric[] = [
 export interface IspUptime { name: string; uptime: number; }
 export const ISP_UPTIMES: IspUptime[] = [
   { name: "Empresa A",   uptime: 99.2 },
-  { name: "Luminet WAN", uptime: 99.8 },
+  { name: "ISP 2",       uptime: 99.8 },
   { name: "Empresa B",   uptime: 97.1 },
-  { name: "Huus",        uptime: 99.1 },
+  { name: "ISP 3",       uptime: 99.1 },
   { name: "Sandur",      uptime: 95.3 },
 ];
 
@@ -59,22 +59,22 @@ export const INVENTORY_ITEMS: InventoryItem[] = [
   { name: "Cable cat6", current: 12, max: 20 },
 ];
 
-export interface MrrDataPoint { month: string; empresa_a: number; luminet: number; huus: number; empresa_b: number; sandur: number; }
+export interface MrrDataPoint { month: string; empresa_a: number; isp2: number; isp3: number; empresa_b: number; sandur: number; }
 export const MRR_EVOLUTION: MrrDataPoint[] = [
-  { month: "Oct", empresa_a: 28000, luminet: 22000, huus: 15000, empresa_b: 12000, sandur: 8000 },
-  { month: "Nov", empresa_a: 29500, luminet: 23000, huus: 15800, empresa_b: 12500, sandur: 9200 },
-  { month: "Dic", empresa_a: 30200, luminet: 23500, huus: 16200, empresa_b: 13000, sandur: 10500 },
-  { month: "Ene", empresa_a: 31000, luminet: 24200, huus: 17000, empresa_b: 13800, sandur: 11000 },
-  { month: "Feb", empresa_a: 32500, luminet: 25000, huus: 17500, empresa_b: 14200, sandur: 11800 },
-  { month: "Mar", empresa_a: 34000, luminet: 26000, huus: 18000, empresa_b: 14500, sandur: 12500 },
+  { month: "Oct", empresa_a: 28000, isp2: 22000, isp3: 15000, empresa_b: 12000, sandur: 8000 },
+  { month: "Nov", empresa_a: 29500, isp2: 23000, isp3: 15800, empresa_b: 12500, sandur: 9200 },
+  { month: "Dic", empresa_a: 30200, isp2: 23500, isp3: 16200, empresa_b: 13000, sandur: 10500 },
+  { month: "Ene", empresa_a: 31000, isp2: 24200, isp3: 17000, empresa_b: 13800, sandur: 11000 },
+  { month: "Feb", empresa_a: 32500, isp2: 25000, isp3: 17500, empresa_b: 14200, sandur: 11800 },
+  { month: "Mar", empresa_a: 34000, isp2: 26000, isp3: 18000, empresa_b: 14500, sandur: 12500 },
 ];
 
 export interface IspPerformance { isp: string; mrr: string; clientes: number; uptime: number; churn: number; }
 export const ISP_PERFORMANCE: IspPerformance[] = [
   { isp: "Empresa A",   mrr: "$34,000", clientes: 142, uptime: 99.2, churn: 1.2 },
-  { isp: "Luminet WAN", mrr: "$26,000", clientes: 98,  uptime: 99.8, churn: 0.8 },
+  { isp: "ISP 2",       mrr: "$26,000", clientes: 98,  uptime: 99.8, churn: 0.8 },
   { isp: "Empresa B",   mrr: "$14,500", clientes: 53,  uptime: 97.1, churn: 2.8 },
-  { isp: "Huus",        mrr: "$18,000", clientes: 67,  uptime: 99.1, churn: 1.5 },
+  { isp: "ISP 3",       mrr: "$18,000", clientes: 67,  uptime: 99.1, churn: 1.5 },
   { isp: "Sandur",      mrr: "$12,500", clientes: 45,  uptime: 95.3, churn: 3.1 },
 ];
 
@@ -115,10 +115,10 @@ export const ACTIVITY_FEED: ActivityItem[] = [
   { time: "14:28", agent: "Cobra", agentColor: "hsl(28 85% 55%)", action: "Recordatorio enviado — Grupo Ind." },
   { time: "13:15", agent: "Nico", agentColor: "hsl(270 50% 55%)", action: "Ticket #4521 resuelto en 3 min" },
   { time: "12:00", agent: "Bodega IA", agentColor: "hsl(5 70% 60%)", action: "Stock mínimo — ONT fibra" },
-  { time: "11:45", agent: "Atlas", agentColor: "hsl(172 60% 45%)", action: "Failover activado — Wispi nodo 3" },
+  { time: "11:45", agent: "Atlas", agentColor: "hsl(172 60% 45%)", action: "Failover activado — ISP Principal nodo 3" },
   { time: "11:20", agent: "Ventas", agentColor: "hsl(220 55% 35%)", action: "Demo agendada — TelCom MX" },
   { time: "10:55", agent: "Nico", agentColor: "hsl(270 50% 55%)", action: "Ticket #4520 resuelto en 2 min" },
   { time: "10:30", agent: "Cobra", agentColor: "hsl(28 85% 55%)", action: "Pago confirmado — $12,400 MXN" },
-  { time: "09:15", agent: "Onboarding", agentColor: "hsl(162 68% 37%)", action: "ISP Wispi — activación completada" },
-  { time: "08:42", agent: "Atlas", agentColor: "hsl(172 60% 45%)", action: "Mantenimiento programado — Luminet" },
+  { time: "09:15", agent: "Onboarding", agentColor: "hsl(162 68% 37%)", action: "ISP Principal — activación completada" },
+  { time: "08:42", agent: "Atlas", agentColor: "hsl(172 60% 45%)", action: "Mantenimiento programado — ISP 2" },
 ];

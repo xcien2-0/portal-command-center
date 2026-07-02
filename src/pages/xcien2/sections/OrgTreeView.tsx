@@ -68,23 +68,17 @@ interface GLink extends d3.SimulationLinkDatum<GNode> {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CO_COLOR: Record<string, string> = {
-  'SERVICIOS CORPORATIVOS WISPI':                   '#00A859',
-  'LUMINET WAN':                                    '#00B4D8',
   'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR': '#8B5CF6',
   'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':    '#8B5CF6',
   'MATERIALES ASESORIAS Y SERVICIOS':               '#F97316',
   'SENEL':                                          '#EC4899',
-  'HUUS VAS':                                       '#EAB308',
 };
 
 const CO_SHORT: Record<string, string> = {
-  'SERVICIOS CORPORATIVOS WISPI':                   'WISPI',
-  'LUMINET WAN':                                    'LUMINET',
   'ADMINISTRADORA DE SERVICIOS DE INTERNET SANDUR': 'SANDUR',
   'ADMINISTRADORA DE SERVICIOS INTERNET SANDUR':    'SANDUR',
   'MATERIALES ASESORIAS Y SERVICIOS':               'MAS',
   'SENEL':                                          'SENEL',
-  'HUUS VAS':                                       'HUUS',
 };
 
 function coColor(c: string) { return CO_COLOR[c] || '#888'; }
@@ -125,7 +119,7 @@ function buildGraph(
   }
 
   // root
-  add({ id:'root', label:brand.orgName, sublabel:'Grupo Empresarial', type:'root', color:'#00A859', r:36, x:W/2, y:H/2 });
+  add({ id:'root', label:brand.orgName, sublabel:'Grupo Empresarial', type:'root', color:brand.accentColor, r:36, x:W/2, y:H/2 });
 
   for (const [co, depts] of Object.entries(structure)) {
     const coId    = `co::${co}`;

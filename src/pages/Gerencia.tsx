@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { API_BASE } from "../config";
+import brand from '../brand';
 
 // ─── Design tokens (Apple + UniFi/Ubiquiti) ───────────────────────────────
 const T = {
@@ -208,7 +209,7 @@ export default function Gerencia() {
             Dashboard Gerencial
           </h1>
           <p style={{ fontSize: 14, color: T.dim, marginTop: 6, marginBottom: 0 }}>
-            XCIEN / Luminet WAN / Huus · Consorcio XCIEN
+            {brand.orgName}
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -423,7 +424,7 @@ export default function Gerencia() {
                 <div key={id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <Dot color={color} size={6} />
                   <span style={{ fontSize: 10, color: T.dim, textTransform: "capitalize" }}>
-                    {id === "luminet" ? "Luminet WAN" : id.charAt(0).toUpperCase() + id.slice(1)}
+                    {id.charAt(0).toUpperCase() + id.slice(1)}
                   </span>
                 </div>
               ))}
@@ -441,7 +442,7 @@ export default function Gerencia() {
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
               { label: "NOCBoard", sub: `${nocOnline}/${nocTotal} nodos · 9401`, ok: nocOnline > 0 },
-              { label: "Odoo ERP", sub: `wispi17 · ${dash?.total_ordenes ?? 0} órdenes`, ok: (dash?.total_ordenes ?? 0) > 0 },
+              { label: "Odoo ERP", sub: `${brand.odooDb || 'ERP'} · ${dash?.total_ordenes ?? 0} órdenes`, ok: (dash?.total_ordenes ?? 0) > 0 },
               { label: "Observium SNMP", sub: dash?.observium ? `${dash.observium.total.toLocaleString()} dispositivos · ${dash.observium.availability}%` : "Conectando...", ok: !!dash?.observium && dash.observium.total > 0 },
               { label: "UISP / Ubiquiti", sub: "xcien.uisp.com · wireless links", ok: true },
               { label: "WFM Field Service", sub: dash?.wfm ? `${dash.wfm.abiertos} abiertos · ${dash.wfm.alta} alta prioridad` : "Conectando...", ok: !!dash?.wfm },

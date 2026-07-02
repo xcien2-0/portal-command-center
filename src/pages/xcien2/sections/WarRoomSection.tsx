@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ThemeConfig } from '../types';
 import { useAuth } from '@/contexts/AuthContext';
+import brand from '../../../brand';
 
 interface WarRoomSectionProps { theme: ThemeConfig; }
 
@@ -129,7 +130,7 @@ export default function WarRoomSection({ theme }: WarRoomSectionProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: '#FFB703', margin: 0 }}>⚔️ SALA DE GUERRA — ORQUESTACIÓN REAL</h2>
-            <p style={{ fontSize: 12, color: theme.dim, margin: '4px 0 0' }}>Los agentes responden con inteligencia real de XCIEN · Claude Sonnet</p>
+            <p style={{ fontSize: 12, color: theme.dim, margin: '4px 0 0' }}>Los agentes responden con inteligencia real de {brand.name} · Claude Sonnet</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {Object.entries(AGENTS).map(([id, a]) => (

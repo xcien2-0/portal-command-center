@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { API_BASE } from '../../../config';
 import { ThemeConfig } from '../types';
+import brand from '../../../brand';
 
 interface Props { theme: ThemeConfig }
 
@@ -214,7 +215,7 @@ function FormNocCaidas({ datos, onChange }: { datos: any; onChange: (d: any) => 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Row2>
         <Field label="Semana" value={datos.semana || ''} onChange={v => upd('semana', v)} placeholder="Ej. 26 May – 1 Jun 2026" />
-        <Field label="Analista NOC" value={datos.analista || 'NOC XCIEN'} onChange={v => upd('analista', v)} />
+        <Field label="Analista NOC" value={datos.analista || brand.nocLabel} onChange={v => upd('analista', v)} />
       </Row2>
       <Field label="Total dispositivos monitoreados" type="number" value={String(datos.total_dispositivos || '')} onChange={v => upd('total_dispositivos', Number(v))} />
       <Field label="Hallazgo Principal" value={datos.hallazgo_principal || ''} onChange={v => upd('hallazgo_principal', v)} multiline placeholder="Observación más importante de la semana..." />
@@ -491,7 +492,7 @@ export default function ReportLabSection({ theme }: Props) {
         </div>
         <div>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Generador de Reportes PDF</h2>
-          <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Reportes corporativos XCIEN — formato blanco y verde</p>
+          <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Reportes corporativos {brand.name} — formato blanco y verde</p>
         </div>
       </div>
 

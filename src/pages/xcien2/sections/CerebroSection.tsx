@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ThemeConfig } from '../types';
+import brand from '../../../brand';
 
 interface Props { theme: ThemeConfig }
 
@@ -157,7 +158,7 @@ export default function CerebroSection({ theme }: Props) {
             🧠 Supercerebro Contextual
           </h1>
           <p style={{ color: theme.dim }} className="text-xs">
-            Multi-proveedor · contexto operativo XCIEN en tiempo real
+            Multi-proveedor · contexto operativo {brand.name} en tiempo real
           </p>
         </div>
         <div className="flex items-center gap-2">

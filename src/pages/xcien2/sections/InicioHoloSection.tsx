@@ -78,8 +78,8 @@ export default function InicioHoloSection({ theme, backendStatus, odooStatus = '
       status: backendStatus === 'online' ? 'conectado' : 'desconectado',
     },
     {
-      label: `ERP Odoo (${brand.odooDb || 'wispi17'})`,
-      sub: 'XML-RPC over HTTPS · wispi.mx',
+      label: `ERP Odoo (${brand.odooDb || 'ERP'})`,
+      sub: `XML-RPC over HTTPS · ${brand.emailDomain}`,
       icon: Database,
       status: odooStatus,
     },

@@ -1,3 +1,5 @@
+import brand from '../../brand';
+
 // ── Theme ─────────────────────────────────────────────────────────────────────
 export interface ThemeConfig {
   accent: string;
@@ -15,7 +17,7 @@ export interface ThemeConfig {
 }
 
 export const DEFAULT_THEME: ThemeConfig = {
-  accent:      '#00A859',
+  accent:      brand.accentColor,
   bg:          '#0A0A0A',
   card:        '#151515',
   sidebar:     '#0F0F0F',
@@ -30,7 +32,7 @@ export const DEFAULT_THEME: ThemeConfig = {
 };
 
 export const PRESET_ACCENTS = [
-  { label: 'Verde Corporativo', value: '#00A859' },
+  { label: 'Color Corporativo', value: brand.accentColor },
   { label: 'Cian NOC',    value: '#00B4D8' },
   { label: 'Azul',        value: '#3B82F6' },
   { label: 'Morado',      value: '#8B5CF6' },
@@ -54,7 +56,7 @@ export const PRESET_THEMES: PresetTheme[] = [
     name: 'Corporativo',
     description: 'Verde corporativo sobre negro · tema por defecto',
     emoji: '🟢',
-    preview: { bg: '#0A0A0A', accent: '#00A859', card: '#151515', text: '#F0F0F0' },
+    preview: { bg: '#0A0A0A', accent: brand.accentColor, card: '#151515', text: '#F0F0F0' },
     config: DEFAULT_THEME,
   },
   {

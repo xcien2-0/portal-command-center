@@ -4,6 +4,7 @@ import { API_BASE } from '../../../config';
 import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2, Building2 } from 'lucide-react';
 import NetworkGraph from '../../../components/NetworkGraph';
 import 'leaflet/dist/leaflet.css';
+import brand from '../../../brand';
 
 // ── Colores ────────────────────────────────────────────────────────────────────
 const COLOR_ONLINE  = '#00ff88';
@@ -650,7 +651,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     if (!showOdoo || odooServicios.length === 0) return;
 
     // Colores por tipo de entrega (onnet/offnet)
-    const COLOR_INNET  = '#00A859';   // verde XCIEN — on-net
+    const COLOR_INNET  = brand.accentColor;   // on-net
     const COLOR_OFFNET = '#ff3366';   // rojo — off-net (infraestructura de terceros)
     const COLOR_INTER  = '#a855f7';   // morado — intercompañía
     const COLOR_NULL   = '#f59e0b';   // ámbar — sin clasificar
@@ -850,7 +851,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>{cities.length} ciu</span>
           {topoLinks.length > 0 && <span style={{ color: '#3b82f6' }}>{topoLinks.length} links</span>}
-          {odooServicios.length > 0 && <span style={{ color: '#00A859' }}>{odooServicios.filter(s => s.estado === 'active').length} svc</span>}
+          {odooServicios.length > 0 && <span style={{ color: brand.accentColor }}>{odooServicios.filter(s => s.estado === 'active').length} svc</span>}
         </div>
 
         {/* Separador */}
@@ -882,7 +883,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           { key: 'nocboard',    label: 'NOC',      color: '#00ff88', active: true,        count: `${hosts.filter(h=>h.status==='online').length}/${hosts.length}` },
           { key: 'wireless',    label: 'Wireless',  color: '#3b82f6', active: showDevices, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length || null },
           { key: 'core',        label: 'Core',      color: '#ff3366', active: showTopo,    count: offline > 0 ? offline : null },
-          { key: 'onnet',         label: 'OnNet',     color: '#00A859', active: showInnet,   count: null },
+          { key: 'onnet',         label: 'OnNet',     color: brand.accentColor, active: showInnet,   count: null },
           { key: 'offnet',        label: 'OffNet',    color: '#ff3366', active: showOffnet,  count: null },
           { key: 'inter',         label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
           { key: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b', active: showSinClas, count: null },
@@ -1038,7 +1039,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           <iframe
             src="/noc-status.html"
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            title="Dashboard Nacional XCIEN"
+            title={`Dashboard Nacional ${brand.name}`}
           />
         )}
 
@@ -1108,7 +1109,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               Servicios Odoo
             </div>
             {[
-              { color: '#00A859', label: 'OnNet',          detail: `${odooServicios.filter(s => s.entrega === 'innet').length.toLocaleString()} servicios` },
+              { color: brand.accentColor, label: 'OnNet',          detail: `${odooServicios.filter(s => s.entrega === 'innet').length.toLocaleString()} servicios` },
               { color: '#ff3366', label: 'OffNet',         detail: `${odooServicios.filter(s => s.entrega === 'offnet').length.toLocaleString()} servicios` },
               { color: '#a855f7', label: 'Intercompañía',  detail: `${odooServicios.filter(s => s.entrega === 'inter').length.toLocaleString()} servicios` },
               { color: '#f59e0b', label: 'Sin clasificar', detail: `${odooServicios.filter(s => !s.entrega).length.toLocaleString()} servicios` },

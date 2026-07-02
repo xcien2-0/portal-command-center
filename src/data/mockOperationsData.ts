@@ -84,7 +84,7 @@ export const MOCK_CONVERSATIONS = [
     assigned_agent_id: null, subject: 'No tengo internet desde esta mañana',
     created_at: '2026-05-05T09:00:00Z', updated_at: '2026-05-05T09:35:00Z',
     contacts: { id: 'cont-1', name: 'Roberto Pérez', phone: '5512345678', email: null, odoo_client_id: 'C-4421', company_id: 'comp-1' },
-    companies: { id: 'comp-1', name: 'Wispi', color: '#1D9E75' },
+    companies: { id: 'comp-1', name: 'ISP Principal', color: '#1D9E75' },
     agents: null,
   },
   {
@@ -93,7 +93,7 @@ export const MOCK_CONVERSATIONS = [
     assigned_agent_id: 'agent-1', subject: 'Velocidad muy baja — pago al corriente',
     created_at: '2026-05-05T08:00:00Z', updated_at: '2026-05-05T09:20:00Z',
     contacts: { id: 'cont-2', name: 'María González', phone: '3398765432', email: 'mgonzalez@empresa.com', odoo_client_id: 'C-3312', company_id: 'comp-2' },
-    companies: { id: 'comp-2', name: 'XCIEN', color: '#2563eb' },
+    companies: { id: 'comp-2', name: 'ISP Principal', color: '#2563eb' },
     agents: { id: 'agent-1', name: 'Agente NOC', is_online: true },
   },
   {
@@ -102,7 +102,7 @@ export const MOCK_CONVERSATIONS = [
     assigned_agent_id: 'agent-1', subject: 'Solicitud de cambio de plan',
     created_at: '2026-05-05T07:30:00Z', updated_at: '2026-05-05T08:50:00Z',
     contacts: { id: 'cont-3', name: 'Luis Hernández', phone: '8112345678', email: null, odoo_client_id: 'C-5587', company_id: 'comp-1' },
-    companies: { id: 'comp-1', name: 'Wispi', color: '#1D9E75' },
+    companies: { id: 'comp-1', name: 'ISP Principal', color: '#1D9E75' },
     agents: { id: 'agent-1', name: 'Agente NOC', is_online: true },
   },
   {
@@ -111,7 +111,7 @@ export const MOCK_CONVERSATIONS = [
     assigned_agent_id: 'agent-1', subject: 'Instalación completada — confirmación',
     created_at: '2026-05-05T06:00:00Z', updated_at: '2026-05-05T08:00:00Z',
     contacts: { id: 'cont-4', name: 'Ana Martínez', phone: '2221234567', email: null, odoo_client_id: 'C-7712', company_id: 'comp-3' },
-    companies: { id: 'comp-3', name: 'Luminet', color: '#9333ea' },
+    companies: { id: 'comp-3', name: 'ISP 2', color: '#9333ea' },
     agents: { id: 'agent-1', name: 'Agente NOC', is_online: true },
   },
 ];
@@ -119,8 +119,8 @@ export const MOCK_CONVERSATIONS = [
 export const MOCK_MESSAGES: Record<string, Array<{ id: string; conversation_id: string; sender_type: 'bot' | 'client' | 'agent'; sender_name: string; content: string; created_at: string }>> = {
   'conv-1': [
     { id: 'm1', conversation_id: 'conv-1', sender_type: 'client', sender_name: 'Roberto Pérez', content: 'Hola, no tengo internet desde esta mañana', created_at: '2026-05-05T09:00:00Z' },
-    { id: 'm2', conversation_id: 'conv-1', sender_type: 'bot', sender_name: 'Bot XCIEN', content: '¡Hola Roberto! Entiendo que tienes problemas con tu conexión. Voy a verificar el estado de tu servicio. Un momento por favor.', created_at: '2026-05-05T09:00:30Z' },
-    { id: 'm3', conversation_id: 'conv-1', sender_type: 'bot', sender_name: 'Bot XCIEN', content: 'Detecté una alerta en tu nodo. El equipo técnico ya fue notificado. El tiempo estimado de resolución es 2 horas. ¿Necesitas algo más?', created_at: '2026-05-05T09:01:00Z' },
+    { id: 'm2', conversation_id: 'conv-1', sender_type: 'bot', sender_name: 'Bot Soporte', content: '¡Hola Roberto! Entiendo que tienes problemas con tu conexión. Voy a verificar el estado de tu servicio. Un momento por favor.', created_at: '2026-05-05T09:00:30Z' },
+    { id: 'm3', conversation_id: 'conv-1', sender_type: 'bot', sender_name: 'Bot Soporte', content: 'Detecté una alerta en tu nodo. El equipo técnico ya fue notificado. El tiempo estimado de resolución es 2 horas. ¿Necesitas algo más?', created_at: '2026-05-05T09:01:00Z' },
   ],
   'conv-2': [
     { id: 'm4', conversation_id: 'conv-2', sender_type: 'client', sender_name: 'María González', content: 'Llevo 3 días con velocidad muy baja. Tengo contratados 100Mbps y me da 5Mbps', created_at: '2026-05-05T08:00:00Z' },
@@ -134,7 +134,7 @@ export const MOCK_ACADEMY_MODULES = [
   { id: 'mod-1', titulo: 'Seguridad en Alturas NOM-009', nivel_requerido: 1, orden: 1, duracion_min: 45, xp_recompensa: 150, descripcion: 'Fundamentos de trabajo en altura, uso correcto de arnés y EPP.', activo: true },
   { id: 'mod-2', titulo: 'Tipos de Mástil y Anclaje', nivel_requerido: 1, orden: 2, duracion_min: 60, xp_recompensa: 200, descripcion: 'Empotrado, tensado y telescópico. Normas de instalación.', activo: true },
   { id: 'mod-3', titulo: 'Lectura de Señal RF', nivel_requerido: 2, orden: 1, duracion_min: 30, xp_recompensa: 100, descripcion: 'Interpretación de RSRP, dBm, dBi. Rango óptimo de instalación.', activo: true },
-  { id: 'mod-4', titulo: 'Odoo wispi17 — Tickets y Materiales', nivel_requerido: 2, orden: 2, duracion_min: 40, xp_recompensa: 120, descripcion: 'Registro de servicios, materiales y cierre con evidencia fotográfica.', activo: true },
+  { id: 'mod-4', titulo: 'ERP — Tickets y Materiales', nivel_requerido: 2, orden: 2, duracion_min: 40, xp_recompensa: 120, descripcion: 'Registro de servicios, materiales y cierre con evidencia fotográfica.', activo: true },
   { id: 'mod-5', titulo: 'Equipos Cambium y Ubiquiti', nivel_requerido: 3, orden: 1, duracion_min: 90, xp_recompensa: 300, descripcion: 'Configuración básica y avanzada de radios de acceso.', activo: true },
   { id: 'mod-6', titulo: 'Factibilidad de Sitio', nivel_requerido: 4, orden: 1, duracion_min: 60, xp_recompensa: 250, descripcion: 'Línea de vista, fresnel, topografía y análisis de obstrucciones.', activo: true },
 ];

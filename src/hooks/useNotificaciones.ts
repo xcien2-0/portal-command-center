@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE } from '../config';
+import brand from '../brand';
 
 export type NotiTipo = 'noc_critica' | 'wfm_urgente' | 'kpi_alerta' | 'academia' | 'sistema';
 
@@ -88,7 +89,7 @@ export function useNotificaciones() {
 
           // Desktop notification if permitted
           if (Notification.permission === 'granted' && !leidasRef.current.has(data.id)) {
-            new Notification(`XCIEN · ${data.titulo}`, { body: data.cuerpo, icon: '/favicon.ico' });
+            new Notification(`${brand.name} · ${data.titulo}`, { body: data.cuerpo, icon: '/favicon.ico' });
           }
         } catch {}
       };
