@@ -11,6 +11,7 @@ import {
 import { API_BASE } from '../../config';
 import brand from '../../brand';
 import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
+import { useAuth } from '../../contexts/AuthContext';
 import { getRealCities, getRealAlerts, invalidateNOCCache } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
 
@@ -20,7 +21,9 @@ import NotificacionesPanel from './sections/NotificacionesPanel';
 import CommandPalette from './sections/CommandPalette';
 import InicioRol from './sections/InicioRol';
 import { useNotificaciones } from '../../hooks/useNotificaciones';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
+import FeedbackWidget from '../../components/FeedbackWidget';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X as CloseIcon } from 'lucide-react';
 
@@ -60,6 +63,10 @@ const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'
 const ComiteSection           = lazy(() => import('./sections/ComiteSection'));
 const TokenConsumptionSection = lazy(() => import('./sections/TokenConsumptionSection'));
 const ImpactoSection          = lazy(() => import('./sections/ImpactoSection'));
+const IntegridadSection       = lazy(() => import('./sections/IntegridadSection'));
+const AnalyticsSection        = lazy(() => import('./sections/AnalyticsSection'));
+const HelpdeskSection         = lazy(() => import('./sections/HelpdeskSection'));
+const Net2PhoneSection        = lazy(() => import('./sections/Net2PhoneSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -73,6 +80,30 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
     case 'reset': return DEFAULT_THEME;
     default: return state;
   }
+}
+
+// ── Acceso por rol ────────────────────────────────────────────────────────────
+const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
+  admin:     '*',
+  director:  ['inicio','impacto','noc','red','incidentes','ventas','integridad','reportes-kpi',
+               'rrhh','sala_juntas','proyectos','plan2026','estrategia2030','foda',
+               'agentes','war-room','comite','docs','reportlab','analytics'],
+  noc:       ['inicio','noc','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs'],
+  wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas'],
+  comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
+  preventa:  ['inicio','ventas','reportes-kpi','proyectos','plan2026','docs','sala_juntas'],
+  almacen:   ['inicio','scan','inv-transfers','docs'],
+  rrhh:      ['inicio','rrhh','academia','docs','sala_juntas'],
+  academico: ['inicio','academia','docs'],
+  tecnico:   ['inicio','academia','docs'],
+  readonly:  ['inicio'],
+};
+
+function canAccess(rol: string | undefined, id: SectionId): boolean {
+  if (!rol) return false;
+  const allowed = ROLE_SECTIONS[rol] ?? [];
+  if (allowed === '*') return true;
+  return allowed.includes(id);
 }
 
 // ── Navigation structure ──────────────────────────────────────────────────────
@@ -97,6 +128,10 @@ const NAV: NavEntry[] = [
   { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
   { id: 'ventas',  label: 'Resumen Ventas', icon: '📈', group: 'Administración' },
+  { id: 'integridad', label: 'Integridad Comercial', icon: '🔍', group: 'Administración' },
+  { id: 'analytics',  label: 'Analytics de Uso',     icon: '📊', group: 'Administración' },
+  { id: 'helpdesk',   label: 'Mesa de Ayuda',        icon: '🎧', group: 'Operaciones' },
+  { id: 'net2phone',  label: 'Net2Phone Call Center', icon: '📞', group: 'Operaciones' },
   { id: 'reportes-kpi', label: 'KPI Dashboard', icon: '🎯', group: 'Administración' },
   { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
   { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
@@ -197,6 +232,10 @@ const SECTION_TITLE: Record<SectionId, string> = {
   estrategia2030: 'Estrategia 2030',
   superadmin: 'Super Admin',
   holo: 'Academia Holográfica',
+  integridad: 'Integridad Comercial',
+  analytics:  'Analytics de Uso',
+  helpdesk:   'Mesa de Ayuda',
+  net2phone:  'Net2Phone Call Center',
 };
 
 // ── UISP color constants ──────────────────────────────────────────────────────
@@ -564,6 +603,10 @@ function Content({
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'ventas'   && <VentasSection theme={theme} />}
+      {section === 'integridad' && <IntegridadSection theme={theme} />}
+      {section === 'analytics'  && <AnalyticsSection />}
+      {section === 'helpdesk'   && <HelpdeskSection />}
+      {section === 'net2phone'  && <Net2PhoneSection />}
       {section === 'reportes-kpi' && <ReportesKPISection theme={theme} />}
       {section === 'reports' && <ReportesGobierno />}
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
@@ -798,6 +841,10 @@ export default function Xcien2Page() {
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
   const [odooStatus, setOdooStatus] = useState<'conectado' | 'desconectado'>('desconectado');
   const [observiumStatus, setObserviumStatus] = useState<'conectado' | 'desconectado'>('desconectado');
+  const rol = user?.rol ?? 'readonly';
+  const navFiltrado = useMemo(() => NAV.filter(e => canAccess(rol, e.id)), [rol]);
+  const { trackSection, track } = useAnalytics();
+
   const [section, setSection] = useState<SectionId>(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('section') as SectionId;
@@ -910,14 +957,10 @@ export default function Xcien2Page() {
   }, [location.search, section]);
 
   const onSelectSection = useCallback((id: SectionId) => {
+    trackSection(id, undefined, section);
     setSection(id);
     navigate(`?section=${id}`, { replace: true });
-    fetch('/api/admin/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: id, user_agent: navigator.userAgent }),
-    }).catch(() => {});
-  }, [navigate]);
+  }, [navigate, section, trackSection]);
 
   const alertCount = realAlerts.filter(a => a.severity === 'critical' || a.severity === 'warning').length;
 
@@ -1181,12 +1224,18 @@ export default function Xcien2Page() {
         onNavigate={(id) => { onSelectSection(id); setNotifPanelOpen(false); }}
       />
 
+      {/* Feedback Widget — mejora continua por proceso */}
+      <FeedbackWidget
+        section={section}
+        sectionLabel={SECTION_TITLE[section]}
+      />
+
       {/* Command Palette */}
       <CommandPalette
         open={cmdPaletteOpen}
         onClose={() => setCmdPaletteOpen(false)}
         onNavigate={(id) => { onSelectSection(id); setCmdPaletteOpen(false); }}
-        secciones={NAV}
+        secciones={navFiltrado}
       />
 
       <style>{`

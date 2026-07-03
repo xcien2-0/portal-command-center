@@ -12,6 +12,7 @@ interface Provider {
   status: 'configured' | 'needs_key' | 'local' | 'online' | 'offline' | 'pending';
   models: string[];
   default_model: string;
+  group?: string;
 }
 
 interface Message {
@@ -75,8 +76,15 @@ export default function CerebroSection({ theme }: Props) {
       .then(r => r.json())
       .then(data => {
         setProviders(data);
-        const prov = data['claude'];
-        if (prov) setActiveModel(prov.default_model);
+        // Auto-select first available provider (preferring claude, then antigravity, then any available)
+        const preferred = ['claude', 'antigravity', 'case', 'ollama'];
+        const avail = preferred.find(id => data[id] &&
+          !['pending', 'offline', 'needs_key'].includes(data[id].status));
+        const pick = avail || Object.keys(data)[0];
+        if (pick && data[pick]) {
+          setActiveProvider(pick);
+          setActiveModel(data[pick].default_model || data[pick].models[0] || '');
+        }
       })
       .catch(() => {});
   }, []);
@@ -147,6 +155,13 @@ export default function CerebroSection({ theme }: Props) {
   const prov = providers[activeProvider];
   const provList = Object.values(providers);
 
+  // Group providers for sidebar display
+  const GROUP_ORDER = ['Agentes XCIEN', 'Local', 'Cloud'];
+  const grouped = GROUP_ORDER.map(g => ({
+    group: g,
+    items: provList.filter(p => (p.group || 'Cloud') === g),
+  })).filter(g => g.items.length > 0);
+
   return (
     <div className="flex flex-col h-full" style={{ maxHeight: 'calc(100vh - 100px)' }}>
 
@@ -188,45 +203,52 @@ export default function CerebroSection({ theme }: Props) {
         <div className="flex-shrink-0 flex flex-col gap-3 p-3 border-r overflow-y-auto"
              style={{ width: 220, borderColor: theme.border, background: theme.sidebar }}>
 
-          {/* Providers */}
-          <div>
-            <p style={{ color: theme.dim }} className="text-[10px] font-semibold uppercase tracking-widest mb-2 px-1">
-              Proveedor
-            </p>
-            <div className="space-y-1">
-              {provList.map(p => {
-                const disabled = p.status === 'pending' || p.status === 'offline';
-                const active = activeProvider === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => selectProvider(p.id)}
-                    disabled={disabled}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all"
-                    style={{
-                      background: active ? `${G}22` : 'transparent',
-                      border: `1px solid ${active ? G : 'transparent'}`,
-                      opacity: disabled ? 0.4 : 1,
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                    }}
-                    title={p.description}
-                  >
-                    <span className="text-base">{p.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div style={{ color: active ? G : theme.text }}
-                           className="text-xs font-semibold truncate">{p.name}</div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: STATUS_COLOR[p.status] || '#6b7280' }} />
-                        <span style={{ color: theme.dim }} className="text-[9px]">
-                          {STATUS_LABEL[p.status] || p.status}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Providers — grouped */}
+          <div className="space-y-3">
+            {grouped.map(({ group, items }) => (
+              <div key={group}>
+                <p style={{ color: theme.dim }}
+                   className="text-[9px] font-semibold uppercase tracking-widest mb-1.5 px-1">
+                  {group}
+                </p>
+                <div className="space-y-0.5">
+                  {items.map(p => {
+                    const disabled = p.status === 'pending' || p.status === 'offline' || p.status === 'needs_key';
+                    const active = activeProvider === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => selectProvider(p.id)}
+                        disabled={disabled}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-all"
+                        style={{
+                          background: active ? `${G}22` : 'transparent',
+                          border: `1px solid ${active ? G : 'transparent'}`,
+                          opacity: disabled ? 0.4 : 1,
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                        }}
+                        title={disabled && p.status === 'needs_key'
+                          ? `${p.description} — Configura la API key en .env`
+                          : p.description}
+                      >
+                        <span className="text-sm flex-shrink-0">{p.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div style={{ color: active ? G : theme.text }}
+                               className="text-[11px] font-semibold truncate leading-tight">{p.name}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                  style={{ background: STATUS_COLOR[p.status] || '#6b7280' }} />
+                            <span style={{ color: theme.dim }} className="text-[9px]">
+                              {STATUS_LABEL[p.status] || p.status}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Context modules */}

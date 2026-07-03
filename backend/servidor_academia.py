@@ -6635,48 +6635,109 @@ except Exception as e:
 
 # ─── Supercerebro Contextual ───────────────────────────────────────────────────
 
+def _p_status(env_var: str) -> str:
+    return "configured" if os.environ.get(env_var) else "needs_key"
+
 CEREBRO_PROVIDERS = {
+    # ── Anthropic ──────────────────────────────────────────────────────────────
     "claude": {
         "id": "claude", "name": "Claude Sonnet", "icon": "🧠",
-        "description": "Anthropic Claude — razonamiento profundo",
-        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "description": "Anthropic Claude — razonamiento profundo y código",
+        "status": _p_status("ANTHROPIC_API_KEY"),
         "models": ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
         "default_model": "claude-sonnet-4-6",
+        "group": "Cloud",
     },
-    "litellm": {
-        "id": "litellm", "name": "LiteLLM Gateway", "icon": "⚡",
-        "description": "Gateway unificado — OpenAI, Gemini, Mistral y más",
-        "status": "configured" if os.environ.get("LITELLM_API_KEY") else "needs_key",
-        "models": ["gpt-4o", "gpt-4o-mini", "gemini/gemini-2.0-flash", "mistral/mistral-large"],
-        "default_model": "gpt-4o",
+    # ── Agentes propios XCIEN ──────────────────────────────────────────────────
+    "antigravity": {
+        "id": "antigravity", "name": "Antigravity Director", "icon": "🚀",
+        "description": "Director General Antigravity — contexto XCIEN nativo",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["director-general"],
+        "default_model": "director-general",
+        "group": "Agentes XCIEN",
     },
+    "case": {
+        "id": "case", "name": "CASE", "icon": "🤖",
+        "description": "CASE — agente operativo de campo, análisis técnico NOC/WFM",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["case-field"],
+        "default_model": "case-field",
+        "group": "Agentes XCIEN",
+    },
+    # ── Local ──────────────────────────────────────────────────────────────────
     "ollama": {
         "id": "ollama", "name": "Ollama Local", "icon": "🦙",
-        "description": "Modelos locales — privado, sin latencia de red",
+        "description": "LLMs locales — privado, sin latencia de red, sin costo",
         "status": "local",
         "models": [],
         "default_model": "llama3.2:3b",
+        "group": "Local",
     },
-    "perplexity": {
-        "id": "perplexity", "name": "Perplexity", "icon": "🔍",
-        "description": "Búsqueda aumentada con IA — datos en tiempo real",
-        "status": "configured" if os.environ.get("PERPLEXITY_API_KEY") else "needs_key",
-        "models": ["sonar", "sonar-pro", "sonar-reasoning"],
-        "default_model": "sonar-pro",
+    # ── OpenAI ─────────────────────────────────────────────────────────────────
+    "openai": {
+        "id": "openai", "name": "OpenAI", "icon": "✨",
+        "description": "GPT-4o, o3 y o4-mini — modelos OpenAI directo",
+        "status": _p_status("OPENAI_API_KEY"),
+        "models": ["gpt-4o", "gpt-4o-mini", "o4-mini", "o3"],
+        "default_model": "gpt-4o",
+        "group": "Cloud",
     },
-    "antigravity": {
-        "id": "antigravity", "name": "Antigravity Director", "icon": "🚀",
-        "description": "Director General de Antigravity — contexto XCIEN nativo",
-        "status": "configured",
-        "models": ["director-general"],
-        "default_model": "director-general",
+    # ── Google Gemini ──────────────────────────────────────────────────────────
+    "gemini": {
+        "id": "gemini", "name": "Gemini", "icon": "💎",
+        "description": "Google Gemini 2.0 Flash y Pro — contexto muy largo",
+        "status": _p_status("GEMINI_API_KEY"),
+        "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"],
+        "default_model": "gemini-2.0-flash",
+        "group": "Cloud",
     },
+    # ── Groq (ultra-rápido) ────────────────────────────────────────────────────
+    "groq": {
+        "id": "groq", "name": "Groq", "icon": "⚡",
+        "description": "Groq LPU — Llama, Mixtral y Gemma ultra rápidos",
+        "status": _p_status("GROQ_API_KEY"),
+        "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant",
+                   "mixtral-8x7b-32768", "gemma2-9b-it"],
+        "default_model": "llama-3.3-70b-versatile",
+        "group": "Cloud",
+    },
+    # ── OpenRouter (100+ modelos) ──────────────────────────────────────────────
+    "openrouter": {
+        "id": "openrouter", "name": "OpenRouter", "icon": "🌐",
+        "description": "100+ modelos en un solo endpoint — DeepSeek, Mistral, Llama...",
+        "status": _p_status("OPENROUTER_API_KEY"),
+        "models": ["deepseek/deepseek-chat", "mistralai/mistral-large",
+                   "meta-llama/llama-3.3-70b-instruct", "qwen/qwen-2.5-72b-instruct"],
+        "default_model": "deepseek/deepseek-chat",
+        "group": "Cloud",
+    },
+    # ── OpenClaw gateway ───────────────────────────────────────────────────────
     "openclaw": {
-        "id": "openclaw", "name": "OpenClaw", "icon": "🦀",
-        "description": "Ecosistema agéntico — pendiente de configuración",
-        "status": "pending",
+        "id": "openclaw", "name": "OpenClaw", "icon": "🦞",
+        "description": "Gateway agéntico self-hosted — conecta todos los canales",
+        "status": "local" if os.environ.get("OPENCLAW_BASE_URL") else "needs_key",
         "models": [],
         "default_model": "",
+        "group": "Local",
+    },
+    # ── LiteLLM proxy ─────────────────────────────────────────────────────────
+    "litellm": {
+        "id": "litellm", "name": "LiteLLM Proxy", "icon": "🔀",
+        "description": "Proxy OpenAI-compatible para cualquier modelo",
+        "status": "configured" if os.environ.get("LITELLM_BASE_URL") else "needs_key",
+        "models": ["gpt-4o", "gpt-4o-mini", "gemini/gemini-2.0-flash", "mistral/mistral-large"],
+        "default_model": "gpt-4o",
+        "group": "Local",
+    },
+    # ── Perplexity ─────────────────────────────────────────────────────────────
+    "perplexity": {
+        "id": "perplexity", "name": "Perplexity", "icon": "🔍",
+        "description": "Búsqueda aumentada con IA — datos en tiempo real + citas",
+        "status": _p_status("PERPLEXITY_API_KEY"),
+        "models": ["sonar", "sonar-pro", "sonar-reasoning"],
+        "default_model": "sonar-pro",
+        "group": "Cloud",
     },
 }
 
@@ -6723,19 +6784,41 @@ class CerebroRequest(BaseModel):
 
 @app.get("/api/cerebro/providers")
 async def cerebro_providers():
-    providers = dict(CEREBRO_PROVIDERS)
-    # Check Ollama models live
-    try:
-        async with _httpx_obs.AsyncClient(timeout=3) as client:
+    import copy
+    providers = copy.deepcopy(CEREBRO_PROVIDERS)
+
+    async with _httpx_obs.AsyncClient(timeout=3) as client:
+        # Ollama — discover local models
+        try:
             r = await client.get("http://localhost:11434/api/tags")
             if r.status_code == 200:
                 models = [m["name"] for m in r.json().get("models", [])]
-                providers["ollama"]["models"] = models or ["llama3.2"]
-                providers["ollama"]["status"] = "online"
+                providers["ollama"]["models"]       = models or ["llama3.2:3b"]
+                providers["ollama"]["status"]       = "online"
+                providers["ollama"]["default_model"] = models[0] if models else "llama3.2:3b"
             else:
                 providers["ollama"]["status"] = "offline"
-    except Exception:
-        providers["ollama"]["status"] = "offline"
+        except Exception:
+            providers["ollama"]["status"] = "offline"
+
+        # OpenClaw — ping local gateway
+        oc_url = os.environ.get("OPENCLAW_BASE_URL", "http://localhost:18789").rstrip("/")
+        try:
+            r = await client.get(f"{oc_url}/health", timeout=2)
+            providers["openclaw"]["status"] = "online" if r.status_code < 400 else "offline"
+            if providers["openclaw"]["status"] == "online":
+                try:
+                    mr = await client.get(f"{oc_url}/v1/models", timeout=2)
+                    if mr.status_code == 200:
+                        mdl_list = [m["id"] for m in mr.json().get("data", [])]
+                        if mdl_list:
+                            providers["openclaw"]["models"] = mdl_list
+                            providers["openclaw"]["default_model"] = mdl_list[0]
+                except Exception:
+                    pass
+        except Exception:
+            providers["openclaw"]["status"] = "offline"
+
     return providers
 
 @app.post("/api/cerebro/chat")
@@ -6816,25 +6899,20 @@ async def cerebro_chat(req: CerebroRequest, request: Request):
                 text += "\n\n**Fuentes:**\n" + "\n".join(f"- {c}" for c in citations[:5])
             return {"response": text, "provider": "perplexity", "model": model}
 
-    # ── Antigravity Director ──
+    # ── Antigravity Director ──────────────────────────────────────────────────
     elif provider_id == "antigravity":
-        trigger_id = "trig_01A1VdoN9yfwyoUFWChXbn3g"
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if not api_key:
             raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY requerido para Antigravity")
         full_msg = f"{system_ctx}\n\n---\nMensaje del usuario: {req.message}"
         async with _httpx_obs.AsyncClient(timeout=60) as client:
             r = await client.post(
-                f"https://api.anthropic.com/v1/messages",
+                "https://api.anthropic.com/v1/messages",
                 headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
-                         "anthropic-beta": "interleaved-thinking-2025-05-14",
                          "content-type": "application/json"},
                 json={
-                    "model": "claude-sonnet-4-6",
-                    "max_tokens": 2048,
-                    "system": [{"type": "text", "text": full_msg,
-                                "cache_control": {"type": "ephemeral"}}],
-                    "messages": [{"role": "user", "content": req.message}],
+                    "model": "claude-sonnet-4-6", "max_tokens": 2048,
+                    "system": full_msg, "messages": messages,
                 },
             )
             if r.status_code != 200:
@@ -6843,7 +6921,160 @@ async def cerebro_chat(req: CerebroRequest, request: Request):
             text = " ".join(b["text"] for b in content if b.get("type") == "text")
             return {"response": text, "provider": "antigravity", "model": "director-general"}
 
-    raise HTTPException(status_code=400, detail="Proveedor no implementado")
+    # ── CASE — agente operativo de campo ─────────────────────────────────────
+    elif provider_id == "case":
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY requerido para CASE")
+        case_persona = (
+            "Eres CASE, el agente operativo de campo de XCIEN Networks. "
+            "Eres preciso, técnico y conciso. Tu especialidad es análisis de red, "
+            "incidentes NOC, coordinación de cuadrillas WFM y diagnóstico de infraestructura. "
+            "Cuando no tienes datos suficientes, lo dices claramente. "
+            "Usas terminología técnica de redes y telecomunicaciones.\n\n"
+        ) + system_ctx
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
+                         "content-type": "application/json"},
+                json={
+                    "model": "claude-sonnet-4-6", "max_tokens": 2048,
+                    "system": case_persona, "messages": messages,
+                    "temperature": req.temperature,
+                },
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            content = r.json().get("content", [])
+            text = " ".join(b["text"] for b in content if b.get("type") == "text")
+            return {"response": text, "provider": "case", "model": "case-field"}
+
+    # ── OpenAI directo ────────────────────────────────────────────────────────
+    elif provider_id == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="OPENAI_API_KEY no configurado")
+        oai_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": oai_messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["choices"][0]["message"]["content"],
+                    "provider": "openai", "model": model}
+
+    # ── Google Gemini ─────────────────────────────────────────────────────────
+    elif provider_id == "gemini":
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="GEMINI_API_KEY no configurado")
+        # Gemini usa formato distinto — contents array
+        gemini_contents = []
+        for m in messages:
+            role = "user" if m["role"] == "user" else "model"
+            gemini_contents.append({"role": role, "parts": [{"text": m["content"]}]})
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                params={"key": api_key},
+                headers={"Content-Type": "application/json"},
+                json={
+                    "system_instruction": {"parts": [{"text": system_ctx}]},
+                    "contents": gemini_contents,
+                    "generationConfig": {"temperature": req.temperature, "maxOutputTokens": 2048},
+                },
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            return {"response": text, "provider": "gemini", "model": model}
+
+    # ── Groq ─────────────────────────────────────────────────────────────────
+    elif provider_id == "groq":
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="GROQ_API_KEY no configurado")
+        groq_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": groq_messages,
+                      "temperature": req.temperature, "max_tokens": 2048},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            data = r.json()
+            text = data["choices"][0]["message"]["content"]
+            usage = data.get("usage", {})
+            tokens = usage.get("total_tokens", 0)
+            return {"response": text, "provider": "groq", "model": model,
+                    "meta": {"tokens": tokens,
+                             "time_ms": int(data.get("usage", {}).get("total_time", 0) * 1000)}}
+
+    # ── OpenRouter ────────────────────────────────────────────────────────────
+    elif provider_id == "openrouter":
+        api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="OPENROUTER_API_KEY no configurado")
+        or_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://xcien.com",
+                    "X-Title": "XCIEN Supercerebro",
+                },
+                json={"model": model, "messages": or_messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["choices"][0]["message"]["content"],
+                    "provider": "openrouter", "model": model}
+
+    # ── OpenClaw gateway ──────────────────────────────────────────────────────
+    elif provider_id == "openclaw":
+        base_url = os.environ.get("OPENCLAW_BASE_URL", "http://localhost:18789").rstrip("/")
+        api_key  = os.environ.get("OPENCLAW_API_KEY", "")
+        headers  = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        oc_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"{base_url}/v1/chat/completions",
+                headers=headers,
+                json={"model": model or "default", "messages": oc_messages,
+                      "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["choices"][0]["message"]["content"],
+                    "provider": "openclaw", "model": model or "openclaw"}
+
+    # ── LiteLLM proxy ─────────────────────────────────────────────────────────
+    elif provider_id == "litellm":
+        api_key  = os.environ.get("LITELLM_API_KEY", "no-key")
+        base_url = os.environ.get("LITELLM_BASE_URL", "http://localhost:4000")
+        oai_messages = [{"role": "system", "content": system_ctx}] + messages
+        async with _httpx_obs.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": oai_messages, "temperature": req.temperature},
+            )
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            return {"response": r.json()["choices"][0]["message"]["content"],
+                    "provider": "litellm", "model": model}
+
+    raise HTTPException(status_code=400, detail=f"Proveedor '{provider_id}' no implementado")
 
 # ─── Super Admin Tracking ──────────────────────────────────────────────────────
 import hashlib
@@ -7068,11 +7299,12 @@ async def get_impacto_resumen():
 CLICKUP_IDS = {
     "space_id": "90146298766",
     "lists": [
-        {"nombre": "Academia XCIEN",       "code": "P1", "color": "#00A859", "list_id": "901417731953"},
-        {"nombre": "Plazas Foráneas",      "code": "P2", "color": "#0D6EFD", "list_id": "901417731955"},
-        {"nombre": "Fibra Piedras Negras", "code": "P3", "color": "#F97316", "list_id": "901417731957"},
-        {"nombre": "Tamaulipas",           "code": "P4", "color": "#8B5CF6", "list_id": "901417731963"},
-        {"nombre": "iBlack + Cuadrillas",  "code": "P5", "color": "#06B6D4", "list_id": "901417731965"},
+        {"nombre": "iBlack + Cuadrillas",  "code": "P1", "color": "#06B6D4", "list_id": "901417731965", "prioridad": "urgente"},
+        {"nombre": "Fibra Piedras Negras", "code": "P2", "color": "#F97316", "list_id": "901417731957", "prioridad": "alta"},
+        {"nombre": "Academia XCIEN",       "code": "P3", "color": "#00A859", "list_id": "901417731953", "prioridad": "normal"},
+        {"nombre": "Plazas Foráneas",      "code": "P4", "color": "#0D6EFD", "list_id": "901417731955", "prioridad": "normal"},
+        {"nombre": "Tamaulipas",           "code": "P5", "color": "#8B5CF6", "list_id": "901417731963", "prioridad": "baja"},
+        {"nombre": "Supercerebro: TARS & CASE", "code": "P6", "color": "#A855F7", "list_id": "901417733662", "prioridad": "alta"},
     ],
 }
 
@@ -7107,14 +7339,16 @@ async def proyectos_dashboard():
 
                 tareas_detalle = [
                     {
-                        "id":        t.get("id"),
-                        "nombre":    t.get("name"),
-                        "status":    t.get("status", {}).get("status", "to do"),
+                        "id":          t.get("id"),
+                        "nombre":      t.get("name"),
+                        "status":      t.get("status", {}).get("status", "to do"),
                         "status_type": t.get("status", {}).get("type", "open"),
-                        "due_date":  t.get("due_date"),
-                        "start_date": t.get("start_date"),
-                        "url":       t.get("url"),
-                        "asignados": [a.get("username", "") for a in t.get("assignees", [])],
+                        "due_date":    t.get("due_date"),
+                        "start_date":  t.get("start_date"),
+                        "url":         t.get("url"),
+                        "asignados":   [a.get("username", "") for a in t.get("assignees", [])],
+                        "priority":    t.get("priority", {}).get("priority") if t.get("priority") else None,
+                        "priority_id": int(t.get("priority", {}).get("id", 0)) if t.get("priority") and t.get("priority", {}).get("id") else 0,
                     }
                     for t in tasks
                 ]
@@ -7124,6 +7358,7 @@ async def proyectos_dashboard():
                     "nombre":     lst["nombre"],
                     "color":      lst["color"],
                     "list_id":    lst["list_id"],
+                    "prioridad":  lst.get("prioridad", "normal"),
                     "total":      total,
                     "completadas": completadas,
                     "en_progreso": en_progreso,
@@ -7160,6 +7395,38 @@ async def update_task_status(task_id: str, body: dict):
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return {"ok": True, "task_id": task_id, "status": nuevo_status}
 
+
+# ─── Analytics ───────────────────────────────────────────────────────────────
+try:
+    from analytics_service import router as analytics_router
+    app.include_router(analytics_router)
+    logger.info("Módulo analytics cargado")
+except Exception as e:
+    logger.warning(f"Analytics no cargado: {e}")
+
+# ─── Helpdesk ─────────────────────────────────────────────────────────────────
+try:
+    from helpdesk_service import router as helpdesk_router
+    app.include_router(helpdesk_router)
+    logger.info("Módulo helpdesk cargado")
+except Exception as e:
+    logger.warning(f"Helpdesk no cargado: {e}")
+
+# ─── Net2Phone ────────────────────────────────────────────────────────────────
+try:
+    from net2phone_service import router as net2phone_router
+    app.include_router(net2phone_router)
+    logger.info("Módulo Net2Phone cargado")
+except Exception as e:
+    logger.warning(f"Net2Phone no cargado: {e}")
+
+# ─── Integridad Comercial ─────────────────────────────────────────────────────
+try:
+    from integridad_comercial import router as integridad_router
+    app.include_router(integridad_router)
+    logger.info("Módulo integridad comercial cargado")
+except Exception as e:
+    logger.warning(f"Integridad comercial no cargado: {e}")
 
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 

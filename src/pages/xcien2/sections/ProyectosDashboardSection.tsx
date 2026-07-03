@@ -10,6 +10,8 @@ interface Tarea {
   start_date: string | null;
   url: string;
   asignados: string[];
+  priority: string | null;
+  priority_id: number;
 }
 
 interface Proyecto {
@@ -17,6 +19,7 @@ interface Proyecto {
   nombre: string;
   color: string;
   list_id: string;
+  prioridad: string;
   total: number;
   completadas: number;
   en_progreso: number;
@@ -25,38 +28,67 @@ interface Proyecto {
   error?: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; bg: string; dot: string }> = {
-  'to do':      { label: 'Pendiente',  bg: 'bg-[#1a1a1a]', dot: '#808080' },
-  'complete':   { label: 'Completada', bg: 'bg-[#0a1f12]', dot: '#00A859' },
+type SortMode = 'fecha' | 'prioridad' | 'status';
+
+const PRIORIDAD_META: Record<string, { label: string; color: string; dot: string }> = {
+  urgente: { label: 'Urgente', color: '#EF4444', dot: '#EF4444' },
+  alta:    { label: 'Alta',    color: '#F97316', dot: '#F97316' },
+  normal:  { label: 'Normal',  color: '#3B82F6', dot: '#3B82F6' },
+  baja:    { label: 'Baja',    color: '#6B7280', dot: '#6B7280' },
 };
 
-function statusMeta(s: string) {
-  return STATUS_LABELS[s.toLowerCase()] ?? { label: s, bg: 'bg-[#1a1a1a]', dot: '#888' };
-}
+const PRIORIDAD_ORDER: Record<string, number> = { urgente: 0, alta: 1, normal: 2, baja: 3 };
+
+// ClickUp priority_id: 1=urgent 2=high 3=normal 4=low
+const TASK_PRIO_COLOR: Record<number, string> = {
+  1: '#EF4444', 2: '#F97316', 3: '#3B82F6', 4: '#6B7280', 0: '#444',
+};
 
 function formatDate(ts: string | null) {
   if (!ts) return '—';
   const d = new Date(Number(ts));
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
-function ProgressRing({ pct, color, size = 64 }: { pct: number; color: string; size?: number }) {
+function isOverdue(ts: string | null) {
+  if (!ts) return false;
+  return Number(ts) < Date.now();
+}
+
+function ProgressRing({ pct, color, size = 56 }: { pct: number; color: string; size?: number }) {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
   return (
-    <svg width={size} height={size} className="rotate-[-90deg]">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2a2a2a" strokeWidth={6} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
-        strokeDasharray={circ} strokeDashoffset={offset}
-        strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+    <svg width={size} height={size} className="rotate-[-90deg] flex-shrink-0">
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#222" strokeWidth={5} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
       <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central"
-        fill="white" fontSize={size < 56 ? 10 : 13} fontWeight="bold"
+        fill="white" fontSize={11} fontWeight="bold"
         style={{ transform: `rotate(90deg)`, transformOrigin: `${size/2}px ${size/2}px` }}>
         {pct}%
       </text>
     </svg>
   );
+}
+
+function sortTareas(tareas: Tarea[], mode: SortMode): Tarea[] {
+  return [...tareas].sort((a, b) => {
+    if (mode === 'fecha') {
+      const da = Number(a.start_date ?? a.due_date ?? 9e15);
+      const db = Number(b.start_date ?? b.due_date ?? 9e15);
+      return da - db;
+    }
+    if (mode === 'prioridad') {
+      return (a.priority_id || 99) - (b.priority_id || 99);
+    }
+    // status: pendientes primero, completadas al final
+    const sa = a.status_type === 'closed' ? 1 : 0;
+    const sb = b.status_type === 'closed' ? 1 : 0;
+    return sa - sb;
+  });
 }
 
 export default function ProyectosDashboardSection() {
@@ -65,6 +97,7 @@ export default function ProyectosDashboardSection() {
   const [error, setError]         = useState('');
   const [expandido, setExpandido] = useState<string | null>(null);
   const [updating, setUpdating]   = useState<string | null>(null);
+  const [sortMode, setSortMode]   = useState<SortMode>('fecha');
 
   const fetchData = async () => {
     setLoading(true);
@@ -97,9 +130,14 @@ export default function ProyectosDashboardSection() {
     }
   };
 
-  const totalTareas     = proyectos.reduce((a, p) => a + p.total, 0);
-  const totalCompletadas= proyectos.reduce((a, p) => a + p.completadas, 0);
-  const pctGlobal       = totalTareas ? Math.round(totalCompletadas / totalTareas * 100) : 0;
+  const totalTareas      = proyectos.reduce((a, p) => a + p.total, 0);
+  const totalCompletadas = proyectos.reduce((a, p) => a + p.completadas, 0);
+  const pctGlobal        = totalTareas ? Math.round(totalCompletadas / totalTareas * 100) : 0;
+
+  // Proyectos ordenados por prioridad definida
+  const proyectosOrdenados = [...proyectos].sort(
+    (a, b) => (PRIORIDAD_ORDER[a.prioridad] ?? 9) - (PRIORIDAD_ORDER[b.prioridad] ?? 9)
+  );
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -114,12 +152,13 @@ export default function ProyectosDashboardSection() {
   );
 
   return (
-    <div className="space-y-6 p-1">
+    <div className="space-y-5 p-1">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-white">Plan de Trabajo 2026</h2>
-          <p className="text-[#555] text-sm mt-0.5">Julio — Diciembre · Sincronizado con ClickUp</p>
+          <h2 className="text-xl font-black text-white tracking-tight">Plan de Trabajo 2026</h2>
+          <p className="text-[#555] text-xs mt-0.5">Julio — Diciembre · ClickUp</p>
         </div>
         <button onClick={fetchData}
           className="text-xs text-[#555] hover:text-white px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444] transition-all">
@@ -127,119 +166,168 @@ export default function ProyectosDashboardSection() {
         </button>
       </div>
 
-      {/* KPI global */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { val: '5',              label: 'Proyectos' },
-          { val: String(totalTareas),     label: 'Fases totales' },
-          { val: String(totalCompletadas),label: 'Completadas' },
-          { val: `${pctGlobal}%`, label: 'Avance global' },
+          { val: '5',                      label: 'Proyectos' },
+          { val: String(totalTareas),      label: 'Fases' },
+          { val: String(totalCompletadas), label: 'Completadas' },
+          { val: `${pctGlobal}%`,          label: 'Avance' },
         ].map(({ val, label }) => (
-          <div key={label} className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-[#00A859]">{val}</div>
-            <div className="text-[#555] text-xs mt-1">{label}</div>
+          <div key={label} className="bg-[#111] border border-[#222] rounded-xl p-3 text-center">
+            <div className="text-xl font-black text-[#00A859]">{val}</div>
+            <div className="text-[#555] text-[11px] mt-0.5">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Barra global */}
-      <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4">
-        <div className="flex justify-between text-xs text-[#555] mb-2">
+      <div className="bg-[#111] border border-[#222] rounded-xl p-4">
+        <div className="flex justify-between text-[11px] text-[#555] mb-2">
           <span>Avance consolidado</span>
-          <span>{totalCompletadas}/{totalTareas} fases</span>
+          <span>{totalCompletadas} / {totalTareas} fases</span>
         </div>
-        <div className="h-2.5 bg-[#222] rounded-full overflow-hidden">
-          <div className="h-full bg-[#00A859] rounded-full transition-all duration-700"
+        <div className="h-2 bg-[#1e1e1e] rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-[#00A859] to-[#00C46A] rounded-full transition-all duration-700"
                style={{ width: `${pctGlobal}%` }} />
+        </div>
+        {/* Mini barras por proyecto */}
+        <div className="flex gap-1 mt-3">
+          {proyectosOrdenados.map(p => (
+            <div key={p.code} className="flex-1 h-1 rounded-full bg-[#1e1e1e] overflow-hidden" title={p.nombre}>
+              <div className="h-full rounded-full transition-all duration-500"
+                   style={{ width: `${p.pct}%`, background: p.color }} />
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Cards de proyectos */}
-      <div className="grid grid-cols-1 gap-4">
-        {proyectos.map((p) => {
-          const isOpen = expandido === p.code;
+      {/* Sort controls */}
+      <div className="flex items-center gap-2">
+        <span className="text-[#555] text-xs">Ordenar fases por:</span>
+        {(['fecha', 'prioridad', 'status'] as SortMode[]).map(m => (
+          <button key={m} onClick={() => setSortMode(m)}
+            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+              sortMode === m
+                ? 'bg-[#00A859] border-[#00A859] text-black font-bold'
+                : 'border-[#2a2a2a] text-[#666] hover:border-[#444] hover:text-white'
+            }`}>
+            {m === 'fecha' ? '📅 Fecha' : m === 'prioridad' ? '🔴 Prioridad' : '✅ Estado'}
+          </button>
+        ))}
+      </div>
+
+      {/* Cards */}
+      <div className="space-y-3">
+        {proyectosOrdenados.map((p, idx) => {
+          const isOpen  = expandido === p.code;
+          const pmeta   = PRIORIDAD_META[p.prioridad] ?? PRIORIDAD_META.normal;
+          const tareas  = sortTareas(p.tareas, sortMode);
+          const pendientes = p.tareas.filter(t => t.status_type !== 'closed').length;
+
           return (
-            <div key={p.code}
-              className="bg-[#111] border border-[#2a2a2a] rounded-2xl overflow-hidden">
-              {/* Cabecera del proyecto */}
+            <div key={p.code} className="bg-[#111] border border-[#222] rounded-2xl overflow-hidden">
               <button
-                className="w-full flex items-center gap-4 p-5 hover:bg-[#181818] transition-colors text-left"
+                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-[#161616] transition-colors text-left"
                 onClick={() => setExpandido(isOpen ? null : p.code)}>
-                {/* Código */}
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white flex-shrink-0"
-                     style={{ background: p.color }}>
-                  {p.code}
-                </div>
-                {/* Nombre y barra */}
+
+                {/* Posición */}
+                <span className="text-[#333] text-xs font-black w-4 flex-shrink-0">{idx + 1}</span>
+
+                {/* Color bar lateral */}
+                <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ background: p.color }} />
+
+                {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-white text-sm truncate">{p.nombre}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex-1 h-1.5 bg-[#222] rounded-full overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-white text-sm truncate">{p.nombre}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                      style={{ background: pmeta.color + '22', color: pmeta.color }}>
+                      {pmeta.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-[#1e1e1e] rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500"
                            style={{ width: `${p.pct}%`, background: p.color }} />
                     </div>
-                    <span className="text-xs text-[#555] flex-shrink-0">
-                      {p.completadas}/{p.total}
+                    <span className="text-[11px] text-[#555] flex-shrink-0">
+                      {p.completadas}/{p.total} · {pendientes} pendientes
                     </span>
                   </div>
                 </div>
-                {/* Ring */}
-                <ProgressRing pct={p.pct} color={p.color} size={56} />
-                {/* Chevron */}
-                <span className={`text-[#555] transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>
-                  ›
-                </span>
+
+                <ProgressRing pct={p.pct} color={p.color} />
+
+                <span className={`text-[#444] text-lg transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>›</span>
               </button>
 
-              {/* Detalle de tareas */}
+              {/* Fases */}
               {isOpen && (
-                <div className="border-t border-[#2a2a2a] divide-y divide-[#1e1e1e]">
-                  {p.tareas.length === 0 && (
-                    <div className="px-5 py-4 text-[#555] text-sm">Sin tareas registradas.</div>
+                <div className="border-t border-[#1e1e1e]">
+                  {/* Cabecera tabla */}
+                  <div className="grid grid-cols-[1fr_80px_90px_36px] gap-2 px-5 py-2 text-[10px] font-bold text-[#444] uppercase tracking-wider border-b border-[#1a1a1a]">
+                    <span>Fase</span>
+                    <span className="text-center">Fechas</span>
+                    <span className="text-center">Estado</span>
+                    <span />
+                  </div>
+
+                  {tareas.length === 0 && (
+                    <div className="px-5 py-4 text-[#555] text-sm">Sin fases registradas.</div>
                   )}
-                  {p.tareas.map((t) => {
-                    const meta = statusMeta(t.status);
+
+                  {tareas.map((t) => {
+                    const closed   = t.status_type === 'closed';
+                    const overdue  = !closed && isOverdue(t.due_date);
+                    const prioColor = TASK_PRIO_COLOR[t.priority_id] ?? '#444';
+
                     return (
                       <div key={t.id}
-                        className={`flex items-center gap-3 px-5 py-3 ${meta.bg} transition-colors`}>
-                        {/* Dot */}
-                        <div className="w-2 h-2 rounded-full flex-shrink-0"
-                             style={{ background: meta.dot }} />
-                        {/* Nombre */}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm text-white truncate block">{t.nombre}</span>
-                          {(t.start_date || t.due_date) && (
-                            <span className="text-xs text-[#444]">
-                              {formatDate(t.start_date)} → {formatDate(t.due_date)}
-                            </span>
-                          )}
+                        className={`grid grid-cols-[1fr_80px_90px_36px] gap-2 items-center px-5 py-2.5 border-b border-[#181818] transition-colors
+                          ${closed ? 'opacity-50' : overdue ? 'bg-[#1f0a0a]' : 'hover:bg-[#161616]'}`}>
+
+                        {/* Nombre + dot prioridad */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: prioColor }} />
+                          <span className={`text-sm truncate ${closed ? 'line-through text-[#444]' : 'text-white'}`}>
+                            {t.nombre}
+                          </span>
+                          {overdue && <span className="text-[10px] text-red-500 flex-shrink-0">vencida</span>}
                         </div>
+
+                        {/* Fechas */}
+                        <div className="text-center">
+                          <span className="text-[11px] text-[#555]">
+                            {formatDate(t.start_date)} → {formatDate(t.due_date)}
+                          </span>
+                        </div>
+
                         {/* Status select */}
                         <select
                           value={t.status}
                           disabled={updating === t.id}
                           onChange={(e) => updateStatus(t.id, e.target.value)}
-                          className="bg-[#1a1a1a] border border-[#333] text-xs text-white rounded-lg px-2 py-1 cursor-pointer hover:border-[#555] transition-colors disabled:opacity-50">
-                          <option value="to do">Pendiente</option>
-                          <option value="complete">Completada</option>
+                          className="bg-[#1a1a1a] border border-[#2a2a2a] text-[11px] text-white rounded-lg px-2 py-1 cursor-pointer hover:border-[#444] transition-colors disabled:opacity-40 w-full">
+                          <option value="to do">⬜ Pendiente</option>
+                          <option value="complete">✅ Completada</option>
                         </select>
+
                         {/* Link ClickUp */}
-                        {t.url && (
+                        {t.url ? (
                           <a href={t.url} target="_blank" rel="noreferrer"
-                             className="text-[#444] hover:text-[#00A859] text-xs transition-colors flex-shrink-0"
-                             title="Abrir en ClickUp">
-                            ↗
-                          </a>
-                        )}
+                             className="text-[#333] hover:text-[#00A859] transition-colors text-center text-sm"
+                             title="Abrir en ClickUp">↗</a>
+                        ) : <span />}
                       </div>
                     );
                   })}
-                  {/* Footer con link a ClickUp */}
+
                   <div className="px-5 py-3 flex justify-end">
-                    <a href={`https://app.clickup.com/${p.list_id}`}
+                    <a href={`https://app.clickup.com/90141376562/v/li/${p.list_id}`}
                        target="_blank" rel="noreferrer"
-                       className="text-xs text-[#555] hover:text-white transition-colors">
-                      Ver lista completa en ClickUp ↗
+                       className="text-[11px] text-[#444] hover:text-white transition-colors">
+                      Ver en ClickUp ↗
                     </a>
                   </div>
                 </div>

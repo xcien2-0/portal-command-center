@@ -30,6 +30,7 @@ import Bitacora from "./pages/Bitacora.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
 import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
 import { AuthProvider, RequireAuth, useAuth } from "./contexts/AuthContext.tsx";
+import { AnalyticsProvider } from "./contexts/AnalyticsContext.tsx";
 import Login from "./pages/Login.tsx";
 import { DEFAULT_THEME } from "./pages/xcien2/types.ts";
 
@@ -86,6 +87,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+        <AnalyticsProvider>
         <Routes>
           {/* Auth */}
           <Route path="/login" element={<Login />} />
@@ -137,6 +139,7 @@ const App = () => (
             </SidebarProvider></RequireAuth>
           } />
         </Routes>
+        </AnalyticsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

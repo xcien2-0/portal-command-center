@@ -30,22 +30,29 @@ ROLES = {
     "admin":      "Administrador — acceso total",
     "director":   "Director General — dashboards ejecutivos + chat IA",
     "noc":        "Analista NOC — red, alertas, monitoreo",
-    "wfm":        "Coordinador WFM — tickets, técnicos, órdenes",
-    "comercial":  "Comercial — ventas, CRM, factibilidad",
-    "academico":  "Academia — capacitación, exámenes, manuales",
+    "wfm":        "Coordinador WFM — tickets, técnicos, órdenes de campo",
+    "comercial":  "Comercial — ventas, integridad, KPI",
+    "preventa":   "Preventa — cotizaciones, factibilidad, proyectos",
+    "almacen":    "Almacén — inventario, transferencias, materiales",
+    "rrhh":       "Recursos Humanos — directorio, nómina, academia",
+    "academico":  "Academia / Entregas — capacitación, manuales",
     "tecnico":    "Técnico de campo — solo lectura de sus tickets",
     "readonly":   "Solo lectura — consulta sin modificar",
 }
 
 # Permisos por rol (qué endpoints/módulos puede usar)
 PERMISOS = {
-    "admin":     ["*"],   # todo
-    "director":  ["dashboard", "chat_ia", "wfm_read", "noc_read", "reportes", "tokens_read"],
-    "noc":       ["noc_read", "noc_write", "alertas", "wfm_read"],
-    "wfm":       ["wfm_read", "wfm_write", "tecnicos", "tickets"],
-    "comercial": ["comercial", "factibilidad", "tokens_emitir", "wfm_read"],
-    "academico": ["academia", "manuales", "examenes", "tecnicos_read"],
-    "tecnico":   ["mis_tickets", "checklist", "evidencias"],
+    "admin":     ["*"],
+    "director":  ["dashboard", "chat_ia", "wfm_read", "noc_read", "reportes",
+                  "tokens_read", "ventas", "integridad", "rrhh_read", "proyectos"],
+    "noc":       ["noc_read", "noc_write", "alertas", "wfm_read", "infra_energia"],
+    "wfm":       ["wfm_read", "wfm_write", "tecnicos", "tickets", "inventario_read"],
+    "comercial": ["ventas", "integridad", "kpi", "documentos"],
+    "preventa":  ["ventas_read", "kpi", "proyectos", "documentos", "factibilidad"],
+    "almacen":   ["inventario_read", "inventario_write", "transferencias", "documentos"],
+    "rrhh":      ["rrhh_read", "rrhh_write", "academia", "documentos"],
+    "academico": ["academia", "manuales", "examenes", "documentos"],
+    "tecnico":   ["mis_tickets", "checklist", "evidencias", "academia"],
     "readonly":  ["dashboard", "wfm_read", "noc_read"],
 }
 
