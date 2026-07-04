@@ -6,7 +6,7 @@
  * WFM           → Cola de tickets + técnicos en campo
  * Genérico      → Cards de acceso rápido + estado de sistemas
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { API_BASE } from '../../../config';
 import brand from '../../../brand';
@@ -104,7 +104,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   const [ventas, setVentas]         = useState<Record<string, number> | null>(null);
   const [alertas, setAlertas]       = useState<{ id: string; entity: string; severity: string }[]>([]);
 
-  useEffect(() => {
+  const loadKPIs = useCallback(() => {
     Promise.allSettled([
       fetch(`${API_BASE}/api/noc/dashboard-stats`).then(r => r.ok ? r.json() : null).then(d => d && setNocStats(d)),
       fetch(`${API_BASE}/api/wfm/kpis`).then(r => r.ok ? r.json() : null).then(d => d && setWfmStats(d)),
@@ -112,15 +112,26 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       fetch(`${API_BASE}/api/ventas/resumen`).then(r => r.ok ? r.json() : null).then(d => d && setVentas(d)),
       fetch(`${API_BASE}/api/noc/alerts`).then(r => r.ok ? r.json() : []).then(d => {
         const crits = (Array.isArray(d) ? d : [])
-          .filter((a: { alert_severity?: string }) => ['critical', 'high'].includes((a.alert_severity ?? '').toLowerCase()))
+          .filter((a: { severity?: string; alert_severity?: string }) => {
+            const sev = (a.severity ?? a.alert_severity ?? '').toLowerCase();
+            return ['critical', 'high'].includes(sev);
+          })
           .slice(0, 5)
-          .map((a: { id?: string | number; entity_name?: string; alert_severity?: string }) => ({
-            id: String(a.id ?? ''), entity: a.entity_name ?? 'Dispositivo', severity: a.alert_severity ?? 'high',
+          .map((a: { id?: string | number; entity_name?: string; hostName?: string; siteName?: string; severity?: string; alert_severity?: string; cityName?: string }) => ({
+            id: String(a.id ?? ''),
+            entity: a.entity_name ?? a.hostName ?? a.siteName ?? a.cityName ?? 'Dispositivo',
+            severity: a.severity ?? a.alert_severity ?? 'critical',
           }));
         setAlertas(crits);
       }),
     ]);
   }, []);
+
+  useEffect(() => {
+    loadKPIs();
+    const t = setInterval(loadKPIs, 60_000);
+    return () => clearInterval(t);
+  }, [loadKPIs]);
 
   const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
@@ -144,7 +155,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 14 }}>
         <KPICard label="Salud de Red" value={nocStats ? `${nocStats.uptime_pct ?? 0}%` : '—'} sub={nocStats ? `${nocStats.up}/${nocStats.total} nodos` : 'cargando'} color={nocStats && (nocStats.uptime_pct ?? 0) >= 90 ? C.green : C.yellow} icon="📡" onClick={() => onNavigate('noc')} />
         <KPICard label="Tickets Abiertos" value={wfmStats?.abiertos ?? '—'} sub={`${wfmStats?.urgentes ?? 0} urgentes`} color={wfmStats && (wfmStats.urgentes ?? 0) > 0 ? C.yellow : C.green} icon="⚙️" onClick={() => onNavigate('wfm')} />
-        <KPICard label="Avance Academia" value={acadStats ? `${acadStats.avance_global ?? 0}%` : '—'} sub={`${acadStats?.total_tecnicos ?? 0} técnicos`} color={C.green} icon="🎓" onClick={() => onNavigate('academia')} />
+        <KPICard label="Avance Academia" value={acadStats ? `${acadStats.avance_activos ?? 0}%` : '—'} sub={`${acadStats?.total_activos ?? 0} de ${acadStats?.total_tecnicos ?? 0} activos`} color={C.green} icon="🎓" onClick={() => onNavigate('academia')} />
         <KPICard label="MRR" value={ventas?.mrr ? `$${Number(ventas.mrr).toLocaleString()}` : '—'} sub="Ingresos recurrentes" color={C.blue} icon="📈" onClick={() => onNavigate('ventas')} />
       </div>
 

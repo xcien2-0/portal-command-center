@@ -21,6 +21,8 @@ interface Message {
   content: string;
   provider?: string;
   model?: string;
+  agent_label?: string;
+  route?: 'tars' | 'case' | 'both';
   ts: string;
 }
 
@@ -139,6 +141,8 @@ export default function CerebroSection({ theme }: Props) {
         content: data.response,
         provider: data.provider,
         model: data.model,
+        agent_label: data.agent_label,
+        route: data.route,
         ts: new Date().toISOString(),
       }]);
     } catch (e: unknown) {
@@ -339,16 +343,29 @@ export default function CerebroSection({ theme }: Props) {
                 <p style={{ color: theme.dim }} className="text-sm max-w-sm">
                   Selecciona un proveedor, activa los módulos de contexto que necesitas y haz tu primera pregunta.
                 </p>
-                <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                  {['¿Cuál es el estado del NOC ahora mismo?', '¿Qué tickets WFM están críticos?', '¿Cómo va el MRR este mes?'].map(q => (
-                    <button
-                      key={q}
-                      onClick={() => { setInput(q); textareaRef.current?.focus(); }}
-                      className="text-xs px-3 py-1.5 rounded-full"
-                      style={{ background: `${G}15`, color: G, border: `1px solid ${G}33` }}
-                    >
-                      {q}
-                    </button>
+                <div className="mt-5 space-y-3 w-full max-w-lg">
+                  {[
+                    { label: '🖥️ TARS — Operativo', color: '#60a5fa', border: '#1d4ed8', bg: '#1e3a5f',
+                      qs: ['¿Qué tickets están abiertos hoy?', '¿Hay sitios caídos ahora?', 'Muestra el backlog de cuadrillas'] },
+                    { label: '🤖 CASE — Análisis', color: '#4ade80', border: '#16a34a', bg: '#1a2e1a',
+                      qs: ['¿Cuál es la tendencia de cumplimiento SLA?', '¿Qué ciudades tienen más reincidencias?', 'Genera un reporte ejecutivo de campo'] },
+                    { label: '⚡ Auto (TARS+CASE)', color: '#c084fc', border: '#7c3aed', bg: '#2d1a4a',
+                      qs: ['¿Qué está pasando con el NOC y qué debería priorizarse?'] },
+                  ].map(({ label, color, border, bg, qs }) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-semibold mb-1.5 px-1"
+                         style={{ color }}>{label}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {qs.map(q => (
+                          <button key={q}
+                            onClick={() => { setInput(q); textareaRef.current?.focus(); }}
+                            className="text-[11px] px-3 py-1 rounded-full"
+                            style={{ background: bg, color, border: `1px solid ${border}` }}>
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -363,12 +380,30 @@ export default function CerebroSection({ theme }: Props) {
                     border: `1px solid ${msg.role === 'user' ? `${G}44` : theme.border}`,
                   }}
                 >
-                  {msg.role === 'assistant' && msg.provider && (
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-xs" style={{ color: theme.dim }}>
-                        {providers[msg.provider]?.icon || '🤖'} {providers[msg.provider]?.name || msg.provider}
-                      </span>
-                      {msg.model && (
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                      {msg.agent_label ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                              style={{
+                                background: msg.route === 'tars' ? '#1e3a5f' :
+                                            msg.route === 'case' ? '#1a2e1a' :
+                                            msg.route === 'both' ? '#2d1a4a' : `${G}15`,
+                                color: msg.route === 'tars' ? '#60a5fa' :
+                                       msg.route === 'case' ? '#4ade80' :
+                                       msg.route === 'both' ? '#c084fc' : G,
+                                border: `1px solid ${
+                                  msg.route === 'tars' ? '#1d4ed8' :
+                                  msg.route === 'case' ? '#16a34a' :
+                                  msg.route === 'both' ? '#7c3aed' : `${G}44`}`,
+                              }}>
+                          {msg.agent_label}
+                        </span>
+                      ) : msg.provider ? (
+                        <span className="text-xs" style={{ color: theme.dim }}>
+                          {providers[msg.provider]?.icon || '🤖'} {providers[msg.provider]?.name || msg.provider}
+                        </span>
+                      ) : null}
+                      {msg.model && !['tars-ops','case-analysis','auto-route','director-general','case-field'].includes(msg.model) && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: `${G}15`, color: G }}>
                           {msg.model}
                         </span>

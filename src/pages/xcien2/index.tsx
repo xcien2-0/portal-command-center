@@ -40,7 +40,8 @@ const AcademiaHoloSection= lazy(() => import('./sections/AcademiaHoloSection'));
 const WFMSection         = lazy(() => import('./sections/WFMSection'));
 const RRHHSection        = lazy(() => import('./sections/RRHHSection'));
 const SalaJuntasSection  = lazy(() => import('./sections/SalaJuntasSection'));
-const VentasSection      = lazy(() => import('./sections/VentasSection'));
+const VentasSection            = lazy(() => import('./sections/VentasSection'));
+const VentasEfectividadSection = lazy(() => import('./sections/VentasEfectividadSection'));
 const AgentesSection     = lazy(() => import('./sections/AgentesSection'));
 const InventarioSection  = lazy(() => import('./sections/InventarioSection'));
 const InventarioTransfersSection = lazy(() => import('./sections/InventarioTransfersSection'));
@@ -127,7 +128,8 @@ const NAV: NavEntry[] = [
   { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
   { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
   { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
-  { id: 'ventas',  label: 'Resumen Ventas', icon: '📈', group: 'Administración' },
+  { id: 'ventas',              label: 'Resumen Ventas',      icon: '📈', group: 'Administración' },
+  { id: 'ventas-efectividad', label: 'Efectividad Ventas',  icon: '🏆', group: 'Administración' },
   { id: 'integridad', label: 'Integridad Comercial', icon: '🔍', group: 'Administración' },
   { id: 'analytics',  label: 'Analytics de Uso',     icon: '📊', group: 'Administración' },
   { id: 'helpdesk',   label: 'Mesa de Ayuda',        icon: '🎧', group: 'Operaciones' },
@@ -602,7 +604,8 @@ function Content({
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
-      {section === 'ventas'   && <VentasSection theme={theme} />}
+      {section === 'ventas'              && <VentasSection theme={theme} />}
+      {section === 'ventas-efectividad'  && <VentasEfectividadSection />}
       {section === 'integridad' && <IntegridadSection theme={theme} />}
       {section === 'analytics'  && <AnalyticsSection />}
       {section === 'helpdesk'   && <HelpdeskSection />}

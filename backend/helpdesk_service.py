@@ -1,13 +1,15 @@
 """
 Helpdesk Service — tickets Odoo helpdesk.ticket para el Command Center.
 Endpoints:
-  GET /api/helpdesk/equipos      — lista de equipos con conteo
-  GET /api/helpdesk/tickets      — tickets con filtros
-  GET /api/helpdesk/resumen      — KPIs generales
-  GET /api/helpdesk/etapas       — etapas por equipo
+  GET /api/helpdesk/equipos        — lista de equipos con conteo
+  GET /api/helpdesk/tickets        — tickets con filtros + filtro fecha
+  GET /api/helpdesk/resumen        — KPIs generales
+  GET /api/helpdesk/etapas         — etapas por equipo
+  GET /api/helpdesk/analytics      — tendencias + patrones por periodo
 """
 import os, xmlrpc.client
-from datetime import datetime, timedelta
+from collections import defaultdict
+from datetime import datetime, timedelta, date
 from typing import Optional
 from fastapi import APIRouter, Query
 from dotenv import load_dotenv
@@ -105,17 +107,33 @@ def get_resumen(team_id: Optional[int] = None):
 
 @router.get("/tickets")
 def get_tickets(
-    team_id:  Optional[int] = None,
-    stage_id: Optional[int] = None,
-    priority: Optional[str] = None,
-    limit:    int = Query(50, ge=1, le=200),
-    offset:   int = Query(0, ge=0),
+    team_id:      Optional[int] = None,
+    stage_id:     Optional[int] = None,
+    priority:     Optional[str] = None,
+    fecha_desde:  Optional[str] = None,
+    fecha_hasta:  Optional[str] = None,
+    periodo:      Optional[str] = None,   # "hoy" | "semana" | "mes" | "30d" | "90d"
+    limit:        int = Query(50, ge=1, le=200),
+    offset:       int = Query(0, ge=0),
 ):
     models, uid = _get_conn()
     domain = [["active", "=", True]]
     if team_id:  domain.append(["team_id",  "=", team_id])
     if stage_id: domain.append(["stage_id", "=", stage_id])
     if priority: domain.append(["priority", "=", priority])
+
+    # Periodo predefinido
+    if periodo:
+        hoy = datetime.utcnow().date()
+        if   periodo == "hoy":    fecha_desde = str(hoy)
+        elif periodo == "semana": fecha_desde = str(hoy - timedelta(days=hoy.weekday()))
+        elif periodo == "mes":    fecha_desde = hoy.strftime("%Y-%m-01")
+        elif periodo == "30d":    fecha_desde = str(hoy - timedelta(days=30))
+        elif periodo == "90d":    fecha_desde = str(hoy - timedelta(days=90))
+    if fecha_desde:
+        domain.append(["create_date", ">=", f"{fecha_desde} 00:00:00"])
+    if fecha_hasta:
+        domain.append(["create_date", "<=", f"{fecha_hasta} 23:59:59"])
 
     tickets = models.execute_kw(ODOO_DB, uid, ODOO_PASS, "helpdesk.ticket", "search_read",
         [domain],
@@ -151,3 +169,98 @@ def get_tickets(
         })
 
     return {"total": total, "tickets": result}
+
+
+@router.get("/analytics")
+def get_analytics(
+    team_id: Optional[int] = None,
+    dias:    int = Query(30, ge=1, le=365),
+    agrup:   str = Query("dia", regex="^(dia|semana|mes)$"),
+):
+    """Tendencias y patrones de tickets para el periodo solicitado."""
+    models, uid = _get_conn()
+
+    desde = (datetime.utcnow() - timedelta(days=dias)).strftime("%Y-%m-%d 00:00:00")
+    base  = [["active", "=", True], ["create_date", ">=", desde]]
+    if team_id:
+        base.append(["team_id", "=", team_id])
+
+    tickets = models.execute_kw(ODOO_DB, uid, ODOO_PASS, "helpdesk.ticket", "search_read",
+        [base],
+        {"fields": ["id", "name", "team_id", "stage_id", "priority", "user_id",
+                    "ticket_type_id", "create_date", "sla_reached_late",
+                    "close_hours", "kanban_state"],
+         "order": "create_date asc", "limit": 2000})
+
+    # Etapas fold para saber cuáles son "resueltas"
+    fold_ids = set(models.execute_kw(ODOO_DB, uid, ODOO_PASS,
+        "helpdesk.stage", "search", [[["fold", "=", True]]]))
+
+    def bucket(fecha_str: str) -> str:
+        try:
+            d = datetime.strptime(fecha_str[:10], "%Y-%m-%d").date()
+        except Exception:
+            return "?"
+        if agrup == "dia":    return str(d)
+        if agrup == "semana":
+            lun = d - timedelta(days=d.weekday())
+            return f"Sem {lun.strftime('%d/%m')}"
+        return d.strftime("%b %Y")
+
+    # ── Tendencias por bucket ─────────────────────────────────────
+    creados: dict  = defaultdict(int)
+    resueltos: dict = defaultdict(int)
+    sla_venc: dict  = defaultdict(int)
+
+    por_tipo:   dict = defaultdict(int)
+    por_equipo: dict = defaultdict(int)
+    por_agente: dict = defaultdict(int)
+    por_prio:   dict = defaultdict(int)
+    tiempos_cierre: list = []
+
+    for t in tickets:
+        bkt = bucket(t.get("create_date", ""))
+        creados[bkt] += 1
+        if t.get("stage_id") and t["stage_id"][0] in fold_ids:
+            resueltos[bkt] += 1
+        if t.get("sla_reached_late"):
+            sla_venc[bkt] += 1
+
+        por_tipo[t["ticket_type_id"][1] if t.get("ticket_type_id") else "Sin tipo"] += 1
+        por_equipo[t["team_id"][1]   if t.get("team_id")   else "Sin equipo"] += 1
+        por_agente[t["user_id"][1]   if t.get("user_id")   else "Sin asignar"] += 1
+        por_prio[PRIORITY_LABEL.get(str(t.get("priority","0")), "Normal")] += 1
+        if t.get("close_hours") and t["close_hours"] > 0:
+            tiempos_cierre.append(t["close_hours"])
+
+    # Ordenar buckets cronológicamente
+    all_bkts = sorted(set(list(creados.keys()) + list(resueltos.keys())))
+
+    tendencia = [
+        {
+            "periodo": b,
+            "creados":   creados.get(b, 0),
+            "resueltos": resueltos.get(b, 0),
+            "sla_venc":  sla_venc.get(b, 0),
+        }
+        for b in all_bkts
+    ]
+
+    avg_cierre = round(sum(tiempos_cierre) / len(tiempos_cierre), 1) if tiempos_cierre else None
+
+    def top(d: dict, n: int = 10):
+        return [{"nombre": k, "total": v}
+                for k, v in sorted(d.items(), key=lambda x: -x[1])[:n]]
+
+    return {
+        "periodo_dias": dias,
+        "total_tickets": len(tickets),
+        "resueltos_total": sum(resueltos.values()),
+        "sla_vencidos_total": sum(sla_venc.values()),
+        "avg_cierre_horas": avg_cierre,
+        "tendencia": tendencia,
+        "por_tipo":   top(por_tipo),
+        "por_equipo": top(por_equipo),
+        "por_agente": top(por_agente, 15),
+        "por_prioridad": top(por_prio),
+    }

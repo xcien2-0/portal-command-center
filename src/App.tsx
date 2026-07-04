@@ -23,6 +23,7 @@ import AcademiaLeaderboard from "./pages/academia/AcademiaLeaderboard.tsx";
 import AcademiaAdmin from "./pages/academia/AcademiaAdmin.tsx";
 import Docs from "./pages/Docs.tsx";
 import Xcien2Page from "./pages/xcien2/index.tsx";
+import Plan2026Page from "./pages/Plan2026Page.tsx";
 import InvitePage from "./pages/InvitePage.tsx";
 import Migracion from "./pages/Migracion.tsx";
 import Metricas from "./pages/Metricas.tsx";
@@ -98,6 +99,7 @@ const App = () => (
           <Route path="/invite" element={<InvitePage />} />
 
           {/* Full-screen routes (no sidebar) — protegidas */}
+          <Route path="/plan2026" element={<RequireAuth><Plan2026Page /></RequireAuth>} />
           <Route path="/gerencia" element={<RequireAuth><Gerencia /></RequireAuth>} />
           <Route path="/scan" element={<RequireAuth><Scan /></RequireAuth>} />
           <Route path="/noc" element={<RequireAuth><NOC /></RequireAuth>} />

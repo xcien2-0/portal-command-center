@@ -2058,6 +2058,127 @@ def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: 
     return df[available].head(limit).fillna("").to_dict(orient="records")
 
 
+@app.get("/api/ventas/efectividad")
+def get_ventas_efectividad(dias: int = 90, empresa: str = "", vendedor: str = "", canal: str = ""):
+    """
+    Efectividad de ventas agrupada por marca (EMPRESA), vendedor y canal.
+    Fuente: CSV Archivo Maestro + Odoo sale.order para equipos y líderes.
+    """
+    df = _load_ventas()
+    if df is None:
+        raise HTTPException(503, "CSV de ventas no disponible")
+
+    # Normalizar valores (sin renombrar columnas para preservar 'SO ')
+    df = df.copy()
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].fillna("").str.strip()
+    # Alias para columna SO con espacio
+    so_col = "SO " if "SO " in df.columns else "SO"
+
+    # Filtros opcionales
+    if empresa:
+        df = df[df["EMPRESA"].str.upper() == empresa.upper()]
+    if vendedor:
+        df = df[df["VENDEDOR COMERCIAL/EAC"].str.upper().str.contains(vendedor.upper())]
+    if canal:
+        df = df[df["CANAL DE VENTA"].str.upper() == canal.upper()]
+
+    import pandas as _pd
+    def _parse_monto(col):
+        try:
+            return _pd.to_numeric(
+                df[col].str.replace(r"[,$\s]", "", regex=True).replace("", "0"),
+                errors="coerce"
+            ).fillna(0)
+        except Exception:
+            return _pd.Series([0.0] * len(df))
+
+    df["_mrr"]   = _parse_monto("MONTO RECURRENTE")
+    df["_total"] = _parse_monto("MONTO TOTAL")
+
+    def _group(by_col: str):
+        grp = df.groupby(by_col).agg(
+            ordenes    = (so_col, "count"),
+            mrr        = ("_mrr",   "sum"),
+            total      = ("_total", "sum"),
+            nuevos     = ("CLIENTE NUEVO", lambda s: (s.str.upper() == "SÍ").sum()),
+            primera_venta = ("TIPO DE OPERACIÓN", lambda s: (s.str.upper() == "PRIMERA VENTA").sum()),
+        ).reset_index().sort_values("mrr", ascending=False)
+        grp["ticket_prom"] = (grp["total"] / grp["ordenes"].replace(0,1)).round(0)
+        grp["mrr"]   = grp["mrr"].round(2)
+        grp["total"] = grp["total"].round(2)
+        return grp.rename(columns={by_col: "nombre"}).to_dict(orient="records")
+
+    # Tipos de operación relevantes
+    ops = df.groupby("TIPO DE OPERACIÓN").agg(
+        ordenes=(so_col,"count"), mrr=("_mrr","sum")
+    ).reset_index().sort_values("mrr",ascending=False)
+
+    # Totales globales
+    totales = {
+        "ordenes":        int(len(df)),
+        "mrr_total":      round(float(df["_mrr"].sum()), 2),
+        "monto_total":    round(float(df["_total"].sum()), 2),
+        "clientes_nuevos": int((df["CLIENTE NUEVO"].str.upper() == "SÍ").sum()),
+        "primera_venta":  int((df["TIPO DE OPERACIÓN"].str.upper() == "PRIMERA VENTA").sum()),
+    }
+
+    # Odoo: líderes por equipo (últimos 90 días para complementar)
+    try:
+        from datetime import datetime, timedelta
+        import xmlrpc.client as xc
+        odoo_url = os.getenv("ODOO_URL",""); odoo_db = os.getenv("ODOO_DB","")
+        odoo_user = os.getenv("ODOO_USER",""); odoo_pwd = os.getenv("ODOO_PASSWORD","")
+        common = xc.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid_odoo = common.authenticate(odoo_db, odoo_user, odoo_pwd, {})
+        mdls = xc.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+        desde = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
+        orders = mdls.execute_kw(odoo_db, uid_odoo, odoo_pwd, "sale.order", "search_read",
+            [[["state","in",["sale","done"]], ["date_order",">=",desde]]],
+            {"fields": ["team_id","team_user_id","amount_total","user_id"], "limit": 5000})
+
+        from collections import defaultdict
+        by_lider: dict = defaultdict(lambda: {"count":0,"total":0.0,"equipos":set()})
+        by_equipo: dict = defaultdict(lambda: {"count":0,"total":0.0,"lider":""})
+        for o in orders:
+            tname = o["team_id"][1] if o["team_id"] else "Sin equipo"
+            lname = o["team_user_id"][1] if o["team_user_id"] else (o["user_id"][1] if o["user_id"] else "Sin líder")
+            by_lider[lname]["count"] += 1
+            by_lider[lname]["total"] += o["amount_total"]
+            by_lider[lname]["equipos"].add(tname)
+            by_equipo[tname]["count"] += 1
+            by_equipo[tname]["total"] += o["amount_total"]
+            if o["team_user_id"]:
+                by_equipo[tname]["lider"] = o["team_user_id"][1]
+
+        lideres_odoo = sorted([
+            {"nombre": k, "ordenes": v["count"], "total": round(v["total"],2),
+             "equipos": list(v["equipos"])}
+            for k,v in by_lider.items()
+        ], key=lambda x: -x["total"])
+
+        equipos_odoo = sorted([
+            {"nombre": k, "ordenes": v["count"], "total": round(v["total"],2), "lider": v["lider"]}
+            for k,v in by_equipo.items()
+        ], key=lambda x: -x["total"])
+    except Exception as e:
+        lideres_odoo = [{"error": str(e)[:100]}]
+        equipos_odoo = []
+
+    return {
+        "totales":      totales,
+        "por_marca":    _group("EMPRESA"),
+        "por_vendedor": _group("VENDEDOR COMERCIAL/EAC"),
+        "por_canal":    _group("CANAL DE VENTA"),
+        "por_segmento": _group("SEGMENTO"),
+        "por_tipo":     ops.rename(columns={"TIPO DE OPERACIÓN":"nombre"}).to_dict(orient="records"),
+        "lideres_odoo": lideres_odoo,
+        "equipos_odoo": equipos_odoo,
+        "filtros": {"empresa": empresa, "vendedor": vendedor, "canal": canal, "dias": dias},
+    }
+
+
 @app.post("/api/ventas/sync-sheets")
 def sync_ventas_from_sheets(_user: dict = Depends(require_rol('comercial', 'admin'))):
     """Descarga el Archivo Maestro de Google Sheets y actualiza el CSV local."""
@@ -6649,20 +6770,36 @@ CEREBRO_PROVIDERS = {
         "group": "Cloud",
     },
     # ── Agentes propios XCIEN ──────────────────────────────────────────────────
+    "auto": {
+        "id": "auto", "name": "Auto (TARS+CASE)", "icon": "⚡",
+        "description": "Router automático — decide si va a TARS, CASE o ambos según la consulta",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["auto-route"],
+        "default_model": "auto-route",
+        "group": "Agentes XCIEN",
+    },
+    "tars": {
+        "id": "tars", "name": "TARS", "icon": "🖥️",
+        "description": "Motor operativo — NOC, tickets, SLA, sitios, cuadrillas, estado actual",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["tars-ops"],
+        "default_model": "tars-ops",
+        "group": "Agentes XCIEN",
+    },
+    "case": {
+        "id": "case", "name": "CASE", "icon": "🤖",
+        "description": "Motor de análisis — tendencias, reportes ejecutivos, causa raíz, estrategia",
+        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
+        "models": ["case-analysis"],
+        "default_model": "case-analysis",
+        "group": "Agentes XCIEN",
+    },
     "antigravity": {
         "id": "antigravity", "name": "Antigravity Director", "icon": "🚀",
         "description": "Director General Antigravity — contexto XCIEN nativo",
         "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
         "models": ["director-general"],
         "default_model": "director-general",
-        "group": "Agentes XCIEN",
-    },
-    "case": {
-        "id": "case", "name": "CASE", "icon": "🤖",
-        "description": "CASE — agente operativo de campo, análisis técnico NOC/WFM",
-        "status": "configured" if os.environ.get("ANTHROPIC_API_KEY") else "needs_key",
-        "models": ["case-field"],
-        "default_model": "case-field",
         "group": "Agentes XCIEN",
     },
     # ── Local ──────────────────────────────────────────────────────────────────
@@ -6750,12 +6887,95 @@ CEREBRO_CONTEXT_MODULES = {
     "incidentes": {"label": "Incidentes activos", "icon": "🚨",  "endpoint": "/api/incidentes"},
 }
 
+# ── Personas de agentes ────────────────────────────────────────────────────────
+
+TARS_PERSONA = """Eres TARS, el motor operativo de conocimiento de XCIEN Networks.
+
+ROL: Responder sobre el estado ACTUAL de las operaciones con datos concretos y hechos verificables.
+
+RESPONSABILIDADES:
+- Consultar y mostrar tickets abiertos, backlog y tickets por vencer SLA
+- Reportar sitios caídos, alertas NOC activas y estado de dependencias
+- Mostrar órdenes de campo, cuadrillas asignadas y estado de campo
+- Responder preguntas operativas con datos del momento
+- Mantener contexto operativo reciente
+
+REGLAS:
+- Usa únicamente datos del contexto proporcionado. Si no tienes datos actuales, dilo claramente.
+- Formato directo: bullets, números, estados (✅ OK / ⚠️ Atención / 🔴 Crítico)
+- No analices tendencias — eso es trabajo de CASE
+- Al final de tu respuesta, incluye siempre: [🖥️ TARS — Operativo]
+"""
+
+CASE_PERSONA = """Eres CASE, el motor de análisis y estrategia de XCIEN Networks.
+
+ROL: Interpretar datos, detectar tendencias, priorizar problemas y generar análisis ejecutivos.
+
+RESPONSABILIDADES:
+- Analizar cumplimiento de SLA y detectar tendencias de incumplimiento
+- Medir reincidencias e identificar causas raíz
+- Generar reportes ejecutivos para dirección y gobierno
+- Proponer acciones correctivas y priorización de ciudades/sitios
+- Ayudar con planeación estratégica, BMAD y roadmap
+- Preparar resúmenes para stakeholders
+
+REGLAS:
+- Separa siempre: **Hechos confirmados** / **Supuestos** / **Preguntas abiertas**
+- No inventes datos. Si hay datos operativos de TARS, analízalos; si no, márcalo como supuesto
+- Formato ejecutivo estructurado: Estado → Hallazgos → Riesgos → Próximo paso recomendado
+- Al final de tu respuesta, incluye siempre: [🤖 CASE — Análisis]
+"""
+
+# ── Router de consultas TARS / CASE ────────────────────────────────────────────
+
+_TARS_KEYWORDS = {
+    "ticket", "tickets", "abierto", "abiertos", "backlog", "sla", "vencer", "vencido",
+    "sitio", "sitios", "caído", "caídos", "alerta", "alertas", "noc", "activo", "activos",
+    "cuadrilla", "cuadrillas", "campo", "orden", "órdenes", "estado", "ahora", "hoy",
+    "actual", "actualmente", "cuántos", "listar", "mostrar", "qué hay", "qué tiene",
+    "están", "tiene", "hay", "dependencia", "dependencias", "host", "hosts",
+}
+
+_CASE_KEYWORDS = {
+    "análisis", "analizar", "analisa", "tendencia", "tendencias", "reporte", "reportes",
+    "reincidencia", "reincidencias", "causa", "raíz", "ejecutivo", "ejecutivos",
+    "priorizar", "prioridad", "cumplimiento", "mejora", "estrategia", "planeación",
+    "resumen", "diagnóstico", "problema", "problemas", "patrón", "patrones",
+    "por qué", "recurrente", "historial", "comparar", "comparación", "impacto",
+    "decisión", "recomienda", "sugerencia", "propuesta", "roadmap",
+}
+
+def _route_query(query: str) -> str:
+    """Returns 'tars', 'case', or 'both' based on query keywords."""
+    q = query.lower()
+    words = set(q.replace("?","").replace(",","").split())
+    tars_score = len(words & _TARS_KEYWORDS)
+    case_score = len(words & _CASE_KEYWORDS)
+    if tars_score > 0 and case_score > 0:
+        return "both"
+    if case_score > tars_score:
+        return "case"
+    return "tars"  # default operativo
+
+async def _call_claude(api_key: str, system: str, messages: list, temperature: float) -> str:
+    """Helper: single Claude API call, returns text."""
+    async with _httpx_obs.AsyncClient(timeout=60) as client:
+        r = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": "claude-sonnet-4-6", "max_tokens": 2048,
+                  "system": system, "messages": messages, "temperature": temperature},
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+        return r.json()["content"][0]["text"]
+
 async def _assemble_context(modules: List[str], request: Request) -> str:
     """Fetch summaries from requested context modules and build system context string."""
     parts: List[str] = [
-        "Eres el Supercerebro de XCIEN Networks. Tienes acceso al estado operativo en tiempo real "
-        "de la empresa. Responde de forma concisa, técnica y orientada a decisiones.\n"
         f"Fecha y hora: {dt_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        "Empresa: XCIEN Networks\n"
     ]
     base = f"http://127.0.0.1:{int(os.environ.get('PORT', 8002))}"
     async with _httpx_obs.AsyncClient(timeout=5) as client:
@@ -6821,6 +7041,122 @@ async def cerebro_providers():
 
     return providers
 
+@app.get("/api/cerebro/route")
+async def cerebro_route(q: str = ""):
+    """Clasifica una consulta: tars | case | both"""
+    decision = _route_query(q)
+    return {"query": q, "route": decision,
+            "agent": "TARS" if decision == "tars" else ("CASE" if decision == "case" else "TARS+CASE")}
+
+# ─── XCIEN Snapshot — contexto para agentes externos (CASE/Eagle/MCP) ──────────
+
+@app.get("/api/xcien/snapshot")
+async def xcien_snapshot(request: Request, token: str = ""):
+    """
+    Snapshot del estado operativo XCIEN para agentes externos.
+    Requiere header  X-Agent-Token: <CASE_API_TOKEN>
+    o query param   ?token=<CASE_API_TOKEN>
+    """
+    expected = os.environ.get("CASE_API_TOKEN", "")
+    header_token = request.headers.get("x-agent-token", "")
+    provided = token or header_token
+
+    if not expected:
+        raise HTTPException(503, "CASE_API_TOKEN no configurado en el servidor")
+    if provided != expected:
+        raise HTTPException(401, "Token inválido")
+
+    base = f"http://127.0.0.1:{int(os.environ.get('PORT', 8002))}"
+    ts   = dt_datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    snap: dict = {"generado_en": ts, "empresa": "XCIEN Networks"}
+
+    async def _fetch(path: str):
+        try:
+            async with _httpx_obs.AsyncClient(timeout=6) as client:
+                r = await client.get(f"{base}{path}")
+                return r.json() if r.status_code == 200 else None
+        except Exception:
+            return None
+
+    # ── NOC ──────────────────────────────────────────────────────────────────────
+    noc_summary = await _fetch("/api/noc/summary")
+    noc_alerts  = await _fetch("/api/noc/alerts")
+    if noc_summary:
+        snap["noc"] = {
+            "resumen": noc_summary,
+            "alertas_muestra": (noc_alerts or [])[:10],
+        }
+    else:
+        snap["noc"] = {"estado": "no disponible"}
+
+    # ── Helpdesk / Mesa de Ayuda ──────────────────────────────────────────────
+    hd_resumen = await _fetch("/api/helpdesk/resumen")
+    if hd_resumen:
+        snap["helpdesk"] = hd_resumen
+    else:
+        snap["helpdesk"] = {"estado": "no disponible"}
+
+    # ── WFM / Campo ───────────────────────────────────────────────────────────
+    wfm = await _fetch("/api/wfm/tickets")
+    if wfm:
+        tickets = wfm if isinstance(wfm, list) else wfm.get("tickets", [])
+        abiertos   = [t for t in tickets if t.get("state") not in ("done","cancel")]
+        criticos   = [t for t in abiertos if t.get("priority") in ("2","3")]
+        snap["campo_wfm"] = {
+            "total_abiertos": len(abiertos),
+            "criticos": len(criticos),
+            "muestra": abiertos[:5],
+        }
+    else:
+        snap["campo_wfm"] = {"estado": "no disponible"}
+
+    # ── RRHH ─────────────────────────────────────────────────────────────────
+    rrhh = await _fetch("/api/rrhh/stats")
+    if rrhh:
+        snap["rrhh"] = rrhh
+    else:
+        snap["rrhh"] = {"estado": "no disponible"}
+
+    # ── Incidentes activos ────────────────────────────────────────────────────
+    incidentes = await _fetch("/api/incidentes")
+    if incidentes:
+        lista = incidentes if isinstance(incidentes, list) else incidentes.get("incidentes", [])
+        activos = [i for i in lista if i.get("estado") not in ("resuelto","cerrado")]
+        snap["incidentes"] = {
+            "activos": len(activos),
+            "lista": activos[:5],
+        }
+    else:
+        snap["incidentes"] = {"estado": "no disponible"}
+
+    # ── Proyectos 2026 ────────────────────────────────────────────────────────
+    proyectos = await _fetch("/api/proyectos2026/dashboard")
+    if proyectos:
+        snap["proyectos_2026"] = proyectos
+    else:
+        snap["proyectos_2026"] = {"estado": "no disponible"}
+
+    # ── Texto plano para CASE (formato fácil de consumir en prompt) ───────────
+    def _txt(label: str, data) -> str:
+        if isinstance(data, dict) and data.get("estado") == "no disponible":
+            return f"[{label}] No disponible\n"
+        try:
+            return f"[{label}]\n{json.dumps(data, ensure_ascii=False)[:1500]}\n"
+        except Exception:
+            return f"[{label}] Error al serializar\n"
+
+    snap["texto_contexto"] = (
+        f"=== XCIEN Snapshot — {ts} ===\n\n"
+        + _txt("NOC", snap["noc"])
+        + _txt("Helpdesk", snap["helpdesk"])
+        + _txt("Campo WFM", snap["campo_wfm"])
+        + _txt("RRHH", snap["rrhh"])
+        + _txt("Incidentes", snap["incidentes"])
+        + _txt("Proyectos 2026", snap["proyectos_2026"])
+    )
+
+    return snap
+
 @app.post("/api/cerebro/chat")
 async def cerebro_chat(req: CerebroRequest, request: Request):
     provider_id = req.provider
@@ -6829,12 +7165,73 @@ async def cerebro_chat(req: CerebroRequest, request: Request):
     if CEREBRO_PROVIDERS[provider_id]["status"] == "pending":
         raise HTTPException(status_code=503, detail=f"{provider_id} aún no está configurado")
 
-    system_ctx = await _assemble_context(req.context_modules, request)
+    ctx_data = await _assemble_context(req.context_modules, request)
     model = req.model or CEREBRO_PROVIDERS[provider_id]["default_model"]
     messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
     messages.append({"role": "user", "content": req.message})
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
-    # ── Claude ──
+    # ── TARS — Motor operativo ──────────────────────────────────────────────────
+    if provider_id == "tars":
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY no configurado")
+        system = TARS_PERSONA + "\n\n" + ctx_data
+        text = await _call_claude(api_key, system, messages, req.temperature)
+        return {"response": text, "provider": "tars", "model": "tars-ops",
+                "agent_label": "🖥️ TARS", "route": "tars"}
+
+    # ── CASE — Motor de análisis ────────────────────────────────────────────────
+    elif provider_id == "case":
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY no configurado")
+        system = CASE_PERSONA + "\n\n" + ctx_data
+        text = await _call_claude(api_key, system, messages, req.temperature)
+        return {"response": text, "provider": "case", "model": "case-analysis",
+                "agent_label": "🤖 CASE", "route": "case"}
+
+    # ── Auto — Router inteligente ───────────────────────────────────────────────
+    elif provider_id == "auto":
+        if not api_key:
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY no configurado")
+        route = _route_query(req.message)
+
+        if route == "tars":
+            system = TARS_PERSONA + "\n\n" + ctx_data
+            text = await _call_claude(api_key, system, messages, req.temperature)
+            return {"response": text, "provider": "auto", "model": "auto-route",
+                    "agent_label": "🖥️ TARS", "route": "tars"}
+
+        elif route == "case":
+            system = CASE_PERSONA + "\n\n" + ctx_data
+            text = await _call_claude(api_key, system, messages, req.temperature)
+            return {"response": text, "provider": "auto", "model": "auto-route",
+                    "agent_label": "🤖 CASE", "route": "case"}
+
+        else:  # both — TARS recupera datos, CASE analiza
+            tars_system = TARS_PERSONA + "\n\n" + ctx_data
+            tars_text = await _call_claude(api_key, tars_system, messages, req.temperature)
+
+            case_system = (
+                CASE_PERSONA + "\n\n" + ctx_data +
+                f"\n\n[Datos operativos de TARS]\n{tars_text}"
+            )
+            case_msgs = messages[:-1] + [
+                {"role": "user", "content":
+                 f"Con base en estos datos operativos de TARS:\n\n{tars_text}\n\n"
+                 f"Ahora analiza: {req.message}"}
+            ]
+            case_text = await _call_claude(api_key, case_system, case_msgs, req.temperature)
+
+            combined = (
+                f"### 🖥️ TARS — Estado operativo\n\n{tars_text}\n\n"
+                f"---\n\n### 🤖 CASE — Análisis\n\n{case_text}"
+            )
+            return {"response": combined, "provider": "auto", "model": "auto-route",
+                    "agent_label": "⚡ TARS+CASE", "route": "both",
+                    "tars_response": tars_text, "case_response": case_text}
+
+    # ── Claude genérico ─────────────────────────────────────────────────────────
+    system_ctx = ctx_data
     if provider_id == "claude":
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if not api_key:
@@ -7299,14 +7696,18 @@ async def get_impacto_resumen():
 CLICKUP_IDS = {
     "space_id": "90146298766",
     "lists": [
-        {"nombre": "iBlack + Cuadrillas",  "code": "P1", "color": "#06B6D4", "list_id": "901417731965", "prioridad": "urgente"},
-        {"nombre": "Fibra Piedras Negras", "code": "P2", "color": "#F97316", "list_id": "901417731957", "prioridad": "alta"},
-        {"nombre": "Academia XCIEN",       "code": "P3", "color": "#00A859", "list_id": "901417731953", "prioridad": "normal"},
-        {"nombre": "Plazas Foráneas",      "code": "P4", "color": "#0D6EFD", "list_id": "901417731955", "prioridad": "normal"},
-        {"nombre": "Tamaulipas",           "code": "P5", "color": "#8B5CF6", "list_id": "901417731963", "prioridad": "baja"},
+        {"nombre": "iBlack",              "code": "P1a", "color": "#06B6D4", "list_id": "901417731965", "prioridad": "urgente", "prefix": "iblack"},
+        {"nombre": "Cuadrillas",          "code": "P1b", "color": "#0EA5E9", "list_id": "901417731965", "prioridad": "urgente", "prefix": "cuadrillas"},
+        {"nombre": "Fibra Piedras Negras","code": "P2",  "color": "#F97316", "list_id": "901417731957", "prioridad": "alta"},
+        {"nombre": "Academia XCIEN",      "code": "P3",  "color": "#00A859", "list_id": "901417731953", "prioridad": "normal"},
+        {"nombre": "Plazas Foráneas",     "code": "P4",  "color": "#0D6EFD", "list_id": "901417731955", "prioridad": "normal"},
+        {"nombre": "Tamaulipas",          "code": "P5",  "color": "#8B5CF6", "list_id": "901417731963", "prioridad": "baja"},
         {"nombre": "Supercerebro: TARS & CASE", "code": "P6", "color": "#A855F7", "list_id": "901417733662", "prioridad": "alta"},
     ],
 }
+
+# Cache para no llamar dos veces a la misma list_id en el mismo request
+_list_cache: dict = {}
 
 @app.get("/api/proyectos2026/dashboard")
 async def proyectos_dashboard():
@@ -7318,17 +7719,35 @@ async def proyectos_dashboard():
 
     headers = {"Authorization": api_key}
     resultado = []
+    fetched: dict = {}   # list_id → tasks, para no llamar dos veces a la misma lista
 
     async with httpx.AsyncClient(timeout=15) as client:
         for lst in CLICKUP_IDS["lists"]:
             try:
-                r = await client.get(
-                    f"https://api.clickup.com/api/v2/list/{lst['list_id']}/task",
-                    headers=headers,
-                    params={"include_closed": "true"},
-                )
-                data = r.json()
-                tasks = data.get("tasks", [])
+                lid = lst["list_id"]
+                if lid not in fetched:
+                    r = await client.get(
+                        f"https://api.clickup.com/api/v2/list/{lid}/task",
+                        headers=headers,
+                        params={"include_closed": "true"},
+                    )
+                    fetched[lid] = r.json().get("tasks", [])
+
+                all_tasks = fetched[lid]
+
+                # Si el proyecto tiene prefix, filtra tareas por nombre
+                prefix = lst.get("prefix", "")
+                if prefix:
+                    tasks = [t for t in all_tasks
+                             if t.get("name", "").lower().startswith(prefix + ":")]
+                    # Tareas sin prefijo van al primer sub-proyecto (iblack)
+                    if prefix == "iblack":
+                        untagged = [t for t in all_tasks
+                                    if not t.get("name","").lower().startswith("iblack:")
+                                    and not t.get("name","").lower().startswith("cuadrillas:")]
+                        tasks = tasks + untagged
+                else:
+                    tasks = all_tasks
 
                 total     = len(tasks)
                 completadas = sum(1 for t in tasks if t.get("status", {}).get("type") == "closed")

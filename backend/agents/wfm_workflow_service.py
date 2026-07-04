@@ -679,8 +679,15 @@ class WFMWorkflowService:
             else:
                 promedios[k] = {"n": 0}
 
+        estados_cerrados = {"CERRADO", "CANCELADO", "FACTURADO"}
+        estados_urgentes = {"ESPERA_INVENTARIO", "REVISION_PM", "APROVISIONAMIENTO"}
+        abiertos = sum(1 for e, c in por_estado.items() if e not in estados_cerrados for _ in range(c))
+        urgentes  = sum(c for e, c in por_estado.items() if e in estados_urgentes)
+
         return {
             "total_ordenes": len(orders),
+            "abiertos": abiertos,
+            "urgentes": urgentes,
             "por_estado": por_estado,
             "promedios_etapas": promedios,
             "ordenes": ordenes_con_kpis,
