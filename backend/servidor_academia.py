@@ -1641,7 +1641,26 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
     tickets  = wfm_data.get("tickets", [])
     
     sev_map = {"degraded": "warning", "info": "warning"}
-    
+
+    # Prioridad: 1=Energía, 2=Datos, 3=WL
+    _BOARD_PRIORITY = {"energia": 1, "datos": 2, "wl": 3}
+
+    def _classify_board(host_name: str, cause: str) -> str:
+        n = (host_name or "").upper()
+        c = (cause or "").lower()
+        # Energía: UPS, PDU, planta eléctrica, baterías
+        if any(x in n for x in ("UPS", "PDU", "ELEC", "BATT", "ENERGIA", "ENERG", "GEN", "PLANTA")):
+            return "energia"
+        if any(x in c for x in ("energia", "power", "ups", "battery", "voltage")):
+            return "energia"
+        # WL: radios PTP, APs, CPEs, antenas
+        if any(x in n for x in ("PTP", "_AP_", "CPE", "_RF_", "_WL_", "RADIO", "WISPI", "UBNT", "MIMOSA", "CAMBIUM", "AIRMAX")):
+            return "wl"
+        if any(x in c for x in ("signal", "airtime", "rf ", "wireless")):
+            return "wl"
+        # Datos: switches, routers, fibra — por defecto
+        return "datos"
+
     def _get_sop_id(cause: str) -> str:
         cause = cause.lower()
         if "latency" in cause: return "SOP-NOC-001"
@@ -1649,25 +1668,38 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
         if "packet loss" in cause: return "SOP-NOC-003"
         return "SOP-GEN-001"
 
-    return [
-        {
+    result = []
+    for a in alerts:
+        host_name = a.get("host_name") or a.get("hostName", "")
+        cause     = a.get("cause", "")
+        board     = _classify_board(host_name, cause)
+        result.append({
             "id":            a.get("id"),
             "cityId":        a.get("city", "").lower().replace(" ", "-"),
             "cityName":      a.get("city", ""),
             "siteName":      a.get("site", ""),
             "hostIp":        a.get("host_ip") or a.get("hostIP", ""),
-            "hostName":      a.get("host_name") or a.get("hostName", ""),
-            "type":          a.get("cause", ""),
+            "hostName":      host_name,
+            "type":          cause,
             "message":       a.get("message", ""),
             "severity":      sev_map.get(a.get("severity"), a.get("severity", "warning")),
             "timestamp":     a.get("triggered_at") or a.get("triggeredAt", ""),
             "ticketCreated": a.get("ticket_created", False) or (_match_ticket(a, tickets) is not None),
             "odooTicketId":  _match_ticket(a, tickets),
-            "sopId":         _get_sop_id(a.get("cause", "")),
+            "sopId":         _get_sop_id(cause),
             "state":         a.get("state"),
-        }
-        for a in alerts
-    ]
+            "board":         board,
+            "boardPriority": _BOARD_PRIORITY[board],
+        })
+
+    # Ordenar estable en cascada (menos → más significativo):
+    # 3. timestamp desc (más reciente primero)
+    result.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
+    # 2. severidad: critical < warning
+    result.sort(key=lambda x: 0 if x["severity"] == "critical" else 1)
+    # 1. board priority: Energía(1) < Datos(2) < WL(3)
+    result.sort(key=lambda x: x["boardPriority"])
+    return result
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
@@ -5429,7 +5461,122 @@ async def reportlab_tipos():
     }
 
 
-_odoo_servicios_cache: dict = {"data": None, "ts": 0}
+_odoo_servicios_cache:   dict = {"data": None, "ts": 0}
+_radiobases_odoo_cache:  dict = {"data": None, "ts": 0}
+
+@app.get("/api/red/radiobases-odoo")
+def red_radiobases_odoo():
+    """
+    Radiobases de Odoo: registros running.services que son referenciados como
+    radio_base_id por otros servicios, con sus coordenadas y conteo de clientes.
+    También incluye datos de armonización con el inventario de infraestructura.
+    TTL: 10 min (datos cambian poco).
+    """
+    import time as _time, re as _re, json as _json
+
+    now = _time.time()
+    if _radiobases_odoo_cache["data"] is not None and now - _radiobases_odoo_cache["ts"] < 600:
+        return _radiobases_odoo_cache["data"]
+
+    try:
+        url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+        db   = os.environ.get("ODOO_DB",  "wispi17")
+        user = os.environ.get("ODOO_USER", "")
+        pwd  = os.environ.get("ODOO_PASSWORD", "")
+
+        common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
+        uid_odoo = common.authenticate(db, user, pwd, {})
+        models_proxy = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
+
+        # 1. Obtener IDs y conteo de servicios por radiobase
+        groups = models_proxy.execute_kw(db, uid_odoo, pwd,
+            "running.services", "read_group",
+            [[["radio_base_id", "!=", False]]],
+            {"fields": ["radio_base_id"], "groupby": ["radio_base_id"], "limit": 500})
+
+        rb_ids     = [g["radio_base_id"][0] for g in groups]
+        rb_nombres = {g["radio_base_id"][0]: g["radio_base_id"][1] for g in groups}
+        rb_counts  = {g["radio_base_id"][0]: g["radio_base_id_count"] for g in groups}
+
+        # 2. Leer los registros radiobase
+        rbs = models_proxy.execute_kw(db, uid_odoo, pwd,
+            "running.services", "read",
+            [rb_ids],
+            {"fields": ["id", "name", "partner_shipping_latitude",
+                        "partner_shipping_longitude", "state",
+                        "description", "partner_id"]})
+
+        # 3. Leer Drive JSON para armonización
+        infra_norm = {}
+        try:
+            infra_path = os.path.join(os.path.dirname(__file__), "data", "radiobases_drive.json")
+            with open(infra_path) as f:
+                for r in _json.load(f):
+                    key = _re.sub(r"[^a-z0-9]", "", (r.get("name") or "").lower())
+                    if key:
+                        infra_norm[key] = r
+        except Exception:
+            pass
+
+        def _match_infra(name: str):
+            key = _re.sub(r"[^a-z0-9]", "", name.lower())
+            # Exact
+            if key in infra_norm:
+                return infra_norm[key]
+            # Remove common prefixes (RB, REP, radiobase)
+            stripped = _re.sub(r"^(rb|rep|radiobase)\s*", "", name.lower()).strip()
+            stripped_key = _re.sub(r"[^a-z0-9]", "", stripped)
+            if stripped_key in infra_norm:
+                return infra_norm[stripped_key]
+            # Partial: infra key starts with stripped_key or vice versa
+            for ik, iv in infra_norm.items():
+                if len(stripped_key) >= 4 and (ik.startswith(stripped_key) or stripped_key.startswith(ik)):
+                    return iv
+            return None
+
+        result = []
+        for r in rbs:
+            lat = r.get("partner_shipping_latitude") or 0
+            lng = r.get("partner_shipping_longitude") or 0
+            if not lat or not lng:
+                continue
+            if not (14.5 < lat < 32.8 and -118.5 < lng < -86.5):
+                continue
+
+            rb_id   = r["id"]
+            label   = rb_nombres.get(rb_id, r.get("name") or "")
+            # Strip Odoo prefix [SOP-XXXXX]
+            display_name = _re.sub(r"^\[.*?\]\s*", "", label).strip() or label
+
+            infra = _match_infra(display_name)
+
+            result.append({
+                "id":           rb_id,
+                "nombre":       display_name,
+                "sop":          r.get("name") or "",
+                "lat":          lat,
+                "lng":          lng,
+                "estado":       r.get("state", ""),
+                "clientes":     rb_counts.get(rb_id, 0),
+                "partner":      r["partner_id"][1] if r.get("partner_id") else "",
+                "en_infra":     infra is not None,
+                "infra_estatus": infra.get("estatus") if infra else None,
+                "infra_vigencia": infra.get("vigencia") if infra else None,
+                "infra_renta":   infra.get("renta") if infra else None,
+            })
+
+        # Sort by clients descending
+        result.sort(key=lambda x: x["clientes"], reverse=True)
+        _radiobases_odoo_cache["data"] = result
+        _radiobases_odoo_cache["ts"]   = now
+        return result
+
+    except Exception as e:
+        logger.error(f"[radiobases-odoo] Error: {e}", exc_info=True)
+        if _radiobases_odoo_cache["data"] is not None:
+            return _radiobases_odoo_cache["data"]
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/red/odoo-servicios-geo")
 def red_odoo_servicios_geo(estado: str = "active"):

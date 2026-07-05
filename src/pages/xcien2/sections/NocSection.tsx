@@ -15,6 +15,122 @@ const O   = '#ff8800';   // naranja  — alerta   45–64
 const R   = '#ff3366';   // rojo     — crítico   < 45
 const DIM = 'rgba(255,255,255,0.35)';
 
+// ── Health ring ───────────────────────────────────────────────────────────────
+function HealthRing({ value, color, size = 76 }: { value: number; color: string; size?: number }) {
+  const r    = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = Math.max(0, Math.min(1, value / 100)) * circ;
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="6"
+        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+        style={{ filter: `drop-shadow(0 0 8px ${color}80)`, transition: 'stroke-dasharray 0.6s ease' }}
+      />
+      <text x={size/2} y={size/2 + 1} textAnchor="middle" dominantBaseline="middle"
+        fill={color} style={{ fontSize: 16, fontWeight: 900, fontFamily: 'Oswald', letterSpacing: -0.5 }}>
+        {value}%
+      </text>
+    </svg>
+  );
+}
+
+// ── Status Banner ─────────────────────────────────────────────────────────────
+function NocStatusBanner({ health, citiesCount, critCount, warnCount, online, offline }: {
+  health: number; citiesCount: number; critCount: number; warnCount: number; online: number; offline: number;
+}) {
+  const hc = health >= 95 ? G : health >= 85 ? Y : R;
+  const statusLabel = health >= 95 ? 'OPERANDO CON NORMALIDAD' : health >= 85 ? 'DEGRADACIÓN LEVE' : 'ATENCIÓN REQUERIDA';
+  const [clock, setClock] = useState('');
+  useEffect(() => {
+    const tick = () => setClock(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div style={{
+      flexShrink: 0, padding: '14px 22px',
+      background: `linear-gradient(135deg, ${hc}0a 0%, rgba(0,8,4,0.4) 60%)`,
+      border: `1px solid ${hc}22`,
+      borderRadius: 16, display: 'flex', alignItems: 'center', gap: 20,
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Accent bar izquierdo */}
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${hc}, ${hc}40)`, borderRadius: '16px 0 0 16px' }} />
+
+      {/* Ring */}
+      <HealthRing value={health} color={hc} />
+
+      {/* Status + clock */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 900, color: hc, fontFamily: 'monospace', letterSpacing: 2 }}>
+          {statusLabel}
+        </div>
+        <div style={{ fontSize: 10, color: DIM, marginTop: 3, fontFamily: 'monospace' }}>
+          {citiesCount} ciudades · {clock}
+        </div>
+      </div>
+
+      {/* Separador */}
+      <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.08)', marginLeft: 4 }} />
+
+      {/* Mini stats */}
+      <div style={{ display: 'flex', gap: 20 }}>
+        {[
+          { v: online,  c: G, label: 'ONLINE' },
+          { v: offline, c: offline > 0 ? R : DIM, label: 'CAÍDOS' },
+        ].map(({ v, c, label }) => (
+          <div key={label}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: c, lineHeight: 1, fontFamily: 'Oswald' }}>{v}</div>
+            <div style={{ fontSize: 8, color: DIM, fontFamily: 'monospace', letterSpacing: 1.2, marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Alertas — solo si hay */}
+      {(critCount > 0 || warnCount > 0) && (
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {critCount > 0 && (
+            <div style={{
+              background: `${R}12`, border: `1px solid ${R}35`,
+              borderRadius: 10, padding: '8px 14px',
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}>
+              <AlertTriangle size={13} color={R} />
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: R, lineHeight: 1, fontFamily: 'Oswald' }}>{critCount}</div>
+                <div style={{ fontSize: 8, color: `${R}80`, fontFamily: 'monospace' }}>CRÍTICAS</div>
+              </div>
+            </div>
+          )}
+          {warnCount > 0 && (
+            <div style={{
+              background: `${Y}10`, border: `1px solid ${Y}30`,
+              borderRadius: 10, padding: '8px 14px',
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}>
+              <AlertTriangle size={13} color={Y} />
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: Y, lineHeight: 1, fontFamily: 'Oswald' }}>{warnCount}</div>
+                <div style={{ fontSize: 8, color: `${Y}80`, fontFamily: 'monospace' }}>WARNINGS</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Corner ping */}
+      <div style={{ position: 'absolute', top: 10, right: 16, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: hc, animation: 'nocpulse 2s infinite' }} />
+        <span style={{ fontSize: 8, color: `${hc}80`, fontFamily: 'monospace', letterSpacing: 1 }}>LIVE</span>
+      </div>
+    </div>
+  );
+}
+
 function nodeColor(score: number) {
   if (score >= 85) return G;
   if (score >= 65) return Y;
@@ -186,28 +302,36 @@ function KpiCard({ label, value, sub, color = G, icon }: {
   return (
     <div style={{
       flex: 1, minWidth: 140,
-      background: 'rgba(255,255,255,0.03)',
-      border: `1px solid ${color}25`,
-      borderRadius: 14, padding: '16px 20px',
-      display: 'flex', alignItems: 'center', gap: 14,
-      boxShadow: `0 0 20px ${color}08`,
+      background: 'rgba(0,8,4,0.55)',
+      border: `1px solid ${color}20`,
+      borderRadius: 16, padding: '18px 22px',
+      display: 'flex', flexDirection: 'column', gap: 10,
+      boxShadow: `0 4px 24px ${color}08, inset 0 1px 0 rgba(255,255,255,0.04)`,
+      position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: 10,
-        background: `${color}15`, border: `1px solid ${color}30`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1.5, fontFamily: 'monospace', marginBottom: 2 }}>
+      {/* Acento superior */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color}cc, ${color}20)` }} />
+
+      {/* Label + icon */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1.5, fontFamily: 'monospace' }}>
           {label.toUpperCase()}
+        </span>
+        <div style={{
+          width: 30, height: 30, borderRadius: 8,
+          background: `${color}12`, border: `1px solid ${color}25`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {icon}
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color, lineHeight: 1, fontFamily: 'Oswald' }}>
-          {value}
-        </div>
-        {sub && <div style={{ fontSize: 10, color: DIM, marginTop: 2 }}>{sub}</div>}
       </div>
+
+      {/* Valor */}
+      <div style={{ fontSize: 30, fontWeight: 900, color, lineHeight: 1, fontFamily: 'Oswald', letterSpacing: -0.5 }}>
+        {value}
+      </div>
+
+      {sub && <div style={{ fontSize: 10, color: DIM, marginTop: -4 }}>{sub}</div>}
     </div>
   );
 }
@@ -436,12 +560,29 @@ function HoloMap({ cities, onSelectCity, selectedCityId }: {
 }
 
 // ── Alert stream ──────────────────────────────────────────────────────────────
+const BOARD_CFG: Record<string, { label: string; color: string; pri: number }> = {
+  energia: { label: 'ENERGÍA', color: '#ffcc00', pri: 1 },
+  datos:   { label: 'DATOS',   color: '#00ff88', pri: 2 },
+  wl:      { label: 'WL',      color: '#60a5fa', pri: 3 },
+};
+
 function AlertStream({ alerts }: { alerts: NOCAlert[] }) {
   const sevConfig: Record<string, { color: string; bg: string; label: string }> = {
-    critical: { color: R,       bg: `${R}15`,       label: 'CRIT' },
-    warning:  { color: Y,       bg: `${Y}15`,       label: 'WARN' },
+    critical: { color: R,         bg: `${R}15`,             label: 'CRIT' },
+    warning:  { color: Y,         bg: `${Y}15`,             label: 'WARN' },
     info:     { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', label: 'INFO' },
   };
+
+  // Ordenar: prioridad board (Energía→Datos→WL) → severidad → timestamp
+  const sorted = [...alerts].sort((a, b) => {
+    const pa = a.boardPriority ?? BOARD_CFG[a.board ?? '']?.pri ?? 4;
+    const pb = b.boardPriority ?? BOARD_CFG[b.board ?? '']?.pri ?? 4;
+    if (pa !== pb) return pa - pb;
+    const sa = a.severity === 'critical' ? 0 : 1;
+    const sb = b.severity === 'critical' ? 0 : 1;
+    if (sa !== sb) return sa - sb;
+    return (b.timestamp || '').localeCompare(a.timestamp || '');
+  });
 
   return (
     <div style={{
@@ -473,49 +614,64 @@ function AlertStream({ alerts }: { alerts: NOCAlert[] }) {
 
       {/* Alerts list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
-        {alerts.length === 0 ? (
+        {sorted.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, opacity: 0.4 }}>
             <CheckCircle size={28} color={G} />
             <span style={{ fontSize: 11, color: G, fontFamily: 'monospace' }}>SIN AMENAZAS ACTIVAS</span>
           </div>
         ) : (
-          alerts.map((a, i) => {
+          sorted.map((a, i) => {
             const s = sevConfig[a.severity] || sevConfig.info;
+            const bc = BOARD_CFG[a.board || ''];
             const time = a.timestamp?.split('T')[1]?.slice(0, 5) || '--:--';
+            const displayName = a.hostName || a.cityName;
             return (
-              <div key={i} style={{
-                padding: '9px 18px', borderBottom: `1px solid rgba(255,255,255,0.03)`,
-                display: 'flex', gap: 10, alignItems: 'flex-start',
+              <div key={a.id || i} style={{
+                padding: '8px 14px', borderBottom: `1px solid rgba(255,255,255,0.03)`,
+                display: 'flex', gap: 8, alignItems: 'flex-start',
                 transition: 'background 0.15s',
+                borderLeft: bc ? `2px solid ${bc.color}50` : '2px solid transparent',
               }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                {/* Severity badge */}
-                <div style={{
-                  flexShrink: 0, marginTop: 1,
-                  background: s.bg, color: s.color,
-                  fontSize: 8, fontWeight: 900, fontFamily: 'monospace',
-                  padding: '2px 6px', borderRadius: 4,
-                  border: `1px solid ${s.color}30`,
-                }}>
-                  {s.label}
+                {/* Prioridad + board */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, width: 46 }}>
+                  {bc && (
+                    <div style={{
+                      background: `${bc.color}15`, color: bc.color,
+                      fontSize: 7, fontWeight: 900, fontFamily: 'monospace',
+                      padding: '1px 4px', borderRadius: 3,
+                      border: `1px solid ${bc.color}30`, textAlign: 'center',
+                      letterSpacing: 0.3,
+                    }}>
+                      {bc.label}
+                    </div>
+                  )}
+                  <div style={{
+                    background: s.bg, color: s.color,
+                    fontSize: 7, fontWeight: 900, fontFamily: 'monospace',
+                    padding: '1px 4px', borderRadius: 3,
+                    border: `1px solid ${s.color}30`, textAlign: 'center',
+                  }}>
+                    {s.label}
+                  </div>
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.cityName}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {displayName}
                     </span>
-                    <span style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', flexShrink: 0, marginLeft: 8 }}>
-                      {time}
-                    </span>
+                    <span style={{ fontSize: 8, color: DIM, fontFamily: 'monospace', flexShrink: 0 }}>{time}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.type}
-                  </div>
+                  {a.message && (
+                    <div style={{ fontSize: 9, color: DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                      {a.message}
+                    </div>
+                  )}
                   {a.siteName && (
-                    <div style={{ fontSize: 9, color: `${G}50`, marginTop: 1, fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: 8, color: `${G}45`, marginTop: 1, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {a.siteName}
                     </div>
                   )}
@@ -1300,25 +1456,37 @@ export default function NocSection({
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', gap: 16,
+      display: 'flex', flexDirection: 'column', gap: 14,
       height: 'calc(100vh - 140px)',
     }}>
-      {/* KPI Row */}
-      <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
-        <KpiCard label="Health Global" value={`${healthPct}%`}
-          sub={`${cities.length} ciudades`} color={hc}
-          icon={<Activity size={18} color={hc} />} />
+      {/* ── Status Banner ── */}
+      <NocStatusBanner
+        health={healthPct}
+        citiesCount={cities.length}
+        critCount={critCount}
+        warnCount={warnCount}
+        online={totalOnline}
+        offline={totalOffline}
+      />
+
+      {/* ── KPI Row ── */}
+      <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
         <KpiCard label="Hosts Online" value={totalOnline}
           sub={`de ${totalHosts} total`} color={G}
-          icon={<Server size={18} color={G} />} />
+          icon={<Server size={16} color={G} />} />
         <KpiCard label="Hosts Caídos" value={totalOffline}
+          sub={totalOffline > 0 ? 'requieren atención' : 'sin incidentes'}
           color={totalOffline > 0 ? R : G}
-          icon={<WifiOff size={18} color={totalOffline > 0 ? R : G} />} />
+          icon={<WifiOff size={16} color={totalOffline > 0 ? R : G} />} />
         <KpiCard label="Alertas Críticas" value={critCount}
-          sub={`${warnCount} warnings`} color={critCount > 0 ? R : G}
-          icon={<AlertTriangle size={18} color={critCount > 0 ? R : G} />} />
+          sub={`${warnCount} warnings activas`} color={critCount > 0 ? R : G}
+          icon={<AlertTriangle size={16} color={critCount > 0 ? R : G} />} />
+        <KpiCard label="Ciudades" value={cities.length}
+          sub="nodos de red" color="#60a5fa"
+          icon={<Network size={16} color="#60a5fa" />} />
       </div>
-      {/* Board breakdown */}
+
+      {/* ── Board breakdown ── */}
       {Object.keys(boards).length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           {Object.entries(boards).map(([name, b]) => {
@@ -1326,22 +1494,27 @@ export default function NocSection({
             const bc = pct >= 90 ? G : pct >= 70 ? Y : R;
             return (
               <div key={name} style={{
-                flex: 1, background: 'rgba(255,255,255,0.02)', border: `1px solid ${bc}20`,
-                borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10,
+                flex: 1, background: 'rgba(0,8,4,0.5)', border: `1px solid ${bc}18`,
+                borderRadius: 12, padding: '10px 16px',
+                position: 'relative', overflow: 'hidden',
               }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${bc}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 900, color: bc, fontFamily: 'Oswald' }}>{pct}%</span>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: DIM, letterSpacing: 1, fontFamily: 'monospace' }}>{name.toUpperCase()}</div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 3 }}>
-                    <span style={{ fontSize: 10, color: G }}>▲ {b.online}</span>
-                    <span style={{ fontSize: 10, color: R }}>▼ {b.offline}</span>
-                    <span style={{ fontSize: 10, color: Y }}>⚠ {b.alerts}</span>
+                {/* barra de fondo progreso */}
+                <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: `${bc}07`, borderRadius: 12, pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: bc, lineHeight: 1, fontFamily: 'Oswald' }}>{pct}%</div>
+                    <div style={{ fontSize: 8, color: DIM, fontFamily: 'monospace', letterSpacing: 1 }}>{name.toUpperCase()}</div>
                   </div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, width: 50, overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: bc, borderRadius: 4 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: bc, boxShadow: `0 0 8px ${bc}60`, borderRadius: 3, transition: 'width 0.6s ease' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <span style={{ fontSize: 9, color: G, fontFamily: 'monospace' }}>▲{b.online}</span>
+                      <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>▼{b.offline}</span>
+                      {b.alerts > 0 && <span style={{ fontSize: 9, color: Y, fontFamily: 'monospace' }}>⚠{b.alerts}</span>}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -1349,41 +1522,41 @@ export default function NocSection({
         </div>
       )}
 
-      {/* Toolbar */}
+      {/* ── Toolbar ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         {/* Tenant filters */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => onTenantChange?.(null)} style={{
-            padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
-            background: activeTenantId === null ? `${G}20` : 'rgba(255,255,255,0.04)',
-            color: activeTenantId === null ? G : DIM,
-            border: `1px solid ${activeTenantId === null ? `${G}40` : 'transparent'}`,
-            fontFamily: 'monospace', transition: 'all 0.15s',
-          }}>GLOBAL</button>
-          {CASA_TENANTS.map(t => (
-            <button key={t.id} onClick={() => onTenantChange?.(t.id)} style={{
-              padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
-              background: activeTenantId === t.id ? `${G}20` : 'rgba(255,255,255,0.04)',
-              color: activeTenantId === t.id ? G : DIM,
-              border: `1px solid ${activeTenantId === t.id ? `${G}40` : 'transparent'}`,
-              fontFamily: 'monospace', transition: 'all 0.15s',
-            }}>{t.name.toUpperCase()}</button>
-          ))}
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[{ id: null, label: 'Global' }, ...CASA_TENANTS.map(t => ({ id: t.id, label: t.name }))].map(({ id, label }) => {
+            const active = activeTenantId === id;
+            return (
+              <button key={String(id)} onClick={() => onTenantChange?.(id)} style={{
+                padding: '5px 13px', fontSize: 10, fontWeight: 700, borderRadius: 20, cursor: 'pointer',
+                background: active ? `${G}18` : 'rgba(255,255,255,0.03)',
+                color: active ? G : 'rgba(255,255,255,0.4)',
+                border: `1px solid ${active ? `${G}35` : 'rgba(255,255,255,0.06)'}`,
+                fontFamily: 'monospace', letterSpacing: 0.5, transition: 'all 0.15s',
+              }}>{label.toUpperCase()}</button>
+            );
+          })}
         </div>
 
-        {/* View toggle */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', padding: 3, borderRadius: 10, gap: 2 }}>
-          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'Capas NOCBoard', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => (
-            <button key={id} onClick={() => setView(id as any)} style={{
-              padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 7,
-              border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              background: view === id ? G : 'transparent',
-              color: view === id ? '#000' : G,
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              <Icon size={12} />{label}
-            </button>
-          ))}
+        {/* View toggle — píldoras */}
+        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', padding: 3, borderRadius: 12, gap: 2 }}>
+          {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'NOCBoard', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => {
+            const active = view === id;
+            return (
+              <button key={id} onClick={() => setView(id as any)} style={{
+                padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 9,
+                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                background: active ? G : 'transparent',
+                color: active ? '#001a0d' : 'rgba(0,255,136,0.5)',
+                display: 'flex', alignItems: 'center', gap: 5,
+                boxShadow: active ? `0 2px 12px ${G}40` : 'none',
+              }}>
+                <Icon size={11} />{label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

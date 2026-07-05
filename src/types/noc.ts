@@ -37,8 +37,12 @@ export interface NOCAlert {
   cityName: string;
   siteName: string;
   hostIp: string;
+  hostName?: string;
   type: string;
+  message?: string;
   severity: 'critical' | 'warning';
   timestamp: string;
   ticketCreated: boolean;
+  board?: 'energia' | 'datos' | 'wl';
+  boardPriority?: 1 | 2 | 3;
 }

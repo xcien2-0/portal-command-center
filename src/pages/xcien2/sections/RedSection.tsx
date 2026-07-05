@@ -343,6 +343,9 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [showInter,       setShowInter]        = useState(false);
   const [showSinClas,     setShowSinClas]      = useState(false);
   const [showSitios,      setShowSitios]       = useState(false);
+  const [showRbOdoo,      setShowRbOdoo]       = useState(false);
+  const [showRbInfra,     setShowRbInfra]      = useState(false);
+  const [rbOdooData,      setRbOdooData]        = useState<any[]>([]);
   const showOdoo = showInnet || showOffnet || showInter || showSinClas;
 
   const mapRef       = useRef<any>(null);
@@ -353,6 +356,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const odooLayer    = useRef<any>(null);
   const sitiosLayer  = useRef<any>(null);
   const sitiosCache  = useRef<any>(null);
+  const rbOdooLayer  = useRef<any>(null);
+  const rbInfraLayer = useRef<any>(null);
   const tileRef   = useRef<any>(null);
   const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
   const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
@@ -407,6 +412,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     fetch(`${API_BASE}/api/red/odoo-servicios-geo`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setOdooServicios(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // ── Cargar radiobases Odoo ───────────────────────────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/radiobases-odoo`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setRbOdooData(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
@@ -821,6 +834,101 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     kmzLayers.current[group.id] = added;
   }, [kmzActive]);
 
+  // ── Renderizar radiobases Odoo ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (rbOdooLayer.current) { rbOdooLayer.current.clearLayers(); }
+    else { rbOdooLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showRbOdoo || rbOdooData.length === 0) return;
+
+    rbOdooData.forEach((rb: any) => {
+      const enInfra  = rb.en_infra;
+      const color    = enInfra ? '#00ffcc' : '#ffaa00';
+      const clients  = rb.clientes || 0;
+      const th = 20;   // altura fija pequeña
+      const tw = 11;
+
+      // SVG de torre de telecomunicaciones compacta — sin label (nombre en tooltip)
+      const W = tw + 4;
+      const H = th + 2;
+      const icon = L.divIcon({
+        className: '',
+        iconSize:   [W, H],
+        iconAnchor: [W / 2, H], // ancla en la base de la torre
+        html: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
+          <defs>
+            <filter id="glow-${rb.id}" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Torre: coordenadas relativas al centro X=${W/2} -->
+          <!-- Antena vertical -->
+          <line x1="${W/2}" y1="0" x2="${W/2}" y2="6" stroke="${color}" stroke-width="1.8" stroke-linecap="round" filter="url(#glow-${rb.id})"/>
+          <!-- Brazo antena -->
+          <line x1="${W/2-5}" y1="4" x2="${W/2+5}" y2="4" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="${W/2-5}" y1="4" x2="${W/2-5}" y2="7" stroke="${color}" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="${W/2+5}" y1="4" x2="${W/2+5}" y2="7" stroke="${color}" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- Pata izquierda -->
+          <line x1="${W/2}" y1="7" x2="${W/2 - tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <!-- Pata derecha -->
+          <line x1="${W/2}" y1="7" x2="${W/2 + tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <!-- Travesaño 1 (25% altura) -->
+          <line x1="${W/2 - tw*0.11}" y1="${7 + (th-9)*0.25}" x2="${W/2 + tw*0.11}" y2="${7 + (th-9)*0.25}" stroke="${color}" stroke-width="1" stroke-linecap="round"/>
+          <!-- Travesaño 2 (55%) -->
+          <line x1="${W/2 - tw*0.23}" y1="${7 + (th-9)*0.55}" x2="${W/2 + tw*0.23}" y2="${7 + (th-9)*0.55}" stroke="${color}" stroke-width="1" stroke-linecap="round"/>
+          <!-- Travesaño 3 (85%) -->
+          <line x1="${W/2 - tw*0.35}" y1="${7 + (th-9)*0.85}" x2="${W/2 + tw*0.35}" y2="${7 + (th-9)*0.85}" stroke="${color}" stroke-width="1.1" stroke-linecap="round"/>
+          <!-- Diagonales cruzadas 1-2 -->
+          <line x1="${W/2 - tw*0.11}" y1="${7 + (th-9)*0.25}" x2="${W/2 + tw*0.23}" y2="${7 + (th-9)*0.55}" stroke="${color}" stroke-width="0.6" stroke-opacity="0.4"/>
+          <line x1="${W/2 + tw*0.11}" y1="${7 + (th-9)*0.25}" x2="${W/2 - tw*0.23}" y2="${7 + (th-9)*0.55}" stroke="${color}" stroke-width="0.6" stroke-opacity="0.4"/>
+          <!-- Base horizontal -->
+          <line x1="${W/2 - tw*0.42}" y1="${th-2}" x2="${W/2 + tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- Punto antena -->
+          <circle cx="${W/2}" cy="3" r="2" fill="${color}" opacity="0.95" filter="url(#glow-${rb.id})"/>
+        </svg>`,
+      });
+
+      L.marker([rb.lat, rb.lng], { icon })
+        .bindTooltip(
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">📡 ${rb.nombre}</div>
+           <div style="color:rgba(255,255,255,0.6);font-size:10px">${rb.sop}</div>
+           <div style="margin-top:5px;font-size:10px">
+             <span style="color:${color};font-weight:700">${clients} clientes</span>
+             ${enInfra
+               ? `<span style="background:#00ffcc22;color:#00ffcc;padding:1px 6px;border-radius:8px;margin-left:6px">✓ En Infra</span>`
+               : `<span style="background:#ffaa0022;color:#ffaa00;padding:1px 6px;border-radius:8px;margin-left:6px">Solo Odoo</span>`}
+           </div>
+           ${rb.infra_estatus ? `<div style="color:rgba(255,255,255,0.4);font-size:9px;margin-top:2px">${rb.infra_estatus}</div>` : ''}`,
+          { className: 'noc-tooltip' }
+        )
+        .bindPopup(
+          `<div style="min-width:220px">
+             <div style="font-weight:700;color:${color};font-size:13px;margin-bottom:4px">📡 ${rb.nombre}</div>
+             <div style="color:#64748b;font-size:11px;margin-bottom:8px">${rb.partner || rb.sop}</div>
+             <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:10px;margin-bottom:6px">
+               <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:8px;font-weight:700">${clients} clientes</span>
+               ${enInfra
+                 ? `<span style="background:#00ffcc22;color:#00ffcc;padding:2px 8px;border-radius:8px">✓ En Infra</span>`
+                 : `<span style="background:#ffaa0022;color:#ffaa00;padding:2px 8px;border-radius:8px">Solo Odoo</span>`}
+             </div>
+             ${rb.infra_estatus ? `<div style="color:#475569;font-size:10px"><b>Contrato:</b> ${rb.infra_estatus}</div>` : ''}
+             ${rb.infra_vigencia ? `<div style="color:#475569;font-size:10px"><b>Vigencia:</b> ${rb.infra_vigencia}</div>` : ''}
+             ${rb.infra_renta ? `<div style="color:#475569;font-size:10px"><b>Renta:</b> ${rb.infra_renta}</div>` : ''}
+             <a href="https://odoo.wispi.mx/web#id=${rb.id}&model=running.services&view_type=form&cids=25" target="_blank" rel="noopener noreferrer"
+                style="display:block;text-align:center;padding:6px 12px;background:${color};color:#000;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;margin-top:8px">
+               Abrir Radiobase en Odoo →
+             </a>
+           </div>`,
+          { className: 'noc-popup', maxWidth: 280 }
+        )
+        .addTo(rbOdooLayer.current);
+    });
+  }, [showRbOdoo, rbOdooData]);
+
   // ── Toggle vendor ─────────────────────────────────────────────────────────────
   const toggleVendor = (v: string) => {
     setSelectedCity(null); setSelectedHost(null);
@@ -888,6 +996,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           { key: 'inter',         label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
           { key: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b', active: showSinClas, count: null },
           { key: 'sitios',        label: 'Sitios',    color: '#c8ff00', active: showSitios,  count: 3727 },
+          { key: 'rb-odoo',       label: 'RB Odoo',   color: '#00ffcc', active: showRbOdoo,  count: rbOdooData.length || null },
         ] as const).map(layer => (
           <button key={layer.key}
             onClick={() => {
@@ -898,6 +1007,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               else if (layer.key === 'inter')         setShowInter(p => !p);
               else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
               else if (layer.key === 'sitios')        setShowSitios(p => !p);
+              else if (layer.key === 'rb-odoo')       setShowRbOdoo(p => !p);
             }}
             style={{
               padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
@@ -1150,6 +1260,46 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Leyenda — radiobases Odoo */}
+        {showRbOdoo && rbOdooData.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            bottom: (() => { let b = 24; if (showSitios) b += 130; if (showOdoo) b += 176; if (showDevices) b += 176; return b; })(),
+            right: 16, zIndex: 999,
+            background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(0,255,204,0.2)',
+            borderRadius: 12, padding: '10px 14px', minWidth: 190,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
+              Radiobases Odoo
+            </div>
+            {[
+              { color: '#00ffcc', label: 'En ambas fuentes', detail: `${rbOdooData.filter(r => r.en_infra).length} RBs` },
+              { color: '#ffaa00', label: 'Solo en Odoo',     detail: `${rbOdooData.filter(r => !r.en_infra).length} RBs` },
+            ].map(({ color, label, detail }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <svg width="10" height="16" viewBox="0 0 24 48" fill="none">
+                  <line x1="12" y1="0" x2="12" y2="5" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="8" y1="5" x2="16" y2="5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="12" y1="8" x2="3" y2="45" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+                  <line x1="12" y1="8" x2="21" y2="45" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+                  <line x1="9" y1="16" x2="15" y2="16" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+                  <line x1="7" y1="26" x2="17" y2="26" stroke={color} strokeWidth="1.2" strokeLinecap="round"/>
+                  <line x1="3" y1="45" x2="21" y2="45" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+                  <circle cx="12" cy="5" r="2.5" fill={color} opacity="0.9"/>
+                </svg>
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginLeft: 5 }}>{detail}</span>
+                </div>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 6, paddingTop: 6, fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>
+              Total: {rbOdooData.length} · Tamaño = # clientes
+            </div>
           </div>
         )}
 
