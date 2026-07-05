@@ -15,7 +15,7 @@ interface CmdItem {
   badge?: string;
   badgeColor?: string;
   onSelect: () => void;
-  keywords?: string;   // extra texto para búsqueda
+  keywords?: string;
 }
 
 interface Props {
@@ -25,20 +25,23 @@ interface Props {
   secciones: { id: SectionId; label: string; icon: string; group?: string }[];
 }
 
-const CAT_LABEL: Record<CmdCategoria, string> = {
-  seccion:  'Secciones',
-  tecnico:  'Técnicos',
-  alerta:   'Alertas NOC',
-  ticket:   'Tickets WFM',
-  accion:   'Acciones rápidas',
-};
+// ─── Design tokens (XCIEN palette) ───────────────────────────────────────────
+const G       = '#00c46a';
+const G_DIM   = 'rgba(0,196,106,0.12)';
+const G_RING  = 'rgba(0,196,106,0.18)';
+const BG      = '#0b1017';
+const BG_ITEM = 'rgba(0,196,106,0.05)';
+const BOR     = 'rgba(255,255,255,0.06)';
+const TXT     = '#e2e8f0';
+const DIM     = '#4a5568';
+const DIM2    = '#64748b';
 
-const CAT_COLOR: Record<CmdCategoria, string> = {
-  seccion:  '#4FC3F7',
-  tecnico:  '#00C896',
-  alerta:   '#FF4757',
-  ticket:   '#FFB703',
-  accion:   '#7c3aed',
+const CAT_META: Record<CmdCategoria, { label: string; color: string }> = {
+  accion:  { label: 'Acciones rápidas', color: G       },
+  seccion: { label: 'Secciones',        color: '#60a5fa' },
+  tecnico: { label: 'Técnicos',         color: '#34d399' },
+  alerta:  { label: 'Alertas NOC',      color: '#f87171' },
+  ticket:  { label: 'Tickets WFM',      color: '#fbbf24' },
 };
 
 // ─── Fuzzy match ──────────────────────────────────────────────────────────────
@@ -65,6 +68,17 @@ function score(item: CmdItem, q: string): number {
   return 0;
 }
 
+// ─── Search icon SVG ──────────────────────────────────────────────────────────
+function SearchIcon({ size = 16, color = DIM2 }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true"
+      style={{ flexShrink: 0 }}>
+      <circle cx="8.5" cy="8.5" r="5.5" stroke={color} strokeWidth="1.5" />
+      <path d="M13.5 13.5L17 17" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ open, onClose, onNavigate, secciones }: Props) {
@@ -74,23 +88,20 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
   const [alertas, setAlertas]   = useState<{ id: string; entity: string; severity: string; message: string }[]>([]);
   const [tickets, setTickets]   = useState<{ id: number; name: string; partner: string; priority: string }[]>([]);
 
-  const inputRef  = useRef<HTMLInputElement>(null);
-  const listRef   = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef  = useRef<HTMLDivElement>(null);
 
-  // Focus input when opened
   useEffect(() => {
     if (open) {
       setQuery('');
       setCursor(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => inputRef.current?.focus(), 40);
     }
   }, [open]);
 
-  // Load dynamic data lazily once open
   useEffect(() => {
     if (!open) return;
 
-    // Técnicos from Academia
     fetch(`${API_BASE}/api/academia/cursos`)
       .then(r => r.ok ? r.json() : [])
       .then((cursos: { members_list: { name: string; pct: number }[] }[]) => {
@@ -104,124 +115,89 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
             map[name].count += 1;
           }
         }
-        const list = Object.entries(map)
+        setTecnicos(Object.entries(map)
           .map(([name, { sum, count }]) => ({ name, avgPct: Math.round(sum / count), rank: 0 }))
           .sort((a, b) => b.avgPct - a.avgPct)
           .map((t, i) => ({ ...t, rank: i + 1 }))
-          .slice(0, 50);
-        setTecnicos(list);
-      })
-      .catch(() => {});
+          .slice(0, 50));
+      }).catch(() => {});
 
-    // NOC Alerts
     fetch(`${API_BASE}/api/noc/alerts`)
       .then(r => r.ok ? r.json() : [])
       .then((data: { id?: string; entity_name?: string; alert_severity?: string; alert_message?: string }[]) => {
-        const list = (Array.isArray(data) ? data : []).slice(0, 30).map(a => ({
+        setAlertas((Array.isArray(data) ? data : []).slice(0, 30).map(a => ({
           id:       String(a.id ?? ''),
           entity:   a.entity_name   ?? 'Dispositivo',
           severity: a.alert_severity ?? 'warning',
           message:  a.alert_message  ?? '',
-        }));
-        setAlertas(list);
-      })
-      .catch(() => {});
+        })));
+      }).catch(() => {});
 
-    // WFM Tickets urgentes
     fetch(`${API_BASE}/api/wfm/field-tickets?limit=30`)
       .then(r => r.ok ? r.json() : { tickets: [] })
       .then((data: { tickets?: { id: number; name: string; partner_name?: string; priority?: string }[] }) => {
-        const list = (data.tickets ?? []).slice(0, 30).map(t => ({
-          id:      t.id,
-          name:    t.name,
-          partner: t.partner_name ?? '',
-          priority: t.priority ?? '0',
-        }));
-        setTickets(list);
-      })
-      .catch(() => {});
+        setTickets((data.tickets ?? []).slice(0, 30).map(t => ({
+          id: t.id, name: t.name,
+          partner: t.partner_name ?? '', priority: t.priority ?? '0',
+        })));
+      }).catch(() => {});
   }, [open]);
 
-  // Build items
   const items = useMemo<CmdItem[]>(() => {
     const out: CmdItem[] = [];
 
-    // Acciones rápidas (siempre visibles sin query)
-    const acciones: CmdItem[] = [
-      { id: 'act_warroom',  categoria: 'accion', icono: '⚔️', titulo: 'Abrir War Room',         subtitulo: 'Comando multi-agente IA',        onSelect: () => onNavigate('war-room'),     keywords: 'ia agente director' },
-      { id: 'act_kpi',      categoria: 'accion', icono: '🎯', titulo: 'KPI Dashboard',           subtitulo: 'Indicadores clave ejecutivos',    onSelect: () => onNavigate('reportes-kpi'), keywords: 'kpi dashboard ejecutivo semáforo' },
-      { id: 'act_academia', categoria: 'accion', icono: '🎓', titulo: 'Academia',                subtitulo: 'Cursos y leaderboard Odoo',      onSelect: () => onNavigate('academia'),     keywords: 'cursos badges odoo elearning' },
-      { id: 'act_noc',      categoria: 'accion', icono: '📡', titulo: 'NOC Virtual',             subtitulo: 'Alertas y estado de red',        onSelect: () => onNavigate('noc'),          keywords: 'alertas red noc observium' },
-      { id: 'act_bidrillas',categoria: 'accion', icono: '🚛', titulo: 'Equipos de Campo',        subtitulo: 'Técnicos geolocalizados',        onSelect: () => onNavigate('bidrillas'),    keywords: 'campo técnicos mapa bidrillas' },
-      { id: 'act_adopcion', categoria: 'accion', icono: '👥', titulo: 'Gestión de Usuarios',    subtitulo: 'Crear y administrar cuentas',    onSelect: () => onNavigate('adopcion'),     keywords: 'usuarios roles cuentas registro' },
-    ];
-    out.push(...acciones);
+    out.push(
+      { id: 'act_kpi',       categoria: 'accion', icono: '🎯', titulo: 'KPI Dashboard',      subtitulo: 'Indicadores ejecutivos',      onSelect: () => onNavigate('reportes-kpi'), keywords: 'kpi ejecutivo métricas' },
+      { id: 'act_academia',  categoria: 'accion', icono: '🎓', titulo: 'Academia',            subtitulo: 'Cursos y ranking Odoo',       onSelect: () => onNavigate('academia'),     keywords: 'cursos badges odoo elearning' },
+      { id: 'act_noc',       categoria: 'accion', icono: '📡', titulo: 'NOC Virtual',         subtitulo: 'Alertas y estado de red',     onSelect: () => onNavigate('noc'),          keywords: 'alertas red observium noc' },
+      { id: 'act_wfm',       categoria: 'accion', icono: '🔧', titulo: 'Control Operativo',   subtitulo: 'Tickets WFM · CAST',          onSelect: () => onNavigate('wfm'),          keywords: 'wfm cast campo tickets operativo' },
+      { id: 'act_bidrillas', categoria: 'accion', icono: '🚛', titulo: 'Equipos de Campo',    subtitulo: 'Técnicos geolocalizados',     onSelect: () => onNavigate('bidrillas'),    keywords: 'campo técnicos mapa bidrillas' },
+      { id: 'act_call',      categoria: 'accion', icono: '📞', titulo: 'Call Center',         subtitulo: 'Tickets Odoo · helpdesk',     onSelect: () => onNavigate('call'),         keywords: 'call helpdesk tickets soporte' },
+    );
 
-    // Secciones
     for (const s of secciones) {
       out.push({
-        id:       `sec_${s.id}`,
-        categoria: 'seccion',
-        icono:    s.icon,
-        titulo:   s.label,
-        subtitulo: s.group,
-        keywords: s.id,
-        onSelect: () => onNavigate(s.id),
+        id: `sec_${s.id}`, categoria: 'seccion',
+        icono: s.icon, titulo: s.label, subtitulo: s.group,
+        keywords: s.id, onSelect: () => onNavigate(s.id),
       });
     }
 
-    // Técnicos
     for (const t of tecnicos) {
       const pct = t.avgPct;
-      const color = pct >= 80 ? '#FFB703' : pct >= 50 ? '#00C896' : '#6b7280';
+      const color = pct >= 80 ? '#fbbf24' : pct >= 50 ? G : DIM2;
       out.push({
-        id:        `tec_${t.name}`,
-        categoria: 'tecnico',
-        icono:     '👷',
-        titulo:    t.name,
-        subtitulo: `#${t.rank} en ranking`,
-        badge:     `${pct}%`,
-        badgeColor: color,
-        keywords:  'técnico campo odoo',
-        onSelect:  () => onNavigate('academia'),
+        id: `tec_${t.name}`, categoria: 'tecnico',
+        icono: '👷', titulo: t.name, subtitulo: `#${t.rank} en ranking`,
+        badge: `${pct}%`, badgeColor: color,
+        keywords: 'técnico campo odoo', onSelect: () => onNavigate('academia'),
       });
     }
 
-    // Alertas
     for (const a of alertas) {
       const isCrit = a.severity === 'critical' || a.severity === 'high';
       out.push({
-        id:        `noc_${a.id}`,
-        categoria: 'alerta',
-        icono:     isCrit ? '🔴' : '🟡',
-        titulo:    a.entity,
+        id: `noc_${a.id}`, categoria: 'alerta',
+        icono: isCrit ? '🔴' : '🟡', titulo: a.entity,
         subtitulo: a.message.slice(0, 70),
-        badge:     a.severity.toUpperCase(),
-        badgeColor: isCrit ? '#FF4757' : '#FFB703',
-        keywords:  'noc alerta red',
-        onSelect:  () => onNavigate('noc'),
+        badge: a.severity.toUpperCase(), badgeColor: isCrit ? '#f87171' : '#fbbf24',
+        keywords: 'noc alerta red', onSelect: () => onNavigate('noc'),
       });
     }
 
-    // Tickets
     for (const t of tickets) {
       out.push({
-        id:        `tick_${t.id}`,
-        categoria: 'ticket',
-        icono:     t.priority === '1' ? '🔥' : '📋',
-        titulo:    t.name.slice(0, 60),
-        subtitulo: t.partner,
-        badge:     t.priority === '1' ? 'URGENTE' : undefined,
-        badgeColor: '#FFB703',
-        keywords:  'wfm ticket campo orden',
-        onSelect:  () => onNavigate('wfm'),
+        id: `tick_${t.id}`, categoria: 'ticket',
+        icono: t.priority === '1' ? '🔥' : '📋',
+        titulo: t.name.slice(0, 60), subtitulo: t.partner,
+        badge: t.priority === '1' ? 'URGENTE' : undefined, badgeColor: '#fbbf24',
+        keywords: 'wfm ticket campo', onSelect: () => onNavigate('wfm'),
       });
     }
 
     return out;
   }, [secciones, tecnicos, alertas, tickets, onNavigate]);
 
-  // Filter
   const filtered = useMemo(() => {
     if (!query.trim()) return items.filter(i => i.categoria === 'accion' || i.categoria === 'seccion');
     return items
@@ -232,7 +208,6 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
       .slice(0, 30);
   }, [items, query]);
 
-  // Group filtered
   const groups = useMemo(() => {
     const map = new Map<CmdCategoria, CmdItem[]>();
     for (const item of filtered) {
@@ -242,7 +217,6 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
     return map;
   }, [filtered]);
 
-  // Flat list for cursor navigation
   useEffect(() => { setCursor(0); }, [query]);
 
   const selectItem = useCallback((item: CmdItem) => {
@@ -251,24 +225,14 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
   }, [onClose]);
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setCursor(c => Math.min(c + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setCursor(c => Math.max(c - 1, 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (filtered[cursor]) selectItem(filtered[cursor]);
-    } else if (e.key === 'Escape') {
-      onClose();
-    }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); setCursor(c => Math.min(c + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)); }
+    else if (e.key === 'Enter')     { e.preventDefault(); if (filtered[cursor]) selectItem(filtered[cursor]); }
+    else if (e.key === 'Escape')    { onClose(); }
   };
 
-  // Scroll cursor into view
   useEffect(() => {
-    const el = listRef.current?.querySelector(`[data-cursor="true"]`);
-    el?.scrollIntoView({ block: 'nearest' });
+    listRef.current?.querySelector('[data-cursor="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [cursor]);
 
   if (!open) return null;
@@ -278,127 +242,162 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
   return (
     <>
       {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 1100,
-          background: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(4px)',
-          animation: 'fadeIn 0.1s ease',
-        }}
-      />
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, zIndex: 1100,
+        background: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        animation: 'cpFadeIn 0.12s ease',
+      }} />
 
-      {/* Palette */}
+      {/* Shell */}
       <div style={{
         position: 'fixed',
-        top: '14%',
+        top: '13%',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1101,
-        width: 620,
+        width: 640,
         maxWidth: 'calc(100vw - 32px)',
-        background: '#0f1623',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 16,
-        boxShadow: '0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)',
+        background: BG,
+        border: `1px solid ${G_RING}`,
+        borderRadius: 14,
+        boxShadow: `0 0 0 1px rgba(0,196,106,0.06), 0 0 40px rgba(0,196,106,0.06), 0 40px 80px rgba(0,0,0,0.8)`,
         overflow: 'hidden',
-        animation: 'cmdAppear 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+        animation: 'cpSlideIn 0.2s cubic-bezier(0.22,1,0.36,1)',
       }}>
 
-        {/* Search input */}
+        {/* ── Input ───────────────────────────────────────────────────────── */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 18px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '13px 16px',
+          borderBottom: `1px solid ${BOR}`,
         }}>
-          <span style={{ fontSize: 16, opacity: 0.5 }}>🔍</span>
+          <SearchIcon size={15} color={query ? G : DIM2} />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Buscar sección, técnico, alerta, ticket…"
+            autoComplete="off"
+            spellCheck={false}
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              fontSize: 15, color: '#f9fafb', fontFamily: 'inherit',
-              caretColor: '#00C896',
+              fontSize: 14, color: TXT, fontFamily: 'inherit',
+              caretColor: G,
             }}
           />
-          {query && (
-            <button onClick={() => setQuery('')}
-              style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 14, padding: '2px 6px' }}>
-              ✕
-            </button>
+          {query ? (
+            <button onClick={() => setQuery('')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: DIM2, padding: '2px 6px', borderRadius: 4,
+              fontSize: 12, lineHeight: 1,
+              transition: 'color 0.1s',
+            }}>✕</button>
+          ) : (
+            <kbd style={{
+              padding: '2px 7px', borderRadius: 5, fontSize: 10,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: DIM, fontFamily: 'monospace', letterSpacing: '0.02em',
+            }}>ESC</kbd>
           )}
-          <kbd style={{ padding: '3px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, color: '#6b7280', fontFamily: 'monospace' }}>
-            ESC
-          </kbd>
         </div>
 
-        {/* Results */}
-        <div ref={listRef} style={{ maxHeight: 420, overflowY: 'auto', padding: '8px 0' }}>
+        {/* ── Results ──────────────────────────────────────────────────────── */}
+        <div ref={listRef} style={{ maxHeight: 400, overflowY: 'auto', padding: '6px 0' }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#4b5563', fontSize: 13 }}>
-              Sin resultados para <strong style={{ color: '#9ca3af' }}>"{query}"</strong>
+            <div style={{ padding: '36px 20px', textAlign: 'center' }}>
+              <SearchIcon size={24} color={DIM} />
+              <p style={{ margin: '12px 0 4px', fontSize: 13, color: DIM2 }}>
+                Sin resultados para <strong style={{ color: TXT }}>"{query}"</strong>
+              </p>
+              <p style={{ margin: 0, fontSize: 11, color: DIM }}>Intenta con otro término</p>
             </div>
           ) : (
             Array.from(groups.entries()).map(([cat, catItems]) => {
-              const color = CAT_COLOR[cat];
+              const { label, color } = CAT_META[cat];
               return (
                 <div key={cat}>
-                  {/* Category header */}
+                  {/* Category label */}
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 18px 4px',
-                    fontSize: 10, fontWeight: 800,
-                    color, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    padding: '8px 16px 3px',
+                    fontSize: 9.5, fontWeight: 700,
+                    color, letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}>
-                    <div style={{ width: 20, height: 1, background: `${color}40` }} />
-                    {CAT_LABEL[cat]}
-                    <div style={{ flex: 1, height: 1, background: `${color}20` }} />
-                    <span style={{ color: '#4b5563', fontWeight: 600 }}>{catItems.length}</span>
+                    <span style={{ display: 'inline-block', width: 3, height: 3, borderRadius: '50%', background: color }} />
+                    {label}
+                    <span style={{ marginLeft: 'auto', fontSize: 9, color: DIM, fontWeight: 600 }}>
+                      {catItems.length}
+                    </span>
                   </div>
 
                   {/* Items */}
                   {catItems.map(item => {
                     const idx = flatIdx++;
-                    const isActive = idx === cursor;
+                    const active = idx === cursor;
                     return (
                       <div
                         key={item.id}
-                        data-cursor={isActive ? 'true' : undefined}
+                        data-cursor={active ? 'true' : undefined}
                         onClick={() => selectItem(item)}
                         onMouseEnter={() => setCursor(idx)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '9px 18px',
-                          background: isActive ? `${color}12` : 'transparent',
-                          borderLeft: `2px solid ${isActive ? color : 'transparent'}`,
+                          display: 'flex', alignItems: 'center', gap: 11,
+                          padding: '8px 16px',
+                          background: active ? BG_ITEM : 'transparent',
+                          borderLeft: `2px solid ${active ? G : 'transparent'}`,
                           cursor: 'pointer',
-                          transition: 'all 0.08s',
+                          transition: 'background 0.08s, border-color 0.08s',
                         }}
                       >
-                        <span style={{ fontSize: 18, flexShrink: 0, width: 26, textAlign: 'center' }}>{item.icono}</span>
+                        {/* Icon */}
+                        <span style={{
+                          fontSize: 15, width: 24, textAlign: 'center', flexShrink: 0,
+                          opacity: active ? 1 : 0.75,
+                          filter: active ? 'none' : 'grayscale(20%)',
+                          transition: 'opacity 0.1s',
+                        }}>{item.icono}</span>
+
+                        {/* Text */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: isActive ? 700 : 600, color: isActive ? '#f9fafb' : '#e5e7eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p style={{
+                            margin: 0, fontSize: 12.5, fontWeight: active ? 600 : 500,
+                            color: active ? TXT : '#cbd5e1',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            transition: 'color 0.08s',
+                          }}>
                             {item.titulo}
                           </p>
                           {item.subtitulo && (
-                            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{
+                              margin: '1px 0 0', fontSize: 10.5, color: DIM,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
                               {item.subtitulo}
                             </p>
                           )}
                         </div>
+
+                        {/* Badge */}
                         {item.badge && (
                           <span style={{
-                            padding: '2px 8px', borderRadius: 20, flexShrink: 0,
-                            background: `${item.badgeColor ?? color}15`,
-                            border: `1px solid ${item.badgeColor ?? color}30`,
-                            color: item.badgeColor ?? color,
-                            fontSize: 10, fontWeight: 800,
+                            flexShrink: 0, padding: '2px 7px', borderRadius: 20,
+                            background: `${item.badgeColor ?? G}12`,
+                            border: `1px solid ${item.badgeColor ?? G}25`,
+                            color: item.badgeColor ?? G,
+                            fontSize: 9.5, fontWeight: 700, letterSpacing: '0.04em',
                           }}>
                             {item.badge}
                           </span>
+                        )}
+
+                        {/* Active arrow */}
+                        {active && (
+                          <span style={{ color: G, fontSize: 11, flexShrink: 0, opacity: 0.7 }}>→</span>
                         )}
                       </div>
                     );
@@ -409,34 +408,41 @@ export default function CommandPalette({ open, onClose, onNavigate, secciones }:
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ───────────────────────────────────────────────────────── */}
         <div style={{
-          padding: '8px 18px',
-          borderTop: '1px solid rgba(255,255,255,0.04)',
-          display: 'flex', gap: 16, alignItems: 'center',
+          padding: '7px 16px',
+          borderTop: `1px solid ${BOR}`,
+          display: 'flex', alignItems: 'center', gap: 14,
         }}>
-          {[
-            ['↑↓', 'navegar'],
-            ['↵',  'seleccionar'],
-            ['Esc','cerrar'],
-          ].map(([key, label]) => (
-            <div key={key} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-              <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>{key}</kbd>
-              <span style={{ fontSize: 10, color: '#4b5563' }}>{label}</span>
-            </div>
+          {[['↑↓', 'navegar'], ['↵', 'seleccionar']].map(([key, lbl]) => (
+            <span key={key} style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              <kbd style={{
+                padding: '1px 6px', borderRadius: 4, fontSize: 9.5,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: DIM2, fontFamily: 'monospace',
+              }}>{key}</kbd>
+              <span style={{ fontSize: 10, color: DIM }}>{lbl}</span>
+            </span>
           ))}
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 10, color: '#374151' }}>
+          <span style={{ fontSize: 10, color: DIM }}>
             {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: DIM }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: G, display: 'inline-block' }} />
+            XCIEN 2.0
           </span>
         </div>
       </div>
 
       <style>{`
-        @keyframes cmdAppear {
-          from { transform: translateX(-50%) scale(0.96) translateY(-8px); opacity: 0 }
-          to   { transform: translateX(-50%) scale(1)    translateY(0);    opacity: 1 }
+        @keyframes cpFadeIn  { from { opacity:0 } to { opacity:1 } }
+        @keyframes cpSlideIn {
+          from { transform: translateX(-50%) translateY(-10px) scale(0.97); opacity: 0 }
+          to   { transform: translateX(-50%) translateY(0)     scale(1);    opacity: 1 }
         }
+        [data-theme="light"] .cmd-shell { background: #f8fafc; }
       `}</style>
     </>
   );

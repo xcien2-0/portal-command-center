@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, Radio, Map, Settings, Truck, Phone, Package, ArrowLeftRight,
   GraduationCap, Link2, GitBranch, BarChart2, FileText, BookOpen,
-  Shield, Users, User, Calendar, Bot, Zap, Swords, Smartphone, Bell,
+  Shield, Users, User, Calendar, Bot, Zap, Bell,
   Database, Settings2, LayoutGrid, ChevronLeft, ChevronRight,
   Activity, Network, Layers, AlertTriangle, TrendingUp, BellRing,
 } from 'lucide-react';
@@ -47,7 +47,6 @@ const InventarioSection  = lazy(() => import('./sections/InventarioSection'));
 const InventarioTransfersSection = lazy(() => import('./sections/InventarioTransfersSection'));
 const XcienTokensSection = lazy(() => import('./sections/XcienTokensSection'));
 const MerkleFeedSection  = lazy(() => import('./sections/MerkleFeedSection'));
-const FodaSection        = lazy(() => import('./sections/FodaSection'));
 const Estrategia2030Section = lazy(() => import('./sections/Estrategia2030Section'));
 const ProyectosDashboardSection = lazy(() => import('./sections/ProyectosDashboardSection'));
 const SuperAdminSection     = lazy(() => import('./sections/SuperAdminSection'));
@@ -58,7 +57,6 @@ const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
-const WarRoomSection          = lazy(() => import('./sections/WarRoomSection'));
 const ReportesKPISection      = lazy(() => import('./sections/ReportesKPISection'));
 const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'));
 const ComiteSection           = lazy(() => import('./sections/ComiteSection'));
@@ -88,8 +86,8 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   admin:     '*',
   director:  ['inicio','impacto','noc','red','incidentes','ventas','integridad','reportes-kpi',
-               'rrhh','sala_juntas','proyectos','plan2026','estrategia2030','foda',
-               'agentes','war-room','comite','docs','reportlab','analytics'],
+               'rrhh','sala_juntas','proyectos','plan2026','estrategia2030',
+               'agentes','comite','docs','reportlab','analytics'],
   noc:       ['inicio','noc','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs'],
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas'],
   comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
@@ -142,7 +140,6 @@ const NAV: NavEntry[] = [
   { id: 'plan2026',  label: 'Plan 2026 · ClickUp',   icon: '🎯', group: 'Planeación' },
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
   { id: 'estrategia2030', label: 'Estrategia 2030', icon: '🚀', group: 'Planeación' },
-  { id: 'foda', label: 'Análisis Estratégico', icon: '🛡️', group: 'Planeación' },
   { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
   { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
@@ -150,7 +147,6 @@ const NAV: NavEntry[] = [
   { id: 'agentes',  label: 'Agentes IA',       icon: '🤖', group: 'Infraestructura' },
   { id: 'comite',   label: 'Comité de Dirección', icon: '🏛️', group: 'Infraestructura' },
   { id: 'token-ai', label: 'Consumo de Tokens',  icon: '📈', group: 'Infraestructura' },
-  { id: 'mobile', label: 'Terminal Móvil', icon: '📱', group: 'Infraestructura' },
   { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
   { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
   { id: 'editor', label: 'Configuración', icon: '🎨', group: 'Sistema' },
@@ -178,13 +174,10 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   docs: BookOpen,
   rrhh: User,
   sala_juntas: Calendar,
-  foda: Shield,
   adopcion: Users,
   incidentes: AlertTriangle,
   agentes: Bot,
   bridge: Zap,
-  'war-room': Swords,
-  mobile: Smartphone,
   telegram: Bell,
   backup: Database,
   editor: Settings2,
@@ -203,7 +196,6 @@ const SECTION_TITLE: Record<SectionId, string> = {
   tokens: 'Transacciones & Tokens',
   transacciones: 'Tokens Unificados',
   etiquetas: 'Etiquetas & Comprobantes',
-  foda: 'Análisis Estratégico',
   adopcion: 'Gestión de Usuarios',
   academia: brand.academiaLabel,
   gerencia: 'Dashboard Gerencial',
@@ -213,8 +205,6 @@ const SECTION_TITLE: Record<SectionId, string> = {
   reportlab: 'PDF Generator',
   bridge: 'Antigravity Data Bridge',
   incidentes: 'Gestor de Incidentes de Red',
-  'war-room': 'Comando Multi-Agente',
-  mobile: 'Terminal Móvil',
   telegram: 'Monitor de Alarmas',
   docs: 'Biblioteca Documental',
   rrhh: 'Recursos Humanos',
@@ -596,7 +586,6 @@ function Content({
       {section === 'plan2026'  && <ProyectosDashboardSection />}
       {section === 'proyectos' && <ProyectosSection theme={theme} />}
       {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
-      {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenterHubSection />}
       {section === 'scan'          && <InventarioSection theme={theme} />}
@@ -688,13 +677,6 @@ function Content({
         </Suspense>
       )}
 
-      {section === 'war-room' && (
-        <Suspense fallback={<SectionSpinner />}>
-          <WarRoomSection theme={theme} />
-        </Suspense>
-      )}
-
-      {section === 'mobile' && <MobileAccessSection theme={theme} />}
       {section === 'telegram' && <TelegramBotSection theme={theme} />}
       {section === 'docs' && <DocsSection theme={theme} />}
       {section === 'backup' && <BackupSection theme={theme} />}
@@ -716,117 +698,7 @@ function Content({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-// ── Terminal Móvil — QR dinámico ──────────────────────────────────────────────
-function MobileAccessSection({ theme }: { theme: ThemeConfig }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [copied, setCopied] = useState(false);
 
-  // URL siempre derivada del hostname actual del browser.
-  // Si estás en localhost → http://localhost:8080/
-  // Si el celular abre 192.168.1.82:8080 → http://192.168.1.82:8080/
-  // Funciona en cualquier red sin configuración extra.
-  const mobileUrl = `${window.location.protocol}//${window.location.hostname}:8080/`;
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, mobileUrl, {
-      width: 260,
-      margin: 2,
-      color: { dark: '#00A651', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
-    });
-  }, [mobileUrl]);
-
-  const copy = () => {
-    navigator.clipboard.writeText(mobileUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const accent = theme.accent || '#00A651';
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 28, fontFamily: "'Inter', sans-serif" }}>
-
-      {/* Title */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: accent, marginBottom: 8, opacity: 0.7 }}>TERMINAL MÓVIL</div>
-        <h2 style={{ fontSize: 30, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: -1 }}>
-          Acceso desde <span style={{ color: accent }}>cualquier red</span>
-        </h2>
-        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
-          Escanea el código con tu celular en la misma red Wi-Fi
-        </p>
-      </div>
-
-      {/* QR Card */}
-      <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${accent}30`,
-        borderRadius: 28,
-        padding: 32,
-        boxShadow: `0 0 80px ${accent}15, 0 30px 60px rgba(0,0,0,0.4)`,
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Corner accents */}
-        {[{top:0,left:0},{top:0,right:0},{bottom:0,left:0},{bottom:0,right:0}].map((pos, i) => (
-          <div key={i} style={{
-            position: 'absolute', width: 20, height: 20,
-            borderTop: i < 2 ? `2px solid ${accent}` : 'none',
-            borderBottom: i >= 2 ? `2px solid ${accent}` : 'none',
-            borderLeft: i % 2 === 0 ? `2px solid ${accent}` : 'none',
-            borderRight: i % 2 === 1 ? `2px solid ${accent}` : 'none',
-            ...pos,
-          }} />
-        ))}
-
-        <div style={{ background: '#fff', borderRadius: 16, padding: 12, boxShadow: `0 0 30px ${accent}20` }}>
-          <canvas ref={canvasRef} style={{ display: 'block', borderRadius: 8 }} />
-        </div>
-      </div>
-
-      {/* URL pill */}
-      <div
-        onClick={copy}
-        style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: `1px solid ${copied ? accent : 'rgba(255,255,255,0.1)'}`,
-          borderRadius: 16, padding: '14px 28px', textAlign: 'center', cursor: 'pointer',
-          transition: 'all 0.2s',
-          boxShadow: copied ? `0 0 20px ${accent}30` : 'none',
-        }}
-      >
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4, letterSpacing: 1 }}>URL DE RED LOCAL</div>
-        <code style={{ fontSize: 18, fontWeight: 700, color: copied ? accent : '#fff', letterSpacing: 0.5 }}>
-          {mobileUrl || '—'}
-        </code>
-        <div style={{ fontSize: 11, color: accent, marginTop: 6, opacity: copied ? 1 : 0, transition: 'opacity 0.2s' }}>
-          ✓ Copiado al portapapeles
-        </div>
-      </div>
-
-      {/* Info pills */}
-      <div style={{ display: 'flex', gap: 12 }}>
-        {[
-          { icon: '📡', label: 'Misma red Wi-Fi' },
-          { icon: '🔒', label: 'Red local privada' },
-          { icon: '⚡', label: 'Sin internet requerido' },
-        ].map(({ icon, label }) => (
-          <div key={label} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.5)',
-          }}>
-            <span>{icon}</span>{label}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function Xcien2Page() {
   const navigate = useNavigate();
