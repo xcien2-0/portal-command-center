@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../../../config';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ThemeConfig } from '../types';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 interface Props { theme: ThemeConfig }
 
@@ -443,6 +444,7 @@ export default function IncidentesSection({ theme }: Props) {
   const [selected, setSelected]     = useState<Incidente | null>(null);
   const [tab, setTab]               = useState<'activos' | 'historial'>('activos');
   const { user } = useAuth();
+  const trackTab = useTabTrack('incidentes');
 
   const load = useCallback(async (): Promise<Incidente[]> => {
     try {
@@ -540,7 +542,7 @@ export default function IncidentesSection({ theme }: Props) {
           { id: 'activos'   as const, label: 'Activos',   badge: activos.length },
           { id: 'historial' as const, label: 'Historial', badge: historial.length },
         ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => { trackTab(t.id); setTab(t.id); }}
             style={{ padding: '8px 20px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8,
               background: tab === t.id ? (t.id === 'activos' ? RED : GREEN) : 'transparent',
               color: tab === t.id ? '#fff' : DIM,

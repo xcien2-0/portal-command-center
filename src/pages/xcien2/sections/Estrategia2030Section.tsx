@@ -1,5 +1,6 @@
 import { ThemeConfig } from '../types';
 import { useState } from 'react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 interface Props { theme: ThemeConfig }
 
@@ -43,6 +44,7 @@ type Tab = 'vision' | 'objetivos' | 'diagnostico' | 'valores';
 export default function Estrategia2030Section({ theme }: Props) {
   const [tab, setTab]       = useState<Tab>('vision');
   const [objSel, setObjSel] = useState<number | null>(null);
+  const trackTab = useTabTrack('estrategia2030');
 
   const G = theme.accent;
   const card: React.CSSProperties = {
@@ -91,7 +93,7 @@ export default function Estrategia2030Section({ theme }: Props) {
           { id: 'diagnostico', label: '🔍  Diagnóstico' },
           { id: 'valores',     label: '💎  Valores' },
         ] as { id: Tab; label: string }[]).map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} onClick={() => { trackTab(t.id); setTab(t.id); }} style={{
             padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 600, transition: 'all .15s',
             background: tab === t.id ? G : 'rgba(255,255,255,0.06)',

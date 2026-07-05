@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ThemeConfig } from '../types';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 import { ArrowLeftRight, Hash } from 'lucide-react';
 import TransaccionesSection from './TransaccionesSection';
 import TokensSection from './TokensSection';
@@ -14,6 +15,7 @@ interface Props {
 
 export default function FinanzasSection({ theme, activeThemeId, initialTab = 'transacciones' }: Props) {
   const [tab, setTab] = useState<TabId>(initialTab);
+  const trackTab = useTabTrack('finanzas');
 
   const accent = theme.accent;
 
@@ -30,7 +32,7 @@ export default function FinanzasSection({ theme, activeThemeId, initialTab = 'tr
           ['transacciones', 'Transacciones Grupo', ArrowLeftRight],
           ['tokens',        'Registro de Tokens',  Hash],
         ] as [TabId, string, any][]).map(([id, label, Icon]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
+          <button key={id} onClick={() => { trackTab(id); setTab(id); }} style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer',
             background: tab === id ? `${accent}22` : 'transparent',

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 import { ThemeConfig } from '../types';
 import { API_BASE as API } from '../../../config';
 // ── Matrix Background ─────────────────────────────────────────────────────────
@@ -441,6 +442,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
   const [backendOnline, setOnline]  = useState(false);
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [vista, setVista]           = useState<'tablero' | 'lista' | 'tokens'>('tablero');
+  const trackTab = useTabTrack('transacciones');
   const [showForm, setShowForm]     = useState(false);
   const [editTx, setEditTx]         = useState<Transaccion | undefined>(undefined);
   const [eliminando, setEliminando] = useState<string | null>(null);
@@ -491,7 +493,7 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
           theme={theme} accent={accent}
           editTx={editTx}
           onClose={() => { setShowForm(false); setEditTx(undefined); }}
-          onSuccess={() => { cargarDatos(); setVista('lista'); }}
+          onSuccess={() => { cargarDatos(); trackTab('lista'); setVista('lista'); }}
         />
       )}
 
@@ -503,9 +505,9 @@ export default function TransaccionesSection({ theme, activeThemeId }: Props) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button style={tabStyle(vista === 'tablero')} onClick={() => setVista('tablero')}>Tablero</button>
-            <button style={tabStyle(vista === 'lista')}   onClick={() => setVista('lista')}>Transacciones</button>
-            <button style={tabStyle(vista === 'tokens')}  onClick={() => setVista('tokens')}>🪙 Tokens</button>
+            <button style={tabStyle(vista === 'tablero')} onClick={() => { trackTab('tablero'); setVista('tablero'); }}>Tablero</button>
+            <button style={tabStyle(vista === 'lista')}   onClick={() => { trackTab('lista'); setVista('lista'); }}>Transacciones</button>
+            <button style={tabStyle(vista === 'tokens')}  onClick={() => { trackTab('tokens'); setVista('tokens'); }}>🪙 Tokens</button>
             <button
               onClick={() => setShowForm(true)}
               style={{ padding: '5px 14px', borderRadius: 20, border: 'none', background: accent, color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}

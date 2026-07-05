@@ -5,6 +5,7 @@ import {
   ChevronRight, RefreshCw,
   MapPin, User, Tag, AlertCircle, Layers, Printer
 } from 'lucide-react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const T = {
@@ -965,15 +966,18 @@ interface Props { theme?: any; initialTab?: TabId }
 
 export default function InventarioSection({ initialTab = 'inventario' }: Props) {
   const [tab, setTab] = useState<TabId>(initialTab);
+  const trackTab = useTabTrack('inventario');
   const [selectedActivo, setSelectedActivo] = useState<Activo | null>(null);
 
   const handleScanActivo = (a: Activo) => {
     setSelectedActivo(a);
+    trackTab('scanner');
     setTab('scanner');
   };
 
   const handleScanBack = () => {
     setSelectedActivo(null);
+    trackTab('inventario');
     setTab('inventario');
   };
 
@@ -988,7 +992,7 @@ export default function InventarioSection({ initialTab = 'inventario' }: Props) 
           ['scanner',    'Scanner',            ScanLine],
           ['etiquetas',  'Etiquetas',          Printer],
         ] as [TabId, string, any][]).map(([id, label, Icon]) => (
-          <button key={id} onClick={() => { setTab(id); if (id !== 'scanner') setSelectedActivo(null); }} style={{
+          <button key={id} onClick={() => { trackTab(id); setTab(id); if (id !== 'scanner') setSelectedActivo(null); }} style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer',
             background: tab === id ? T.teal : 'transparent',

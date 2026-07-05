@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTabTrack } from '../../../../hooks/useTabTrack';
 // recharts removed — Dashboard uses custom RingChart/GlassCard components
 import { API_BASE } from '../../../../config';
 import brand from '../../../../brand';
@@ -963,6 +964,7 @@ function TabPlazas({ tecnicos, plazas }: { tecnicos: Tecnico[]; plazas: string[]
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AcademiaGerencial({ theme }: Props) {
+  const trackTab = useTabTrack('academia-gerencial');
   const [tab, setTab]             = useState<Tab>('dashboard');
   const [cursos, setCursos]       = useState<OdooCurso[]>([]);
   const [plazaMapa, setPlazaMapa] = useState<Record<string, string> | undefined>(undefined);
@@ -1043,7 +1045,7 @@ export default function AcademiaGerencial({ theme }: Props) {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#111827', borderRadius: 12, padding: 4, alignSelf: 'flex-start', border: '1px solid rgba(255,255,255,0.06)' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => { trackTab(t.id); setTab(t.id); }}
             style={{ padding: '8px 20px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
               background: tab === t.id ? GREEN : 'transparent',
               color: tab === t.id ? '#001a12' : DIM,

@@ -1,444 +1,401 @@
-import { useState, useEffect, useRef } from 'react';
-import brand from '../brand';
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/data/mockOperationsData';
-import { MessageSquare, Phone, Ticket, Bot, AlertTriangle, CheckCircle2, Clock, Send, User, Building2, ChevronRight, PanelRightOpen, PanelRightClose, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { MessageSquare, RefreshCw, AlertTriangle, Send, Clock, User,
+         ChevronRight, Filter, Search, CheckCircle2, XCircle } from 'lucide-react';
 
-type Channel = 'whatsapp' | 'call' | 'ticket';
-type Status = 'bot_active' | 'escalated' | 'in_progress' | 'resolved';
-type SenderType = 'bot' | 'client' | 'agent';
-
-interface Company {
-  id: string;
-  name: string;
-  color: string | null;
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Ticket {
+  id: number; name: string;
+  equipo: string; equipo_id: number | null;
+  etapa: string; etapa_id: number | null;
+  cliente: string; agente: string; tipo: string;
+  prioridad: string; prioridad_n: number;
+  kanban: string; sla_vencido: boolean;
+  sla_deadline: string; creado: string; horas_cierre: number | null;
 }
-
-interface Contact {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  odoo_client_id: string | null;
-  company_id: string;
+interface Mensaje {
+  id: number; autor: string; fecha: string; cuerpo: string; tipo: string;
 }
-
-interface Agent {
-  id: string;
-  name: string;
-  is_online: boolean;
+interface TicketDetail {
+  ticket: Ticket; descripcion: string; mensajes: Mensaje[];
 }
+interface Equipo { id: number; name: string; total: number }
 
-interface Conversation {
-  id: string;
-  company_id: string;
-  contact_id: string;
-  channel: Channel;
-  status: Status;
-  assigned_agent_id: string | null;
-  subject: string | null;
-  created_at: string;
-  updated_at: string;
-  contacts?: Contact;
-  companies?: Company;
-  agents?: Agent | null;
-}
+// ── Palette ───────────────────────────────────────────────────────────────────
+const BG   = '#0f1117';
+const BG2  = '#161b27';
+const BG3  = '#1a2035';
+const BOR  = '#1e2535';
+const G    = '#00c46a';
+const DIM  = '#64748b';
+const TXT  = '#e2e8f0';
+const RED  = '#ef4444';
+const AMB  = '#f59e0b';
 
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_type: SenderType;
-  sender_name: string | null;
-  content: string;
-  created_at: string;
-}
-
-const channelIcon = (ch: Channel) => {
-  switch (ch) {
-    case 'whatsapp': return <MessageSquare className="h-3.5 w-3.5" />;
-    case 'call': return <Phone className="h-3.5 w-3.5" />;
-    case 'ticket': return <Ticket className="h-3.5 w-3.5" />;
-  }
+const PRI_COLOR: Record<string, string> = {
+  'Normal': DIM, 'Urgente': AMB, 'Muy urgente': '#f97316', 'Bloqueante': RED,
+};
+const KAN_COLOR: Record<string, string> = {
+  normal: DIM, done: G, blocked: RED,
 };
 
-const channelLabel = (ch: Channel) => {
-  switch (ch) {
-    case 'whatsapp': return 'WhatsApp';
-    case 'call': return 'Llamada';
-    case 'ticket': return 'Ticket';
-  }
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso.replace(' ','T')+'Z').getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 2)  return 'ahora';
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h/24)}d`;
+}
 
-const statusConfig: Record<Status, { label: string; color: string; bg: string; border: string }> = {
-  escalated: { label: 'Escalada', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)' },
-  in_progress: { label: 'En progreso', color: '#eab308', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.25)' },
-  bot_active: { label: 'Bot activo', color: '#64748b', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.25)' },
-  resolved: { label: 'Resuelto', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.25)' },
-};
-
-const STATUS_FILTERS: { key: Status | 'all'; label: string; icon: React.ReactNode }[] = [
-  { key: 'all', label: 'Todas', icon: null },
-  { key: 'escalated', label: 'Escaladas', icon: <span className="text-red-400">🔴</span> },
-  { key: 'in_progress', label: 'En progreso', icon: <span>🟡</span> },
-  { key: 'bot_active', label: 'Bot', icon: <span>🤖</span> },
-  { key: 'resolved', label: 'Resueltas', icon: <span>✅</span> },
-];
-
-export default function CallCenter() {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
-  const [replyText, setReplyText] = useState('');
-  const [showClientInfo, setShowClientInfo] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Load mock data
-  useEffect(() => {
-    setCompanies([
-      { id: 'comp-1', name: 'Wispi', color: '#1D9E75' },
-      { id: 'comp-2', name: brand.name, color: '#2563eb' },
-      { id: 'comp-3', name: 'ISP 2', color: '#9333ea' },
-    ]);
-    setAgents([{ id: 'agent-1', name: 'Agente NOC', is_online: true }]);
-    setConversations(MOCK_CONVERSATIONS as any);
-  }, []);
-
-  // Load messages when conversation selected
-  useEffect(() => {
-    if (!selectedId) { setMessages([]); return; }
-    setMessages((MOCK_MESSAGES[selectedId] || []) as any);
-  }, [selectedId]);
-
-  // Auto-scroll
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const selected = conversations.find(c => c.id === selectedId);
-
-  const filtered = conversations.filter(c => {
-    if (companyFilter && c.company_id !== companyFilter) return false;
-    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
-    return true;
-  });
-
-  const handleSend = async () => {
-    if (!replyText.trim() || !selectedId) return;
-    const content = replyText.trim();
-    setReplyText('');
-    const optimistic: Message = {
-      id: crypto.randomUUID(),
-      conversation_id: selectedId,
-      sender_type: 'agent',
-      sender_name: 'Agente',
-      content,
-      created_at: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, optimistic]);
-  };
-
-  const handleTake = async () => {
-    if (!selectedId) return;
-    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'in_progress' as any } : c));
-  };
-
-  const handleResolve = async () => {
-    if (!selectedId) return;
-    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status: 'resolved' as any } : c));
-  };
-
-  const contactConvCount = selectedId && selected?.contact_id
-    ? conversations.filter(c => c.contact_id === selected.contact_id).length
-    : 0;
-
+// ── Ticket Row ────────────────────────────────────────────────────────────────
+function TicketRow({ t, active, onClick }: { t: Ticket; active: boolean; onClick: () => void }) {
   return (
-    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden" style={{ background: '#0f1117', color: '#e2e8f0' }}>
-      {/* Left Panel */}
-      <div className="flex flex-col border-r" style={{ width: '30%', minWidth: 320, borderColor: '#1e2535', background: '#161b27' }}>
-        {/* Company tabs */}
-        <div className="flex items-center gap-1 px-3 pt-3 pb-2 overflow-x-auto flex-shrink-0">
-          <PillButton active={!companyFilter} onClick={() => setCompanyFilter(null)}>Todas</PillButton>
-          {companies.map(c => (
-            <PillButton key={c.id} active={companyFilter === c.id} onClick={() => setCompanyFilter(c.id)} accentColor={c.color || undefined}>
-              {c.name}
-            </PillButton>
-          ))}
-        </div>
-        {/* Status filters */}
-        <div className="flex items-center gap-1 px-3 pb-2 overflow-x-auto flex-shrink-0">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setStatusFilter(f.key)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] whitespace-nowrap transition-colors"
-              style={{
-                background: statusFilter === f.key ? 'rgba(0,200,150,0.15)' : 'transparent',
-                color: statusFilter === f.key ? '#00c896' : '#64748b',
-                border: statusFilter === f.key ? '1px solid rgba(0,200,150,0.3)' : '1px solid transparent',
-              }}
-            >
-              {f.icon} {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Conversation list */}
-        <ScrollArea className="flex-1">
-          <div className="px-2 pb-2 space-y-1">
-            {filtered.map(conv => {
-              const contact = conv.contacts;
-              const company = conv.companies;
-              const sc = statusConfig[conv.status];
-              const isActive = conv.id === selectedId;
-              return (
-                <button
-                  key={conv.id}
-                  onClick={() => { setSelectedId(conv.id); setShowClientInfo(false); }}
-                  className="w-full text-left rounded-lg px-3 py-2.5 transition-colors"
-                  style={{
-                    background: isActive ? '#252d40' : '#1e2535',
-                    borderLeft: isActive ? '3px solid #00c896' : '3px solid transparent',
-                  }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget.style.background = '#252d40'); }}
-                  onMouseLeave={e => { if (!isActive) (e.currentTarget.style.background = '#1e2535'); }}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ color: '#64748b' }}>{channelIcon(conv.channel)}</span>
-                    <span className="text-[13px] font-medium truncate flex-1" style={{ color: '#e2e8f0' }}>
-                      {contact?.name || 'Desconocido'}
-                    </span>
-                    <span className="text-[10px]" style={{ color: '#64748b' }}>
-                      {formatDistanceToNow(new Date(conv.updated_at), { addSuffix: false, locale: es })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {company && (
-                      <span
-                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: `${company.color}22`, color: company.color || '#64748b', border: `1px solid ${company.color}44` }}
-                      >
-                        {company.name}
-                      </span>
-                    )}
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded"
-                      style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}
-                    >
-                      {sc.label}
-                    </span>
-                    <span className="text-[10px] truncate flex-1" style={{ color: '#64748b' }}>
-                      {conv.subject}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="text-center py-12 text-[13px]" style={{ color: '#64748b' }}>
-                No hay conversaciones
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+    <button onClick={onClick} style={{
+      display: 'block', width: '100%', textAlign: 'left',
+      padding: '10px 14px', borderBottom: `1px solid ${BOR}`,
+      background: active ? 'rgba(0,196,106,0.08)' : 'transparent',
+      boxShadow: active ? `inset 3px 0 0 ${G}` : 'none',
+      cursor: 'pointer', border: 'none',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: active ? G : DIM, fontFamily: 'monospace' }}>
+          #{t.id}
+        </span>
+        <span style={{ fontSize: 9, color: DIM }}>{timeAgo(t.creado)}</span>
       </div>
-
-      {/* Right Panel */}
-      <div className="flex-1 flex flex-col min-w-0" style={{ background: '#0f1117' }}>
-        {!selected ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center" style={{ color: '#64748b' }}>
-              <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Selecciona una conversación</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: '#1e2535', background: '#161b27' }}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#252d40', color: '#e2e8f0' }}>
-                  {(selected.contacts?.name || 'D')[0]}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold truncate">{selected.contacts?.name}</span>
-                    {selected.companies && (
-                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${selected.companies.color}22`, color: selected.companies.color || '#64748b' }}>
-                        {selected.companies.name}
-                      </span>
-                    )}
-                    <span className="text-[10px]" style={{ color: '#64748b' }}>{channelLabel(selected.channel)}</span>
-                  </div>
-                  <p className="text-[11px] truncate" style={{ color: '#64748b' }}>{selected.subject}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {selected.status === 'escalated' && !selected.assigned_agent_id && (
-                  <Button size="sm" className="h-7 text-[11px] px-3" style={{ background: '#00c896', color: '#0f1117' }} onClick={handleTake}>
-                    Tomar conversación
-                  </Button>
-                )}
-                {selected.status !== 'resolved' && (
-                  <Button size="sm" variant="outline" className="h-7 text-[11px] px-3" style={{ borderColor: '#2a3f50', color: '#e2e8f0' }} onClick={handleResolve}>
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Resolver
-                  </Button>
-                )}
-                <button
-                  onClick={() => setShowClientInfo(!showClientInfo)}
-                  className="p-1.5 rounded hover:bg-white/5 transition-colors"
-                  style={{ color: '#64748b' }}
-                >
-                  {showClientInfo ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Status banners */}
-            {selected.status === 'bot_active' && (
-              <div className="px-4 py-2 flex items-center gap-2 text-[11px]" style={{ background: 'rgba(100,116,139,0.1)', color: '#94a3b8' }}>
-                <Bot className="h-3.5 w-3.5" /> Siendo atendido por IA
-              </div>
-            )}
-            {selected.status === 'escalated' && (
-              <div className="px-4 py-2 flex items-center gap-2 text-[11px]" style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171' }}>
-                <AlertTriangle className="h-3.5 w-3.5" /> Requiere atención humana
-              </div>
-            )}
-
-            <div className="flex-1 flex overflow-hidden">
-              {/* Messages */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <ScrollArea className="flex-1 px-4 py-3">
-                  <div className="space-y-3 max-w-2xl mx-auto">
-                    {messages.map(msg => (
-                      <MessageBubble key={msg.id} msg={msg} />
-                    ))}
-                    <div ref={chatEndRef} />
-                  </div>
-                </ScrollArea>
-
-                {/* Reply input */}
-                {(selected.status === 'in_progress' || selected.status === 'escalated') && (
-                  <div className="p-3 border-t flex-shrink-0" style={{ borderColor: '#1e2535' }}>
-                    <div className="flex gap-2 max-w-2xl mx-auto">
-                      <Textarea
-                        value={replyText}
-                        onChange={e => setReplyText(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                        placeholder="Escribe tu respuesta..."
-                        className="min-h-[40px] max-h-[100px] text-[13px] resize-none border-0 focus-visible:ring-0"
-                        style={{ background: '#1e2535', color: '#e2e8f0' }}
-                        rows={1}
-                      />
-                      <Button size="sm" className="h-10 px-4 self-end" style={{ background: '#00c896', color: '#0f1117' }} onClick={handleSend} disabled={!replyText.trim()}>
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Client info panel */}
-              {showClientInfo && selected.contacts && (
-                <div className="w-72 border-l p-4 flex-shrink-0 overflow-y-auto" style={{ borderColor: '#1e2535', background: '#161b27' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>Info del cliente</span>
-                    <button onClick={() => setShowClientInfo(false)} className="p-1 rounded hover:bg-white/5" style={{ color: '#64748b' }}>
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: '#252d40', color: '#e2e8f0' }}>
-                        {selected.contacts.name[0]}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{selected.contacts.name}</p>
-                        {selected.companies && (
-                          <span className="text-[10px]" style={{ color: selected.companies.color || '#64748b' }}>{selected.companies.name}</span>
-                        )}
-                      </div>
-                    </div>
-                    <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Teléfono" value={selected.contacts.phone || '—'} />
-                    <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Email" value={selected.contacts.email || '—'} />
-                    <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label="ID Odoo" value={selected.contacts.odoo_client_id || '—'} />
-                    <InfoRow icon={<MessageSquare className="h-3.5 w-3.5" />} label="Conversaciones" value={String(contactConvCount)} />
-                    {selected.agents && (
-                      <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Agente" value={selected.agents.name} />
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
+      <div style={{ fontSize: 12, color: TXT, fontWeight: 500, marginBottom: 4,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {t.name}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 9, color: PRI_COLOR[t.prioridad] || DIM, fontWeight: 600 }}>
+          {t.prioridad}
+        </span>
+        <span style={{ fontSize: 9, color: DIM }}>·</span>
+        <span style={{ fontSize: 9, color: DIM, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }}>
+          {t.cliente}
+        </span>
+        {t.sla_vencido && (
+          <span style={{ fontSize: 9, color: RED, fontWeight: 700 }}>SLA ✗</span>
         )}
       </div>
-    </div>
-  );
-}
-
-function MessageBubble({ msg }: { msg: Message }) {
-  const isClient = msg.sender_type === 'client';
-  const isBot = msg.sender_type === 'bot';
-  const isAgent = msg.sender_type === 'agent';
-
-  let bubbleBg = '#1e2535'; // client
-  let labelColor = '#64748b';
-  let icon = '👤';
-  if (isBot) { bubbleBg = '#1a2744'; icon = '🤖'; labelColor = '#64748b'; }
-  if (isAgent) { bubbleBg = 'rgba(0,200,150,0.12)'; icon = '💬'; labelColor = '#00c896'; }
-
-  return (
-    <div className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
-      <div className="rounded-lg px-3.5 py-2.5 max-w-[75%]" style={{ background: bubbleBg }}>
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[10px]">{icon}</span>
-          <span className="text-[10px] font-semibold" style={{ color: labelColor }}>
-            {msg.sender_name || (isBot ? 'Bot' : isAgent ? 'Agente' : 'Cliente')}
-          </span>
-          <span className="text-[9px]" style={{ color: '#475569' }}>
-            {new Date(msg.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-        <p className="text-[13px] leading-relaxed whitespace-pre-line" style={{ color: '#e2e8f0' }}>{msg.content}</p>
-      </div>
-    </div>
-  );
-}
-
-function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span style={{ color: '#64748b' }} className="mt-0.5">{icon}</span>
-      <div>
-        <p className="text-[10px]" style={{ color: '#64748b' }}>{label}</p>
-        <p className="text-[12px] font-medium">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function PillButton({ children, active, onClick, accentColor }: { children: React.ReactNode; active: boolean; onClick: () => void; accentColor?: string }) {
-  const bg = active ? (accentColor ? `${accentColor}22` : 'rgba(0,200,150,0.15)') : 'transparent';
-  const border = active ? (accentColor ? `${accentColor}44` : 'rgba(0,200,150,0.3)') : '#2a3f50';
-  const color = active ? (accentColor || '#00c896') : '#64748b';
-
-  return (
-    <button
-      onClick={onClick}
-      className="px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors"
-      style={{ background: bg, border: `1px solid ${border}`, color }}
-    >
-      {children}
     </button>
+  );
+}
+
+// ── Message Bubble ────────────────────────────────────────────────────────────
+function Bubble({ m }: { m: Mensaje }) {
+  const isSystem = m.tipo === 'notification' || m.autor === 'Sistema';
+  return (
+    <div style={{ marginBottom: 12, padding: '8px 12px',
+      background: isSystem ? 'transparent' : BG3,
+      borderRadius: 8, border: isSystem ? 'none' : `1px solid ${BOR}`,
+      borderLeft: isSystem ? `2px solid ${DIM}` : undefined,
+    }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+        <User style={{ width: 12, height: 12, color: isSystem ? DIM : G }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: isSystem ? DIM : TXT }}>{m.autor}</span>
+        <span style={{ fontSize: 9, color: DIM }}>{m.fecha?.slice(11,16) || ''}</span>
+        <span style={{ fontSize: 9, color: DIM }}>{m.fecha?.slice(0,10) || ''}</span>
+      </div>
+      <p style={{ fontSize: 12, color: isSystem ? DIM : TXT, margin: 0, lineHeight: 1.6,
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {m.cuerpo}
+      </p>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+export default function CallCenter() {
+  const [equipos, setEquipos]         = useState<Equipo[]>([]);
+  const [teamId, setTeamId]           = useState<number | null>(null);
+  const [tickets, setTickets]         = useState<Ticket[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [offset, setOffset]           = useState(0);
+  const [hasMore, setHasMore]         = useState(false);
+  const PER_PAGE = 25;
+  const [periodo, setPeriodo]         = useState('mes');
+  const [search, setSearch]           = useState('');
+  const [selected, setSelected]       = useState<number | null>(null);
+  const [detail, setDetail]           = useState<TicketDetail | null>(null);
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(false);
+  const [error, setError]             = useState('');
+  const [respuesta, setRespuesta]     = useState('');
+  const [postOk, setPostOk]           = useState(false);
+  const msgEndRef = useRef<HTMLDivElement>(null);
+
+  // Load teams
+  useEffect(() => {
+    fetch('/api/helpdesk/equipos')
+      .then(r => r.json())
+      .then(d => setEquipos(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, []);
+
+  // Load tickets
+  const loadTickets = useCallback(async (off = 0) => {
+    setLoadingList(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ periodo, limit: String(PER_PAGE), offset: String(off) });
+      if (teamId) params.set('team_id', String(teamId));
+      const r = await fetch(`/api/helpdesk/tickets?${params}`);
+      if (!r.ok) throw new Error(await r.text());
+      const d = await r.json();
+      const list: Ticket[] = Array.isArray(d.tickets) ? d.tickets : [];
+      setTickets(off === 0 ? list : prev => [...prev, ...list]);
+      setTotal(d.total ?? 0);
+      setHasMore(off + PER_PAGE < (d.total ?? 0));
+      setOffset(off);
+    } catch (e: any) {
+      setError(e.message || 'Error cargando tickets');
+    } finally {
+      setLoadingList(false);
+    }
+  }, [teamId, periodo]);
+
+  useEffect(() => { loadTickets(1); }, [loadTickets]);
+
+  // Load detail
+  useEffect(() => {
+    if (!selected) { setDetail(null); return; }
+    setLoadingDetail(true);
+    setPostOk(false);
+    setRespuesta('');
+    fetch(`/api/helpdesk/tickets/${selected}/mensajes`)
+      .then(r => r.json())
+      .then(d => { setDetail(d); setLoadingDetail(false); })
+      .catch(e => { setError(String(e)); setLoadingDetail(false); });
+  }, [selected]);
+
+  useEffect(() => {
+    if (detail) setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+  }, [detail]);
+
+  // Post reply
+  const postReply = async () => {
+    if (!selected || !respuesta.trim()) return;
+    setLoadingPost(true);
+    try {
+      const r = await fetch(`/api/helpdesk/tickets/${selected}/responder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensaje: respuesta.trim(), agente: 'Agente XCIEN' }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setRespuesta('');
+      setPostOk(true);
+      setTimeout(() => setPostOk(false), 3000);
+      // Reload detail
+      const d2 = await fetch(`/api/helpdesk/tickets/${selected}/mensajes`).then(r2 => r2.json());
+      setDetail(d2);
+    } catch (e: any) {
+      setError(e.message || 'Error enviando respuesta');
+    } finally {
+      setLoadingPost(false);
+    }
+  };
+
+  const filtered = tickets.filter(t =>
+    !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
+    t.cliente.toLowerCase().includes(search.toLowerCase()) ||
+    String(t.id).includes(search)
+  );
+
+  return (
+    <div style={{ display: 'flex', height: '100%', background: BG, overflow: 'hidden' }}>
+
+      {/* ── Left panel: ticket list ─────────────────────────────────────── */}
+      <div style={{ width: 280, flexShrink: 0, borderRight: `1px solid ${BOR}`,
+        display: 'flex', flexDirection: 'column', background: BG2 }}>
+
+        {/* Filters */}
+        <div style={{ padding: '10px 12px', borderBottom: `1px solid ${BOR}` }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <select value={teamId ?? ''} onChange={e => setTeamId(e.target.value ? Number(e.target.value) : null)}
+              style={{ flex: 1, background: BG3, color: TXT, border: `1px solid ${BOR}`,
+                borderRadius: 5, fontSize: 11, padding: '4px 6px' }}>
+              <option value="">Todos los equipos</option>
+              {equipos.map(eq => (
+                <option key={eq.id} value={eq.id}>{eq.name} ({eq.total})</option>
+              ))}
+            </select>
+            <select value={periodo} onChange={e => setPeriodo(e.target.value)}
+              style={{ background: BG3, color: TXT, border: `1px solid ${BOR}`,
+                borderRadius: 5, fontSize: 11, padding: '4px 6px' }}>
+              <option value="hoy">Hoy</option>
+              <option value="semana">Semana</option>
+              <option value="mes">Mes</option>
+              <option value="90d">90 días</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <Search style={{ width: 12, height: 12, color: DIM, flexShrink: 0 }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar ticket..."
+              style={{ flex: 1, background: BG3, color: TXT, border: `1px solid ${BOR}`,
+                borderRadius: 5, fontSize: 11, padding: '4px 6px', outline: 'none' }} />
+            <button onClick={() => loadTickets(1)} title="Actualizar"
+              style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', padding: 2 }}>
+              <RefreshCw style={{ width: 13, height: 13 }} className={loadingList ? 'animate-spin' : ''} />
+            </button>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 10, color: DIM }}>
+            {total} ticket{total !== 1 ? 's' : ''} · Odoo helpdesk.ticket
+          </div>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {error && (
+            <div style={{ padding: 12, color: RED, fontSize: 11 }}>
+              <AlertTriangle style={{ width: 12, height: 12, display: 'inline', marginRight: 4 }} />
+              {error}
+            </div>
+          )}
+          {loadingList && filtered.length === 0 && (
+            <div style={{ padding: 20, textAlign: 'center', color: DIM, fontSize: 12 }}>
+              Cargando tickets Odoo…
+            </div>
+          )}
+          {!loadingList && filtered.length === 0 && !error && (
+            <div style={{ padding: 20, textAlign: 'center', color: DIM, fontSize: 12 }}>
+              Sin tickets en el período
+            </div>
+          )}
+          {filtered.map(t => (
+            <TicketRow key={t.id} t={t} active={selected === t.id}
+              onClick={() => setSelected(t.id)} />
+          ))}
+          {hasMore && (
+            <button onClick={() => loadTickets(offset + PER_PAGE)} style={{
+              display: 'block', width: '100%', padding: '10px',
+              background: 'none', border: 'none', color: G,
+              fontSize: 11, cursor: 'pointer',
+            }}>
+              Cargar más…
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Right panel: detail ──────────────────────────────────────────── */}
+      {!selected ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexDirection: 'column', gap: 12, color: DIM }}>
+          <MessageSquare style={{ width: 40, height: 40, opacity: 0.3 }} />
+          <p style={{ fontSize: 13 }}>Selecciona un ticket para ver la conversación</p>
+          <p style={{ fontSize: 11 }}>Datos reales de Odoo · helpdesk.ticket</p>
+        </div>
+      ) : loadingDetail ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: DIM }}>
+          <RefreshCw className="animate-spin" style={{ width: 20, height: 20 }} />
+        </div>
+      ) : detail ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BOR}`, background: BG2, flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: G, fontFamily: 'monospace', fontWeight: 700 }}>
+                    #{detail.ticket.id}
+                  </span>
+                  <span style={{ fontSize: 10, color: PRI_COLOR[detail.ticket.prioridad] || DIM, fontWeight: 600 }}>
+                    {detail.ticket.prioridad}
+                  </span>
+                  {detail.ticket.sla_vencido && (
+                    <span style={{ fontSize: 9, color: RED, fontWeight: 700, background: 'rgba(239,68,68,0.12)',
+                      padding: '1px 5px', borderRadius: 3 }}>SLA vencido</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: TXT, marginBottom: 4,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {detail.ticket.name}
+                </div>
+                <div style={{ display: 'flex', gap: 12, fontSize: 10, color: DIM, flexWrap: 'wrap' }}>
+                  <span>Cliente: <b style={{ color: TXT }}>{detail.ticket.cliente}</b></span>
+                  <span>Equipo: <b style={{ color: TXT }}>{detail.ticket.equipo}</b></span>
+                  <span>Etapa: <b style={{ color: TXT }}>{detail.ticket.etapa}</b></span>
+                  <span>Agente: <b style={{ color: TXT }}>{detail.ticket.agente}</b></span>
+                  <span>
+                    <Clock style={{ width: 9, height: 9, display: 'inline', marginRight: 2 }} />
+                    {detail.ticket.creado}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {detail.descripcion && (
+              <div style={{ marginTop: 8, fontSize: 11, color: DIM, background: BG,
+                padding: '6px 10px', borderRadius: 5, borderLeft: `2px solid ${BOR}` }}>
+                {detail.descripcion.slice(0, 300)}
+              </div>
+            )}
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+            {detail.mensajes.length === 0 ? (
+              <p style={{ color: DIM, fontSize: 12, textAlign: 'center', marginTop: 20 }}>
+                Sin mensajes en este ticket
+              </p>
+            ) : (
+              detail.mensajes.map(m => <Bubble key={m.id} m={m} />)
+            )}
+            <div ref={msgEndRef} />
+          </div>
+
+          {/* Reply box */}
+          <div style={{ padding: '10px 16px', borderTop: `1px solid ${BOR}`, background: BG2, flexShrink: 0 }}>
+            {postOk && (
+              <div style={{ fontSize: 11, color: G, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircle2 style={{ width: 12, height: 12 }} />
+                Respuesta enviada a Odoo
+              </div>
+            )}
+            {error && (
+              <div style={{ fontSize: 11, color: RED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <XCircle style={{ width: 12, height: 12 }} />
+                {error}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea
+                value={respuesta}
+                onChange={e => setRespuesta(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) postReply(); }}
+                placeholder="Escribe tu respuesta… (Cmd+Enter para enviar)"
+                rows={3}
+                style={{ flex: 1, background: BG, color: TXT, border: `1px solid ${BOR}`,
+                  borderRadius: 6, fontSize: 12, padding: '8px 10px', resize: 'none', outline: 'none',
+                  fontFamily: 'inherit' }}
+              />
+              <button onClick={postReply} disabled={loadingPost || !respuesta.trim()}
+                style={{ padding: '8px 14px', borderRadius: 6, border: 'none',
+                  background: respuesta.trim() ? G : BOR, color: respuesta.trim() ? '#000' : DIM,
+                  cursor: respuesta.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                {loadingPost
+                  ? <RefreshCw className="animate-spin" style={{ width: 14, height: 14 }} />
+                  : <Send style={{ width: 14, height: 14 }} />
+                }
+                Enviar
+              </button>
+            </div>
+            <div style={{ fontSize: 9, color: DIM, marginTop: 4 }}>
+              Se publicará como comentario en Odoo helpdesk.ticket #{selected}
+            </div>
+          </div>
+
+        </div>
+      ) : null}
+    </div>
   );
 }

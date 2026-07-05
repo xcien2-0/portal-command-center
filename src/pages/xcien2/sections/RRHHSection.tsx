@@ -8,6 +8,7 @@ import { API_BASE } from '../../../config';
 import { ThemeConfig } from '../types';
 import OrgTreeView from './OrgTreeView';
 import brand from '../../../brand';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 interface Empleado {
   id: number;
@@ -289,7 +290,10 @@ export default function RRHHSection({ theme }: Props) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [photoZoom,   setPhotoZoom]   = useState(false);
-  const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas'>('arbol');
+  const [activeTab, setActiveTab] = useState<'arbol' | 'organigrama' | 'directorio' | 'estadisticas' | 'diagnostico'>('arbol');
+  const [diagnostico, setDiagnostico] = useState<any | null>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const trackTab = useTabTrack('rrhh');
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
 
   const openEmp = (emp: Empleado) => {
@@ -396,8 +400,19 @@ export default function RRHHSection({ theme }: Props) {
             { id: 'organigrama',  label: '🏢 Organigrama' },
             { id: 'directorio',   label: '👥 Directorio'  },
             { id: 'estadisticas', label: '📊 Estadísticas' },
+            { id: 'diagnostico',  label: '🔍 Diagnóstico' },
           ] as const).map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+            <button key={tab.id} onClick={() => {
+              trackTab(tab.id); setActiveTab(tab.id);
+              if (tab.id === 'diagnostico' && !diagnostico && !diagLoading) {
+                setDiagLoading(true);
+                fetch(`${API_BASE}/api/rrhh/diagnostico`)
+                  .then(r => r.ok ? r.json() : null)
+                  .then(d => { if (d) setDiagnostico(d); })
+                  .catch(() => {})
+                  .finally(() => setDiagLoading(false));
+              }
+            }} style={{
               padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
               color: activeTab === tab.id ? accent : dim, fontWeight: activeTab === tab.id ? 700 : 500,
               fontSize: 13, borderBottom: `2px solid ${activeTab === tab.id ? accent : 'transparent'}`,
@@ -653,6 +668,201 @@ export default function RRHHSection({ theme }: Props) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── DIAGNÓSTICO DE JERARQUÍA ── */}
+        {activeTab === 'diagnostico' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {diagLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: dim, padding: '40px 0' }}>
+                <div style={{ width: 16, height: 16, border: `2px solid ${accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+                Analizando datos de Odoo...
+              </div>
+            )}
+
+            {!diagLoading && diagnostico && (() => {
+              const d = diagnostico;
+              const score = d.avg_score_global;
+              const scoreColor = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+              const CAMPO_ICONS: Record<string, string> = {
+                manager: '👤', department: '🏢', job_title: '💼',
+                email: '📧', phone: '📱', location: '📍',
+              };
+
+              return (
+                <>
+                  {/* KPIs */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                    {[
+                      { label: 'Score global',     val: `${score}%`,      color: scoreColor,  icon: '📊' },
+                      { label: 'Completos (100%)', val: d.completos,       color: '#10b981',   icon: '✅' },
+                      { label: 'En riesgo (<50%)', val: d.criticos,        color: '#ef4444',   icon: '⚠️' },
+                      { label: 'Total empleados',  val: d.total_empleados, color: accent,      icon: '👥' },
+                    ].map((k, i) => (
+                      <div key={i} style={{ background: card, border: `1px solid ${k.color}20`, borderRadius: radius, padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color }} />
+                        <div style={{ fontSize: 18, marginBottom: 4 }}>{k.icon}</div>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: k.color, fontFamily: 'Oswald, sans-serif', lineHeight: 1 }}>{k.val}</div>
+                        <div style={{ fontSize: 10, color: dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{k.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Score global visual */}
+                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, padding: '18px 20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>Completitud global de datos jerárquicos</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: scoreColor }}>{score}%</span>
+                    </div>
+                    <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 5, overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ width: `${score}%`, height: '100%', background: scoreColor, borderRadius: 5, transition: 'width 1s ease' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 11, color: dim }}>
+                      <span style={{ color: '#10b981' }}>■ &gt;80% Listo para Board</span>
+                      <span style={{ color: '#f59e0b' }}>■ 50-79% En progreso</span>
+                      <span style={{ color: '#ef4444' }}>■ &lt;50% Requiere atención</span>
+                    </div>
+                  </div>
+
+                  {/* Calidad por campo */}
+                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, padding: '18px 20px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: dim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
+                      Campos de jerarquía — {d.total_empleados} empleados
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {Object.entries(d.campos as Record<string, any>)
+                        .sort((a, b) => a[1].pct - b[1].pct)
+                        .map(([campo, info]) => {
+                          const c = info.pct >= 80 ? '#10b981' : info.pct >= 50 ? '#f59e0b' : '#ef4444';
+                          return (
+                            <div key={campo}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                                <span style={{ fontSize: 14, width: 22, textAlign: 'center', flexShrink: 0 }}>{CAMPO_ICONS[campo] ?? '📋'}</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, flex: 1 }}>{info.label}</span>
+                                <span style={{ fontSize: 12, fontWeight: 800, color: c, minWidth: 40, textAlign: 'right' }}>{info.pct}%</span>
+                                <span style={{ fontSize: 10, color: dim, minWidth: 110, textAlign: 'right' }}>
+                                  {info.completados} ok · {info.faltantes} faltantes
+                                </span>
+                              </div>
+                              <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden', marginLeft: 32 }}>
+                                <div style={{ width: `${info.pct}%`, height: '100%', background: c, borderRadius: 3, transition: 'width 1s ease' }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Por departamento */}
+                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: dim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Por departamento — peores primero</span>
+                      <span style={{ fontSize: 10, color: dim }}>{d.por_departamento.length} departamentos</span>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                            {['Departamento', 'Empleados', 'Score prom.', 'Completos', 'En riesgo', 'Avance'].map(h => (
+                              <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: dim, fontWeight: 700, fontSize: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {d.por_departamento.map((dep: any, i: number) => {
+                            const c = dep.avg_score >= 80 ? '#10b981' : dep.avg_score >= 50 ? '#f59e0b' : '#ef4444';
+                            return (
+                              <tr key={dep.department} style={{ borderTop: `1px solid ${border}`, background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                                <td style={{ padding: '11px 16px', fontWeight: 600, color: text, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dep.department}</td>
+                                <td style={{ padding: '11px 16px', color: dim, textAlign: 'center' }}>{dep.total}</td>
+                                <td style={{ padding: '11px 16px', textAlign: 'center' }}>
+                                  <span style={{ fontWeight: 800, color: c, fontFamily: 'Oswald, sans-serif' }}>{dep.avg_score}%</span>
+                                </td>
+                                <td style={{ padding: '11px 16px', textAlign: 'center' }}>
+                                  <span style={{ color: '#10b981', fontWeight: 700 }}>{dep.completos}</span>
+                                  <span style={{ color: dim, fontSize: 10, marginLeft: 4 }}>/{dep.total}</span>
+                                </td>
+                                <td style={{ padding: '11px 16px', textAlign: 'center' }}>
+                                  {dep.criticos > 0
+                                    ? <span style={{ color: '#ef4444', fontWeight: 700 }}>⚠ {dep.criticos}</span>
+                                    : <span style={{ color: dim }}>—</span>}
+                                </td>
+                                <td style={{ padding: '11px 20px 11px 16px', minWidth: 120 }}>
+                                  <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                                    <div style={{ width: `${dep.pct_completos}%`, height: '100%', background: c, borderRadius: 3 }} />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Empleados con datos incompletos */}
+                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: radius, overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: dim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Empleados con datos incompletos</span>
+                      <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 600 }}>
+                        {d.empleados.filter((e: any) => e.score < 100).length} requieren actualización
+                      </span>
+                    </div>
+                    <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+                      {d.empleados.filter((e: any) => e.score < 100).map((emp: any, i: number) => {
+                        const c = emp.score >= 80 ? '#10b981' : emp.score >= 50 ? '#f59e0b' : '#ef4444';
+                        return (
+                          <div key={emp.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+                            borderBottom: `1px solid ${border}`,
+                            background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                          }}>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${c}15`, border: `1.5px solid ${c}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: c, flexShrink: 0 }}>
+                              {emp.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.name}</div>
+                              <div style={{ fontSize: 10, color: dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.department}{emp.job_title ? ` · ${emp.job_title}` : ''}</div>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end', maxWidth: 280, flexShrink: 0 }}>
+                              {emp.faltantes.map((f: string) => (
+                                <span key={f} style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', whiteSpace: 'nowrap' }}>
+                                  ✗ {f}
+                                </span>
+                              ))}
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 44 }}>
+                              <div style={{ fontSize: 15, fontWeight: 800, color: c, fontFamily: 'Oswald, sans-serif' }}>{emp.score}%</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div style={{ background: `${accent}08`, border: `1px solid ${accent}20`, borderRadius: radius, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: accent, marginBottom: 3 }}>
+                        {score >= 80
+                          ? '✅ Jerarquía lista — se puede activar el Board multicapa'
+                          : score >= 50
+                          ? `⚡ Faltan ${80 - score} puntos para desbloquear el Board multicapa`
+                          : `🔴 Actualización urgente en Odoo — ${100 - score}% de datos incompletos`}
+                      </div>
+                      <div style={{ fontSize: 11, color: dim }}>
+                        RRHH debe completar los campos faltantes en Odoo para cada empleado
+                      </div>
+                    </div>
+                    <a href={`${brand.odooUrl}/odoo/employees`} target="_blank" rel="noreferrer"
+                      style={{ padding: '9px 18px', borderRadius: 8, background: accent, color: '#000', fontWeight: 700, fontSize: 12, textDecoration: 'none', flexShrink: 0, marginLeft: 16 }}>
+                      Actualizar en Odoo ↗
+                    </a>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

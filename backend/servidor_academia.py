@@ -566,6 +566,94 @@ def api_rrhh_stats():
     }
 
 
+@app.get("/api/rrhh/diagnostico")
+def api_rrhh_diagnostico():
+    """Diagnóstico de calidad de datos jerárquicos en Odoo."""
+    from collections import defaultdict
+    try:
+        employees = api_rrhh_empleados()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error conectando con Odoo")
+
+    CAMPOS = {
+        "manager":    "Responsable directo",
+        "department": "Departamento",
+        "job_title":  "Puesto / Cargo",
+        "email":      "Correo de trabajo",
+        "phone":      "Teléfono",
+        "location":   "Ubicación / Plaza",
+    }
+    total = len(employees)
+    if total == 0:
+        return {"total_empleados": 0, "avg_score_global": 0, "completos": 0,
+                "criticos": 0, "campos": {}, "por_departamento": [], "empleados": []}
+
+    # ── Calidad por campo ──────────────────────────────────────────────────────
+    campos_stats = {}
+    for campo, label in CAMPOS.items():
+        filled = sum(1 for e in employees if e.get(campo) and str(e[campo]).strip())
+        campos_stats[campo] = {
+            "label":       label,
+            "completados": filled,
+            "faltantes":   total - filled,
+            "pct":         round(filled / total * 100, 1),
+        }
+
+    # ── Score individual ───────────────────────────────────────────────────────
+    emp_scores = []
+    for e in employees:
+        campos_ok = sum(1 for c in CAMPOS if e.get(c) and str(e[c]).strip())
+        score     = round(campos_ok / len(CAMPOS) * 100)
+        faltantes = [CAMPOS[c] for c in CAMPOS if not e.get(c) or not str(e[c]).strip()]
+        emp_scores.append({
+            "id":         e["id"],
+            "name":       e["name"],
+            "department": e["department"],
+            "job_title":  e["job_title"],
+            "manager":    e.get("manager"),
+            "email":      e.get("email"),
+            "location":   e.get("location"),
+            "score":      score,
+            "campos_ok":  campos_ok,
+            "faltantes":  faltantes,
+        })
+
+    # ── Análisis por departamento ──────────────────────────────────────────────
+    by_dept: dict = defaultdict(lambda: {"total": 0, "score_sum": 0,
+                                          "completos": 0, "criticos": 0})
+    for e in emp_scores:
+        d = by_dept[e["department"]]
+        d["total"]     += 1
+        d["score_sum"] += e["score"]
+        if e["score"] == 100: d["completos"] += 1
+        if e["score"] < 50:   d["criticos"]  += 1
+
+    dept_list = [
+        {
+            "department": k,
+            "total":      v["total"],
+            "avg_score":  round(v["score_sum"] / v["total"]) if v["total"] else 0,
+            "completos":  v["completos"],
+            "criticos":   v["criticos"],
+            "pct_completos": round(v["completos"] / v["total"] * 100) if v["total"] else 0,
+        }
+        for k, v in by_dept.items()
+    ]
+    dept_list.sort(key=lambda x: x["avg_score"])  # peores primero
+
+    avg_global = round(sum(e["score"] for e in emp_scores) / total)
+
+    return {
+        "total_empleados":   total,
+        "avg_score_global":  avg_global,
+        "completos":         sum(1 for e in emp_scores if e["score"] == 100),
+        "criticos":          sum(1 for e in emp_scores if e["score"] < 50),
+        "campos":            campos_stats,
+        "por_departamento":  dept_list,
+        "empleados":         sorted(emp_scores, key=lambda x: x["score"]),
+    }
+
+
 @app.get("/api/rrhh/empleado/{emp_id}")
 def api_rrhh_empleado_detalle(emp_id: int):
     """Detalle de un empleado."""
@@ -8092,6 +8180,70 @@ def eliminar_usuario(user_id: str, user: dict = Depends(require_rol("admin"))):
 @app.get("/api/auth/roles")
 def listar_roles(user: dict = Depends(get_current_user)):
     return auth_service.ROLES
+
+# ─── Helpdesk extras — mensajes y responder (helpdesk_service.py cubre el resto) ─
+
+@app.get("/api/helpdesk/tickets/{ticket_id}/mensajes")
+def hd_get_mensajes(ticket_id: int):
+    import re as _re2
+    import xmlrpc.client as _xrc2
+    _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB",       "wispi17")
+    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    common = _xrc2.ServerProxy(f"{_url}/xmlrpc/2/common")
+    uid    = common.authenticate(_db, _user, _pw, {})
+    models = _xrc2.ServerProxy(f"{_url}/xmlrpc/2/object")
+
+    tickets = models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "search_read",
+        [[["id","=",ticket_id]]], {"fields": _HD_FIELDS + ["description","name"], "limit":1})
+    if not tickets:
+        raise HTTPException(404, "Ticket no encontrado")
+    t = tickets[0]
+
+    msgs = models.execute_kw(_db, uid, _pw, "mail.message", "search_read",
+        [[["model","=","helpdesk.ticket"],["res_id","=",ticket_id],
+          ["message_type","in",["comment","email"]]]],
+        {"fields":["id","author_id","date","body","message_type"], "order":"date asc", "limit":100})
+
+    def _strip(html):
+        txt = (html or "").replace("<br>","\n").replace("<br/>","\n").replace("</p>","\n")
+        txt = _re2.sub(r"<[^>]+>","",txt)
+        return txt.strip()
+
+    mensajes = [
+        {"id": m["id"],
+         "autor": m["author_id"][1] if m.get("author_id") else "Sistema",
+         "fecha": (m.get("date") or "")[:16],
+         "cuerpo": _strip(m.get("body","")),
+         "tipo":   m.get("message_type","comment")}
+        for m in msgs if _strip(m.get("body",""))
+    ]
+    return {
+        "ticket": _hd_ticket_to_dict(t),
+        "descripcion": _strip(t.get("description","")),
+        "mensajes": mensajes,
+    }
+
+class HdResponderReq(BaseModel):
+    mensaje: str
+    agente: str = "Agente"
+
+@app.post("/api/helpdesk/tickets/{ticket_id}/responder")
+def hd_responder(ticket_id: int, req: HdResponderReq):
+    import xmlrpc.client as _xrc3
+    _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB",       "wispi17")
+    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    common = _xrc3.ServerProxy(f"{_url}/xmlrpc/2/common")
+    uid    = common.authenticate(_db, _user, _pw, {})
+    models = _xrc3.ServerProxy(f"{_url}/xmlrpc/2/object")
+    cuerpo = f"<p>{req.mensaje}</p>"
+    models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "message_post",
+        [[ticket_id]], {"body": cuerpo, "message_type": "comment",
+                        "subtype_xmlid": "mail.mt_comment"})
+    return {"ok": True, "ticket_id": ticket_id}
 
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 

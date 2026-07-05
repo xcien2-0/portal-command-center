@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, TrendingUp, Users, Building2, BarChart3 } from 'lucide-react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 interface Grupo { nombre: string; ordenes: number; mrr?: number; total?: number; ticket_prom?: number; nuevos?: number; primera_venta?: number; lider?: string; equipos?: string[] }
 interface Totales { ordenes: number; mrr_total: number; monto_total: number; clientes_nuevos: number; primera_venta: number }
@@ -44,6 +45,7 @@ export default function VentasEfectividadSection() {
   const [tab, setTab]       = useState<Tab>('marca');
   const [empresa, setEmpresa] = useState('');
   const [vendedor, setVendedor] = useState('');
+  const trackTab = useTabTrack('ventas-efectividad');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,7 +157,7 @@ export default function VentasEfectividadSection() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
+          <button key={t} onClick={() => { trackTab(t); setTab(t); }}
             style={{ background: tab === t ? `${G}22` : '#111827',
               border: `1px solid ${tab === t ? G : '#374151'}`,
               borderRadius: 8, color: tab === t ? G : '#9ca3af',

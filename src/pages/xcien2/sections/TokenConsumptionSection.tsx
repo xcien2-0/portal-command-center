@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DailyPoint { day: string; calls: number; input_tokens: number; output_tokens: number; cost_usd: number; }
@@ -198,6 +199,7 @@ export default function TokenConsumptionSection({ theme }: { theme: ThemeConfig 
   const [days, setDays] = useState(30);
   const [tab, setTab] = useState<'overview' | 'providers' | 'models' | 'recent'>('overview');
   const [isDemo, setIsDemo] = useState(false);
+  const trackTab = useTabTrack('tokens');
 
   const load = async (d: number) => {
     setLoading(true);
@@ -278,7 +280,7 @@ export default function TokenConsumptionSection({ theme }: { theme: ThemeConfig 
           { id: 'models',     label: '🤖 Modelos' },
           { id: 'recent',     label: '🕐 Historial' },
         ] as const).map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} onClick={() => { trackTab(t.id); setTab(t.id); }} style={{
             padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
             background: 'transparent', border: 'none', outline: 'none',
             color: tab === t.id ? theme.text : theme.dim,

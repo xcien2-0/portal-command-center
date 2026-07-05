@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ThemeConfig, WFMOrder, WFMOrderState, FieldTicket } from '../types';
 
 import { API_BASE } from '../../../config';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 const G = '#00ff88';
 
 // ── Field Service View (Habilitaciones & Fallas desde Odoo CAST) ──────────────
@@ -292,6 +293,7 @@ function FieldServiceView({ theme }: { theme: ThemeConfig }) {
   const [summary, setSummary]       = useState<any>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode]     = useState<'grid' | 'kanban' | 'carousel'>('grid');
+  const trackTab = useTabTrack('wfm');
   const [carouselIdx, setCarousel]  = useState(0);
 
   const fetchData = async () => {
@@ -380,7 +382,7 @@ function FieldServiceView({ theme }: { theme: ThemeConfig }) {
         {/* View mode toggle */}
         <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, gap: 2 }}>
           {VIEW_MODES.map(v => (
-            <button key={v.id} onClick={() => setViewMode(v.id)} title={v.label} style={{
+            <button key={v.id} onClick={() => { trackTab(v.id); setViewMode(v.id); }} title={v.label} style={{
               padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
               background: viewMode === v.id ? `${theme.accent}22` : 'transparent',
               color: viewMode === v.id ? theme.accent : theme.dim,
@@ -2894,6 +2896,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const [selectedId, setSelected] = useState<string | null>(null);
   const [dispatchTab, setDispatchTab] = useState<DispatchTab>('checklist');
   const [viewMode, setViewMode]   = useState<ViewMode>('kanban');
+  const trackTab = useTabTrack('wfm');
 
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
@@ -3063,7 +3066,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
           theme={theme}
           orders={orders}
           viewMode={viewMode}
-          onViewChange={setViewMode}
+          onViewChange={(v) => { trackTab(v); setViewMode(v); }}
         />
       )}
 
@@ -3121,7 +3124,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             <KanbanView
               theme={theme}
               orders={orders.filter(o => o.estado !== 'CERRADO' && o.estado !== 'BACKLOG')}
-              onSelectOrder={id => { setSelected(id); setViewMode('roles'); }}
+              onSelectOrder={id => { setSelected(id); trackTab('roles'); setViewMode('roles'); }}
             />
           </div>
         )}
@@ -3132,7 +3135,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
             <TimelineView
               theme={theme}
               orders={orders}
-              onSelectOrder={id => { setSelected(id); setViewMode('roles'); }}
+              onSelectOrder={id => { setSelected(id); trackTab('roles'); setViewMode('roles'); }}
             />
           </div>
         )}
@@ -3298,7 +3301,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                           ['pruebas',   '📡 Velocidad'],
                           ['evidencias','📸 Evidencias'],
                         ] as [DispatchTab, string][]).map(([id, label]) => (
-                          <button key={id} onClick={() => setDispatchTab(id)} style={{
+                          <button key={id} onClick={() => { trackTab(id); setDispatchTab(id); }} style={{
                             padding: '7px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
                             background: dispatchTab === id ? `${G}22` : 'transparent',
                             color: dispatchTab === id ? G : theme.dim,

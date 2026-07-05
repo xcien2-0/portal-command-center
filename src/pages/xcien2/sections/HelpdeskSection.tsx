@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 import { Headphones, RefreshCw, AlertTriangle, Clock, CheckCircle, TrendingUp, BarChart3, FileText, ChevronDown } from 'lucide-react';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ export default function HelpdeskSection() {
   const [page,          setPage]          = useState(0);
   const [showDrop,      setShowDrop]      = useState(false);
   const [tab,           setTab]           = useState<Tab>('tickets');
+  const trackTab = useTabTrack('helpdesk');
   const [periodo,       setPeriodo]       = useState('mes');
   const [agrup,         setAgrup]         = useState('dia');
   const [reportLoading, setReportLoading] = useState(false);
@@ -259,7 +261,7 @@ export default function HelpdeskSection() {
             tickets: '📋 Tickets', tendencias: '📈 Tendencias', patrones: '🔍 Patrones'
           };
           return (
-            <button key={t} onClick={() => setTab(t)}
+            <button key={t} onClick={() => { trackTab(t); setTab(t); }}
               style={{ background: tab===t ? G_DIM : '#111827',
                 border: `1px solid ${tab===t ? G : '#374151'}`,
                 borderRadius: 8, color: tab===t ? G : '#9ca3af',

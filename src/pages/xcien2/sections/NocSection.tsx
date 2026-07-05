@@ -7,6 +7,7 @@ import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, 
 import { API_BASE } from '../../../config';
 import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const G   = '#00ff88';   // verde    — healthy  ≥ 85
@@ -1423,6 +1424,7 @@ export default function NocSection({
 }: Props) {
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
   const [view, setView] = useState<'map' | 'grid' | 'reportes' | 'capas'>('map');
+  const trackTab = useTabTrack('noc');
   const [boards, setBoards] = useState<Record<string, { online: number; offline: number; alerts: number; hosts: number; avail: number }>>({});
 
   useEffect(() => {
@@ -1549,7 +1551,7 @@ export default function NocSection({
           {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'NOCBoard', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => {
             const active = view === id;
             return (
-              <button key={id} onClick={() => setView(id as any)} style={{
+              <button key={id} onClick={() => { trackTab(id); setView(id as any); }} style={{
                 padding: '6px 14px', fontSize: 10, fontWeight: 700, borderRadius: 9,
                 border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                 background: active ? G : 'transparent',

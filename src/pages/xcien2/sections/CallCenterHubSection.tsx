@@ -1,4 +1,5 @@
 import { useState, Suspense, lazy } from 'react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 import { Phone, Headphones, PhoneCall } from 'lucide-react';
 
 const CallCenter     = lazy(() => import('../../CallCenter'));
@@ -26,6 +27,7 @@ function Spinner() {
 
 export default function CallCenterHubSection() {
   const [tab, setTab] = useState<Tab>('conversaciones');
+  const trackTab = useTabTrack('call');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f1117', overflow: 'hidden' }}>
@@ -40,7 +42,7 @@ export default function CallCenterHubSection() {
           return (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => { trackTab(t.id); setTab(t.id); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: 500,

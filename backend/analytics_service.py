@@ -282,6 +282,85 @@ def get_feedback(days: int = Query(30, ge=1, le=180), section: Optional[str] = N
     return items
 
 
+@router.get("/tabs")
+def get_tabs(days: int = Query(30, ge=1, le=90), section: Optional[str] = None):
+    """Uso de pestañas por sección — eventos click con action=tab_change."""
+    events = _read(days)
+
+    # section → tab → {count, usuarios, ultimo}
+    data: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
+        "count": 0, "usuarios": set(), "ultimo": ""
+    }))
+
+    for e in events:
+        props = e.get("properties") or {}
+        if props.get("action") != "tab_change":
+            continue
+        sec = props.get("section") or e.get("section") or ""
+        tab = props.get("tab") or ""
+        if not sec or not tab:
+            continue
+        if section and sec != section:
+            continue
+        d = data[sec][tab]
+        d["count"] += 1
+        email = e.get("user_email")
+        if email:
+            d["usuarios"].add(email)
+        ts = e.get("ts", "")
+        if ts > d["ultimo"]:
+            d["ultimo"] = ts
+
+    result = []
+    for sec, tabs in data.items():
+        tab_list = sorted(
+            [{"tab": t, "count": v["count"], "usuarios_unicos": len(v["usuarios"]),
+              "ultimo": v["ultimo"][:16].replace("T", " ")} for t, v in tabs.items()],
+            key=lambda x: x["count"], reverse=True
+        )
+        total = sum(t["count"] for t in tab_list)
+        result.append({"section": sec, "total_tab_clicks": total, "tabs": tab_list})
+
+    result.sort(key=lambda x: x["total_tab_clicks"], reverse=True)
+    return result
+
+
+@router.get("/actions")
+def get_actions(days: int = Query(30, ge=1, le=90)):
+    """Todas las acciones registradas (búsquedas, exportaciones, clicks clave) por sección."""
+    events = _read(days)
+    data: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
+        "count": 0, "usuarios": set(), "ultimo": ""
+    }))
+
+    for e in events:
+        props = e.get("properties") or {}
+        action = props.get("action") or ""
+        if not action or action == "tab_change":
+            continue
+        sec = props.get("section") or e.get("section") or "—"
+        d = data[sec][action]
+        d["count"] += 1
+        email = e.get("user_email")
+        if email:
+            d["usuarios"].add(email)
+        ts = e.get("ts", "")
+        if ts > d["ultimo"]:
+            d["ultimo"] = ts
+
+    result = []
+    for sec, actions in data.items():
+        action_list = sorted(
+            [{"action": a, "count": v["count"], "usuarios_unicos": len(v["usuarios"]),
+              "ultimo": v["ultimo"][:16].replace("T", " ")} for a, v in actions.items()],
+            key=lambda x: x["count"], reverse=True
+        )
+        result.append({"section": sec, "actions": action_list})
+
+    result.sort(key=lambda x: sum(a["count"] for a in x["actions"]), reverse=True)
+    return result
+
+
 @router.get("/sessions")
 def get_sessions(days: int = Query(7, ge=1, le=30)):
     events = _read(days)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTabTrack } from '../../../hooks/useTabTrack';
 import { API_BASE } from '../../../config';
 import { ThemeConfig } from '../types';
 import {
@@ -173,6 +174,7 @@ export default function IntegridadSection({ theme }: Props) {
   const [filtro, setFiltro] = useState<Riesgo | 'TODOS'>('TODOS');
   const [busqueda, setBusqueda] = useState('');
   const [tab, setTab]       = useState<'ordenes' | 'vendedores'>('ordenes');
+  const trackTab = useTabTrack('integridad');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -247,7 +249,7 @@ export default function IntegridadSection({ theme }: Props) {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '1px solid #1f2937' }}>
         {(['ordenes', 'vendedores'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+          <button key={t} onClick={() => { trackTab(t); setTab(t); }} style={{
             background: 'transparent', border: 'none', padding: '8px 20px', cursor: 'pointer',
             color: tab === t ? '#00A859' : '#6b7280', fontSize: 13,
             borderBottom: tab === t ? '2px solid #00A859' : '2px solid transparent',
