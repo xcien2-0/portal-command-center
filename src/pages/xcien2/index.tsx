@@ -68,6 +68,7 @@ const IntegridadSection       = lazy(() => import('./sections/IntegridadSection'
 const AnalyticsSection        = lazy(() => import('./sections/AnalyticsSection'));
 const HelpdeskSection         = lazy(() => import('./sections/HelpdeskSection'));
 const Net2PhoneSection        = lazy(() => import('./sections/Net2PhoneSection'));
+const CallCenterHubSection    = lazy(() => import('./sections/CallCenterHubSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -132,8 +133,6 @@ const NAV: NavEntry[] = [
   { id: 'ventas-efectividad', label: 'Efectividad Ventas',  icon: '🏆', group: 'Administración' },
   { id: 'integridad', label: 'Integridad Comercial', icon: '🔍', group: 'Administración' },
   { id: 'analytics',  label: 'Analytics de Uso',     icon: '📊', group: 'Administración' },
-  { id: 'helpdesk',   label: 'Mesa de Ayuda',        icon: '🎧', group: 'Operaciones' },
-  { id: 'net2phone',  label: 'Net2Phone Call Center', icon: '📞', group: 'Operaciones' },
   { id: 'reportes-kpi', label: 'KPI Dashboard', icon: '🎯', group: 'Administración' },
   { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
   { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
@@ -599,7 +598,7 @@ function Content({
       {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
       {section === 'foda'     && <FodaSection     theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
-      {section === 'call'     && <CallCenter      theme={theme} activeThemeId={activeThemeId} />}
+      {section === 'call'     && <CallCenterHubSection />}
       {section === 'scan'          && <InventarioSection theme={theme} />}
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
