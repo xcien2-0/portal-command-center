@@ -7994,33 +7994,6 @@ try:
 except Exception as e:
     logger.warning(f"Integridad comercial no cargado: {e}")
 
-# ─── SPA Fallback ─────────────────────────────────────────────────────────────
-
-@app.get("/{full_path:path}")
-async def spa_fallback(full_path: str):
-    """Maneja el enrutamiento de React (SPA) para cualquier ruta no definida en la API."""
-    # 1. Si es una ruta de API o de estáticos conocidos que no existe, 404 real
-    if full_path.startswith("api/") or full_path.startswith("static/") or full_path.startswith("assets/"):
-        raise HTTPException(status_code=404, detail="Recurso no encontrado")
-    
-    # 2. Verificar si es un archivo físico en la raíz de DIST_DIR (ej: favicon.ico, xcien.png)
-    if os.path.exists(DIST_DIR):
-        file_in_dist = os.path.join(DIST_DIR, full_path)
-        if os.path.isfile(file_in_dist):
-            return FileResponse(file_in_dist)
-            
-        # 3. Si no es un archivo, servir index.html para que React Router maneje la ruta
-        index_path = os.path.join(DIST_DIR, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-    
-    # 4. Fallback final a la versión legacy si no hay build de React
-    legacy_index = os.path.join(BASE_DIR, "static", "index.html")
-    if os.path.exists(legacy_index):
-        return FileResponse(legacy_index)
-    
-    raise HTTPException(status_code=404, detail="Portal no disponible")
-
 # ─── Health Check ──────────────────────────────────────────────────────────────
 @app.get("/api/health")
 def health():
@@ -8114,6 +8087,33 @@ def eliminar_usuario(user_id: str, user: dict = Depends(require_rol("admin"))):
 @app.get("/api/auth/roles")
 def listar_roles(user: dict = Depends(get_current_user)):
     return auth_service.ROLES
+
+# ─── SPA Fallback ─────────────────────────────────────────────────────────────
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    """Maneja el enrutamiento de React (SPA) para cualquier ruta no definida en la API."""
+    # 1. Si es una ruta de API o de estáticos conocidos que no existe, 404 real
+    if full_path.startswith("api/") or full_path.startswith("static/") or full_path.startswith("assets/"):
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+
+    # 2. Verificar si es un archivo físico en la raíz de DIST_DIR (ej: favicon.ico, xcien.png)
+    if os.path.exists(DIST_DIR):
+        file_in_dist = os.path.join(DIST_DIR, full_path)
+        if os.path.isfile(file_in_dist):
+            return FileResponse(file_in_dist)
+
+        # 3. Si no es un archivo, servir index.html para que React Router maneje la ruta
+        index_path = os.path.join(DIST_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+
+    # 4. Fallback final a la versión legacy si no hay build de React
+    legacy_index = os.path.join(BASE_DIR, "static", "index.html")
+    if os.path.exists(legacy_index):
+        return FileResponse(legacy_index)
+
+    raise HTTPException(status_code=404, detail="Portal no disponible")
 
 
 # ─── Entry point ───────────────────────────────────────────────────────────────

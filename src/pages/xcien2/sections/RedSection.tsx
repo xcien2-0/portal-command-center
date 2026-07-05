@@ -379,7 +379,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
       setNocCities(
         (Array.isArray(citiesRaw) ? citiesRaw : [])
           .filter((c: any) =>
-            c.tipo === 'on-net' && c.lat && c.lng &&
+            c.lat && c.lng &&
             14.5 < c.lat && c.lat < 32.8 && -118.5 < c.lng && c.lng < -86.5
           )
       );
@@ -438,16 +438,16 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Ciudades NOCBoard (on-net, solo México) ──────────────────────────────────
   const cities: CityGroup[] = useMemo(() => nocCities.map((c: any) => {
-    const cityHosts = hosts.filter(h => h.city === c.nombre);
+    const cityHosts = hosts.filter(h => h.city === c.name);
     const byVendor: Record<string, number> = {};
     cityHosts.forEach(h => { byVendor[h.vendor] = (byVendor[h.vendor] || 0) + 1; });
     return {
-      name: c.nombre,
+      name: c.name,
       lat: c.lat,
       lng: c.lng,
       hosts: cityHosts,
-      online: c.activos,
-      offline: c.alertas,
+      online: c.online ?? cityHosts.filter(h => h.status === 'online').length,
+      offline: c.offline ?? cityHosts.filter(h => h.status === 'offline').length,
       byVendor,
     };
   }), [nocCities, hosts]);
