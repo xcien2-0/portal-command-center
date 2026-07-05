@@ -133,38 +133,78 @@ function ColorSwatch({ value, onChange, accent, label }: { value: string; onChan
 // ── Preset Card ───────────────────────────────────────────────────────────────
 function ThemeCard({ preset, isActive, onApply }: { preset: PresetTheme; isActive: boolean; onApply: () => void }) {
   const { preview } = preset;
+  const isDark = preview.bg.startsWith('#0') || preview.bg.startsWith('#F5') === false && !preview.bg.startsWith('#F');
   return (
-    <button onClick={onApply} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+    <button
+      onClick={onApply}
+      title={preset.description}
+      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+    >
+      {/* Preview canvas */}
       <div style={{
-        borderRadius: 10, overflow: 'hidden',
-        border: isActive ? `2px solid ${preview.accent}` : '2px solid rgba(255,255,255,0.08)',
-        transition: 'all 0.2s',
-        boxShadow: isActive ? `0 0 16px ${preview.accent}40` : 'none',
-        transform: isActive ? 'scale(1.02)' : 'scale(1)',
+        borderRadius: 12, overflow: 'hidden',
+        border: isActive ? `2px solid ${preview.accent}` : '2px solid rgba(255,255,255,0.07)',
+        transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
+        boxShadow: isActive ? `0 0 20px ${preview.accent}50, 0 4px 16px rgba(0,0,0,0.4)` : '0 2px 8px rgba(0,0,0,0.3)',
+        transform: isActive ? 'scale(1.025)' : 'scale(1)',
       }}>
-        <div style={{ display: 'flex', height: 64, background: preview.bg }}>
-          <div style={{ width: 28, background: preview.card, borderRight: `1px solid ${preview.accent}20`, display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 5px' }}>
-            {[1, 2, 3].map(i => <div key={i} style={{ height: 4, borderRadius: 2, background: i === 1 ? preview.accent : `${preview.text}20` }} />)}
+        {/* Mini portal */}
+        <div style={{ display: 'flex', height: 80, background: preview.bg }}>
+          {/* Sidebar */}
+          <div style={{
+            width: 32, background: preview.card,
+            borderRight: `1px solid ${preview.accent}25`,
+            display: 'flex', flexDirection: 'column', gap: 5, padding: '10px 6px',
+          }}>
+            <div style={{ height: 4, borderRadius: 2, background: preview.accent }} />
+            {[0.25, 0.15, 0.2, 0.12].map((o, i) => (
+              <div key={i} style={{ height: 4, borderRadius: 2, background: preview.text, opacity: o }} />
+            ))}
           </div>
-          <div style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[40, 30, 50, 35].map((w, i) => <div key={i} style={{ height: 16, width: w, borderRadius: 3, background: preview.card, border: `1px solid ${preview.accent}20` }} />)}
+          {/* Content */}
+          <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Stat cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+              {[preview.accent, `${preview.accent}60`, `${preview.accent}40`].map((c, i) => (
+                <div key={i} style={{
+                  height: 22, borderRadius: 4,
+                  background: i === 0 ? `${preview.accent}20` : `${preview.text}06`,
+                  border: `1px solid ${c}30`,
+                }} />
+              ))}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <div style={{ height: 24, width: 60, borderRadius: 3, background: preview.card }} />
-              <div style={{ height: 24, flex: 1, borderRadius: 3, background: `${preview.accent}18` }} />
+            {/* Chart bar */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 28, paddingTop: 4 }}>
+              {[0.4, 0.7, 0.55, 0.9, 0.65, 0.8].map((h, i) => (
+                <div key={i} style={{
+                  flex: 1, borderRadius: '2px 2px 0 0',
+                  height: `${h * 100}%`,
+                  background: i === 3 ? preview.accent : `${preview.accent}30`,
+                }} />
+              ))}
             </div>
           </div>
         </div>
-        <div style={{ height: 3, background: `linear-gradient(90deg, ${preview.accent}, ${preview.bg})` }} />
+        {/* Accent stripe */}
+        <div style={{ height: 2.5, background: `linear-gradient(90deg, ${preview.accent} 0%, ${preview.accent}00 100%)` }} />
       </div>
-      <div style={{ padding: '8px 2px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: isActive ? preview.accent : '#F0F0F0' }}>{preset.emoji} {preset.name}</span>
-          {isActive && <span style={{ fontSize: 9, background: `${preview.accent}20`, color: preview.accent, padding: '1px 6px', borderRadius: 20, fontWeight: 700 }}>ACTIVO</span>}
-        </div>
-        <p style={{ fontSize: 11, color: '#606060', margin: '2px 0 0' }}>{preset.description}</p>
+
+      {/* Label */}
+      <div style={{ padding: '9px 3px 2px', display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{ fontSize: 15 }}>{preset.emoji}</span>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: isActive ? preview.accent : '#e2e8f0', letterSpacing: '-0.01em' }}>
+          {preset.name}
+        </span>
+        {isActive && (
+          <span style={{
+            marginLeft: 'auto', fontSize: 8.5, fontWeight: 700, letterSpacing: '0.06em',
+            background: `${preview.accent}18`, color: preview.accent,
+            border: `1px solid ${preview.accent}35`,
+            padding: '1px 7px', borderRadius: 20,
+          }}>ACTIVO</span>
+        )}
       </div>
+      <p style={{ margin: '0 3px', fontSize: 10.5, color: '#505060', lineHeight: 1.4 }}>{preset.description}</p>
     </button>
   );
 }
@@ -252,7 +292,7 @@ export default function DevPanel({ theme, activeThemeId, onChange, onApplyPreset
 
       {/* ── Preset themes ── */}
       <SectionLabel>Temas predefinidos</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginBottom: 8 }}>
         {PRESET_THEMES.map(p => (
           <ThemeCard key={p.id} preset={p} isActive={activeThemeId === p.id}
             onApply={() => { onApplyPreset(p); localStorage.setItem(LS_KEY, JSON.stringify(p.config)); }} />
