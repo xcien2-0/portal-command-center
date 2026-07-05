@@ -1634,7 +1634,7 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
     _, alerts = _get_enriched_noc_data()
     if active_only:
         alerts = [a for a in alerts if a.get("state") == "active"]
-    alerts = sorted(alerts, key=lambda a: a.get("triggered_at") or a.get("triggeredAt", ""), reverse=True)[:limit]
+    alerts = sorted(alerts, key=lambda a: a.get("triggered_at") or a.get("triggeredAt", ""), reverse=True)
     
     # Cruzar con tickets locales (WFM)
     wfm_data = _load_wfm()
@@ -1648,14 +1648,19 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
     def _classify_board(host_name: str, cause: str) -> str:
         n = (host_name or "").upper()
         c = (cause or "").lower()
-        # Energía: UPS, PDU, planta eléctrica, baterías
-        if any(x in n for x in ("UPS", "PDU", "ELEC", "BATT", "ENERGIA", "ENERG", "GEN", "PLANTA")):
-            return "energia"
-        if any(x in c for x in ("energia", "power", "ups", "battery", "voltage")):
-            return "energia"
-        # WL: radios PTP, APs, CPEs, antenas
+        # WL name check primero — evita que causa "power" capture radios CPE/PTP
         if any(x in n for x in ("PTP", "_AP_", "CPE", "_RF_", "_WL_", "RADIO", "WISPI", "UBNT", "MIMOSA", "CAMBIUM", "AIRMAX")):
             return "wl"
+        # Energía name check: patrones específicos con separadores para evitar falsos positivos
+        # "GENERADOR"/"GENSET" en lugar de bare "GEN" (que matchea REGENT, GENERAL, GENERA…)
+        if any(x in n for x in ("UPS", "PDU", "ELEC", "BATT", "ENERGIA", "ENERG", "GENERADOR", "GENSET", "PLANTA")):
+            return "energia"
+        if any(x in n for x in ("_GEN_", "_GEN-", "-GEN_", "-GEN-")):
+            return "energia"
+        # Causa de energía solo como desempate (ya descartamos WL por nombre arriba)
+        if any(x in c for x in ("energia", "power", "ups", "battery", "voltage")):
+            return "energia"
+        # WL por causa como segundo nivel
         if any(x in c for x in ("signal", "airtime", "rf ", "wireless")):
             return "wl"
         # Datos: switches, routers, fibra — por defecto
@@ -1682,7 +1687,7 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
             "hostName":      host_name,
             "type":          cause,
             "message":       a.get("message", ""),
-            "severity":      sev_map.get(a.get("severity"), a.get("severity", "warning")),
+            "severity":      sev_map.get(a.get("severity") or "warning", a.get("severity") or "warning"),
             "timestamp":     a.get("triggered_at") or a.get("triggeredAt", ""),
             "ticketCreated": a.get("ticket_created", False) or (_match_ticket(a, tickets) is not None),
             "odooTicketId":  _match_ticket(a, tickets),
@@ -1699,7 +1704,7 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
     result.sort(key=lambda x: 0 if x["severity"] == "critical" else 1)
     # 1. board priority: Energía(1) < Datos(2) < WL(3)
     result.sort(key=lambda x: x["boardPriority"])
-    return result
+    return result[:limit]
 
 @app.get("/api/noc/summary")
 def get_noc_summary():

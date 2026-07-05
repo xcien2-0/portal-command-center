@@ -50,7 +50,7 @@ async function _refresh() {
       const raw = await citiesRes.json();
       _cities = Array.isArray(raw) ? raw.map(transformCity) : [];
     }
-    if (alertsRes.ok)  _alerts = await alertsRes.json();
+    if (alertsRes.ok) { const raw = await alertsRes.json(); _alerts = Array.isArray(raw) ? raw : []; }
     _lastFetch = Date.now();
   } catch (e) {
     console.warn('[NOCBoard] Error fetching via backend:', e);

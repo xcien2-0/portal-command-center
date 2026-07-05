@@ -161,7 +161,11 @@ function MtrModal({ host, onClose }: { host: NOCHost; onClose: () => void }) {
         if (data.hops) setHops(data.hops);
         if (data.done) { setStatus('done'); es.close(); }
         if (data.error) { setError(data.error); setStatus('error'); es.close(); }
-      } catch {}
+      } catch {
+        setError('Error procesando respuesta MTR');
+        setStatus('error');
+        es.close();
+      }
     };
     es.onerror = () => { setStatus('error'); setError('Conexión perdida'); es.close(); };
     return () => es.close();
@@ -665,9 +669,9 @@ function AlertStream({ alerts }: { alerts: NOCAlert[] }) {
                     </span>
                     <span style={{ fontSize: 8, color: DIM, fontFamily: 'monospace', flexShrink: 0 }}>{time}</span>
                   </div>
-                  {a.message && (
+                  {(a.message || a.type) && (
                     <div style={{ fontSize: 9, color: DIM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                      {a.message}
+                      {a.message || a.type}
                     </div>
                   )}
                   {a.siteName && (
