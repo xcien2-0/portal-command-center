@@ -3,7 +3,7 @@ import { API_BASE as API } from '../../../config';
 import {
   Search, X, ScanLine, ArrowLeft, Check,
   ChevronRight, RefreshCw,
-  MapPin, User, Tag, AlertCircle, Layers, Printer
+  MapPin, User, Tag, AlertCircle, Layers, Printer, Truck, Warehouse
 } from 'lucide-react';
 import { useTabTrack } from '../../../hooks/useTabTrack';
 
@@ -960,8 +960,217 @@ function OdooInventarioTab() {
   );
 }
 
+// ── Stock por Plaza ───────────────────────────────────────────────────────────
+const PLAZAS = [
+  { code: 'CDMX', name: 'CDMX', flag: '🏙️' },
+  { code: 'MTY',  name: 'Monterrey', flag: '⛰️' },
+  { code: 'QRO',  name: 'Querétaro', flag: '🏛️' },
+  { code: 'GDL',  name: 'Guadalajara', flag: '🌵' },
+];
+
+function StockPlazasTab() {
+  const [data, setData]       = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [plaza, setPlaza]     = useState('MTY');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all(PLAZAS.map(p =>
+      fetch(`${API}/api/inv-transfers/stock/${p.code}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => [p.code, d])
+    )).then(results => {
+      const map: Record<string, any> = {};
+      results.forEach(([code, d]) => { if (d) map[code as string] = d; });
+      setData(map);
+      setLoading(false);
+    });
+  }, []);
+
+  const current = data[plaza];
+  const products: any[] = current?.products || [];
+  const totalItems = Object.values(data).reduce((acc, d) => acc + (d?.products?.length || 0), 0);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Resumen plazas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+        {PLAZAS.map(p => {
+          const d = data[p.code];
+          const prods = d?.products || [];
+          const ok = prods.filter((x: any) => x.quantity > 0).length;
+          const low = prods.filter((x: any) => x.quantity <= 0).length;
+          return (
+            <button key={p.code} onClick={() => setPlaza(p.code)} style={{
+              background: plaza === p.code ? T.teal + '22' : T.surface,
+              border: `2px solid ${plaza === p.code ? T.teal : T.border}`,
+              borderRadius: 10, padding: '12px 10px', cursor: 'pointer',
+              textAlign: 'left' as const, transition: 'all 0.15s',
+            }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>{p.flag}</div>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{p.name}</div>
+              <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>
+                {loading ? '...' : `${prods.length} productos`}
+              </div>
+              {!loading && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  {ok > 0 && <span style={{ background: '#00ff8822', color: T.teal, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>✓ {ok}</span>}
+                  {low > 0 && <span style={{ background: '#ff336622', color: T.red, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>⚠ {low}</span>}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tabla de productos */}
+      <div style={{ background: T.surface, borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>
+            {PLAZAS.find(p => p.code === plaza)?.flag} Stock — {PLAZAS.find(p => p.code === plaza)?.name}
+          </span>
+          <span style={{ color: T.dim, fontSize: 11 }}>{products.length} productos</span>
+        </div>
+        {loading ? (
+          <div style={{ padding: 32, textAlign: 'center' as const, color: T.dim }}>Cargando stock...</div>
+        ) : products.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center' as const, color: T.dim }}>Sin productos registrados en esta plaza</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+            <thead>
+              <tr style={{ background: T.card }}>
+                {['Referencia', 'Producto', 'Cantidad'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left' as const, color: T.dim, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p: any, i: number) => (
+                <tr key={i} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? 'transparent' : T.card + '44' }}>
+                  <td style={{ padding: '10px 16px', color: T.dim, fontSize: 12, fontFamily: 'monospace' }}>{p.product_ref}</td>
+                  <td style={{ padding: '10px 16px', color: T.text, fontSize: 12 }}>{p.product_name}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{
+                      background: p.quantity > 0 ? '#00ff8822' : '#ff336622',
+                      color: p.quantity > 0 ? T.teal : T.red,
+                      borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700,
+                    }}>{p.quantity > 0 ? `+${p.quantity}` : p.quantity}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Equipos en Tránsito ───────────────────────────────────────────────────────
+const ESTADO_COLOR: Record<string, string> = {
+  draft:     '#8ba3b8',
+  confirmed: '#ffcc00',
+  shipped:   '#00aaff',
+  received:  '#00ff88',
+  cancelled: '#ff3366',
+};
+const ESTADO_LABEL: Record<string, string> = {
+  draft:     'Borrador',
+  confirmed: 'Confirmado',
+  shipped:   'En camino',
+  received:  'Recibido',
+  cancelled: 'Cancelado',
+};
+
+function TransitoTab() {
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [filtro, setFiltro]       = useState<string>('all');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch(`${API}/api/inv-transfers/`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { setTransfers(Array.isArray(d) ? d : d.transfers || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = filtro === 'all' ? transfers : transfers.filter(t => t.state === filtro);
+  const counts: Record<string, number> = {};
+  transfers.forEach(t => { counts[t.state] = (counts[t.state] || 0) + 1; });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Filtros de estado */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+        {[['all', 'Todos', T.dim], ...Object.entries(ESTADO_LABEL).map(([k, v]) => [k, v, ESTADO_COLOR[k]])].map(([k, label, color]) => (
+          <button key={k} onClick={() => setFiltro(k)} style={{
+            background: filtro === k ? color + '33' : T.surface,
+            border: `1px solid ${filtro === k ? color : T.border}`,
+            color: filtro === k ? color : T.dim,
+            borderRadius: 8, padding: '6px 14px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          }}>
+            {label} {k !== 'all' && counts[k] ? `(${counts[k]})` : k === 'all' ? `(${transfers.length})` : '(0)'}
+          </button>
+        ))}
+        <button onClick={load} style={{ marginLeft: 'auto', background: T.surface, border: `1px solid ${T.border}`, color: T.dim, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 11 }}>
+          ↻ Actualizar
+        </button>
+      </div>
+
+      {/* Lista de transferencias */}
+      {loading ? (
+        <div style={{ padding: 32, textAlign: 'center' as const, color: T.dim }}>Cargando transferencias...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: 32, textAlign: 'center' as const, color: T.dim }}>
+          {filtro === 'shipped' ? '✅ Sin equipos en tránsito actualmente' : 'Sin transferencias en este estado'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filtered.map((t: any) => {
+            const color = ESTADO_COLOR[t.state] || T.dim;
+            const totalPiezas = t.lines?.reduce((s: number, l: any) => s + (l.quantity || 0), 0) || 0;
+            return (
+              <div key={t.token_id} style={{ background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: `4px solid ${color}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ color: T.text, fontWeight: 700, fontSize: 13 }}>{t.token_name}</span>
+                      <span style={{ background: color + '22', color, borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>
+                        {ESTADO_LABEL[t.state] || t.state}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 11, color: T.dim }}>
+                      <span>📦 Origen: <b style={{ color: T.text }}>{t.origin_warehouse}</b></span>
+                      <span>📍 Destino: <b style={{ color: T.text }}>{t.dest_warehouse}</b></span>
+                      <span>🔢 {totalPiezas} piezas en {t.lines?.length || 0} líneas</span>
+                      {t.created_at && <span>📅 {t.created_at.slice(0,10)}</span>}
+                    </div>
+                    {t.notes && <div style={{ fontSize: 11, color: T.dim, marginTop: 4, fontStyle: 'italic' }}>"{t.notes}"</div>}
+                  </div>
+                </div>
+                {t.lines?.length > 0 && (
+                  <div style={{ borderTop: `1px solid ${T.border}`, padding: '8px 16px', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                    {t.lines.map((l: any, i: number) => (
+                      <span key={i} style={{ background: T.card, borderRadius: 6, padding: '3px 8px', fontSize: 11, color: T.text }}>
+                        {l.product_name} × {l.quantity}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
-type TabId = 'inventario' | 'scanner' | 'etiquetas' | 'odoo';
+type TabId = 'inventario' | 'scanner' | 'etiquetas' | 'odoo' | 'plazas' | 'transito';
 interface Props { theme?: any; initialTab?: TabId }
 
 export default function InventarioSection({ initialTab = 'inventario' }: Props) {
@@ -987,6 +1196,8 @@ export default function InventarioSection({ initialTab = 'inventario' }: Props) 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.surface, padding: 4, borderRadius: 12, alignSelf: 'flex-start' }}>
         {([
+          ['plazas',     'Stock por Plaza',    Warehouse],
+          ['transito',   'En Tránsito',        Truck],
           ['inventario', 'Inventario Privado', Layers],
           ['odoo',       'Inventario Odoo',    Tag],
           ['scanner',    'Scanner',            ScanLine],
@@ -1007,6 +1218,8 @@ export default function InventarioSection({ initialTab = 'inventario' }: Props) 
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {tab === 'plazas'     && <StockPlazasTab />}
+        {tab === 'transito'   && <TransitoTab />}
         {tab === 'inventario' && <InventarioTab onScanActivo={handleScanActivo} />}
 
         {tab === 'scanner' && (
