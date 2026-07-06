@@ -3800,8 +3800,8 @@ import threading as _threading
 
 TN360_API       = "https://api-latam.telematics.com/v1"
 TN360_AUTH_URL  = "https://id-mx.telematics.com/auth/realms/TN360DB/protocol/openid-connect/token"
-TN360_USER      = "hector.elizondo@xcien.com"
-TN360_PASS      = "Diciembre#05121980"
+TN360_USER      = os.environ.get("TN360_USER", "")
+TN360_PASS      = os.environ.get("TN360_PASS", "")
 
 _gps_cache: dict = {"data": [], "ts": 0, "token": None, "token_ts": 0}
 _gps_lock = _threading.Lock()
@@ -8244,6 +8244,77 @@ def hd_responder(ticket_id: int, req: HdResponderReq):
         [[ticket_id]], {"body": cuerpo, "message_type": "comment",
                         "subtype_xmlid": "mail.mt_comment"})
     return {"ok": True, "ticket_id": ticket_id}
+
+# ─── Syscom API ───────────────────────────────────────────────────────────────
+
+SYSCOM_CLIENT_ID     = os.environ.get("SYSCOM_CLIENT_ID", "")
+SYSCOM_CLIENT_SECRET = os.environ.get("SYSCOM_CLIENT_SECRET", "")
+SYSCOM_TOKEN_URL     = "https://developers.syscom.mx/oauth/token"
+SYSCOM_API_BASE      = "https://developers.syscom.mx/api/v1"
+
+_syscom_token_cache: dict = {"token": None, "expires_at": 0}
+_syscom_lock = _threading.Lock()
+
+def _syscom_get_token() -> str:
+    with _syscom_lock:
+        now = time.time()
+        if _syscom_token_cache["token"] and now < _syscom_token_cache["expires_at"]:
+            return _syscom_token_cache["token"]
+        if not SYSCOM_CLIENT_ID or not SYSCOM_CLIENT_SECRET:
+            raise HTTPException(status_code=503, detail="Syscom no configurado — agrega SYSCOM_CLIENT_ID y SYSCOM_CLIENT_SECRET al .env")
+        resp = _requests.post(SYSCOM_TOKEN_URL, data={
+            "client_id":     SYSCOM_CLIENT_ID,
+            "client_secret": SYSCOM_CLIENT_SECRET,
+            "grant_type":    "client_credentials",
+        }, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        _syscom_token_cache["token"]      = data["access_token"]
+        _syscom_token_cache["expires_at"] = now + data.get("expires_in", 31536000) - 300
+        return _syscom_token_cache["token"]
+
+def _syscom_get(path: str, params: dict = None):
+    token = _syscom_get_token()
+    r = _requests.get(f"{SYSCOM_API_BASE}/{path.lstrip('/')}",
+                      headers={"Authorization": f"Bearer {token}"},
+                      params=params or {}, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+@app.get("/api/syscom/categorias")
+def syscom_categorias():
+    return _syscom_get("/categorias")
+
+@app.get("/api/syscom/productos")
+def syscom_productos(
+    busqueda: str = "",
+    categoria: str = "",
+    marca: str = "",
+    pagina: int = 1,
+):
+    if not busqueda and not categoria and not marca:
+        raise HTTPException(status_code=422, detail="Debes enviar al menos: busqueda, categoria o marca")
+    params: dict = {"pagina": pagina}
+    if busqueda:  params["busqueda"]  = busqueda
+    if categoria: params["categoria"] = categoria
+    if marca:     params["marca"]     = marca
+    return _syscom_get("/productos", params)
+
+@app.get("/api/syscom/productos/{producto_id}")
+def syscom_producto_detalle(producto_id: str):
+    return _syscom_get(f"/productos/{producto_id}")
+
+@app.get("/api/syscom/marcas")
+def syscom_marcas():
+    return _syscom_get("/marcas")
+
+@app.get("/api/syscom/status")
+def syscom_status():
+    try:
+        token = _syscom_get_token()
+        return {"ok": True, "token_cached": bool(token)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
