@@ -706,6 +706,7 @@ const STATE_LABEL: Record<WFMOrderState, string> = {
   ANTEPROYECTO:         'Anteproyecto Listo',
   ORDEN_IMPLEMENTACION: 'Orden de Imp.',
   ALMACEN_VALIDACION:   'Validando Almacén',
+  ESPERA_ALMACEN:       '⏸ Espera Almacén',
   ESPERA_INVENTARIO:    'Espera Inventario',
   APROVISIONAMIENTO:    'En Aprovisionamiento',
   REVISION_PM:          'Revisión Final PM',
@@ -723,6 +724,7 @@ const STATE_COLOR: Partial<Record<WFMOrderState, string>> = {
   BACKLOG:        '#FF4757',
   INSTALACION:    '#FFB703',
   NOC_VALIDACION: '#00B4D8',
+  ESPERA_ALMACEN: '#F97316',
 };
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -1331,6 +1333,9 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
   const [modelo, setModelo]         = useState('');
   const [serie, setSerie]           = useState('');
   const [saving, setSaving]         = useState(false);
+  const [showDetener, setShowDetener] = useState(false);
+  const [motivoDetener, setMotivoDetener] = useState('');
+  const [savingDetener, setSavingDetener] = useState(false);
 
   if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
 
@@ -1358,8 +1363,49 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
 
   const inputStyle = { width: '100%', padding: '8px 10px', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 8, color: theme.text, fontSize: 12, boxSizing: 'border-box' as const };
 
+  const handleDetener = async () => {
+    if (!motivoDetener.trim()) return;
+    setSavingDetener(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/almacen/espera`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, motivo: motivoDetener, responsable_almacen: 'Jefe Almacén', usuario: 'Jefe Almacén' }),
+      });
+      if (res.ok) { setShowDetener(false); setMotivoDetener(''); onRefresh(); }
+      else { const e = await res.json(); alert(e.detail); }
+    } finally { setSavingDetener(false); }
+  };
+
+  const handleLiberar = async () => {
+    setSavingDetener(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/wfm/almacen/liberar/${order.id}?usuario=Jefe+Almacén`, { method: 'POST' });
+      if (res.ok) { onRefresh(); }
+      else { const e = await res.json(); alert(e.detail); }
+    } finally { setSavingDetener(false); }
+  };
+
+  const esDetenido = order.estado === 'ESPERA_ALMACEN';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Banner ESPERA_ALMACEN si ya está detenido */}
+      {esDetenido && (
+        <div style={{ padding: 14, background: 'rgba(249,115,22,0.1)', borderRadius: 10, border: '2px solid rgba(249,115,22,0.4)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#F97316', marginBottom: 6 }}>⏸ CASO DETENIDO POR ALMACÉN</div>
+          {order.almacen?.motivo && <div style={{ fontSize: 12, color: theme.text, marginBottom: 4 }}>Motivo: <b>{order.almacen.motivo}</b></div>}
+          {order.almacen?.respondido_por && <div style={{ fontSize: 11, color: theme.dim }}>Registrado por: {order.almacen.respondido_por}</div>}
+          {order.almacen?.fecha_respuesta && <div style={{ fontSize: 11, color: theme.dim }}>Fecha: {order.almacen.fecha_respuesta.slice(0,10)}</div>}
+          <button
+            onClick={handleLiberar}
+            disabled={savingDetener}
+            style={{ marginTop: 12, width: '100%', padding: 10, borderRadius: 8, border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', background: '#00C896', color: '#000' }}>
+            {savingDetener ? 'Liberando...' : '✅ Equipo disponible — Liberar caso'}
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ padding: 14, background: 'rgba(255,183,3,0.06)', borderRadius: 10, border: '1px solid rgba(255,183,3,0.2)' }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: '#FFB703', marginBottom: 4 }}>📦 RESPUESTA DE ALMACÉN — HU-05</div>
@@ -1438,6 +1484,44 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
         style={{ padding: 12, borderRadius: 10, border: 'none', fontWeight: 800, fontSize: 13, cursor: respuesta ? 'pointer' : 'not-allowed', background: respuesta ? '#FFB703' : 'rgba(255,255,255,0.06)', color: respuesta ? '#000' : theme.dim, transition: 'all 0.2s' }}>
         {saving ? 'Enviando...' : respuesta ? `📦 REGISTRAR RESPUESTA` : 'Selecciona disponibilidad'}
       </button>
+
+      {/* Separador */}
+      <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 16 }}>
+        {!esDetenido && !showDetener && (
+          <button
+            onClick={() => setShowDetener(true)}
+            style={{ width: '100%', padding: 11, borderRadius: 10, border: `1px solid rgba(249,115,22,0.4)`, fontWeight: 700, fontSize: 12, cursor: 'pointer', background: 'rgba(249,115,22,0.08)', color: '#F97316', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            ⏸ Detener por Almacén
+          </button>
+        )}
+
+        {!esDetenido && showDetener && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', textTransform: 'uppercase' }}>
+              ⏸ Motivo del bloqueo
+            </div>
+            <input
+              style={{ ...inputStyle, border: '1px solid rgba(249,115,22,0.5)' }}
+              placeholder="ej. Sin stock de antena Ubiquiti PowerBeam — proveedor sin fecha"
+              value={motivoDetener}
+              onChange={e => setMotivoDetener(e.target.value)}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                onClick={() => { setShowDetener(false); setMotivoDetener(''); }}
+                style={{ padding: 9, borderRadius: 8, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.dim, fontSize: 12, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleDetener}
+                disabled={!motivoDetener.trim() || savingDetener}
+                style={{ padding: 9, borderRadius: 8, border: 'none', fontWeight: 800, fontSize: 12, cursor: motivoDetener.trim() ? 'pointer' : 'not-allowed', background: motivoDetener.trim() ? '#F97316' : 'rgba(255,255,255,0.06)', color: motivoDetener.trim() ? '#fff' : theme.dim }}>
+                {savingDetener ? 'Guardando...' : '⏸ Confirmar'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -2006,6 +2090,7 @@ const _FALLBACK_SLA_LIMITS: Record<string, number> = {
   ANTEPROYECTO:         3,
   ORDEN_IMPLEMENTACION: 2,
   ALMACEN_VALIDACION:   2,
+  ESPERA_ALMACEN:       7,
   ESPERA_INVENTARIO:    5,
   APROVISIONAMIENTO:    1,
   REVISION_PM:          1,
@@ -2045,7 +2130,180 @@ interface EscEntry {
   status: string; cleared_at: string | null; cleared_by: string | null; notas: string;
 }
 
-type ViewMode = 'kanban' | 'timeline' | 'roles';
+type ViewMode = 'kanban' | 'timeline' | 'roles' | 'visibilidad';
+
+// ── VisibilidadView — Cuellos de Botella ──────────────────────────────────────
+const AREA_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  'NOC':          { label: 'NOC',       color: '#00B4D8', icon: '📡' },
+  'Dispatch':     { label: 'Dispatch',  color: '#FF6B35', icon: '🚛' },
+  'Almacén':      { label: 'Almacén',   color: '#FFB703', icon: '📦' },
+  'Operaciones':  { label: 'Campo',     color: '#00ff88', icon: '🔧' },
+  'NOC Cierra':   { label: 'Cierre',    color: '#00C896', icon: '✅' },
+};
+const ORDER_AREA: Partial<Record<WFMOrderState, string>> = {
+  SOLICITUD_PREVENTA:   'NOC',    ANTEPROYECTO:      'NOC',
+  ORDEN_IMPLEMENTACION: 'PM',     ALMACEN_VALIDACION:'Almacén',
+  ESPERA_ALMACEN:       'Almacén',ESPERA_INVENTARIO: 'Almacén',
+  APROVISIONAMIENTO:    'NOC',    REVISION_PM:       'PM',
+  LISTO_INSTALACION:    'Campo',  INSTALACION:       'Campo',
+  NOC_VALIDACION:       'NOC',    FACTURACION:       'Admin',
+};
+const ORDER_AREA_COLOR: Record<string, string> = {
+  'NOC': '#00B4D8', 'PM': '#FF4757', 'Almacén': '#F97316',
+  'Campo': '#00ff88', 'Admin': '#00C896',
+};
+
+function semaforo(dias: number, umbralAlerta = 3, umbralCritico = 7) {
+  if (dias >= umbralCritico) return { color: '#EF4444', label: 'Crítico' };
+  if (dias >= umbralAlerta)  return { color: '#F59E0B', label: 'Alerta' };
+  return { color: '#00C896', label: 'OK' };
+}
+
+function VisibilidadView({ theme, orders, fieldTickets }: {
+  theme: ThemeConfig; orders: WFMOrder[]; fieldTickets: FieldTicket[];
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const hoy = new Date();
+
+  // ── Field tickets por etapa con antigüedad ──────────────────────────────────
+  const ftPorEtapa: Record<string, FieldTicket[]> = {};
+  for (const t of fieldTickets) {
+    const e = t.etapa_op || 'Sin etapa';
+    if (!ftPorEtapa[e]) ftPorEtapa[e] = [];
+    ftPorEtapa[e].push(t);
+  }
+
+  // ── Orders por área con antigüedad ─────────────────────────────────────────
+  const ordPorArea: Record<string, WFMOrder[]> = {};
+  for (const o of orders.filter(o => o.estado !== 'CERRADO')) {
+    const area = ORDER_AREA[o.estado] || o.estado;
+    if (!ordPorArea[area]) ordPorArea[area] = [];
+    ordPorArea[area].push(o);
+  }
+
+  const diasFT = (t: FieldTicket) => {
+    const fc = t.fecha_creacion?.slice(0, 10);
+    if (!fc) return 0;
+    return Math.floor((hoy.getTime() - new Date(fc).getTime()) / 86400000);
+  };
+  const diasOrd = (o: WFMOrder) => {
+    const fc = o.fecha_creacion?.slice(0, 10);
+    if (!fc) return 0;
+    return Math.floor((hoy.getTime() - new Date(fc).getTime()) / 86400000);
+  };
+
+  const block = (
+    titulo: string, subtitulo: string, areaKey: string,
+    items: { id: string; nombre: string; dias: number; extra?: string }[],
+    color: string, icon: string
+  ) => {
+    const criticos  = items.filter(i => i.dias >= 7).length;
+    const alertas   = items.filter(i => i.dias >= 3 && i.dias < 7).length;
+    const maxDias   = items.length ? Math.max(...items.map(i => i.dias)) : 0;
+    const sem       = semaforo(maxDias);
+    const isOpen    = selected === areaKey;
+    const sorted    = [...items].sort((a, b) => b.dias - a.dias).slice(0, 15);
+
+    return (
+      <div key={areaKey} style={{
+        borderRadius: 12, overflow: 'hidden',
+        border: `1.5px solid ${isOpen ? color : 'rgba(255,255,255,0.08)'}`,
+        background: isOpen ? `${color}08` : 'rgba(255,255,255,0.02)',
+        transition: 'all 0.2s',
+      }}>
+        {/* Header del bloque */}
+        <button onClick={() => setSelected(isOpen ? null : areaKey)}
+          style={{ width: '100%', padding: '14px 16px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' as const, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 22 }}>{icon}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: theme.text, fontWeight: 800, fontSize: 14 }}>{titulo}</span>
+              <span style={{ background: `${sem.color}22`, color: sem.color, borderRadius: 6, padding: '1px 8px', fontSize: 10, fontWeight: 700 }}>{sem.label}</span>
+            </div>
+            <span style={{ color: theme.dim, fontSize: 11 }}>{subtitulo}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {criticos > 0  && <span style={{ background: '#EF444422', color: '#EF4444', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>🔴 {criticos}</span>}
+            {alertas > 0   && <span style={{ background: '#F59E0B22', color: '#F59E0B', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>🟡 {alertas}</span>}
+            <span style={{ background: `${color}22`, color, borderRadius: 8, padding: '3px 12px', fontSize: 14, fontWeight: 800 }}>{items.length}</span>
+            <span style={{ color: theme.dim, fontSize: 16 }}>{isOpen ? '▲' : '▼'}</span>
+          </div>
+        </button>
+
+        {/* Detalle expandido */}
+        {isOpen && (
+          <div style={{ borderTop: `1px solid rgba(255,255,255,0.06)`, padding: '0 16px 16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' as const, marginTop: 12 }}>
+              <thead>
+                <tr>
+                  {['ID', 'Caso', extra => extra, 'Días'].map((h, i) => (
+                    <th key={i} style={{ textAlign: 'left' as const, fontSize: 10, fontWeight: 700, color: theme.dim, textTransform: 'uppercase' as const, padding: '4px 8px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                      {typeof h === 'string' ? h : (sorted[0]?.extra !== undefined ? 'Técnico' : '')}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((item, i) => {
+                  const s = semaforo(item.dias);
+                  return (
+                    <tr key={item.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                      <td style={{ padding: '6px 8px', fontSize: 11, color: theme.dim, fontFamily: 'monospace' }}>{item.id}</td>
+                      <td style={{ padding: '6px 8px', fontSize: 11, color: theme.text, maxWidth: 280 }}>{item.nombre.slice(0, 55)}{item.nombre.length > 55 ? '…' : ''}</td>
+                      <td style={{ padding: '6px 8px', fontSize: 11, color: theme.dim }}>{item.extra || '—'}</td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <span style={{ background: `${s.color}22`, color: s.color, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                          {item.dias}d
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {items.length > 15 && <div style={{ fontSize: 11, color: theme.dim, marginTop: 8, textAlign: 'center' as const }}>… y {items.length - 15} más</div>}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto', flex: 1 }}>
+      <div style={{ fontSize: 12, color: theme.dim, marginBottom: 4 }}>
+        🔍 Cuellos de botella — click en un área para ver los casos. 🔴 ≥7 días · 🟡 3-6 días · 🟢 &lt;3 días
+      </div>
+
+      {/* Field Tickets (Operacional) */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8 }}>
+        ⚡ Habilitaciones & Fallas (Odoo CAST)
+      </div>
+      {Object.entries(AREA_CONFIG).map(([key, cfg]) => {
+        const items = (ftPorEtapa[key] || []).map(t => ({
+          id: t.id, nombre: t.nombre, dias: diasFT(t), extra: t.tecnico || 'Sin asignar'
+        }));
+        if (!items.length) return null;
+        return block(cfg.label, `${items.length} casos activos`, key, items, cfg.color, cfg.icon);
+      })}
+
+      {/* Pipeline Comercial */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, textTransform: 'uppercase', letterSpacing: 1, marginTop: 12 }}>
+        📋 Pipeline Comercial (Órdenes WFM)
+      </div>
+      {Object.entries(ordPorArea)
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([area, ords]) => {
+          const items = ords.map(o => ({
+            id: o.id, nombre: `${o.cliente} — ${o.servicio}`, dias: diasOrd(o), extra: o.comercial
+          }));
+          const color = ORDER_AREA_COLOR[area] || '#888';
+          const icons: Record<string, string> = { NOC:'📡', PM:'📋', Almacén:'📦', Campo:'🔧', Admin:'💳' };
+          return block(area, `${items.length} órdenes activas`, `ord-${area}`, items, color, icons[area] || '📌');
+        })}
+    </div>
+  );
+}
+
 interface SLABannerProps {
   theme: ThemeConfig;
   orders: WFMOrder[];
@@ -2238,9 +2496,10 @@ function SLAEscalationBanner({ theme, orders, viewMode, onViewChange }: SLABanne
         {onViewChange && (
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)', marginLeft: 8 }}>
             {([
-              ['kanban',   '⬛', 'Kanban'],
-              ['timeline', '📅', 'Timeline'],
-              ['roles',    '👤', 'Roles'],
+              ['visibilidad', '🔍', 'Cuellos de Botella'],
+              ['kanban',      '⬛', 'Kanban'],
+              ['timeline',    '📅', 'Timeline'],
+              ['roles',       '👤', 'Roles'],
             ] as [ViewMode, string, string][]).map(([id, icon, label]) => (
               <button key={id} onClick={() => onViewChange(id)} style={{
                 padding: '4px 11px', borderRadius: 5, border: 'none', cursor: 'pointer',
@@ -2498,7 +2757,7 @@ function SLAEscalationBanner({ theme, orders, viewMode, onViewChange }: SLABanne
 // ── Timeline View ─────────────────────────────────────────────────────────────
 const PIPELINE_STATES: WFMOrderState[] = [
   'SOLICITUD_PREVENTA', 'ANTEPROYECTO', 'ORDEN_IMPLEMENTACION',
-  'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO',
+  'ALMACEN_VALIDACION', 'ESPERA_ALMACEN', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO',
   'REVISION_PM', 'LISTO_INSTALACION', 'INSTALACION', 'NOC_VALIDACION',
   'FACTURACION', 'CERRADO',
 ];
@@ -2508,6 +2767,7 @@ const LANE_FOR: Partial<Record<WFMOrderState, { color: string; area: string }>> 
   ANTEPROYECTO:         { color: '#00B4D8', area: 'NOC' },
   ORDEN_IMPLEMENTACION: { color: '#FF4757', area: 'PM' },
   ALMACEN_VALIDACION:   { color: '#FF4757', area: 'PM' },
+  ESPERA_ALMACEN:       { color: '#F97316', area: 'Almacén' },
   ESPERA_INVENTARIO:    { color: '#FFB703', area: 'PM' },
   APROVISIONAMIENTO:    { color: '#A855F7', area: 'PM' },
   REVISION_PM:          { color: '#FF4757', area: 'PM' },
@@ -2692,7 +2952,7 @@ const KANBAN_LANES: {
     icon: '📋',
     color: '#FF4757',
     slaLabel: '2 hrs',
-    states: ['ORDEN_IMPLEMENTACION', 'ALMACEN_VALIDACION', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO', 'REVISION_PM'],
+    states: ['ORDEN_IMPLEMENTACION', 'ALMACEN_VALIDACION', 'ESPERA_ALMACEN', 'ESPERA_INVENTARIO', 'APROVISIONAMIENTO', 'REVISION_PM'],
   },
   {
     id: 'campo',
@@ -2709,6 +2969,7 @@ const COLUMN_SHORT: Partial<Record<WFMOrderState, string>> = {
   ANTEPROYECTO:         'Anteproyecto',
   ORDEN_IMPLEMENTACION: 'Orden Imp.',
   ALMACEN_VALIDACION:   'Almacén',
+  ESPERA_ALMACEN:       '⏸ Esp. Almacén',
   ESPERA_INVENTARIO:    'Espera Inv.',
   APROVISIONAMIENTO:    'Aprovision.',
   REVISION_PM:          'Rev. PM',
@@ -2892,10 +3153,11 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
   const [dataSource, setDataSource] = useState<'operacional' | 'comercial'>('operacional');
   const [role, setRole]           = useState<WFMRole>('comercial');
   const [orders, setOrders]       = useState<WFMOrder[]>([]);
+  const [fieldTickets, setFieldTickets] = useState<FieldTicket[]>([]);
   const [loading, setLoading]     = useState(true);
   const [selectedId, setSelected] = useState<string | null>(null);
   const [dispatchTab, setDispatchTab] = useState<DispatchTab>('checklist');
-  const [viewMode, setViewMode]   = useState<ViewMode>('kanban');
+  const [viewMode, setViewMode]   = useState<ViewMode>('visibilidad');
   const trackTab = useTabTrack('wfm');
 
   // Forms
@@ -2955,7 +3217,12 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+    fetch(`${API_BASE}/api/wfm/field-tickets?limit=500`)
+      .then(r => r.ok ? r.json() : { tickets: [] })
+      .then(d => setFieldTickets(d.tickets || []));
+  }, []);
 
   const handleCreate = async () => {
     if (!newOrder.cliente || !newOrder.servicio) return;
@@ -3070,7 +3337,12 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         />
       )}
 
-      {dataSource === 'comercial' && (<div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
+      {/* ── Vista Cuellos de Botella — disponible para ambos data sources ── */}
+      {viewMode === 'visibilidad' && (
+        <VisibilidadView theme={theme} orders={orders} fieldTickets={fieldTickets} />
+      )}
+
+      {dataSource === 'comercial' && viewMode !== 'visibilidad' && (<div style={{ display: 'flex', flex: 1, gap: 20, minHeight: 0 }}>
       {/* Sidebar de Roles — hidden in kanban view */}
       {viewMode === 'roles' && <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: theme.dim, marginBottom: 8, textTransform: 'uppercase' }}>Vistas por Rol</h3>

@@ -35,6 +35,241 @@ const CONTEXT_MODULES = [
   { id: 'incidentes', label: 'Incidentes activos', icon: '🚨'  },
 ];
 
+type TabId = 'chat' | 'mapa';
+
+// ── Mapa de Sistemas ─────────────────────────────────────────────────────────
+
+interface SysNode {
+  id: string; label: string; sub: string;
+  status: 'ok' | 'warn' | 'err'; icon: string;
+  r: number; ring: number; angle: number; detail: string;
+}
+
+const SYS_NODES: SysNode[] = [
+  { id:'portal',    label:'XCIEN\nPortal',    sub:'localhost:8080',   status:'ok',   icon:'⚡', r:38, ring:0, angle:0,   detail:'React 18 + FastAPI · 100+ endpoints activos' },
+  { id:'backend',   label:'Backend\nFastAPI', sub:':8002',            status:'ok',   icon:'⚙️', r:26, ring:1, angle:90,  detail:'servidor_academia.py · 8300+ líneas' },
+  { id:'kmz',       label:'KMZ\n29 capas',    sub:'backend/static/',  status:'ok',   icon:'🗺️', r:22, ring:1, angle:160, detail:'Rutas fibra óptica · GeoJSON mapa de red' },
+  { id:'odoo',      label:'Odoo\nwispi17',    sub:'odoo.wispi.mx',    status:'ok',   icon:'🗄️', r:30, ring:2, angle:0,   detail:'ERP Central · 12 modelos · 117K tickets' },
+  { id:'nocboard',  label:'NOCBoard',         sub:':9400',            status:'ok',   icon:'📟', r:26, ring:2, angle:50,  detail:'v3.9.6 · 76 hosts · 29 SNMP energía' },
+  { id:'telegram',  label:'Telegram\nBot',    sub:'api.telegram.org', status:'ok',   icon:'✈️', r:26, ring:2, angle:105, detail:'@jmmc2026_bot · @xcien_nocboard_bot' },
+  { id:'anthropic', label:'IA\nClaude',       sub:'sonnet-4-6',       status:'ok',   icon:'🧠', r:26, ring:2, angle:155, detail:'5 agentes IA · Director · Comité ejecutivo' },
+  { id:'syscom',    label:'Syscom\nAPI',      sub:'OAuth2',           status:'ok',   icon:'🛍️', r:24, ring:2, angle:210, detail:'Catálogo distribuidora · 60 req/min' },
+  { id:'observium', label:'Observium',        sub:'TIMEOUT',          status:'warn', icon:'📡', r:24, ring:2, angle:255, detail:'Proxy activo · credenciales posiblemente expiradas' },
+  { id:'uisp',      label:'UISP',             sub:'502',              status:'warn', icon:'🔗', r:24, ring:2, angle:295, detail:'xcien.uisp.com · token guardado · posible VPN' },
+  { id:'tn360',     label:'TN360\nGPS',       sub:'400',              status:'warn', icon:'🚚', r:24, ring:2, angle:335, detail:'Flotilla vehicular · auth posiblemente expirada' },
+  { id:'gcal',      label:'Google\nCalendar', sub:'Sin token',        status:'err',  icon:'📅', r:22, ring:2, angle:20,  detail:'Sala de juntas · requiere re-autorizar OAuth2' },
+];
+
+const SYS_EDGES: [string, string, 'solid' | 'dashed' | 'inactive'][] = [
+  ['portal','backend','solid'],   ['portal','odoo','solid'],      ['portal','nocboard','solid'],
+  ['portal','telegram','solid'],  ['portal','anthropic','solid'], ['portal','syscom','solid'],
+  ['portal','observium','dashed'],['portal','uisp','dashed'],     ['portal','tn360','dashed'],
+  ['portal','gcal','inactive'],   ['portal','kmz','solid'],
+  ['backend','odoo','solid'],     ['backend','telegram','solid'],
+];
+
+const SYS_STATUS_HEX = { ok: '#22C55E', warn: '#F59E0B', err: '#EF4444' };
+
+const WFM_LANES = [
+  { label: 'NOC / Ing.',  color: '#38BDF8', states: [
+    { name: 'SOLICITUD\nPREVENTA', count: '~28',   crit: false, note: '' },
+    { name: 'ANTE-\nPROYECTO',    count: '135 🔴', crit: true,  note: 'cuello de botella' },
+  ]},
+  { label: 'Almacén',     color: '#F97316', states: [
+    { name: 'ALMACÉN\nVALID.',    count: '~22',   crit: false, note: '' },
+    { name: 'ESPERA\nALMACÉN',    count: '57 ⏸',  crit: false, note: 'Odoo stock' },
+    { name: 'ESPERA\nINVENT.',    count: '~11',   crit: false, note: '' },
+  ]},
+  { label: 'Operaciones', color: '#A78BFA', states: [
+    { name: 'ORDEN\nIMPL.',       count: '~40',   crit: false, note: '' },
+    { name: 'APROVIS.',           count: '~18',   crit: false, note: '' },
+    { name: 'REVISIÓN\nPM',       count: '~9',    crit: false, note: '' },
+  ]},
+  { label: 'Campo',       color: '#22C55E', states: [
+    { name: 'LISTO\nINSTALL.',    count: '~30',   crit: false, note: '' },
+    { name: 'INSTA-\nLACIÓN',    count: '~47 🟡', crit: false, note: '' },
+    { name: 'NOC\nVALID.',        count: '~15',   crit: false, note: '' },
+  ]},
+  { label: 'Finanzas',    color: '#F59E0B', states: [
+    { name: 'FACTU-\nRACIÓN',    count: '~12',   crit: false, note: '' },
+    { name: 'CERRADO',            count: '✓',     crit: false, note: '' },
+  ]},
+];
+
+function MapaSistemasView({ theme }: { theme: ThemeConfig }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef   = useRef<HTMLDivElement>(null);
+  const tipRef    = useRef<{ x: number; y: number; node: SysNode } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; node: SysNode } | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrap   = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const dpr = window.devicePixelRatio || 1;
+    let frameId = 0;
+
+    function resize() {
+      const w = wrap!.clientWidth, h = wrap!.clientHeight;
+      canvas!.width = w * dpr; canvas!.height = h * dpr;
+      canvas!.style.width = w + 'px'; canvas!.style.height = h + 'px';
+    }
+
+    function npos(n: SysNode, W: number, H: number) {
+      const R = [0, Math.min(W, H) * 0.2, Math.min(W, H) * 0.41];
+      if (n.ring === 0) return { x: W / 2, y: H / 2 };
+      const rad = (n.angle - 90) * Math.PI / 180;
+      return { x: W / 2 + Math.cos(rad) * R[n.ring], y: H / 2 + Math.sin(rad) * R[n.ring] };
+    }
+
+    function rgb(hex: string) {
+      return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`;
+    }
+
+    function draw(t: number) {
+      const ctx = canvas!.getContext('2d')!;
+      const W = canvas!.width / dpr, H = canvas!.height / dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const textCol = dark ? '#BDD0E8' : '#1A2B40';
+      const dimCol  = dark ? '#4E6A88' : '#64748B';
+      const bgFill  = dark ? '#0E1B2C' : '#FFFFFF';
+
+      SYS_EDGES.forEach(([a, b, style], idx) => {
+        const na = SYS_NODES.find(n => n.id === a)!, nb = SYS_NODES.find(n => n.id === b)!;
+        const pa = npos(na, W, H), pb = npos(nb, W, H);
+        const r = rgb(SYS_STATUS_HEX[nb.status]);
+        ctx.save(); ctx.setLineDash([]);
+        if (style === 'solid') {
+          ctx.strokeStyle = `rgba(${r},0.3)`; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+          const p = ((t * 0.0008 + idx * 0.13) % 1);
+          ctx.beginPath(); ctx.arc(pa.x+(pb.x-pa.x)*p, pa.y+(pb.y-pa.y)*p, 2.5, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(${r},0.85)`; ctx.fill();
+        } else if (style === 'dashed') {
+          ctx.strokeStyle = `rgba(${rgb('#F59E0B')},0.28)`; ctx.lineWidth = 1; ctx.setLineDash([5,5]);
+          ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+        } else {
+          ctx.strokeStyle = `rgba(${rgb('#EF4444')},0.15)`; ctx.lineWidth = 1; ctx.setLineDash([3,8]);
+          ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      SYS_NODES.forEach(n => {
+        const p = npos(n, W, H);
+        const col = SYS_STATUS_HEX[n.status];
+        const r = rgb(col);
+        const hov = tipRef.current?.node.id === n.id;
+        const rr = n.r + (hov ? 3 : 0);
+        const grd = ctx.createRadialGradient(p.x,p.y,rr*0.3, p.x,p.y,rr*1.9);
+        grd.addColorStop(0, `rgba(${r},${hov?0.2:0.09})`); grd.addColorStop(1, `rgba(${r},0)`);
+        ctx.beginPath(); ctx.arc(p.x,p.y,rr*1.9,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,Math.PI*2);
+        ctx.fillStyle=bgFill; ctx.fill();
+        ctx.strokeStyle=`rgba(${r},${hov?0.9:0.55})`; ctx.lineWidth=hov?2.5:1.5; ctx.stroke();
+        if (n.id==='portal') {
+          const pulse=0.6+0.4*Math.sin(t*0.002);
+          ctx.beginPath(); ctx.arc(p.x,p.y,rr+7,0,Math.PI*2);
+          ctx.strokeStyle=`rgba(0,168,89,${0.12+0.07*pulse})`; ctx.lineWidth=1;
+          ctx.setLineDash([]); ctx.stroke();
+        }
+        ctx.font=`${Math.round(rr*0.7)}px serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(n.icon, p.x, p.y-(n.ring===0?5:3));
+        ctx.beginPath(); ctx.arc(p.x+rr*0.65,p.y-rr*0.65,5,0,Math.PI*2);
+        ctx.fillStyle=col; ctx.fill(); ctx.strokeStyle=bgFill; ctx.lineWidth=1.5; ctx.stroke();
+        const lines=n.label.split('\n'); const fs=n.ring===0?12:10;
+        ctx.font=`${n.ring===0?700:600} ${fs}px system-ui,sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='top';
+        const ly=p.y+rr+5;
+        lines.forEach((line,i)=>{ ctx.fillStyle=hov?col:textCol; ctx.fillText(line,p.x,ly+i*(fs+2)); });
+        if (n.ring>0) { ctx.font=`${fs-2}px system-ui,sans-serif`; ctx.fillStyle=dimCol; ctx.fillText(n.sub,p.x,ly+lines.length*(fs+2)); }
+      });
+    }
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(wrap);
+    const t0 = performance.now();
+    const loop = () => { draw(performance.now()-t0); frameId=requestAnimationFrame(loop); };
+    frameId = requestAnimationFrame(loop);
+    const onMove = (e: MouseEvent) => {
+      const rect = canvas!.getBoundingClientRect();
+      const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+      const W=wrap!.clientWidth, H=wrap!.clientHeight;
+      const found = SYS_NODES.find(n=>{ const p=npos(n,W,H); return Math.hypot(mx-p.x,my-p.y)<n.r+12; })??null;
+      canvas!.style.cursor = found?'pointer':'default';
+      const val = found?{x:e.clientX,y:e.clientY,node:found}:null;
+      tipRef.current=val; setTooltip(val);
+    };
+    const onLeave = () => { tipRef.current=null; setTooltip(null); };
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseleave', onLeave);
+    return () => { cancelAnimationFrame(frameId); ro.disconnect(); canvas.removeEventListener('mousemove',onMove); canvas.removeEventListener('mouseleave',onLeave); };
+  }, []);
+
+  return (
+    <div className="flex flex-col flex-1 overflow-y-auto min-h-0">
+      <div ref={wrapRef} className="relative flex-shrink-0" style={{ height: 360, borderBottom: `1px solid ${theme.border}` }}>
+        <canvas ref={canvasRef} style={{ display:'block', width:'100%', height:'100%' }} />
+        {tooltip && (
+          <div className="fixed z-50 pointer-events-none rounded-lg px-3 py-2"
+               style={{ left: tooltip.x+14, top: tooltip.y-10, background: theme.card,
+                        border:`1px solid ${theme.border}`, boxShadow:'0 8px 24px rgba(0,0,0,.35)', maxWidth:210 }}>
+            <div className="font-bold text-sm mb-1" style={{ color: theme.text }}>
+              {tooltip.node.label.replace('\n',' ')}
+            </div>
+            <div className="font-mono text-xs" style={{ color: SYS_STATUS_HEX[tooltip.node.status] }}>
+              {tooltip.node.status==='ok'?'✓ CONECTADO':tooltip.node.status==='warn'?'⚠ DEGRADADO':'✗ SIN CONEXIÓN'}{' · '}{tooltip.node.sub}
+            </div>
+            <div className="text-xs mt-1" style={{ color: theme.dim }}>{tooltip.node.detail}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 flex-shrink-0">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: theme.dim }}>
+          Pipeline WFM — responsable por área
+        </p>
+        <div className="rounded-lg overflow-hidden border" style={{ borderColor: theme.border, minWidth: 580 }}>
+          {WFM_LANES.map((lane, li) => (
+            <div key={lane.label} className="flex items-stretch"
+                 style={{ borderBottom: li < WFM_LANES.length-1 ? `1px solid ${theme.border}` : undefined }}>
+              <div className="flex-shrink-0 flex items-center px-3 py-2 text-[11px] font-bold border-r w-24"
+                   style={{ color:lane.color, borderColor:theme.border, background:theme.surface, borderLeft:`3px solid ${lane.color}` }}>
+                {lane.label}
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 flex-1 overflow-x-auto" style={{ background:theme.card }}>
+                {lane.states.map((s, si) => (
+                  <div key={s.name} className="flex items-center gap-2">
+                    {si>0 && <span style={{ color:theme.dim }}>→</span>}
+                    <div className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded text-center"
+                         style={{ border:`1px solid ${s.crit?'#EF4444':lane.color}55`,
+                                  background:s.crit?'rgba(239,68,68,0.1)':`${lane.color}12`,
+                                  minWidth:70, animation:s.crit?'wcPulse 2s ease-in-out infinite':undefined }}>
+                      <span className="text-[10px] font-bold leading-tight whitespace-pre"
+                            style={{ color:s.crit?'#EF4444':lane.color }}>{s.name}</span>
+                      <span className="font-mono text-[11px] font-bold"
+                            style={{ color:s.crit?'#EF4444':lane.color }}>{s.count}</span>
+                      {s.note && <span className="text-[9px] font-semibold uppercase tracking-wide"
+                                       style={{ color:s.crit?'#EF4444':theme.dim }}>{s.note}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <style>{`@keyframes wcPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.35)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}`}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const STATUS_COLOR: Record<string, string> = {
   configured: '#22c55e',
   online:     '#22c55e',
@@ -70,6 +305,7 @@ export default function CerebroSection({ theme }: Props) {
   const [loading, setLoading] = useState(false);
   const [temperature, setTemperature] = useState(0.7);
   const [showConfig, setShowConfig] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>('chat');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -201,7 +437,23 @@ export default function CerebroSection({ theme }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
+      {/* ── Tabs ── */}
+      <div className="flex border-b flex-shrink-0 px-5" style={{ borderColor: theme.border }}>
+        {(['chat', 'mapa'] as TabId[]).map(id => {
+          const label = id === 'chat' ? '💬 Chat' : '🗺️ Mapa de Sistemas';
+          return (
+            <button key={id} onClick={() => setActiveTab(id)}
+                    className="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                    style={{ borderBottomColor: activeTab === id ? G : 'transparent',
+                             color: activeTab === id ? G : theme.dim, background: 'transparent' }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'mapa' && <MapaSistemasView theme={theme} />}
+      {activeTab === 'chat' && <div className="flex flex-1 min-h-0">
 
         {/* ── Left panel: providers + modules ── */}
         <div className="flex-shrink-0 flex flex-col gap-3 p-3 border-r overflow-y-auto"
@@ -489,7 +741,7 @@ export default function CerebroSection({ theme }: Props) {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

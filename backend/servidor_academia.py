@@ -3794,6 +3794,39 @@ async def wfm_aprovisionar(req: WFMAproRequest):
 async def wfm_auditar(req: WFMAuditoriaRequest):
     return wfm_service.auditar_pm(req.order_id, req.ok, req.motivo, req.usuario)
 
+class WFMEsperaAlmacenRequest(BaseModel):
+    order_id: str
+    motivo: str
+    responsable_almacen: str = "Almacén"
+    usuario: str = "Sistema"
+
+@app.post("/api/wfm/almacen/espera")
+async def wfm_marcar_espera_almacen(req: WFMEsperaAlmacenRequest):
+    """Marca una orden como ESPERA_ALMACEN: equipo no disponible, caso detenido."""
+    result = wfm_service.marcar_espera_almacen(req.order_id, req.motivo, req.responsable_almacen, req.usuario)
+    if not result:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return result
+
+@app.post("/api/wfm/almacen/liberar/{order_id}")
+async def wfm_liberar_espera_almacen(order_id: str, usuario: str = "Sistema"):
+    """Libera una orden de ESPERA_ALMACEN → regresa a ALMACEN_VALIDACION."""
+    result = wfm_service.liberar_espera_almacen(order_id, usuario)
+    if not result:
+        raise HTTPException(status_code=404, detail="Orden no encontrada o no está en ESPERA_ALMACEN")
+    return result
+
+@app.get("/api/wfm/almacen/detenidos")
+async def wfm_detenidos_almacen():
+    """Retorna todos los casos actualmente detenidos por almacén (ESPERA_ALMACEN)."""
+    todas = wfm_service.obtener_ordenes()
+    detenidos = [o for o in todas if o.get("estado") == "ESPERA_ALMACEN"]
+    return {
+        "total": len(detenidos),
+        "fecha": __import__("datetime").datetime.now().isoformat(),
+        "ordenes": detenidos,
+    }
+
 # ─── GPS TN360 ───────────────────────────────────────────────────────────────
 import requests as _requests
 import threading as _threading

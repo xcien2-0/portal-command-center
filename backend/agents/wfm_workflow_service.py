@@ -54,6 +54,7 @@ class WFMWorkflowService:
         "ANTEPROYECTO":        63,
         "ORDEN_IMPLEMENTACION":4,
         "ALMACEN_VALIDACION":  4,
+        "ESPERA_ALMACEN":      4,
         "ESPERA_INVENTARIO":   4,
         "APROVISIONAMIENTO":   8,
         "REVISION_PM":         8,
@@ -377,6 +378,48 @@ class WFMWorkflowService:
     def asignar_equipos_almacen(self, order_id: str, equipos: List[Dict], usuario: str) -> Dict:
         """Compatibilidad retroactiva — llama a responder_almacen como 'disponible'."""
         return self.responder_almacen(order_id, "disponible", equipos, None, "", usuario)
+
+    def marcar_espera_almacen(self, order_id: str, motivo: str, responsable_almacen: str, usuario: str) -> Dict:
+        """Marca una orden como ESPERA_ALMACEN: el almacén no tiene el equipo y el caso queda detenido."""
+        orders = self._load_orders()
+        for o in orders:
+            if o["id"] == order_id:
+                o["estado"] = "ESPERA_ALMACEN"
+                o["estado_fuente"] = "local"
+                self._stamp(o, "ESPERA_ALMACEN")
+                o.setdefault("almacen", {})
+                o["almacen"]["esperando_inventario"] = True
+                o["almacen"]["disponibilidad"] = False
+                o["almacen"]["motivo"] = motivo
+                o["almacen"]["respondido_por"] = responsable_almacen
+                o["almacen"]["fecha_respuesta"] = datetime.now().isoformat()
+                o["historial"].append({
+                    "fecha": datetime.now().isoformat(),
+                    "accion": f"⏸ ESPERA ALMACÉN — {motivo}",
+                    "usuario": usuario,
+                })
+                self._save_orders(orders)
+                return o
+        return None
+
+    def liberar_espera_almacen(self, order_id: str, usuario: str) -> Dict:
+        """Libera una orden de ESPERA_ALMACEN de vuelta a ALMACEN_VALIDACION."""
+        orders = self._load_orders()
+        for o in orders:
+            if o["id"] == order_id and o.get("estado") == "ESPERA_ALMACEN":
+                o["estado"] = "ALMACEN_VALIDACION"
+                o["estado_fuente"] = "local"
+                self._stamp(o, "ALMACEN_VALIDACION")
+                o.setdefault("almacen", {})
+                o["almacen"]["esperando_inventario"] = False
+                o["historial"].append({
+                    "fecha": datetime.now().isoformat(),
+                    "accion": "✅ Equipo disponible — regresa a validación de almacén",
+                    "usuario": usuario,
+                })
+                self._save_orders(orders)
+                return o
+        return None
 
     def aprovisionar_servicio(self, order_id: str, config: Dict, usuario: str) -> Dict:
         """US-020 / HU-07: Configuración lógica, parámetros, firmware y MAC."""
