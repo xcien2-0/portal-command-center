@@ -4579,6 +4579,8 @@ def activate_user(user_id: str):
 # ── Academia / Odoo eLearning ─────────────────────────────────────────────────
 _academia_cache: dict = {"data": None, "ts": 0}
 _ACADEMIA_TTL = 120
+# Cursos creados con la cuenta de JMMC pero cuyo autor real es otro instructor
+_CURSOS_EXCLUIDOS_MINE: set = {37}  # 37 = Gestión de Proyectos (Carlos Belloc)
 
 @app.get("/api/academia/cursos")
 async def get_academia_cursos():
@@ -4601,7 +4603,8 @@ async def get_academia_cursos():
 
         channels = qry("slide.channel", [], [
             "name", "description", "total_slides", "total_time",
-            "website_published", "members_count", "enroll", "channel_type"
+            "website_published", "members_count", "enroll", "channel_type",
+            "create_uid", "user_id"
         ])
         slides = qry("slide.slide", [], [
             "name", "channel_id", "slide_type", "slide_category",
@@ -4663,6 +4666,8 @@ async def get_academia_cursos():
                 "avg_completion": avg,
                 "lessons":        lessons,
                 "members_list":   members_by_ch.get(cid, []),
+                "is_mine":        (ch.get("create_uid") or [None])[0] == uid and cid not in _CURSOS_EXCLUIDOS_MINE,
+                "author":         (ch.get("user_id") or ch.get("create_uid") or [None, "—"])[1],
             })
 
         result.sort(key=lambda x: (-len(x["lessons"]), -x["members"]))
@@ -4749,6 +4754,17 @@ async def get_academia_stats():
         "mayor_avance":    {"name": mayor["name"], "pct": mayor["avg_pct"]} if mayor else None,
         "menor_avance":    {"name": menor["name"], "pct": menor["avg_pct"]} if menor else None,
     }
+
+
+@app.post("/api/academia/refresh")
+async def refresh_academia_cache():
+    """Limpia todos los cachés de Academia para forzar recarga desde Odoo."""
+    global _academia_cache, _plaza_cache
+    _academia_cache["data"] = None
+    _academia_cache["ts"]   = 0
+    _plaza_cache["data"]    = None
+    _plaza_cache["ts"]      = 0
+    return {"ok": True, "message": "Caché de Academia limpiado — próxima consulta recarga desde Odoo"}
 
 
 @app.get("/api/academia/examen/colocacion/preguntas")
@@ -6373,11 +6389,11 @@ def get_tecnicos_plaza():
         return _plaza_cache["data"]
 
     try:
-        empleados = odoo_conn.search_read(
-            "hr.employee",
-            domain=[["active", "=", True]],
-            fields=["name", "work_location_id", "job_title", "department_id"],
-            limit=3000,
+        models, odoo_db, uid, odoo_pass = _odoo_connect()
+        empleados = models.execute_kw(
+            odoo_db, uid, odoo_pass, "hr.employee", "search_read",
+            [[["active", "=", True]]],
+            {"fields": ["name", "work_location_id", "job_title", "department_id"], "limit": 3000},
         ) or []
     except Exception as e:
         logger.warning(f"[academia-plaza] Error RRHH: {e}")

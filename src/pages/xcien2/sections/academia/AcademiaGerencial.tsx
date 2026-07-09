@@ -30,16 +30,150 @@ function LevelBadge({ level, color, icon }: { level: string; color: string; icon
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'ruta' | 'leaderboard' | 'cursos' | 'plazas' | 'areas';
+type Tab = 'dashboard' | 'ruta' | 'leaderboard' | 'cursos' | 'plazas' | 'areas' | 'rutas';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',   icon: '📊' },
+  { id: 'rutas',       label: 'Rutas',       icon: '🗺️' },
   { id: 'ruta',        label: 'Ruta',        icon: '🛤️' },
   { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
   { id: 'cursos',      label: 'Cursos',      icon: '📚' },
   { id: 'areas',       label: 'Por Área',    icon: '🏢' },
   { id: 'plazas',      label: 'Por Plaza',   icon: '🗺️' },
 ];
+
+// ── Rutas de Aprendizaje ──────────────────────────────────────────────────────
+interface RutaCurso { curso_id: number; curso_name: string; orden: number; obligatorio: boolean; }
+interface RutaDef { area: string; nombre: string; descripcion: string; cursos: RutaCurso[]; color: string; icono: string; }
+
+function TabRutas({ cursosOdoo, theme }: { cursosOdoo: OdooCurso[]; theme: ThemeConfig }) {
+  const [rutas, setRutas]   = useState<Record<string, RutaDef>>({});
+  const [area, setArea]     = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/academia/rutas`)
+      .then(r => r.ok ? r.json() : {})
+      .then(d => { setRutas(d); const first = Object.keys(d)[0]; if (first) setArea(first); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const cursoMap = useMemo(() => {
+    const m: Record<number, OdooCurso> = {};
+    cursosOdoo.forEach(c => { m[c.id] = c; });
+    return m;
+  }, [cursosOdoo]);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, color: '#6b7280' }}>
+      <div style={{ width: 16, height: 16, border: `2px solid ${GREEN}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      Cargando rutas…
+    </div>
+  );
+
+  const areas = Object.values(rutas);
+  const ruta  = rutas[area];
+  const stepColor = (n: number) => n <= 2 ? '#4FC3F7' : n <= 5 ? '#00C896' : n <= 7 ? '#FFB703' : '#7c3aed';
+
+  return (
+    <div style={{ display: 'flex', gap: 16, minHeight: 500, padding: '4px 0' }}>
+      {/* Sidebar */}
+      <div style={{ width: 175, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto' }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#4b5563', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, padding: '0 4px' }}>ÁREAS ({areas.length})</div>
+        {areas.map(r => (
+          <button key={r.area} onClick={() => setArea(r.area)} style={{
+            display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', width: '100%', cursor: 'pointer',
+            background: area === r.area ? `${r.color}22` : 'transparent',
+            border: area === r.area ? `1px solid ${r.color}55` : '1px solid transparent',
+            borderRadius: 9, padding: '7px 10px', transition: 'all 0.15s',
+          }}>
+            <span style={{ fontSize: 15, flexShrink: 0 }}>{r.icono}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: area === r.area ? '#f9fafb' : '#9ca3af', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.area}</div>
+              <div style={{ fontSize: 9, color: '#4b5563', marginTop: 1 }}>{r.cursos.length} cursos</div>
+            </div>
+            {area === r.area && <div style={{ width: 5, height: 5, borderRadius: '50%', background: r.color, flexShrink: 0, marginLeft: 'auto' }} />}
+          </button>
+        ))}
+      </div>
+
+      {/* Timeline */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+        {!ruta ? (
+          <div style={{ color: '#4b5563', padding: 40, textAlign: 'center' }}>Selecciona un área</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '12px 16px', background: `${ruta.color}14`, border: `1px solid ${ruta.color}30`, borderRadius: 12 }}>
+              <span style={{ fontSize: 26 }}>{ruta.icono}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#f9fafb' }}>{ruta.nombre}</div>
+                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{ruta.descripcion}</div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: ruta.color }}>{ruta.cursos.length}</div>
+                <div style={{ fontSize: 8, color: '#4b5563', textTransform: 'uppercase' }}>cursos</div>
+              </div>
+            </div>
+
+            {/* Steps */}
+            {ruta.cursos.map((item, i) => {
+              const c = cursoMap[item.curso_id];
+              const isLast = i === ruta.cursos.length - 1;
+              const hasContent = !!c && c.lessons.length > 0;
+              const pct = c?.avg_completion ?? 0;
+              const pc = pct >= 80 ? '#00C896' : pct >= 40 ? '#FFB703' : '#4FC3F7';
+              const sc = stepColor(item.orden);
+              return (
+                <div key={item.curso_id} style={{ display: 'flex', gap: 0, marginBottom: isLast ? 0 : 0 }}>
+                  {/* Connector */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: hasContent ? `${ruta.color}25` : 'rgba(255,255,255,0.03)', border: `2px solid ${hasContent ? ruta.color : 'rgba(255,255,255,0.08)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: hasContent ? ruta.color : '#374151' }}>{item.orden}</div>
+                    {!isLast && <div style={{ width: 2, flex: 1, minHeight: 12, background: hasContent ? `${ruta.color}25` : 'rgba(255,255,255,0.04)', margin: '2px 0' }} />}
+                  </div>
+                  {/* Card */}
+                  <div style={{ flex: 1, marginLeft: 10, marginBottom: isLast ? 0 : 6, background: hasContent ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.2)', border: `0.5px solid ${hasContent ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}`, borderRadius: 9, padding: '10px 12px', opacity: hasContent ? 1 : 0.55 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: hasContent ? 7 : 0 }}>
+                      <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: hasContent ? '#e5e7eb' : '#4b5563', lineHeight: 1.3 }}>{c ? c.name : item.curso_name}</div>
+                      <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                        <span style={{ fontSize: 7, fontWeight: 700, padding: '2px 5px', borderRadius: 7, background: item.obligatorio ? 'rgba(255,71,87,0.1)' : 'rgba(255,255,255,0.03)', color: item.obligatorio ? '#FF4757' : '#4b5563', border: `0.5px solid ${item.obligatorio ? 'rgba(255,71,87,0.2)' : 'rgba(255,255,255,0.05)'}` }}>{item.obligatorio ? 'OBLIGATORIO' : 'OPCIONAL'}</span>
+                        <span style={{ fontSize: 7, fontWeight: 700, padding: '2px 5px', borderRadius: 7, color: sc, background: `${sc}12`, border: `0.5px solid ${sc}30` }}>#{item.orden}</span>
+                      </div>
+                    </div>
+                    {hasContent && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: pc, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: pc, flexShrink: 0 }}>{pct}%</span>
+                        <span style={{ fontSize: 9, color: '#4b5563', flexShrink: 0 }}>{c.lessons.length} lecc · {c.members} ins</span>
+                        <a href={`https://odoo.wispi.mx/slides/${c.id}`} target="_blank" rel="noreferrer" style={{ fontSize: 8, color: '#4b5563', textDecoration: 'none', padding: '2px 6px', borderRadius: 5, border: '0.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>Odoo ↗</a>
+                      </div>
+                    )}
+                    {!hasContent && <div style={{ fontSize: 9, color: '#4b5563', fontStyle: 'italic', marginTop: 2 }}>En desarrollo — sin contenido aún</div>}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Certificado */}
+            <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+              <div style={{ width: 32, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: `${ruta.color}35`, border: `2px solid ${ruta.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🏅</div>
+              </div>
+              <div style={{ flex: 1, marginLeft: 10, padding: '9px 12px', background: `${ruta.color}08`, border: `1px dashed ${ruta.color}40`, borderRadius: 9 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: ruta.color }}>{ruta.nombre} — Certificado</div>
+                <div style={{ fontSize: 9, color: '#4b5563', marginTop: 2 }}>Completa los cursos obligatorios para obtener la certificación</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
 
 // ── RutasEditor Overlay ───────────────────────────────────────────────────────
 function RutasEditorOverlay({ areas, cursosOdoo, onClose }: { areas: string[]; cursosOdoo: OdooCurso[]; onClose: () => void }) {
@@ -973,26 +1107,32 @@ export default function AcademiaGerencial({ theme }: Props) {
   const [areas, setAreas]         = useState<string[]>([]);
   const [stats, setStats]         = useState<AcademiaStats | null>(null);
   const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showRutasEditor, setShowRutasEditor] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  const loadData = (bustCache = false) => {
+    const doLoad = () => Promise.all([
       fetch(`${API_BASE}/api/academia/cursos`).then(r => r.ok ? r.json() : []),
       fetch(`${API_BASE}/api/academia/tecnicos-plaza`).then(r => r.ok ? r.json() : null),
       fetch(`${API_BASE}/api/academia/stats`).then(r => r.ok ? r.json() : null),
     ]).then(([cs, pd, st]) => {
       setCursos(cs ?? []);
-      if (pd?.mapa) {
-        setPlazaMapa(pd.mapa);
-        setPlazas(pd.plazas ?? []);
-      }
-      if (pd?.mapa_area) {
-        setAreaMapa(pd.mapa_area);
-        setAreas(pd.areas ?? []);
-      }
+      if (pd?.mapa) { setPlazaMapa(pd.mapa); setPlazas(pd.plazas ?? []); }
+      if (pd?.mapa_area) { setAreaMapa(pd.mapa_area); setAreas(pd.areas ?? []); }
       if (st) setStats(st);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    }).catch(() => {});
+
+    if (bustCache) {
+      setRefreshing(true);
+      fetch(`${API_BASE}/api/academia/refresh`, { method: 'POST' })
+        .then(() => doLoad())
+        .finally(() => setRefreshing(false));
+    } else {
+      doLoad().finally(() => setLoading(false));
+    }
+  };
+
+  useEffect(() => { loadData(false); }, []);
 
   // Toda la organización inscrita en cursos, enriquecida con plaza y área
   const tecnicos = useMemo(() => buildTecnicoList(cursos, plazaMapa, areaMapa), [cursos, plazaMapa, areaMapa]);
@@ -1030,6 +1170,15 @@ export default function AcademiaGerencial({ theme }: Props) {
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button
+            onClick={() => loadData(true)}
+            disabled={refreshing}
+            style={{ padding: '9px 14px', borderRadius: 10, background: refreshing ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: refreshing ? DIM : '#f3f4f6', fontSize: 13, fontWeight: 600, cursor: refreshing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
+            title="Recargar datos desde Odoo"
+          >
+            <span style={{ display: 'inline-block', animation: refreshing ? 'spin .8s linear infinite' : 'none' }}>↻</span>
+            {refreshing ? 'Actualizando…' : 'Actualizar'}
+          </button>
+          <button
             onClick={() => setShowRutasEditor(true)}
             style={{ padding: '9px 18px', borderRadius: 10, background: 'rgba(0,200,150,0.08)', border: `1px solid ${GREEN}25`, color: GREEN, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
@@ -1058,6 +1207,7 @@ export default function AcademiaGerencial({ theme }: Props) {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'dashboard'   && <TabDashboard cursos={cursos} tecnicos={tecnicos} stats={stats} />}
+        {tab === 'rutas'       && <TabRutas cursosOdoo={cursos} theme={theme} />}
         {tab === 'ruta'        && <TabRuta cursos={cursos} tecnicos={tecnicos} />}
         {tab === 'leaderboard' && <TabLeaderboard tecnicos={tecnicos} plazas={plazas} areas={areas} />}
         {tab === 'cursos'      && <TabCursos cursos={cursos} />}

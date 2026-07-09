@@ -8,6 +8,132 @@ import AcademiaGerencial from './academia/AcademiaGerencial';
 import AcademiaTecnico from './academia/AcademiaTecnico';
 
 // ── Odoo eLearning types ──────────────────────────────────────────────────────
+// ── Rutas de aprendizaje ──────────────────────────────────────────────────────
+interface RutaCurso { curso_id: number; curso_name: string; orden: number; obligatorio: boolean; }
+interface Ruta { area: string; nombre: string; descripcion: string; cursos: RutaCurso[]; color: string; icono: string; }
+
+function RutasView({ theme }: { theme: ThemeConfig }) {
+  const [rutas, setRutas]   = useState<Record<string, Ruta>>({});
+  const [cursos, setCursos] = useState<Record<number, OdooCurso>>({});
+  const [area, setArea]     = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/api/academia/rutas`).then(r => r.json()),
+      fetch(`${API_BASE}/api/academia/cursos`).then(r => r.json()),
+    ]).then(([rd, cd]) => {
+      setRutas(rd);
+      const map: Record<number, OdooCurso> = {};
+      (cd as OdooCurso[]).forEach(c => { map[c.id] = c; });
+      setCursos(map);
+      const first = Object.keys(rd)[0];
+      if (first) setArea(first);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#555', gap: 12 }}>
+      <div style={{ width: 16, height: 16, border: `2px solid ${theme.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      Cargando rutas...
+    </div>
+  );
+
+  const areas = Object.values(rutas);
+  const ruta  = rutas[area];
+  const lc = (n: number) => n <= 2 ? '#4FC3F7' : n <= 5 ? '#00C896' : n <= 7 ? '#FFB703' : '#7c3aed';
+
+  return (
+    <div style={{ display: 'flex', gap: 16, minHeight: 500 }}>
+      {/* Sidebar */}
+      <div style={{ width: 180, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#444', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>ÁREAS</div>
+        {areas.map(r => (
+          <button key={r.area} onClick={() => setArea(r.area)} style={{
+            display: 'flex', alignItems: 'center', gap: 9, textAlign: 'left', width: '100%', cursor: 'pointer',
+            background: area === r.area ? `${r.color}22` : 'transparent',
+            border: area === r.area ? `1px solid ${r.color}55` : '1px solid transparent',
+            borderRadius: 9, padding: '8px 10px', transition: 'all 0.15s',
+          }}>
+            <span style={{ fontSize: 15, flexShrink: 0 }}>{r.icono}</span>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: area === r.area ? '#fff' : '#777', lineHeight: 1.2 }}>{r.area}</div>
+              <div style={{ fontSize: 9, color: '#444', marginTop: 1 }}>{r.cursos.length} cursos</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Ruta */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+        {!ruta ? <div style={{ color: '#444', padding: 40, textAlign: 'center' }}>Selecciona un área</div> : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: '12px 16px', background: `${ruta.color}18`, border: `1px solid ${ruta.color}33`, borderRadius: 12 }}>
+              <span style={{ fontSize: 26 }}>{ruta.icono}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{ruta.nombre}</div>
+                <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{ruta.descripcion}</div>
+              </div>
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: ruta.color }}>{ruta.cursos.length}</div>
+                <div style={{ fontSize: 9, color: '#444' }}>cursos</div>
+              </div>
+            </div>
+
+            {ruta.cursos.map((item, i) => {
+              const c = cursos[item.curso_id];
+              const isLast = i === ruta.cursos.length - 1;
+              const hasContent = c && c.lessons.length > 0;
+              const pct = c?.avg_completion ?? 0;
+              const pc = pct >= 80 ? '#00C896' : pct >= 40 ? '#FFB703' : '#4FC3F7';
+              return (
+                <div key={item.curso_id} style={{ display: 'flex', gap: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 34, flexShrink: 0 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: hasContent ? `${ruta.color}33` : 'rgba(255,255,255,0.04)', border: `2px solid ${hasContent ? ruta.color : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: hasContent ? ruta.color : '#444' }}>{item.orden}</div>
+                    {!isLast && <div style={{ width: 2, flex: 1, minHeight: 14, background: hasContent ? `${ruta.color}33` : 'rgba(255,255,255,0.05)', margin: '2px 0' }} />}
+                  </div>
+                  <div style={{ flex: 1, marginLeft: 12, marginBottom: isLast ? 0 : 8, background: hasContent ? theme.card : '#0a0a0a', border: `0.5px solid ${hasContent ? theme.border : 'rgba(255,255,255,0.04)'}`, borderRadius: 10, padding: '11px 13px', opacity: hasContent ? 1 : 0.65 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: hasContent ? 7 : 0 }}>
+                      <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: hasContent ? '#fff' : '#555', lineHeight: 1.3 }}>{c ? c.name : item.curso_name}</div>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: item.obligatorio ? 'rgba(255,71,87,0.1)' : 'rgba(255,255,255,0.04)', color: item.obligatorio ? '#FF4757' : '#444', border: `0.5px solid ${item.obligatorio ? 'rgba(255,71,87,0.2)' : 'rgba(255,255,255,0.06)'}` }}>{item.obligatorio ? 'OBLIGATORIO' : 'OPCIONAL'}</span>
+                        <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 8, color: lc(item.orden), background: `${lc(item.orden)}15`, border: `0.5px solid ${lc(item.orden)}33` }}>Paso {item.orden}</span>
+                      </div>
+                    </div>
+                    {hasContent && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: pc, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: pc, flexShrink: 0 }}>{pct}%</span>
+                        <span style={{ fontSize: 9, color: '#444', flexShrink: 0 }}>{c.lessons.length} lec.</span>
+                        {c.members > 0 && <span style={{ fontSize: 9, color: '#444', flexShrink: 0 }}>{c.members} ins.</span>}
+                        <a href={`https://odoo.wispi.mx/slides/${c.id}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 9, color: '#444', textDecoration: 'none', padding: '2px 7px', borderRadius: 5, border: `0.5px solid ${theme.border}`, flexShrink: 0 }}>Ver ↗</a>
+                      </div>
+                    )}
+                    {!hasContent && <div style={{ fontSize: 9, color: '#444', fontStyle: 'italic', marginTop: 3 }}>En desarrollo — sin contenido aún</div>}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={{ display: 'flex', gap: 0, marginTop: 6 }}>
+              <div style={{ width: 34, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: `${ruta.color}40`, border: `2px solid ${ruta.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🏅</div>
+              </div>
+              <div style={{ flex: 1, marginLeft: 12, padding: '9px 13px', background: `${ruta.color}0d`, border: `1px dashed ${ruta.color}44`, borderRadius: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: ruta.color }}>{ruta.nombre} — Certificado</div>
+                <div style={{ fontSize: 9, color: '#444', marginTop: 2 }}>Completa los cursos obligatorios para obtener la certificación</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
 interface OdooLesson {
   id: number; name: string; type: string; category: string;
   duration_h: number; published: boolean; sequence: number;
@@ -1051,13 +1177,13 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const { user } = useAuth();
   const { track } = useAnalytics();
 
-  const ROLES_GERENCIALES = ['admin', 'director', 'wfm', 'comercial', 'readonly'];
+  const ROLES_GERENCIALES = ['admin', 'director', 'wfm', 'comercial', 'readonly', 'academico', 'rrhh'];
   const esGerencial = user ? ROLES_GERENCIALES.includes(user.rol) : true;
 
   const [forceView, setForceView] = useState<'gerencial' | 'tecnico' | null>(null);
   const vistaActual = forceView ?? (esGerencial ? 'gerencial' : 'tecnico');
 
-  const [view, setView]         = useState<'cursos' | 'panorama' | 'exam'>('cursos');
+  const [view, setView]         = useState<'cursos' | 'panorama' | 'rutas' | 'exam'>('cursos');
   const [stats, setStats]       = useState<AcademiaStats | null>(null);
   const [statsLoaded, setStatsLoaded] = useState(false);
 
@@ -1110,6 +1236,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const TABS: { id: typeof view; label: string }[] = [
     { id: 'cursos',   label: '🎓 Cursos'   },
     { id: 'panorama', label: '📊 Panorama' },
+    { id: 'rutas',    label: '🗺️ Rutas'    },
     { id: 'exam',     label: '📝 Examen'   },
   ];
 
@@ -1150,6 +1277,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
         <div style={{ position: 'relative', zIndex: 1 }}>
           {view === 'cursos'   && <CursosView theme={theme} />}
           {view === 'panorama' && <PanoramaView theme={theme} stats={stats} statsLoaded={statsLoaded} />}
+          {view === 'rutas'    && <RutasView theme={theme} />}
           {view === 'exam'     && <ExamenView theme={theme} />}
         </div>
       </div>
