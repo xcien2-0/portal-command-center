@@ -6660,12 +6660,12 @@ class RutaPayload(BaseModel):
     icono:       str = "🎓"
 
 @app.get("/api/academia/rutas")
-def get_rutas(_user: dict = Depends(get_current_user)):
+def get_rutas():
     """Lista todas las rutas de aprendizaje configuradas."""
     return _load_rutas()
 
 @app.get("/api/academia/rutas/{area}")
-def get_ruta_area(area: str, _user: dict = Depends(get_current_user)):
+def get_ruta_area(area: str):
     """Ruta de aprendizaje de un área específica."""
     rutas = _load_rutas()
     return rutas.get(area) or {"area": area, "cursos": [], "nombre": f"Ruta {area}"}
