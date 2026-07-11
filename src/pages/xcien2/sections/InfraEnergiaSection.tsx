@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE } from '../../../config';
 import type { ThemeConfig } from '../types';
 import 'leaflet/dist/leaflet.css';
+import { useVisibleInterval } from '../../../hooks/useVisibleInterval';
 
 interface Props { theme: ThemeConfig }
 
@@ -228,7 +229,8 @@ export default function InfraEnergiaSection({ theme }: Props) {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchData(); const iv = setInterval(fetchData, 60000); return () => clearInterval(iv); }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useVisibleInterval(fetchData, 60_000);
 
   const toggleReview = (ip: string) => {
     const next = { ...reviews };

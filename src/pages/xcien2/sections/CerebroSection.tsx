@@ -461,6 +461,12 @@ export default function CerebroSection({ theme }: Props) {
 
           {/* Providers — grouped */}
           <div className="space-y-3">
+            {grouped.length === 0 && (
+              <div style={{ color: theme.dim, fontSize: 11, textAlign: 'center', padding: '20px 8px', lineHeight: 1.5 }}>
+                Cargando proveedores…<br/>
+                <span style={{ fontSize: 10 }}>Verifica que el backend esté activo</span>
+              </div>
+            )}
             {grouped.map(({ group, items }) => (
               <div key={group}>
                 <p style={{ color: theme.dim }}

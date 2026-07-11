@@ -38,26 +38,7 @@ export default function BackupSection({ theme }: BackupSectionProps) {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [progress, setProgress] = useState(0);
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
-  const [backups, setBackups] = useState<BackupRecord[]>([
-    {
-      id: 'BK-2026-0506-01',
-      timestamp: '2026-05-06 01:20:44',
-      size: '1.2 GB',
-      type: 'full',
-      status: 'completed',
-      user: brand.adminLabel,
-      location: 'Local Storage (RAID 5)'
-    },
-    {
-      id: 'BK-2026-0505-18',
-      timestamp: '2026-05-05 18:00:12',
-      size: '450 MB',
-      type: 'incremental',
-      status: 'completed',
-      user: 'Sistema (Auto)',
-      location: 'Cloud Mirror (S3)'
-    }
-  ]);
+  const [backups, setBackups] = useState<BackupRecord[]>([]);
 
   useEffect(() => {
     const checkBackend = async () => {
@@ -203,6 +184,11 @@ export default function BackupSection({ theme }: BackupSectionProps) {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {backups.length === 0 && (
+                <div style={{ padding: '32px 24px', textAlign: 'center', color: theme.dim, fontSize: 13 }}>
+                  Sin puntos de restauración registrados. Ejecuta el primer respaldo para comenzar el historial.
+                </div>
+              )}
               {backups.map((bk, i) => (
                 <div key={bk.id} style={{ 
                   padding: '16px 24px', borderBottom: i === backups.length - 1 ? 'none' : `1px solid ${theme.border}`,

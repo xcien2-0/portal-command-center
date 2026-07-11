@@ -152,6 +152,15 @@ export default function AnalyticsSection() {
         ))}
       </div>
 
+      {/* Loading state while first data fetch */}
+      {loading && !s && (
+        <div style={{ textAlign: 'center', color: '#6b7280', padding: 48, fontSize: 13 }}>
+          <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite', marginBottom: 10 }} />
+          <div>Cargando datos de analítica…</div>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      )}
+
       {/* ── Resumen ── */}
       {tab === 'resumen' && s && (
         <div>

@@ -8,6 +8,7 @@ import { API_BASE } from '../../../config';
 import RealMap from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
 import { useTabTrack } from '../../../hooks/useTabTrack';
+import { useVisibleInterval } from '../../../hooks/useVisibleInterval';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const G   = '#00ff88';   // verde    — healthy  ≥ 85
@@ -1002,11 +1003,8 @@ function NocLayersPanel({ cities, onSelectCity, onRefresh }: {
     }
   }, []);
 
-  useEffect(() => {
-    fetchBoards();
-    const id = setInterval(fetchBoards, 15_000);
-    return () => clearInterval(id);
-  }, [fetchBoards]);
+  useEffect(() => { fetchBoards(); }, [fetchBoards]);
+  useVisibleInterval(fetchBoards, 15_000);
 
   const toggleLayer = async (id: LayerId) => {
     const current = boards[id];
@@ -1427,26 +1425,27 @@ export default function NocSection({
   const trackTab = useTabTrack('noc');
   const [boards, setBoards] = useState<Record<string, { online: number; offline: number; alerts: number; hosts: number; avail: number }>>({});
 
-  useEffect(() => {
-    const fetchBoards = async () => {
-      const keys: Record<string, { port: number; key: string }> = {
-        'Energía': { port: 9404, key: 'f4f5ef40c4c54aeca1d6a66109e4555d' },
-        'Datos': { port: 9403, key: 'e48b0da1798145199ad24639cc70c66b' },
-        'WL': { port: 9401, key: '87a08190b801416392e944ab79c7e3c9' },
-      };
-      const result: typeof boards = {};
-      await Promise.all(Object.entries(keys).map(async ([name, { port, key }]) => {
-        try {
-          const r = await fetch(`${API_BASE}/api/noc/board-status?port=${port}&key=${key}`);
-          if (r.ok) { const d = await r.json(); result[name] = d; }
-        } catch {}
-      }));
-      setBoards(result);
-    };
-    fetchBoards();
-    const iv = setInterval(fetchBoards, 30000);
-    return () => clearInterval(iv);
+  // Priority order: Energía → Datos → WL (wireless last)
+  const NOCBOARD_PRIORITY = [
+    { name: 'Energía',    port: 9404, key: 'f4f5ef40c4c54aeca1d6a66109e4555d' },
+    { name: 'Datos',      port: 9403, key: 'e48b0da1798145199ad24639cc70c66b' },
+    { name: 'WL',         port: 9401, key: '87a08190b801416392e944ab79c7e3c9' },
+  ];
+
+  const fetchNocBoards = useCallback(async () => {
+    for (const { name, port, key } of NOCBOARD_PRIORITY) {
+      try {
+        const r = await fetch(`${API_BASE}/api/noc/board-status?port=${port}&key=${key}`);
+        if (r.ok) {
+          const d = await r.json();
+          setBoards(prev => ({ ...prev, [name]: d }));
+        }
+      } catch {}
+    }
   }, []);
+
+  useEffect(() => { fetchNocBoards(); }, [fetchNocBoards]);
+  useVisibleInterval(fetchNocBoards, 30_000);
 
   const totalHosts  = useMemo(() => cities.reduce((a, c) => a + c.totalHosts, 0), [cities]);
   const totalOnline = useMemo(() => cities.reduce((a, c) => a + c.online, 0), [cities]);

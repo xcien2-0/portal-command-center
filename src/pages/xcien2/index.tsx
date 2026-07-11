@@ -26,6 +26,7 @@ import FeedbackWidget from '../../components/FeedbackWidget';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X as CloseIcon } from 'lucide-react';
+import { useVisibleInterval } from '../../hooks/useVisibleInterval';
 
 // ── Secciones lazy — se cargan solo cuando el usuario las abre ────────────────
 const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
@@ -110,47 +111,53 @@ function canAccess(rol: string | undefined, id: SectionId): boolean {
 interface NavEntry { id: SectionId; label: string; icon: string; group?: string }
 
 const NAV: NavEntry[] = [
-  { id: 'inicio',  label: 'Hub Principal',     icon: '🏠' },
-  { id: 'impacto', label: 'Impacto Operacional', icon: '🚀' },
+  { id: 'inicio', label: 'Hub Principal', icon: '🏠' },
 
-  { id: 'noc', label: 'NOC VIRTUAL', icon: '📡', group: 'Operaciones' },
-  { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Operaciones' },
-  { id: 'red', label: 'Mapa de Red', icon: '🗺️', group: 'Operaciones' },
-  { id: 'wfm', label: 'Control Operativo', icon: '⚙️', group: 'Operaciones' },
-  { id: 'bidrillas', label: 'Equipos de Campo', icon: '🚛', group: 'Operaciones' },
-  { id: 'call', label: 'Call Center', icon: '📞', group: 'Operaciones' },
-  { id: 'scan', label: 'Inventario & Scanner', icon: '🔍', group: 'Operaciones' },
-  { id: 'inv-transfers', label: 'Transferencias', icon: '🏷️', group: 'Operaciones' },
+  // ── Monitoreo ──────────────────────────────────────────────────────────────
+  { id: 'noc',           label: 'NOC Virtual',             icon: '📡', group: 'Monitoreo' },
+  { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
+  { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
+  { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
+  { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
 
-  { id: 'academia', label: 'Academia', icon: '🎓', group: 'Certificación' },
+  // ── Campo & Inventario ─────────────────────────────────────────────────────
+  { id: 'wfm',           label: 'Control Operativo',    icon: '⚙️', group: 'Campo & Inventario' },
+  { id: 'bidrillas',     label: 'Equipos de Campo',     icon: '🚛', group: 'Campo & Inventario' },
+  { id: 'call',          label: 'Call Center',          icon: '📞', group: 'Campo & Inventario' },
+  { id: 'scan',          label: 'Inventario & Scanner', icon: '🔍', group: 'Campo & Inventario' },
+  { id: 'inv-transfers', label: 'Transferencias',       icon: '🏷️', group: 'Campo & Inventario' },
 
-  { id: 'transacciones', label: 'Tokens Unificados', icon: '🔗', group: 'Administración' },
-  { id: 'merkle', label: 'Merkle Feed', icon: '⛓️', group: 'Administración' },
-  { id: 'gerencia', label: 'Gerencia', icon: '📊', group: 'Administración' },
-  { id: 'ventas',              label: 'Resumen Ventas',      icon: '📈', group: 'Administración' },
-  { id: 'ventas-efectividad', label: 'Efectividad Ventas',  icon: '🏆', group: 'Administración' },
-  { id: 'integridad', label: 'Integridad Comercial', icon: '🔍', group: 'Administración' },
-  { id: 'analytics',  label: 'Analytics de Uso',     icon: '📊', group: 'Administración' },
-  { id: 'reportes-kpi', label: 'KPI Dashboard', icon: '🎯', group: 'Administración' },
-  { id: 'reports', label: 'Reportes', icon: '📋', group: 'Administración' },
-  { id: 'reportlab', label: 'PDF Generator', icon: '📄', group: 'Administración' },
-  { id: 'docs', label: 'Documentos', icon: '📚', group: 'Administración' },
-  { id: 'rrhh', label: 'Recursos Humanos', icon: '👤', group: 'Administración' },
+  // ── Comercial ──────────────────────────────────────────────────────────────
+  { id: 'ventas',             label: 'Resumen Ventas',       icon: '📈', group: 'Comercial' },
+  { id: 'ventas-efectividad', label: 'Efectividad Ventas',   icon: '🏆', group: 'Comercial' },
+  { id: 'integridad',         label: 'Integridad Comercial', icon: '🔒', group: 'Comercial' },
+  { id: 'gerencia',           label: 'Gerencia',             icon: '📊', group: 'Comercial' },
+  { id: 'reportes-kpi',       label: 'KPI Dashboard',        icon: '🎯', group: 'Comercial' },
+  { id: 'reports',            label: 'Reportes',             icon: '📋', group: 'Comercial' },
+  { id: 'docs',               label: 'Documentos',           icon: '📚', group: 'Comercial' },
 
-  { id: 'plan2026',  label: 'Plan 2026 · ClickUp',   icon: '🎯', group: 'Planeación' },
+  // ── Capital Humano ─────────────────────────────────────────────────────────
+  { id: 'rrhh',        label: 'Recursos Humanos', icon: '👤', group: 'Capital Humano' },
+  { id: 'academia',    label: 'Academia XCIEN',   icon: '🎓', group: 'Capital Humano' },
+  { id: 'sala_juntas', label: 'Sala de Juntas',   icon: '📅', group: 'Capital Humano' },
+
+  // ── Planeación ─────────────────────────────────────────────────────────────
+  { id: 'plan2026',  label: 'Plan 2026 · ClickUp',  icon: '🎯', group: 'Planeación' },
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
-  { id: 'estrategia2030', label: 'Estrategia 2030', icon: '🚀', group: 'Planeación' },
-  { id: 'adopcion', label: 'Usuarios', icon: '👥', group: 'Planeación' },
 
-  { id: 'incidentes', label: 'Incidentes', icon: '🚨', group: 'Operaciones' },
-  { id: 'cerebro', label: 'Supercerebro', icon: '🧠', group: 'Infraestructura' },
-  { id: 'agentes',  label: 'Agentes IA',       icon: '🤖', group: 'Infraestructura' },
-  { id: 'comite',   label: 'Comité de Dirección', icon: '🏛️', group: 'Infraestructura' },
-  { id: 'token-ai', label: 'Consumo de Tokens',  icon: '📈', group: 'Infraestructura' },
-  { id: 'telegram', label: 'Bot de Alarmas', icon: '🤖', group: 'Infraestructura' },
-  { id: 'backup', label: 'Migración', icon: '💾', group: 'Sistema' },
-  { id: 'editor', label: 'Configuración', icon: '🎨', group: 'Sistema' },
-  { id: 'superadmin', label: 'Super Admin', icon: '🔐', group: 'Sistema' },
+  // ── IA & Automatización ────────────────────────────────────────────────────
+  { id: 'cerebro',       label: 'Infraestructura IA', icon: '🧠', group: 'IA & Automatización' },
+  { id: 'agentes',       label: 'Agentes IA',         icon: '🤖', group: 'IA & Automatización' },
+  { id: 'transacciones', label: 'Tokens Unificados',  icon: '🔗', group: 'IA & Automatización' },
+  { id: 'merkle',        label: 'Merkle Feed',        icon: '⛓️', group: 'IA & Automatización' },
+  { id: 'token-ai',      label: 'Consumo de Tokens',  icon: '📈', group: 'IA & Automatización' },
+
+  // ── Sistema [colapsado por defecto] ────────────────────────────────────────
+  { id: 'analytics',  label: 'Analytics de Uso', icon: '📊', group: 'Sistema' },
+  { id: 'reportlab',  label: 'PDF Generator',    icon: '📄', group: 'Sistema' },
+  { id: 'backup',     label: 'Migración',        icon: '💾', group: 'Sistema' },
+  { id: 'editor',     label: 'Configuración',    icon: '🎨', group: 'Sistema' },
+  { id: 'superadmin', label: 'Super Admin',      icon: '🔐', group: 'Sistema' },
 ];
 
 // ── Lucide icon map ───────────────────────────────────────────────────────────
@@ -217,7 +224,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   plan2026:  'Plan de Trabajo 2026',
   proyectos: 'Tablero de Proyectos',
   'infra-energia': 'Infraestructura Energía',
-  cerebro: 'Supercerebro',
+  cerebro: 'Infraestructura IA',
   'inv-transfers': 'Transferencias de Inventario',
   merkle: 'Merkle Feed',
   estrategia2030: 'Estrategia 2030',
@@ -256,7 +263,19 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
+const COLLAPSED_BY_DEFAULT = new Set(['Sistema']);
+
 function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse, isMobile, mobileOpen, onMobileClose }: SidebarProps) {
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(COLLAPSED_BY_DEFAULT);
+
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  };
+
   const groups = useMemo(() => {
     const grouped: { label: string | null; items: NavEntry[] }[] = [];
     let current: NavEntry[] = [];
@@ -351,23 +370,36 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
 
       {/* Nav items */}
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '6px 0' }}>
-        {groups.map(({ label, items }) => (
+        {groups.map(({ label, items }) => {
+          const isGroupCollapsed = label ? collapsedGroups.has(label) : false;
+          return (
           <div key={label ?? '__root__'}>
             {/* Group separator / label */}
             {label && (
               collapsed && !isMobile
                 ? <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', margin: '6px 8px' }} />
-                : <div style={{
-                    padding: '10px 16px 3px',
-                    fontSize: 9, fontWeight: 700,
-                    letterSpacing: 1.5,
-                    color: U.dim,
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                  }}>{label}</div>
+                : <button
+                    onClick={() => toggleGroup(label)}
+                    style={{
+                      width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '10px 16px 3px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}
+                  >
+                    <span style={{
+                      fontSize: 9, fontWeight: 700,
+                      letterSpacing: 1.5,
+                      color: U.dim,
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}>{label}</span>
+                    <span style={{ color: U.dim, fontSize: 10, marginTop: 1 }}>
+                      {isGroupCollapsed ? '▸' : '▾'}
+                    </span>
+                  </button>
             )}
 
-            {items.map(item => {
+            {!isGroupCollapsed && items.map(item => {
               const Icon = NAV_ICONS[item.id] || LayoutGrid;
               const isActive = active === item.id;
               return (
@@ -414,7 +446,8 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}
@@ -725,36 +758,31 @@ export default function Xcien2Page() {
     return (s && SECTION_TITLE[s]) ? s : 'inicio';
   });
 
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/health`);
-        if (res.ok) {
-          setBackendStatus('online');
-          const data = await res.json();
-          if (data.odoo) setOdooStatus(data.odoo === 'conectado' ? 'conectado' : 'desconectado');
-          if (data.observium) setObserviumStatus(data.observium === 'conectado' ? 'conectado' : 'desconectado');
-        } else {
-          setBackendStatus('offline');
-        }
-      } catch { setBackendStatus('offline'); }
-    };
-    checkBackend();
-    const id = setInterval(checkBackend, 10000);
-    return () => clearInterval(id);
+  const checkBackend = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/health`);
+      if (res.ok) {
+        setBackendStatus('online');
+        const data = await res.json();
+        if (data.odoo) setOdooStatus(data.odoo === 'conectado' ? 'conectado' : 'desconectado');
+        if (data.observium) setObserviumStatus(data.observium === 'conectado' ? 'conectado' : 'desconectado');
+      } else {
+        setBackendStatus('offline');
+      }
+    } catch { setBackendStatus('offline'); }
   }, []);
 
-  useEffect(() => {
-    const fetchBridge = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/bridge`);
-        if (res.ok) setBridgeData(await res.json());
-      } catch (e) { }
-    };
-    const id = setInterval(fetchBridge, 3000);
-    fetchBridge();
-    return () => clearInterval(id);
+  useEffect(() => { checkBackend(); }, [checkBackend]);
+  useVisibleInterval(checkBackend, 10000);
+
+  const fetchBridge = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/bridge`);
+      if (res.ok) setBridgeData(await res.json());
+    } catch { }
   }, []);
+  useEffect(() => { fetchBridge(); }, [fetchBridge]);
+  useVisibleInterval(fetchBridge, 3000);
 
   const [theme, dispatch] = useReducer(themeReducer, DEFAULT_THEME, (initial) => {
     try {
@@ -769,24 +797,21 @@ export default function Xcien2Page() {
   const [realCities, setRealCities] = useState<NOCCity[]>([]);
   const [realAlerts, setRealAlerts] = useState<NOCAlert[]>([]);
 
-  const loadRealData = async () => {
+  const loadRealData = useCallback(async () => {
     try {
       const [cities, alerts] = await Promise.all([getRealCities(), getRealAlerts()]);
       if (cities) setRealCities(cities);
       if (alerts) setRealAlerts(alerts);
     } catch (e) { console.error("Error loading NOC data in Holo:", e); }
-  };
+  }, []);
 
   const refreshNOC = useCallback(async () => {
     invalidateNOCCache();
     await loadRealData();
-  }, []);
+  }, [loadRealData]);
 
-  useEffect(() => {
-    loadRealData();
-    const id = setInterval(loadRealData, 30_000);
-    return () => clearInterval(id);
-  }, []);
+  useEffect(() => { loadRealData(); }, [loadRealData]);
+  useVisibleInterval(loadRealData, 30_000);
 
   // Global Cmd+K shortcut for command palette
   useEffect(() => {

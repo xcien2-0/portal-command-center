@@ -110,6 +110,7 @@ function InventarioTab({ onScanActivo: _onScanActivo }: { onScanActivo: (a: Acti
   const [productos, setProductos] = useState<OdooProducto[]>([]);
   const [resumen, setResumen]     = useState<OdooResumen | null>(null);
   const [loading, setLoading]     = useState(true);
+  const [odooError, setOdooError] = useState(false);
   const [search, setSearch]       = useState('');
   const [inputVal, setInputVal]   = useState('');
   const [total, setTotal]         = useState(0);
@@ -120,14 +121,21 @@ function InventarioTab({ onScanActivo: _onScanActivo }: { onScanActivo: (a: Acti
 
   const load = useCallback(async (q: string, off: number) => {
     setLoading(true);
-    const [res, sum] = await Promise.all([
-      fetchOdooProductos(q, off, LIMIT),
-      off === 0 ? fetchOdooResumen() : Promise.resolve(null),
-    ]);
-    setProductos(res.productos);
-    setTotal(res.total);
-    if (sum) setResumen(sum);
-    setLoading(false);
+    setOdooError(false);
+    try {
+      const [res, sum] = await Promise.all([
+        fetchOdooProductos(q, off, LIMIT),
+        off === 0 ? fetchOdooResumen() : Promise.resolve(null),
+      ]);
+      if (!res.productos.length && !res.total && !sum) { setOdooError(true); }
+      setProductos(res.productos);
+      setTotal(res.total);
+      if (sum) setResumen(sum);
+    } catch {
+      setOdooError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(search, 0); }, []);
@@ -223,8 +231,17 @@ function InventarioTab({ onScanActivo: _onScanActivo }: { onScanActivo: (a: Acti
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Cargando desde Odoo...</div>
+        ) : odooError ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>⚠️</div>
+            <div style={{ color: T.yellow, fontSize: 13, fontWeight: 600 }}>Sin conexión con Odoo</div>
+            <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Verifica que el servidor Odoo (wispi17) esté disponible</div>
+            <button onClick={() => load(search, 0)} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 8, background: 'rgba(255,183,3,0.12)', border: '1px solid rgba(255,183,3,0.3)', color: T.yellow, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              Reintentar
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Sin resultados</div>
+          <div style={{ textAlign: 'center', color: T.dim, padding: 40, fontSize: 13 }}>Sin resultados para "{search || 'todos'}"</div>
         ) : filtered.map(p => {
           const sc = stockColor(p.qty_available);
           const catName = Array.isArray(p.categ_id) ? p.categ_id[1] : '—';
