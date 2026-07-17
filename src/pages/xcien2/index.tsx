@@ -68,6 +68,7 @@ const AnalyticsSection        = lazy(() => import('./sections/AnalyticsSection')
 const HelpdeskSection         = lazy(() => import('./sections/HelpdeskSection'));
 const Net2PhoneSection        = lazy(() => import('./sections/Net2PhoneSection'));
 const CallCenterHubSection    = lazy(() => import('./sections/CallCenterHubSection'));
+const FibraSection            = lazy(() => import('./sections/FibraSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -87,7 +88,7 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   admin:     '*',
   director:  ['inicio','impacto','noc','red','incidentes','ventas','integridad','reportes-kpi',
-               'rrhh','sala_juntas','proyectos','plan2026','estrategia2030',
+               'rrhh','sala_juntas','proyectos','plan2026','fibra','estrategia2030',
                'agentes','comite','docs','reportlab','analytics'],
   noc:       ['inicio','noc','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs'],
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas'],
@@ -144,6 +145,7 @@ const NAV: NavEntry[] = [
   // ── Planeación ─────────────────────────────────────────────────────────────
   { id: 'plan2026',  label: 'Plan 2026 · ClickUp',  icon: '🎯', group: 'Planeación' },
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
+  { id: 'fibra',     label: 'Fibra Óptica X100',    icon: '🔆', group: 'Planeación' },
 
   // ── IA & Automatización ────────────────────────────────────────────────────
   { id: 'cerebro',       label: 'Infraestructura IA', icon: '🧠', group: 'IA & Automatización' },
@@ -223,6 +225,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   'token-ai': 'Consumo de Tokens AI',
   plan2026:  'Plan de Trabajo 2026',
   proyectos: 'Tablero de Proyectos',
+  fibra:     'Fibra Óptica X100',
   'infra-energia': 'Infraestructura Energía',
   cerebro: 'Infraestructura IA',
   'inv-transfers': 'Transferencias de Inventario',
@@ -618,6 +621,7 @@ function Content({
       {section === 'token-ai'  && <TokenConsumptionSection theme={theme} />}
       {section === 'plan2026'  && <ProyectosDashboardSection />}
       {section === 'proyectos' && <ProyectosSection theme={theme} />}
+      {section === 'fibra'     && <FibraSection theme={theme} />}
       {section === 'estrategia2030' && <Estrategia2030Section theme={theme} />}
       {section === 'adopcion' && <AdopcionSection theme={theme} />}
       {section === 'call'     && <CallCenterHubSection />}
