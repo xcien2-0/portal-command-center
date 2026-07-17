@@ -117,7 +117,7 @@ export default function ProyectosSection({ theme }: Props) {
           return (
             <div key={g} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: U.dim, width: 110, fontWeight: 600 }}>{g}</span>
-              <div style={{ flex: 1, height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 5, overflow: 'hidden' }}>
+              <div style={{ flex: 1, height: 10, background: U.border, borderRadius: 5, overflow: 'hidden' }}>
                 <div style={{ width: `${groupPct}%`, height: '100%', background: groupPct >= 80 ? GREEN : groupPct >= 50 ? YELLOW : RED, borderRadius: 5, transition: 'width 0.5s' }} />
               </div>
               <span style={{ fontSize: 12, fontWeight: 700, color: groupPct >= 80 ? GREEN : groupPct >= 50 ? YELLOW : RED, fontFamily: 'JetBrains Mono', width: 40, textAlign: 'right' }}>{groupPct}%</span>
@@ -157,7 +157,7 @@ export default function ProyectosSection({ theme }: Props) {
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ flex: 1, height: 8, background: U.border, borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${p.progress}%`, height: '100%', background: p.progress >= 80 ? GREEN : p.progress >= 50 ? YELLOW : RED, borderRadius: 4 }} />
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 800, color: p.progress >= 80 ? GREEN : p.progress >= 50 ? YELLOW : RED, fontFamily: 'JetBrains Mono', width: 38 }}>{p.progress}%</span>

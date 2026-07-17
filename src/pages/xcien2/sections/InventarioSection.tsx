@@ -1084,7 +1084,7 @@ function StockPlazasTab() {
 }
 
 // ── Equipos en Tránsito ───────────────────────────────────────────────────────
-const ESTADO_COLOR: Record<string, string> = {
+const TRANSITO_ESTADO_COLOR: Record<string, string> = {
   draft:     '#8ba3b8',
   confirmed: '#ffcc00',
   shipped:   '#00aaff',
@@ -1122,7 +1122,7 @@ function TransitoTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Filtros de estado */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-        {[['all', 'Todos', T.dim], ...Object.entries(ESTADO_LABEL).map(([k, v]) => [k, v, ESTADO_COLOR[k]])].map(([k, label, color]) => (
+        {[['all', 'Todos', T.dim], ...Object.entries(ESTADO_LABEL).map(([k, v]) => [k, v, TRANSITO_ESTADO_COLOR[k]])].map(([k, label, color]) => (
           <button key={k} onClick={() => setFiltro(k)} style={{
             background: filtro === k ? color + '33' : T.surface,
             border: `1px solid ${filtro === k ? color : T.border}`,
@@ -1147,7 +1147,7 @@ function TransitoTab() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map((t: any) => {
-            const color = ESTADO_COLOR[t.state] || T.dim;
+            const color = TRANSITO_ESTADO_COLOR[t.state] || T.dim;
             const totalPiezas = t.lines?.reduce((s: number, l: any) => s + (l.quantity || 0), 0) || 0;
             return (
               <div key={t.token_id} style={{ background: T.surface, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden' }}>

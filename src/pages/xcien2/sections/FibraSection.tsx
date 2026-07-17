@@ -124,11 +124,11 @@ const NIVEL_COLOR: Record<string, string> = {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style, theme }: { children: React.ReactNode; style?: React.CSSProperties; theme: ThemeConfig }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: theme.card,
+      border: `1px solid ${theme.border}`,
       borderRadius: 12,
       padding: '16px 20px',
       ...style,
@@ -146,9 +146,9 @@ function SectionTitle({ children, accent }: { children: React.ReactNode; accent?
   );
 }
 
-function ProgressBar({ pct, color }: { pct: number; color: string }) {
+function ProgressBar({ pct, color, theme }: { pct: number; color: string; theme: ThemeConfig }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 6, height: 5, marginTop: 4, overflow: 'hidden' }}>
+    <div style={{ background: theme.border, borderRadius: 6, height: 5, marginTop: 4, overflow: 'hidden' }}>
       <div style={{ width: `${pct}%`, background: color, borderRadius: 6, height: '100%', transition: 'width 0.4s ease' }} />
     </div>
   );
@@ -203,7 +203,7 @@ export default function FibraSection({ theme }: Props) {
           { label: 'Compromisos pendientes', value: String(pendientes), sub: `de ${COMPROMISOS.length} totales`, color: '#FFB703' },
           { label: 'Riesgos críticos', value: String(criticos), sub: 'requieren atención urgente', color: '#FF4757' },
         ].map(k => (
-          <Card key={k.label}>
+          <Card key={k.label} theme={theme}>
             <div style={{ fontSize: 24, fontWeight: 800, color: k.color }}>{k.value}</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: theme.text, marginTop: 2 }}>{k.label}</div>
             <div style={{ fontSize: 11, color: theme.dim, marginTop: 2 }}>{k.sub}</div>
@@ -221,7 +221,7 @@ export default function FibraSection({ theme }: Props) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             background: tab === t.id ? 'rgba(0,200,150,0.12)' : 'transparent',
@@ -246,8 +246,8 @@ export default function FibraSection({ theme }: Props) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
             {PLAZAS.map((p, i) => (
               <button key={p.id} onClick={() => setPlazaIdx(i)} style={{
-                background: plazaIdx === i ? p.color + '22' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${plazaIdx === i ? p.color + '60' : 'rgba(255,255,255,0.08)'}`,
+                background: plazaIdx === i ? p.color + '22' : theme.card,
+                border: `1px solid ${plazaIdx === i ? p.color + '60' : theme.border}`,
                 borderRadius: 8, padding: '8px 16px', cursor: 'pointer',
                 color: plazaIdx === i ? p.color : theme.dim,
                 fontSize: 13, fontWeight: plazaIdx === i ? 700 : 400,
@@ -262,7 +262,7 @@ export default function FibraSection({ theme }: Props) {
             const p = PLAZAS[plazaIdx];
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Card>
+                <Card theme={theme}>
                   <SectionTitle accent={p.color}>Arquitectura · {p.nombre}</SectionTitle>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <tbody>
@@ -273,7 +273,7 @@ export default function FibraSection({ theme }: Props) {
                         ['Clientes activos', String(p.clientes)],
                         ['Estado', p.estado],
                       ].map(([k, v]) => (
-                        <tr key={k} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <tr key={k} style={{ borderBottom: `1px solid ${theme.border}`}}>
                           <td style={{ padding: '7px 4px', color: theme.dim, fontWeight: 600, width: 140, fontSize: 12 }}>{k}</td>
                           <td style={{ padding: '7px 4px', color: theme.text }}>{v}</td>
                         </tr>
@@ -282,7 +282,7 @@ export default function FibraSection({ theme }: Props) {
                   </table>
                 </Card>
 
-                <Card>
+                <Card theme={theme}>
                   <SectionTitle accent={p.color}>Fases del Proyecto</SectionTitle>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {p.fases.map(f => {
@@ -293,7 +293,7 @@ export default function FibraSection({ theme }: Props) {
                             <span style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{f.nombre}</span>
                             <span style={{ fontSize: 11, color: cfg.color, fontWeight: 700 }}>{cfg.label}</span>
                           </div>
-                          <ProgressBar pct={f.pct} color={cfg.color} />
+                          <ProgressBar pct={f.pct} color={cfg.color} theme={theme} />
                           <div style={{ fontSize: 11, color: theme.dim, marginTop: 4 }}>{f.detalle}</div>
                         </div>
                       );
@@ -308,11 +308,11 @@ export default function FibraSection({ theme }: Props) {
 
       {/* ── Tab: Compromisos ───────────────────────────────────────────────── */}
       {tab === 'compromisos' && (
-        <Card style={{ padding: 0 }}>
+        <Card theme={theme} style={{ padding: 0 }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
                   {['#', 'Responsable', 'Compromiso', 'Plaza', 'Prioridad', 'Estado'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: theme.dim, fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
@@ -320,7 +320,7 @@ export default function FibraSection({ theme }: Props) {
               </thead>
               <tbody>
                 {COMPROMISOS.map((c, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                  <tr key={i} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
                     <td style={{ padding: '9px 14px', color: theme.dim, fontSize: 11 }}>{i + 1}</td>
                     <td style={{ padding: '9px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{c.responsable}</td>
                     <td style={{ padding: '9px 14px', color: theme.text }}>{c.compromiso}</td>
@@ -351,7 +351,7 @@ export default function FibraSection({ theme }: Props) {
       {/* ── Tab: Proceso SIDF ─────────────────────────────────────────────── */}
       {tab === 'sidf' && (
         <div>
-          <Card style={{ marginBottom: 16 }}>
+          <Card theme={theme} style={{ marginBottom: 16 }}>
             <SectionTitle>Flujo SIDF — Internet Dedicado por Fibra Óptica</SectionTitle>
             <p style={{ fontSize: 13, color: theme.dim, marginBottom: 16 }}>
               El producto de fibra óptica se crea como variante de Internet Dedicado (SIDP), cambiando el sufijo a <strong style={{ color: '#00C896' }}>SIDF</strong>.
@@ -387,11 +387,11 @@ export default function FibraSection({ theme }: Props) {
             </div>
           </Card>
 
-          <Card>
+          <Card theme={theme}>
             <SectionTitle>Modelo Comercial</SectionTitle>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
                   {['Concepto', 'Condición', 'Valor'].map(h => (
                     <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: theme.dim, fontWeight: 700, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                   ))}
@@ -406,7 +406,7 @@ export default function FibraSection({ theme }: Props) {
                   ['SLA con Neutra', 'Tramos rentados (MTY)', '99.2%'],
                   ['Tiempo por sitio', 'Troncales disponibles', '2–4 semanas'],
                 ].map(([c, cond, v], i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                  <tr key={i} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
                     <td style={{ padding: '8px 10px', fontWeight: 600 }}>{c}</td>
                     <td style={{ padding: '8px 10px', color: theme.dim }}>{cond}</td>
                     <td style={{ padding: '8px 10px', color: '#00C896', fontWeight: 700 }}>{v}</td>
@@ -422,7 +422,7 @@ export default function FibraSection({ theme }: Props) {
       {tab === 'riesgos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {RIESGOS.map((r, i) => (
-            <Card key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '12px 16px' }}>
+            <Card key={i} theme={theme} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '12px 16px' }}>
               <div style={{
                 width: 8, borderRadius: 4, flexShrink: 0, alignSelf: 'stretch',
                 background: NIVEL_COLOR[r.nivel],
@@ -446,7 +446,7 @@ export default function FibraSection({ theme }: Props) {
       {tab === 'decisiones' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {DECISIONES.map((d, i) => (
-            <Card key={i} style={{ display: 'flex', gap: 12 }}>
+            <Card key={i} theme={theme} style={{ display: 'flex', gap: 12 }}>
               <span style={{ fontSize: 18 }}>📌</span>
               <div>
                 <div style={{ fontSize: 11, color: '#00C896', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{d.tema}</div>

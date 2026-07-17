@@ -24,14 +24,17 @@ interface Props {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 const C = {
-  green:  '#00C896',
-  yellow: '#FFB703',
-  red:    '#FF4757',
-  blue:   '#4FC3F7',
-  purple: '#7c3aed',
-  dim:    '#6b7280',
-  card:   '#111827',
-  border: 'rgba(255,255,255,0.06)',
+  green:   '#00C896',
+  yellow:  '#FFB703',
+  red:     '#FF4757',
+  blue:    '#4FC3F7',
+  purple:  '#7c3aed',
+  dim:     '#6b7280',
+  card:    '#111827',
+  border:  'rgba(255,255,255,0.06)',
+  text:    '#f9fafb',
+  textSub: '#f3f4f6',
+  rowBg:   '#0d1117',
 };
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -85,7 +88,7 @@ function SectionBtn({ icon, label, desc, color, onClick }:
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>
         <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>{label}</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.textSub }}>{label}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: C.dim }}>{desc}</p>
         </div>
         <span style={{ marginLeft: 'auto', color: `${color}60`, fontSize: 16 }}>→</span>
@@ -140,7 +143,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       {/* Greeting */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Buenos días, Director</h1>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: C.text }}>Buenos días, Director</h1>
           <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>{brand.name} · Centro de Mando · {hora} hrs</p>
         </div>
         <button onClick={() => onNavigate('war-room')} style={{
@@ -163,7 +166,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
         {/* Alertas críticas */}
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>🔴 Alertas Críticas NOC</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.textSub }}>🔴 Alertas Críticas NOC</p>
             <button onClick={() => onNavigate('noc')} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Ver todas →</button>
           </div>
           {alertas.length === 0 ? (
@@ -177,7 +180,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
                   display: 'flex', alignItems: 'center', gap: 10,
                 }}>
                   <span style={{ fontSize: 16 }}>{a.severity === 'critical' ? '🔴' : '🟡'}</span>
-                  <p style={{ margin: 0, fontSize: 12, color: '#f3f4f6', fontWeight: 600 }}>{a.entity}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: C.textSub, fontWeight: 600 }}>{a.entity}</p>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: C.red, fontWeight: 700 }}>{a.severity.toUpperCase()}</span>
                 </div>
               ))}
@@ -187,7 +190,7 @@ function HomeDirector({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
 
         {/* Accesos rápidos */}
         <Card>
-          <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>⚡ Accesos Rápidos</p>
+          <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: C.textSub }}>⚡ Accesos Rápidos</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionBtn icon="🎯" label="KPI Dashboard" desc="Indicadores ejecutivos configurables" color={C.purple} onClick={() => onNavigate('reportes-kpi')} />
             <SectionBtn icon="⚔️" label="War Room IA" desc="Comando multi-agente en tiempo real" color={C.purple} onClick={() => onNavigate('war-room')} />
@@ -274,14 +277,14 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       {/* Greeting */}
       <div>
-        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Hola, {nombreTecnico.split(' ')[0]} 👋</h1>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: C.text }}>Hola, {nombreTecnico.split(' ')[0]} 👋</h1>
         <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>Técnico de Campo · {brand.name}</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 16 }}>
         {/* Perfil Academia */}
-        <Card style={{ background: 'linear-gradient(135deg, #0d1117 0%, #111827 100%)' }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>🎓 Mi Progreso Academia</p>
+        <Card>
+          <p style={{ margin: '0 0 16px', fontSize: 13, fontWeight: 700, color: C.textSub }}>🎓 Mi Progreso Academia</p>
           {perfil ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
@@ -295,7 +298,7 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
                   <p style={{ margin: 0, fontSize: 12, color: C.dim }}>{perfil.completados} cursos completados</p>
                 </div>
               </div>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: C.border, borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ width: `${perfil.avgPct}%`, height: '100%', background: nivel.color, borderRadius: 3, transition: 'width 1s ease' }} />
               </div>
             </>
@@ -319,7 +322,7 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
       {/* Tickets */}
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>⚙️ Últimos Tickets WFM</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.textSub }}>⚙️ Últimos Tickets WFM</p>
           <button onClick={() => onNavigate('wfm')} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Ver todos →</button>
         </div>
         {tickets.length === 0 ? (
@@ -327,9 +330,9 @@ function HomeTecnico({ nombreTecnico, onNavigate }: { nombreTecnico: string; onN
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {tickets.map(t => (
-              <div key={t.id} style={{ padding: '9px 12px', borderRadius: 8, background: '#0d1117', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div key={t.id} style={{ padding: '9px 12px', borderRadius: 8, background: C.rowBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 14 }}>{t.priority === '1' ? '🔥' : '📋'}</span>
-                <p style={{ margin: 0, fontSize: 12, color: '#e5e7eb', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
+                <p style={{ margin: 0, fontSize: 12, color: C.textSub, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
                 {t.stage && <span style={{ fontSize: 10, color: C.dim, flexShrink: 0 }}>{t.stage}</span>}
               </div>
             ))}
@@ -361,7 +364,7 @@ function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Centro NOC</h1>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: C.text }}>Centro NOC</h1>
         <button onClick={() => onNavigate('noc')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
           Ver NOC completo →
         </button>
@@ -374,7 +377,7 @@ function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       </div>
 
       <Card>
-        <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>
+        <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: C.textSub }}>
           Alertas Activas
           {crits.length > 0 && <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 10, background: 'rgba(255,71,87,0.1)', color: C.red, fontSize: 11 }}>{crits.length} críticas</span>}
         </p>
@@ -392,7 +395,7 @@ function HomeNOC({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
                   }}>
                     <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{isCrit ? '🔴' : '🟡'}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#f3f4f6' }}>{a.entity}</p>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: C.textSub }}>{a.entity}</p>
                       <p style={{ margin: '2px 0 0', fontSize: 11, color: C.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.message}</p>
                     </div>
                     <span style={{ fontSize: 9, fontWeight: 800, color: isCrit ? C.red : C.yellow, flexShrink: 0 }}>{a.severity.toUpperCase()}</span>
@@ -430,7 +433,7 @@ function HomeWFM({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb' }}>Control WFM</h1>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: C.text }}>Control WFM</h1>
         <button onClick={() => onNavigate('wfm')} style={{ padding: '9px 18px', borderRadius: 9, background: 'rgba(255,183,3,0.1)', border: '1px solid rgba(255,183,3,0.3)', color: C.yellow, fontSize: 13, fontWeight: 700, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
           Control operativo →
         </button>
@@ -444,20 +447,20 @@ function HomeWFM({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       </div>
 
       <Card>
-        <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>Cola de Tickets</p>
+        <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: C.textSub }}>Cola de Tickets</p>
         {tickets.length === 0
           ? <p style={{ color: C.dim, fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Cargando tickets…</p>
           : <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
               {[...urgentes, ...normales].map(t => (
                 <div key={t.id} onClick={() => onNavigate('wfm')} style={{
                   padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
-                  background: t.priority === '1' ? 'rgba(255,183,3,0.04)' : '#0d1117',
+                  background: t.priority === '1' ? 'rgba(255,183,3,0.04)' : C.rowBg,
                   border: `1px solid ${t.priority === '1' ? 'rgba(255,183,3,0.2)' : C.border}`,
                   display: 'flex', gap: 10, alignItems: 'center',
                 }}>
                   <span style={{ fontSize: 14 }}>{t.priority === '1' ? '🔥' : '📋'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#e5e7eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</p>
                     {t.partner && <p style={{ margin: 0, fontSize: 10, color: C.dim }}>{t.partner}</p>}
                   </div>
                   <span style={{ fontSize: 10, color: C.dim, flexShrink: 0 }}>{t.stage}</span>
@@ -488,13 +491,13 @@ function HomeGenerico({ onNavigate, backendStatus, odooStatus, observiumStatus }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20, width: '100%', maxWidth: '100%' }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: '#f9fafb', letterSpacing: '-0.01em' }}>Centro de Mando</h1>
+        <h1 style={{ margin: 0, fontSize: isMobile ? 19 : 24, fontWeight: 800, color: C.text, letterSpacing: '-0.01em' }}>Centro de Mando</h1>
         <p style={{ margin: '4px 0 0', fontSize: 12, color: C.dim }}>{brand.name} — Portal de Operaciones</p>
       </div>
 
       {/* Sistema status */}
       <Card style={isMobile ? { padding: 16 } : undefined}>
-        <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#f3f4f6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Estado de Sistemas</p>
+        <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: C.textSub, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Estado de Sistemas</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
             { label: 'Backend API', status: backendStatus === 'online', color: C.green },
@@ -526,9 +529,17 @@ function HomeGenerico({ onNavigate, backendStatus, odooStatus, observiumStatus }
 
 // ─── Router por rol ───────────────────────────────────────────────────────────
 
-export default function InicioRol({ onNavigate, backendStatus, odooStatus, observiumStatus }: Props) {
+export default function InicioRol({ theme, onNavigate, backendStatus, odooStatus, observiumStatus }: Props) {
   const { user } = useAuth();
   const rol = user?.rol ?? 'readonly';
+
+  // Sync shared C palette with current theme so all sub-components inherit it
+  C.card    = theme.card;
+  C.border  = theme.border;
+  C.dim     = theme.dim;
+  C.text    = theme.text;
+  C.textSub = theme.text;
+  C.rowBg   = theme.bg;
 
   if (rol === 'admin' || rol === 'director' || rol === 'comercial')
     return <HomeDirector onNavigate={onNavigate} />;
