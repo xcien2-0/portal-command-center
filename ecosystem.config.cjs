@@ -47,6 +47,25 @@ module.exports = {
       merge_logs: true,
     },
 
+    // ── Agente Odoo ───────────────────────────────────────────────────────
+    {
+      name: 'xcien-agente-odoo',
+      script: 'agente_odoo.py',
+      interpreter: '.venv/bin/python3',
+      cwd: ROOT,
+      instances: 1,
+      autorestart: true,
+      restart_delay: 5000,
+      max_restarts: 10,
+      watch: false,
+      env_file: 'backend/.env',
+      env: { PYTHONUNBUFFERED: '1' },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/agente-odoo-err.log',
+      out_file:   'logs/agente-odoo-out.log',
+      merge_logs: true,
+    },
+
     // ── Telegram Bot ───────────────────────────────────────────────────────
     {
       name: 'xcien-telegram-bot',

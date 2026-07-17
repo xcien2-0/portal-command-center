@@ -1,4 +1,4 @@
-# Antigravity — Command Center XCIEN Networks
+# xcien-portal — Command Center XCIEN Networks
 
 ## Qué es este proyecto
 Portal web de operaciones para XCIEN Networks. Centraliza NOC, campo (WFM), inventario, ventas, RRHH, academia y agentes de IA en una sola interfaz. No es solo una app de academia — es un Command Center completo con 25+ secciones.
@@ -129,4 +129,4 @@ TOKEN_SECRET=...             # JWT para tokens internos
 Agentes disponibles en Claude Code: `/bmad-pm`, `/bmad-architect`, `/bmad-dev`, `/bmad-qa`, `/bmad-sm`, `/bmad-analyst`, `/bmad-ux-expert`
 
 ## Remote Trigger
-`trig_01A1VdoN9yfwyoUFWChXbn3g` — Director General Antigravity
+`trig_01A1VdoN9yfwyoUFWChXbn3g` — Director General xcien-portal
