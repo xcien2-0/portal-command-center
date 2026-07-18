@@ -624,6 +624,313 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
   );
 }
 
+// ── Cruce GPS × Tickets Tab ───────────────────────────────────────────────────
+type Periodo = 'diario' | 'semanal' | 'mensual';
+
+interface CruceRow {
+  vehiculo_id: string;
+  vehiculo: string;
+  placa: string;
+  km_semana: number;
+  horas_campo: number;
+  n_viajes: number;
+  tecnico: string | null;
+  tickets: number;
+  cerrados: number;
+  abiertos: number;
+  match_tipo: 'manual' | 'fuzzy' | 'sin_match';
+  alerta: 'ok' | 'sin_gps' | 'sin_tickets' | 'inactivo';
+}
+
+interface CruceData {
+  semana: string;
+  cruce: CruceRow[];
+  sin_vehiculo: { nombre: string; tickets: number; cerrados: number; abiertos: number }[];
+  todos_tecnicos: string[];
+  resumen: {
+    vehiculos_activos: number;
+    vehiculos_total: number;
+    km_total: number;
+    viajes_total: number;
+    tickets_semana: number;
+    alertas: number;
+  };
+  veh_map: Record<string, string>;
+}
+
+const ALERTA_CFG = {
+  ok:           { label: '✓ OK',         color: '#00C896', bg: '#00C89615' },
+  sin_gps:      { label: '⚠ Sin GPS',    color: '#FFB703', bg: '#FFB70315' },
+  sin_tickets:  { label: '● Sin tickets', color: '#00B4D8', bg: '#00B4D815' },
+  inactivo:     { label: '— Inactivo',    color: '#555',    bg: 'transparent' },
+};
+
+const PERIODO_LABEL: Record<Periodo, string> = {
+  diario:  'Hoy',
+  semanal: 'Esta semana',
+  mensual: 'Este mes',
+};
+
+function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
+  const [periodo,    setPeriodo]    = useState<Periodo>('semanal');
+  const [data,       setData]       = useState<CruceData | null>(null);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [sending,    setSending]    = useState(false);
+  const [reportMsg,  setReportMsg]  = useState<string | null>(null);
+  const [editMap,    setEditMap]    = useState<Record<string, string>>({});
+  const [savingMap,  setSavingMap]  = useState(false);
+  const [filterAlerta, setFilterAlerta] = useState<string>('todos');
+
+  const fetchCruce = async (p: Periodo) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal?periodo=${p}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d: CruceData = await res.json();
+      setData(d);
+      setEditMap({ ...d.veh_map });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchCruce(periodo); }, [periodo]);
+
+  const generarReporte = async () => {
+    setSending(true);
+    setReportMsg(null);
+    try {
+      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal/reporte?periodo=${periodo}`, { method: 'POST' });
+      const json = await res.json();
+      setReportMsg(json.telegram
+        ? `PDF enviado a Telegram ✓ · ${json.semana}`
+        : `PDF generado (sin Telegram) · ${json.semana}`);
+    } catch (e: any) {
+      setReportMsg(`Error: ${e.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const saveMap = async () => {
+    setSavingMap(true);
+    try {
+      await fetch(`${API_BASE}/api/wfm/bidrillas/vehiculo-tecnico-map`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editMap),
+      });
+      await fetchCruce(periodo);
+    } finally {
+      setSavingMap(false);
+    }
+  };
+
+  const rows = data?.cruce ?? [];
+  const filteredRows = filterAlerta === 'todos' ? rows : rows.filter(r => r.alerta === filterAlerta);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Period + actions bar */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 11, color: theme.dim, fontWeight: 700 }}>PERÍODO:</div>
+        {(['diario','semanal','mensual'] as Periodo[]).map(p => (
+          <button key={p} onClick={() => { setPeriodo(p); }}
+            style={{
+              padding: '6px 16px', borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: periodo === p ? 700 : 400,
+              background: periodo === p ? `${theme.accent}25` : 'rgba(255,255,255,0.05)',
+              color: periodo === p ? theme.accent : theme.dim,
+              boxShadow: periodo === p ? `0 0 0 1.5px ${theme.accent}50` : 'none',
+            }}>
+            {PERIODO_LABEL[p]}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => fetchCruce(periodo)} disabled={loading}
+          style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.dim, fontSize: 11, cursor: 'pointer' }}>
+          🔄 Actualizar
+        </button>
+        <button onClick={generarReporte} disabled={sending || loading}
+          style={{
+            padding: '6px 18px', borderRadius: 8, border: 'none', cursor: sending ? 'not-allowed' : 'pointer',
+            background: sending ? 'rgba(255,255,255,0.06)' : theme.accent,
+            color: sending ? theme.dim : '#000', fontWeight: 700, fontSize: 11,
+          }}>
+          {sending ? '⏳ Generando...' : '📄 Generar Reporte PDF'}
+        </button>
+      </div>
+
+      {reportMsg && (
+        <div style={{ padding: '10px 16px', borderRadius: 8, background: reportMsg.startsWith('Error') ? '#FF475715' : '#00C89615', color: reportMsg.startsWith('Error') ? '#FF4757' : '#00C896', fontSize: 12, fontWeight: 600 }}>
+          {reportMsg}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 60, color: theme.dim, fontSize: 13 }}>
+          Cruzando GPS TN360 × Odoo Field Service...
+        </div>
+      )}
+      {error && (
+        <div style={{ padding: 16, borderRadius: 8, background: '#FF475710', color: '#FF4757', fontSize: 12 }}>
+          Error: {error}
+        </div>
+      )}
+
+      {data && !loading && (
+        <>
+          {/* KPI cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+            {[
+              { label: 'Vehículos activos', val: `${data.resumen.vehiculos_activos} / ${data.resumen.vehiculos_total}`, color: theme.accent },
+              { label: 'Km en campo',       val: `${data.resumen.km_total.toLocaleString('es-MX')} km`, color: '#00B4D8' },
+              { label: 'Viajes totales',    val: data.resumen.viajes_total, color: '#FF6B35' },
+              { label: 'Tickets Odoo',      val: data.resumen.tickets_semana, color: '#FFD700' },
+              { label: 'Alertas',           val: data.resumen.alertas, color: data.resumen.alertas > 0 ? '#FF4757' : '#00C896' },
+            ].map(k => (
+              <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: k.color, fontVariantNumeric: 'tabular-nums' }}>{k.val}</div>
+                <div style={{ fontSize: 9, color: theme.dim, marginTop: 3, fontWeight: 700 }}>{k.label.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 10, color: theme.dim }}>
+            Período: <b style={{ color: theme.text }}>{data.semana}</b>
+            {' · '}Fuentes: TN360 GPS + Odoo Field Service · {rows.length} vehículos cruzados
+          </div>
+
+          {/* Filter bar */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: theme.dim, fontWeight: 700 }}>FILTRAR:</span>
+            {(['todos', 'ok', 'sin_gps', 'sin_tickets', 'inactivo'] as const).map(f => {
+              const cfg = f === 'todos' ? { label: 'Todos', color: theme.accent } : { label: ALERTA_CFG[f].label, color: ALERTA_CFG[f].color };
+              return (
+                <button key={f} onClick={() => setFilterAlerta(f)}
+                  style={{
+                    padding: '4px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: filterAlerta === f ? 700 : 400,
+                    background: filterAlerta === f ? `${cfg.color}20` : 'rgba(255,255,255,0.04)',
+                    color: filterAlerta === f ? cfg.color : theme.dim,
+                    boxShadow: filterAlerta === f ? `0 0 0 1.5px ${cfg.color}40` : 'none',
+                  }}>{cfg.label}</button>
+              );
+            })}
+            <span style={{ fontSize: 10, color: theme.dim, marginLeft: 'auto' }}>{filteredRows.length} de {rows.length}</span>
+          </div>
+
+          {/* Main cruce table */}
+          <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${theme.border}` }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  {['Vehículo','Placa','Técnico','Km sem.','Hrs campo','Viajes','Tickets','Cerr.','Abiert.','Estado'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Vehículo' || h === 'Técnico' || h === 'Placa' ? 'left' : 'center',
+                      color: theme.dim, fontWeight: 700, fontSize: 9, letterSpacing: 0.5,
+                      borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>
+                      {h.toUpperCase()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((r, i) => {
+                  const cfg = ALERTA_CFG[r.alerta];
+                  return (
+                    <tr key={r.vehiculo_id}
+                      style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${theme.accent}08`}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
+                    >
+                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 600 }}>{r.vehiculo || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: theme.dim, fontFamily: 'monospace', fontSize: 10 }}>{r.placa}</td>
+                      <td style={{ padding: '9px 12px' }}>
+                        {r.tecnico
+                          ? <span style={{ color: theme.text }}>
+                              {r.tecnico}
+                              {r.match_tipo === 'fuzzy' && <sup style={{ fontSize: 8, color: theme.dim, marginLeft: 3 }}>~</sup>}
+                            </span>
+                          : <span style={{ color: theme.dim, fontStyle: 'italic' }}>Sin match</span>}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_semana > 0 ? '#00B4D8' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{r.km_semana}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.horas_campo}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: r.n_viajes > 0 ? 700 : 400 }}>{r.n_viajes}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: r.tickets > 0 ? '#FFD700' : theme.dim }}>{r.tickets}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: '#00C896', fontVariantNumeric: 'tabular-nums' }}>{r.cerrados}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.abiertos > 0 ? '#FFB703' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.abiertos}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 9, fontWeight: 700, background: cfg.bg, color: cfg.color, whiteSpace: 'nowrap' }}>
+                          {cfg.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Técnicos sin vehículo */}
+          {data.sin_vehiculo.length > 0 && (
+            <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 12, letterSpacing: 0.5 }}>
+                TÉCNICOS SIN VEHÍCULO GPS ASIGNADO — {data.sin_vehiculo.length}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {data.sin_vehiculo.map(t => (
+                  <div key={t.nombre} style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${theme.border}` }}>
+                    <div style={{ fontSize: 11, color: theme.text, fontWeight: 600 }}>{t.nombre}</div>
+                    <div style={{ fontSize: 9, color: theme.dim, marginTop: 2 }}>
+                      {t.tickets} tickets · {t.cerrados} cerrados
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Vehicle → Technician mapping editor */}
+          {rows.filter(r => r.alerta !== 'inactivo' && r.match_tipo === 'sin_match').length > 0 && (
+            <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#FFB703', marginBottom: 4, letterSpacing: 0.5 }}>
+                ⚙ ASIGNAR TÉCNICO A VEHÍCULO (sin match automático)
+              </div>
+              <div style={{ fontSize: 10, color: theme.dim, marginBottom: 14 }}>
+                Asigna manualmente un técnico a cada vehículo sin coincidencia. Se guarda para futuros cruces.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {rows.filter(r => r.match_tipo === 'sin_match').map(r => (
+                  <div key={r.vehiculo_id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 180, fontSize: 11, color: theme.text, fontWeight: 600 }}>
+                      {r.vehiculo} <span style={{ color: theme.dim, fontWeight: 400 }}>· {r.placa}</span>
+                    </div>
+                    <select
+                      value={editMap[r.vehiculo_id] ?? ''}
+                      onChange={e => setEditMap(m => ({ ...m, [r.vehiculo_id]: e.target.value }))}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text, fontSize: 11, outline: 'none' }}
+                    >
+                      <option value="">— seleccionar técnico —</option>
+                      {data.todos_tecnicos.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <button onClick={saveMap} disabled={savingMap}
+                style={{ marginTop: 14, padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: theme.accent, color: '#000', fontWeight: 700, fontSize: 11 }}>
+                {savingMap ? 'Guardando...' : '💾 Guardar mapeo'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Organizar Tab ─────────────────────────────────────────────────────────────
 
 const ROLES_DISPONIBLES = ['Auxiliar', 'Técnico FO', 'Técnico RF/Microondas', 'Líder de Cuadrilla'];
@@ -965,7 +1272,7 @@ function OrganizarTab({ theme, tecnicosPool }: { theme: ThemeConfig; tecnicosPoo
 
 // ── Main Section ──────────────────────────────────────────────────────────────
 export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
-  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno' | 'gps' | 'organizar'>('cuadrillas');
+  const [tab, setTab]                 = useState<'cuadrillas' | 'desempeno' | 'gps' | 'organizar' | 'cruce'>('cuadrillas');
   const [tecnicos, setTecnicos]       = useState<Tecnico[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -1018,10 +1325,11 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {([
-          ['cuadrillas', '👷 Cuadrillas',    theme.accent],
-          ['organizar',  '🏗️ Organizar',     '#00C896'],
-          ['desempeno',  '🏆 Desempeño',     '#FFD700'],
-          ['gps',        '🗺️ GPS en Vivo',   '#FF6B35'],
+          ['cuadrillas', '👷 Cuadrillas',      theme.accent],
+          ['organizar',  '🏗️ Organizar',       '#00C896'],
+          ['desempeno',  '🏆 Desempeño',       '#FFD700'],
+          ['gps',        '🗺️ GPS en Vivo',     '#FF6B35'],
+          ['cruce',      '🔁 Cruce GPS/Tickets','#8B5CF6'],
         ] as const).map(([id, label, col]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === id ? 700 : 400,
@@ -1041,6 +1349,9 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
 
       {/* GPS tab */}
       {tab === 'gps' && <GPSTab theme={theme} />}
+
+      {/* Cruce GPS × Tickets tab */}
+      {tab === 'cruce' && <CruceGPSTab theme={theme} />}
 
       {loading && tab === 'cuadrillas' && <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Conectando a Odoo Field Service...</div>}
       {error   && tab === 'cuadrillas' && <div style={{ padding: 16, borderRadius: 8, background: '#FF475710', color: '#FF4757', fontSize: 12 }}>Error: {error}</div>}

@@ -3925,6 +3925,392 @@ def get_gps_vehiculos():
                 return {"vehiculos": _gps_cache["data"], "total": len(_gps_cache["data"]), "cached": True, "stale": True}
             raise HTTPException(500, f"Error GPS: {e}")
 
+# ─── GPS × Tickets — Cruce Semanal ───────────────────────────────────────────
+
+_VEH_MAP_FILE = os.path.join(BASE_DIR, "data", "vehiculo_tecnico_map.json")
+
+def _veh_map_load() -> dict:
+    try:
+        with open(_VEH_MAP_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _veh_map_save(data: dict):
+    with open(_VEH_MAP_FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _fuzzy_match_score(vehicle_name: str, tecnico_nombre: str) -> float:
+    """Word-overlap score: words from vehicle_name that appear in tecnico_nombre."""
+    v_words = set(vehicle_name.lower().split())
+    t_words = set(tecnico_nombre.lower().split())
+    if not v_words:
+        return 0.0
+    return len(v_words & t_words) / len(v_words)
+
+@app.get("/api/wfm/bidrillas/cruce-semanal")
+def get_cruce_semanal(periodo: str = "semanal"):
+    """
+    Cruce GPS TN360 vs tickets Odoo.
+    periodo: diario | semanal | mensual
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    import xmlrpc.client as _xr
+
+    # ── Rango de fechas según período (CST = UTC-6) ───────────────────────────
+    now_utc = datetime.datetime.utcnow()
+    now_mx  = now_utc - datetime.timedelta(hours=6)
+
+    if periodo == "diario":
+        start_mx = now_mx.replace(hour=0, minute=0, second=0, microsecond=0)
+        periodo_label = f"Hoy {now_mx.strftime('%d %b %Y')}"
+    elif periodo == "mensual":
+        start_mx = now_mx.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        periodo_label = f"{start_mx.strftime('%d %b')} – {now_mx.strftime('%d %b %Y')}"
+    else:  # semanal
+        monday_mx = now_mx - datetime.timedelta(days=now_mx.weekday())
+        start_mx  = monday_mx.replace(hour=0, minute=0, second=0, microsecond=0)
+        periodo_label = f"{start_mx.strftime('%d %b')} – {now_mx.strftime('%d %b %Y')}"
+
+    start_utc     = start_mx + datetime.timedelta(hours=6)
+    from_dt       = start_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_dt         = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    week_start_iso = start_utc.strftime("%Y-%m-%d %H:%M:%S")
+    semana_label  = periodo_label
+
+    # ── 1. TN360: viajes de la semana ─────────────────────────────────────────
+    gps_by_vid: dict = {}
+    try:
+        token   = _tn360_token()
+        hdr     = {"Authorization": f"Bearer {token}"}
+        veh_r   = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=hdr, timeout=15)
+        vehicles_raw = veh_r.json() if veh_r.ok else []
+
+        def _get_trips(veh):
+            vid = veh["id"]
+            try:
+                r = _requests.get(
+                    f"{TN360_API}/trips?vehicleId={vid}&from={from_dt}&to={to_dt}&limit=200",
+                    headers=hdr, timeout=15
+                )
+                trips = r.json() if r.ok else []
+                if not isinstance(trips, list): trips = []
+                # TN360: gpsOdoStart/gpsOdoEnd in km; ignitionOn/Off in ms
+                km  = sum(
+                    max(0, (t.get("gpsOdoEnd") or 0) - (t.get("gpsOdoStart") or 0))
+                    for t in trips
+                )
+                dur = sum(
+                    max(0, ((t.get("ignitionOff") or 0) - (t.get("ignitionOn") or 0))) / 3_600_000
+                    for t in trips
+                )
+                return {"id": vid, "nombre": veh.get("name",""), "placa": veh.get("registration",""),
+                        "km_semana": round(km, 1), "horas_campo": round(dur, 1), "n_viajes": len(trips)}
+            except Exception:
+                return {"id": vid, "nombre": veh.get("name",""), "placa": veh.get("registration",""),
+                        "km_semana": 0.0, "horas_campo": 0.0, "n_viajes": 0}
+
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            for item in pool.map(_get_trips, vehicles_raw):
+                gps_by_vid[item["id"]] = item
+    except Exception as e:
+        logger.error(f"Cruce-semanal TN360 error: {e}")
+
+    # ── 2. Odoo: tareas Field Service de la semana ────────────────────────────
+    odoo_by_tec: dict = {}
+    try:
+        odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+        odoo_db   = os.environ.get("ODOO_DB", "wispi17")
+        odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+        odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+        common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid    = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+
+        CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed"}
+        domain = [
+            ["project_id.name", "ilike", "field"],
+            ["user_ids", "!=", False],
+            "|", ["create_date", ">=", week_start_iso],
+                  ["date_last_stage_update", ">=", week_start_iso],
+        ]
+        tasks = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
+            [domain], {"fields": ["id","name","stage_id","user_ids","create_date"], "limit": 1000})
+
+        all_uids  = list({u for t in tasks for u in t["user_ids"]})
+        users_raw = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
+            [all_uids], {"fields": ["id","name"]}) if all_uids else []
+        uid_to_name = {u["id"]: u["name"] for u in users_raw}
+
+        for t in tasks:
+            stage     = (t["stage_id"][1] if t["stage_id"] else "").lower()
+            is_closed = any(kw in stage for kw in CLOSED_KW)
+            for u_id in t["user_ids"]:
+                nombre = uid_to_name.get(u_id, f"User {u_id}")
+                if nombre not in odoo_by_tec:
+                    odoo_by_tec[nombre] = {"nombre": nombre, "tickets": 0, "cerrados": 0, "abiertos": 0}
+                odoo_by_tec[nombre]["tickets"] += 1
+                if is_closed:
+                    odoo_by_tec[nombre]["cerrados"] += 1
+                else:
+                    odoo_by_tec[nombre]["abiertos"] += 1
+    except Exception as e:
+        logger.error(f"Cruce-semanal Odoo error: {e}")
+
+    # ── 3. Cruce por mapeo manual + fuzzy ─────────────────────────────────────
+    veh_map    = _veh_map_load()   # {str(vehiculo_id) → tecnico_nombre}
+    gps_list   = list(gps_by_vid.values())
+    odoo_matched: set = set()
+    cruce_rows = []
+
+    for veh in gps_list:
+        vid        = veh["id"]
+        tec_nombre = veh_map.get(str(vid))
+        match_tipo = "sin_match"
+        tec_data   = None
+
+        if tec_nombre and tec_nombre in odoo_by_tec:
+            tec_data   = odoo_by_tec[tec_nombre]
+            match_tipo = "manual"
+            odoo_matched.add(tec_nombre)
+        else:
+            best_score, best_tec = 0.0, None
+            for tec_n, tec_d in odoo_by_tec.items():
+                score = _fuzzy_match_score(veh["nombre"], tec_n)
+                if score > best_score and score >= 0.5:
+                    best_score, best_tec = score, tec_n
+            if best_tec:
+                tec_data   = odoo_by_tec[best_tec]
+                tec_nombre = best_tec
+                match_tipo = "fuzzy"
+                odoo_matched.add(best_tec)
+
+        tiene_gps     = veh["n_viajes"] > 0
+        tiene_tickets = tec_data["tickets"] > 0 if tec_data else False
+
+        if tiene_gps and tiene_tickets:
+            alerta = "ok"
+        elif tiene_tickets and not tiene_gps:
+            alerta = "sin_gps"
+        elif tiene_gps and not tiene_tickets:
+            alerta = "sin_tickets"
+        else:
+            alerta = "inactivo"
+
+        cruce_rows.append({
+            "vehiculo_id":  str(vid),
+            "vehiculo":     veh["nombre"],
+            "placa":        veh["placa"],
+            "km_semana":    veh["km_semana"],
+            "horas_campo":  veh["horas_campo"],
+            "n_viajes":     veh["n_viajes"],
+            "tecnico":      tec_nombre,
+            "tickets":      tec_data["tickets"]  if tec_data else 0,
+            "cerrados":     tec_data["cerrados"] if tec_data else 0,
+            "abiertos":     tec_data["abiertos"] if tec_data else 0,
+            "match_tipo":   match_tipo,
+            "alerta":       alerta,
+        })
+
+    sin_vehiculo = [t for n, t in odoo_by_tec.items() if n not in odoo_matched]
+    cruce_rows.sort(key=lambda x: (-x["tickets"], -x["km_semana"]))
+
+    return {
+        "semana":     semana_label,
+        "cruce":      cruce_rows,
+        "sin_vehiculo": sin_vehiculo,
+        "todos_tecnicos": list(odoo_by_tec.keys()),
+        "resumen": {
+            "vehiculos_activos": sum(1 for r in cruce_rows if r["n_viajes"] > 0),
+            "vehiculos_total":   len(cruce_rows),
+            "km_total":          round(sum(v["km_semana"] for v in gps_list), 1),
+            "viajes_total":      sum(v["n_viajes"] for v in gps_list),
+            "tickets_semana":    sum(t["tickets"] for t in odoo_by_tec.values()),
+            "alertas":           sum(1 for r in cruce_rows if r["alerta"] in ("sin_gps","sin_tickets")),
+        },
+        "veh_map": veh_map,
+    }
+
+@app.patch("/api/wfm/bidrillas/vehiculo-tecnico-map")
+def patch_veh_map(body: dict):
+    """Guarda mapeo vehiculo_id → tecnico_nombre. Body: {vid: nombre, ...}"""
+    existing = _veh_map_load()
+    existing.update(body)
+    _veh_map_save(existing)
+    return {"ok": True, "total": len(existing)}
+
+@app.post("/api/wfm/bidrillas/cruce-semanal/reporte")
+def post_cruce_reporte(periodo: str = "semanal"):
+    """Genera PDF del reporte GPS×Tickets para el período indicado y lo envía por Telegram."""
+    import io, textwrap
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Table,
+                                        TableStyle, Spacer, HRFlowable)
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        HAS_RL = True
+    except ImportError:
+        HAS_RL = False
+
+    cruce_data = get_cruce_semanal(periodo=periodo)
+    rows       = cruce_data["cruce"]
+    resumen    = cruce_data["resumen"]
+    semana     = cruce_data["semana"]
+    sin_v      = cruce_data["sin_vehiculo"]
+
+    if not HAS_RL:
+        return {"ok": False, "error": "reportlab no instalado"}
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+        topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
+    styles = getSampleStyleSheet()
+    VERDE  = colors.HexColor("#00C896")
+    OSCURO = colors.HexColor("#0A0A0A")
+    GRIS   = colors.HexColor("#555555")
+    ROJO   = colors.HexColor("#FF4757")
+    AMBAR  = colors.HexColor("#FFB703")
+    AZUL   = colors.HexColor("#00B4D8")
+
+    title_style = ParagraphStyle("title", fontName="Helvetica-Bold",
+        fontSize=18, textColor=VERDE, spaceAfter=4)
+    sub_style   = ParagraphStyle("sub",   fontName="Helvetica",
+        fontSize=10, textColor=GRIS, spaceAfter=2)
+    body_style  = ParagraphStyle("body",  fontName="Helvetica",
+        fontSize=9,  textColor=colors.black)
+    h2_style    = ParagraphStyle("h2",    fontName="Helvetica-Bold",
+        fontSize=12, textColor=OSCURO, spaceAfter=4, spaceBefore=10)
+
+    story = []
+    periodo_titulo = {"diario": "Reporte Diario", "mensual": "Reporte Mensual"}.get(periodo, "Reporte Semanal")
+    story.append(Paragraph(f"XCIEN Networks — {periodo_titulo}", title_style))
+    story.append(Paragraph(f"Cruce GPS × Tickets Field Service · {semana}", sub_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=VERDE))
+    story.append(Spacer(1, 10))
+
+    # KPIs
+    kpi_data = [
+        ["Vehículos activos", "Km totales", "Viajes", "Tickets semana", "Alertas"],
+        [
+            str(resumen["vehiculos_activos"]),
+            f"{resumen['km_total']:.0f} km",
+            str(resumen["viajes_total"]),
+            str(resumen["tickets_semana"]),
+            str(resumen["alertas"]),
+        ]
+    ]
+    kpi_table = Table(kpi_data, colWidths=[3.3*cm]*5)
+    kpi_table.setStyle(TableStyle([
+        ("BACKGROUND",  (0,0), (-1,0), VERDE),
+        ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+        ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+        ("FONTSIZE",    (0,0), (-1,-1), 9),
+        ("ALIGN",       (0,0), (-1,-1), "CENTER"),
+        ("GRID",        (0,0), (-1,-1), 0.3, colors.white),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#F0FFF4"), colors.white]),
+    ]))
+    story.append(kpi_table)
+    story.append(Spacer(1, 14))
+
+    # Tabla principal
+    story.append(Paragraph("Detalle por Vehículo / Técnico", h2_style))
+
+    def alerta_icon(a):
+        return {"ok":"✓","sin_gps":"⚠ Sin GPS","sin_tickets":"ℹ Sin Tickets","inactivo":"— Inactivo"}.get(a, a)
+
+    hdr = ["Vehículo","Placa","Técnico","Km sem","Hrs campo","Viajes","Tickets","Cerr.","Alert."]
+    table_data = [hdr]
+    for r in rows:
+        table_data.append([
+            r["vehiculo"][:18],
+            r["placa"],
+            (r["tecnico"] or "Sin match")[:20],
+            str(r["km_semana"]),
+            str(r["horas_campo"]),
+            str(r["n_viajes"]),
+            str(r["tickets"]),
+            str(r["cerrados"]),
+            alerta_icon(r["alerta"]),
+        ])
+
+    col_w = [3.5*cm, 2*cm, 4*cm, 1.5*cm, 1.8*cm, 1.5*cm, 1.5*cm, 1.5*cm, 2.2*cm]
+    main_table = Table(table_data, colWidths=col_w, repeatRows=1)
+
+    row_styles = [
+        ("BACKGROUND",  (0,0), (-1,0), OSCURO),
+        ("TEXTCOLOR",   (0,0), (-1,0), VERDE),
+        ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+        ("FONTSIZE",    (0,0), (-1,-1), 8),
+        ("ALIGN",       (3,0), (-1,-1), "CENTER"),
+        ("GRID",        (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#FAFAFA"), colors.white]),
+        ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
+        ("TOPPADDING",  (0,0), (-1,-1), 3),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 3),
+    ]
+    for i, r in enumerate(rows, start=1):
+        if r["alerta"] == "sin_gps":
+            row_styles.append(("BACKGROUND", (8,i), (8,i), colors.HexColor("#FFF3CD")))
+            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), AMBAR))
+        elif r["alerta"] == "sin_tickets":
+            row_styles.append(("BACKGROUND", (8,i), (8,i), colors.HexColor("#E8F4FD")))
+            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), AZUL))
+        elif r["alerta"] == "ok":
+            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), VERDE))
+
+    main_table.setStyle(TableStyle(row_styles))
+    story.append(main_table)
+
+    if sin_v:
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("Técnicos sin vehículo GPS asignado", h2_style))
+        sv_data = [["Técnico","Tickets","Cerrados","Abiertos"]]
+        for t in sin_v:
+            sv_data.append([t["nombre"][:30], str(t["tickets"]), str(t["cerrados"]), str(t["abiertos"])])
+        sv_table = Table(sv_data, colWidths=[7*cm, 2*cm, 2*cm, 2*cm])
+        sv_table.setStyle(TableStyle([
+            ("BACKGROUND",  (0,0), (-1,0), OSCURO),
+            ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+            ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",    (0,0), (-1,-1), 8),
+            ("GRID",        (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
+        ]))
+        story.append(sv_table)
+
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
+    story.append(Paragraph(
+        f"Generado automáticamente — XCIEN Command Center · {semana}",
+        ParagraphStyle("foot", fontName="Helvetica", fontSize=7, textColor=GRIS)
+    ))
+
+    doc.build(story)
+    pdf_bytes = buf.getvalue()
+
+    # Enviar por Telegram
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN","")
+    chat_id   = os.environ.get("TELEGRAM_CHAT_ID_REPORTES","") or os.environ.get("TELEGRAM_CHAT_ID","")
+    sent_ok   = False
+    if bot_token and chat_id:
+        try:
+            import requests as _rq
+            caption = f"📊 *Reporte Semanal GPS×Tickets*\n{semana}\n✅ {resumen['vehiculos_activos']} vehículos · {resumen['km_total']} km · {resumen['tickets_semana']} tickets"
+            files   = {"document": (f"cruce_semanal_{semana.replace(' ','-').replace('–','-')}.pdf", pdf_bytes, "application/pdf")}
+            data    = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+            _rq.post(f"https://api.telegram.org/bot{bot_token}/sendDocument", data=data, files=files, timeout=20)
+            sent_ok = True
+        except Exception as te:
+            logger.error(f"Telegram send error: {te}")
+
+    return {
+        "ok": True,
+        "semana": semana,
+        "telegram": sent_ok,
+        "resumen": resumen,
+    }
+
 # ─── Integraciones Externas ──────────────────────────────────────────────────
 
 @app.post("/api/integrations/execute")
@@ -8380,14 +8766,14 @@ def _fibra_save(data: dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 @app.get("/api/fibra/data")
-def fibra_get_data(user: dict = Depends(require_auth)):
+def fibra_get_data(user: dict = Depends(get_current_user)):
     return _fibra_load()
 
 @app.patch("/api/fibra/compromisos/{comp_id}")
 def fibra_update_compromiso(
     comp_id: str,
     payload: dict,
-    user: dict = Depends(require_auth),
+    user: dict = Depends(get_current_user),
 ):
     data = _fibra_load()
     comp = next((c for c in data.get("compromisos", []) if c["id"] == comp_id), None)
@@ -8435,7 +8821,7 @@ def fibra_update_fase(
     plaza_id: str,
     fase_idx: int,
     payload: dict,
-    user: dict = Depends(require_auth),
+    user: dict = Depends(get_current_user),
 ):
     if user.get("rol") not in ("admin", "director"):
         raise HTTPException(403, "Solo admin/director pueden actualizar fases")
@@ -8467,9 +8853,167 @@ def fibra_update_fase(
     return {"ok": True, "fase": fase}
 
 @app.get("/api/fibra/historial")
-def fibra_get_historial(user: dict = Depends(require_auth)):
+def fibra_get_historial(user: dict = Depends(get_current_user)):
     data = _fibra_load()
     return {"historial": list(reversed(data.get("historial", [])))}
+
+# ─── Radio Bases ──────────────────────────────────────────────────────────────
+
+_RADIOBASES_DRIVE_FILE   = os.path.join(BASE_DIR, "data", "radiobases_drive.json")
+_RADIOBASES_OVERLAY_FILE = os.path.join(BASE_DIR, "data", "radiobases_overlay.json")
+
+def _rb_overlay_load() -> dict:
+    if not os.path.exists(_RADIOBASES_OVERLAY_FILE):
+        return {"overlays": [], "historial": []}
+    with open(_RADIOBASES_OVERLAY_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def _rb_overlay_save(data: dict):
+    with open(_RADIOBASES_OVERLAY_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# ── Renta parser ───────────────────────────────────────────────────────────────
+
+def _clean_number(s: str):
+    s = s.strip().replace(" ", "")
+    if not s:
+        return None
+    periods = s.count(".")
+    commas  = s.count(",")
+    try:
+        if periods == 0 and commas == 0:
+            return float(s)
+        elif periods == 0 and commas == 1:
+            parts = s.split(",")
+            return float(s.replace(",", "")) if len(parts[1]) == 3 else float(s.replace(",", "."))
+        elif periods == 1 and commas == 0:
+            parts = s.split(".")
+            return float(s.replace(".", "")) if len(parts[1]) == 3 else float(s)
+        elif periods == 1 and commas == 1:
+            return float(s.replace(",", ""))
+        elif periods == 2 and commas == 0:
+            idx = s.index(".")
+            return float(s[:idx] + s[idx+1:])
+        else:
+            return float(s.replace(",", ""))
+    except (ValueError, IndexError):
+        return None
+
+def _parse_renta(renta_str: str):
+    """Returns (monthly_amount: float|None, includes_iva: bool)"""
+    if not renta_str or not renta_str.strip():
+        return None, False
+    s = renta_str.strip()
+    su = s.upper()
+    includes_iva = "YA CON IVA" in su or ("CON IVA" in su and "+" not in su[:su.index("CON IVA")])
+    # Prefer monthly value in parentheses: "($5,200 mensua"
+    import re as _re
+    m = _re.search(r"\(\s*\$?\s*([\d,. ]+)\s*mensua", s, _re.IGNORECASE)
+    if m:
+        v = _clean_number(m.group(1))
+        if v:
+            return v, includes_iva
+    is_quarterly = "TRES MESES" in su
+    is_annual    = bool(_re.search(r"\bANUALES?\b", su)) and "INCREMENTO ANUAL" not in su
+    amounts = _re.findall(r"\$\s*([\d,. ]+)", s)
+    if not amounts:
+        return None, False
+    v = _clean_number(amounts[0])
+    if v is None:
+        return None, False
+    if is_quarterly:
+        v = v / 3
+    elif is_annual:
+        v = v / 12
+    return v, includes_iva
+
+# ── Merge ──────────────────────────────────────────────────────────────────────
+
+# All overlay-editable fields (besides operational state/notes)
+_RB_EDITABLE = {"estado_op", "notas", "ultima_visita", "direccion", "city", "state", "renta", "lat", "lng"}
+
+def _rb_merge() -> list:
+    with open(_RADIOBASES_DRIVE_FILE, "r", encoding="utf-8") as f:
+        drive = json.load(f)
+    ov_data = _rb_overlay_load()
+    overlay_map = {o["name"]: o for o in ov_data.get("overlays", [])}
+    result = []
+    junk_patterns = ["pactualizar", "actualizar", "por actualizar"]
+    for i, rb in enumerate(drive):
+        name = rb.get("name") or ""
+        if not name:
+            continue
+        if any(p in name.lower() for p in junk_patterns):
+            continue
+        ov = overlay_map.get(rb["name"], {})
+        merged = {**rb, "idx": i}
+        # Apply overlay overrides for any editable field
+        for field in _RB_EDITABLE:
+            if field in ov:
+                merged[field] = ov[field]
+        # Defaults for operational fields
+        merged.setdefault("estado_op", "sin_info")
+        merged.setdefault("notas", "")
+        merged.setdefault("ultima_visita", "")
+        # Parse renta to numeric
+        renta_mxn, incluye_iva = _parse_renta(merged.get("renta", ""))
+        merged["renta_mxn"]       = renta_mxn
+        merged["renta_incluye_iva"] = incluye_iva
+        result.append(merged)
+    return result
+
+@app.get("/api/radiobases/data")
+def radiobases_get_data(user: dict = Depends(get_current_user)):
+    radiobases = _rb_merge()
+    ov_data = _rb_overlay_load()
+    return {
+        "radiobases": radiobases,
+        "historial": list(reversed(ov_data.get("historial", []))),
+    }
+
+@app.get("/api/radiobases/historial")
+def radiobases_get_historial(user: dict = Depends(get_current_user)):
+    ov_data = _rb_overlay_load()
+    return {"historial": list(reversed(ov_data.get("historial", [])))}
+
+@app.patch("/api/radiobases/sitios/{site_name:path}")
+def radiobases_update_sitio(
+    site_name: str,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+):
+    if user.get("rol") not in ("admin", "director"):
+        raise HTTPException(403, "Solo admin/director pueden actualizar radio bases")
+
+    valid = {k: v for k, v in payload.items() if k in _RB_EDITABLE}
+    if not valid:
+        raise HTTPException(400, "Sin campos válidos para actualizar")
+
+    ov_data = _rb_overlay_load()
+    overlays = ov_data.setdefault("overlays", [])
+    existing = next((o for o in overlays if o["name"] == site_name), None)
+
+    old_vals: dict = {}
+    if existing:
+        for campo in valid:
+            old_vals[campo] = existing.get(campo)
+        existing.update(valid)
+    else:
+        old_vals = {k: None for k in valid}
+        overlays.append({"name": site_name, **valid})
+
+    ov_data.setdefault("historial", []).append({
+        "ts": dt_datetime.utcnow().isoformat(),
+        "site_name": site_name,
+        "user_nombre": user.get("nombre"),
+        "user_email": user.get("email"),
+        "cambios": {k: {"de": old_vals.get(k), "a": valid[k]} for k in valid},
+    })
+    _rb_overlay_save(ov_data)
+
+    merged = _rb_merge()
+    updated = next((r for r in merged if r["name"] == site_name), None)
+    return {"ok": True, "sitio": updated}
 
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
