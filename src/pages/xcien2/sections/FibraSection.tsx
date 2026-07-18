@@ -1,75 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import type { ThemeConfig } from '../types';
 
 interface Props { theme: ThemeConfig }
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const PLAZAS = [
-  {
-    id: 'mty', nombre: 'Monterrey', emoji: '🟢',
-    core: 'Purísima',
-    infra: 'Anillo Alfa · 23 rutas KMZ',
-    proveedor: 'Neutral Networks (troncales)',
-    clientes: 6,
-    estado: 'En piloto',
-    color: '#00C896',
-    fases: [
-      { nombre: 'F1 — Diseño y definición', estado: 'progreso', pct: 45, detalle: 'SIDF en Odoo, kits, diagrama topológico, RZ Gustavo' },
-      { nombre: 'F2 — Despliegue + convenio Neutral', estado: 'bloqueado', pct: 0, detalle: 'Requiere convenio firmado — blocker crítico' },
-      { nombre: 'F3 — CWDM + pruebas', estado: 'pendiente', pct: 0, detalle: 'Depende de F2 · capacitación Raisecom' },
-      { nombre: 'F4 — Piloto y lanzamiento', estado: 'pendiente', pct: 0, detalle: 'SLA 99.2% con 6 clientes piloto' },
-    ],
-  },
-  {
-    id: 'pn', nombre: 'Piedras Negras', emoji: '🔵',
-    core: 'RB Piedras Negras',
-    infra: 'Anillo + Lancemex · 21 cajas',
-    proveedor: 'Monserrat (planta ext. · temporal)',
-    clientes: 2,
-    estado: 'Construida',
-    color: '#3B82F6',
-    fases: [
-      { nombre: 'F1 — Diseño y definición', estado: 'completado', pct: 100, detalle: 'Kits básicos. Pendiente formalización SIDF en Odoo' },
-      { nombre: 'F2 — Despliegue de fibra', estado: 'completado', pct: 100, detalle: 'Anillo PN (71 pts, 11 cajas) + Lancemex (50 pts, 7 cajas)' },
-      { nombre: 'F3 — CWDM + migración topología', estado: 'bloqueado', pct: 10, detalle: 'Electrónica CWDM incompleta · 1 hilo/cliente — fecha urgente a Ingeniería' },
-      { nombre: 'F4 — Activación y lanzamiento', estado: 'progreso', pct: 25, detalle: '~2.5 clientes activos. Expansión tras topología final' },
-    ],
-  },
-  {
-    id: 'slt', nombre: 'Saltillo', emoji: '🟣',
-    core: 'Por definir',
-    infra: '6 rutas KMZ disponibles',
-    proveedor: 'Por definir',
-    clientes: 0,
-    estado: 'Mediano plazo',
-    color: '#8B5CF6',
-    fases: [
-      { nombre: 'F1 — Levantamiento y definición', estado: 'pendiente', pct: 5, detalle: 'Requiere RZ de Gustavo. KMZ disponibles' },
-      { nombre: 'F2 — Diseño de arquitectura', estado: 'pendiente', pct: 0, detalle: 'Core local, topología, switches. Depende F1' },
-      { nombre: 'F3 — Despliegue de fibra', estado: 'pendiente', pct: 0, detalle: 'Red propia X100. Sin Neutral Networks' },
-      { nombre: 'F4 — CWDM + SIDF + clientes', estado: 'pendiente', pct: 0, detalle: 'Piloto tras validar MTY y PN' },
-    ],
-  },
-];
+interface Fase {
+  nombre: string;
+  estado: string;
+  pct: number;
+  detalle: string;
+}
 
-const COMPROMISOS = [
-  { responsable: 'Ingeniería', compromiso: 'Fecha exacta culminación electrónica CWDM en PN', plaza: 'PN', prioridad: 'critica', estado: 'pendiente' },
-  { responsable: 'Oswaldo Lozano', compromiso: 'Cargar SIDF con precios homologados en sistema', plaza: 'Todas', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Rodrigo Flores', compromiso: 'Entregar framework/diagrama de diseño de red', plaza: 'MTY', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Pedro Botello', compromiso: 'Documentar topología red (salida por POP PN)', plaza: 'PN', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Alejandro Guzmán', compromiso: 'KMZ MTY + lista parques industriales al Sheet', plaza: 'MTY', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Cecilia Núñez', compromiso: 'Cotización estándar Preventa para OC Neutral', plaza: 'MTY', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Cecilia Núñez', compromiso: 'Conjuntar requerimientos Preventa + Infraestructura', plaza: 'MTY', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'José Miguel', compromiso: 'Solicitar mapa red Neutral + contrato a Rodrigo', plaza: 'MTY', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'José Miguel', compromiso: 'Visita a Piedras Negras — validación distribución', plaza: 'PN', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'José Miguel', compromiso: 'Compartir HTML al equipo + Drive compartido', plaza: 'Todas', prioridad: 'alta', estado: 'completado' },
-  { responsable: 'JM + Oswaldo', compromiso: 'Documentar cajas de empalme con radios de alcance', plaza: 'Todas', prioridad: 'alta', estado: 'pendiente' },
-  { responsable: 'Gustavo Cavazos', compromiso: 'Info red Neutral para mapa MTY', plaza: 'MTY', prioridad: 'media', estado: 'pendiente' },
-  { responsable: 'Raúl Zapata', compromiso: 'KMZ validación rutas/empalmes MTY y SLT', plaza: 'MTY/SLT', prioridad: 'media', estado: 'pendiente' },
-  { responsable: 'José Miguel', compromiso: 'Documentar Academia WISTI/ODU en base conocimiento', plaza: 'Interna', prioridad: 'media', estado: 'pendiente' },
-  { responsable: 'Elizabeth Marines', compromiso: 'Llamar a José Miguel — grabación de sesión', plaza: 'Interna', prioridad: 'normal', estado: 'pendiente' },
-];
+interface Plaza {
+  id: string;
+  nombre: string;
+  emoji: string;
+  core: string;
+  infra: string;
+  proveedor: string;
+  clientes: number;
+  estado: string;
+  color: string;
+  fases: Fase[];
+}
+
+interface Compromiso {
+  id: string;
+  responsable: string;
+  compromiso: string;
+  plaza: string;
+  prioridad: string;
+  estado: string;
+  nota: string;
+}
+
+interface HistorialEntry {
+  ts: string;
+  tipo?: string;
+  comp_id?: string;
+  responsable?: string;
+  plaza_id?: string;
+  fase_idx?: number;
+  user_nombre?: string;
+  user_email?: string;
+  cambios: Record<string, { de: unknown; a: unknown }>;
+}
+
+interface FibraData {
+  plazas: Plaza[];
+  compromisos: Compromiso[];
+  historial: HistorialEntry[];
+}
+
+// ─── Static data (no editable via API) ───────────────────────────────────────
 
 const DECISIONES = [
   { tema: 'Tecnología', decision: 'CWDM Raisecom · 9 clientes/fibra · 1–10 Gbps' },
@@ -100,7 +85,7 @@ const SIDF_PASOS = [
   { paso: 5, accion: 'Capacitar equipo en nuevo flujo SIDF', responsable: 'Pedro / Oswaldo', estado: 'pendiente' },
 ];
 
-// ─── Color helpers ────────────────────────────────────────────────────────────
+// ─── Color maps ───────────────────────────────────────────────────────────────
 
 const ESTADO_FASE: Record<string, { label: string; color: string }> = {
   completado: { label: 'Completado', color: '#00C896' },
@@ -110,29 +95,18 @@ const ESTADO_FASE: Record<string, { label: string; color: string }> = {
 };
 
 const PRIO_COLOR: Record<string, string> = {
-  critica: '#FF4757',
-  alta:    '#FFB703',
-  media:   '#3B82F6',
-  normal:  '#6b7280',
+  critica: '#FF4757', alta: '#FFB703', media: '#3B82F6', normal: '#6b7280',
 };
 
 const NIVEL_COLOR: Record<string, string> = {
-  critico: '#FF4757',
-  alta:    '#FFB703',
-  media:   '#3B82F6',
+  critico: '#FF4757', alta: '#FFB703', media: '#3B82F6',
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Card({ children, style, theme }: { children: React.ReactNode; style?: React.CSSProperties; theme: ThemeConfig }) {
   return (
-    <div style={{
-      background: theme.card,
-      border: `1px solid ${theme.border}`,
-      borderRadius: 12,
-      padding: '16px 20px',
-      ...style,
-    }}>
+    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '16px 20px', ...style }}>
       {children}
     </div>
   );
@@ -149,14 +123,105 @@ function SectionTitle({ children, accent }: { children: React.ReactNode; accent?
 function ProgressBar({ pct, color, theme }: { pct: number; color: string; theme: ThemeConfig }) {
   return (
     <div style={{ background: theme.border, borderRadius: 6, height: 5, marginTop: 4, overflow: 'hidden' }}>
-      <div style={{ width: `${pct}%`, background: color, borderRadius: 6, height: '100%', transition: 'width 0.4s ease' }} />
+      <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: color, borderRadius: 6, height: '100%', transition: 'width 0.4s ease' }} />
     </div>
   );
 }
 
+function Spinner() {
+  return (
+    <span style={{
+      display: 'inline-block', width: 12, height: 12,
+      border: '2px solid rgba(0,200,150,0.2)', borderTopColor: '#00C896',
+      borderRadius: '50%', animation: 'spin 0.7s linear infinite',
+      verticalAlign: 'middle',
+    }} />
+  );
+}
+
+// Inline-edit select for estado
+function EstadoSelect({ value, onChange, options, color }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  color: string;
+}) {
+  return (
+    <select
+      autoFocus
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      onBlur={e => onChange(e.target.value)}
+      style={{
+        background: color + '20', color, border: `1px solid ${color}55`,
+        borderRadius: 6, padding: '2px 6px', fontSize: 11, fontWeight: 700,
+        cursor: 'pointer', outline: 'none',
+      }}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+// Inline-edit text input
+function InlineInput({ value, onSave, onCancel, style }: {
+  value: string;
+  onSave: (v: string) => void;
+  onCancel: () => void;
+  style?: React.CSSProperties;
+}) {
+  const [val, setVal] = useState(value);
+  return (
+    <input
+      autoFocus
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter') onSave(val); if (e.key === 'Escape') onCancel(); }}
+      onBlur={() => onSave(val)}
+      style={{
+        width: '100%', background: 'transparent', border: 'none',
+        borderBottom: '1px solid #00C896', outline: 'none', fontSize: 12,
+        color: 'inherit', padding: '2px 0',
+        ...style,
+      }}
+    />
+  );
+}
+
+function InlineNumber({ value, onSave, onCancel }: {
+  value: number;
+  onSave: (v: number) => void;
+  onCancel: () => void;
+}) {
+  const [val, setVal] = useState(String(value));
+  return (
+    <input
+      autoFocus
+      type="number" min={0} max={100}
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter') onSave(Number(val)); if (e.key === 'Escape') onCancel(); }}
+      onBlur={() => onSave(Number(val))}
+      style={{
+        width: 56, background: 'transparent', border: 'none',
+        borderBottom: '1px solid #00C896', outline: 'none', fontSize: 12,
+        color: 'inherit', padding: '2px 4px', textAlign: 'right',
+      }}
+    />
+  );
+}
+
+// Edit pencil icon shown on hover
+const PencilIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+);
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'plazas' | 'compromisos' | 'sidf' | 'riesgos' | 'decisiones';
+type Tab = 'plazas' | 'compromisos' | 'sidf' | 'riesgos' | 'decisiones' | 'historial';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'plazas',      label: '📍 Plazas' },
@@ -164,25 +229,185 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'sidf',        label: '🔁 Proceso SIDF' },
   { id: 'riesgos',     label: '⚠️ Riesgos' },
   { id: 'decisiones',  label: '📌 Decisiones' },
+  { id: 'historial',   label: '🕐 Historial' },
 ];
 
+// EditCell key: "comp:{id}:{field}" or "fase:{plaza_id}:{fase_idx}:{field}"
+type EditKey = string;
+
 export default function FibraSection({ theme }: Props) {
+  const { user, authFetch } = useAuth();
+  const [data, setData] = useState<FibraData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('plazas');
   const [plazaIdx, setPlazaIdx] = useState(0);
+  const [editKey, setEditKey] = useState<EditKey | null>(null);
+  const [saving, setSaving] = useState<Set<string>>(new Set());
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
 
-  const totalClientes = PLAZAS.reduce((s, p) => s + p.clientes, 0);
-  const pendientes = COMPROMISOS.filter(c => c.estado === 'pendiente').length;
+  // ── Load data ──────────────────────────────────────────────────────────────
+  const loadData = useCallback(() => {
+    authFetch('/api/fibra/data')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((d: FibraData) => setData(d))
+      .catch(() => setLoadError('Error cargando datos de Fibra. Verifica tu sesión.'));
+  }, [authFetch]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Permissions ────────────────────────────────────────────────────────────
+  const isAdmin = user?.rol === 'admin' || user?.rol === 'director';
+  const canEditComp = (comp: Compromiso) => {
+    if (isAdmin) return true;
+    const nombre = (user?.nombre ?? '').toLowerCase();
+    return nombre && comp.responsable.toLowerCase().includes(nombre.split(' ')[0]);
+  };
+
+  // ── Save compromiso ────────────────────────────────────────────────────────
+  const saveComp = useCallback(async (compId: string, patch: Partial<Compromiso>) => {
+    setSaving(prev => new Set(prev).add(compId));
+    setSaveError(null);
+    try {
+      const res = await authFetch(`/api/fibra/compromisos/${compId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail ?? `Error ${res.status}`);
+      }
+      const { compromiso: updated } = await res.json();
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          compromisos: prev.compromisos.map(c => c.id === compId ? { ...c, ...updated } : c),
+        };
+      });
+      // Reload historial silently
+      authFetch('/api/fibra/historial')
+        .then(r => r.ok ? r.json() : null)
+        .then(h => h && setData(prev => prev ? { ...prev, historial: h.historial } : prev))
+        .catch(() => {});
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'Error al guardar');
+    } finally {
+      setSaving(prev => { const n = new Set(prev); n.delete(compId); return n; });
+      setEditKey(null);
+    }
+  }, [authFetch]);
+
+  // ── Save fase ──────────────────────────────────────────────────────────────
+  const saveFase = useCallback(async (plazaId: string, faseIdx: number, patch: Partial<Fase>) => {
+    const key = `${plazaId}:${faseIdx}`;
+    setSaving(prev => new Set(prev).add(key));
+    setSaveError(null);
+    try {
+      const res = await authFetch(`/api/fibra/plazas/${plazaId}/fases/${faseIdx}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail ?? `Error ${res.status}`);
+      }
+      const { fase: updated } = await res.json();
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          plazas: prev.plazas.map(p =>
+            p.id !== plazaId ? p : {
+              ...p,
+              fases: p.fases.map((f, i) => i === faseIdx ? { ...f, ...updated } : f),
+            }
+          ),
+        };
+      });
+      authFetch('/api/fibra/historial')
+        .then(r => r.ok ? r.json() : null)
+        .then(h => h && setData(prev => prev ? { ...prev, historial: h.historial } : prev))
+        .catch(() => {});
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'Error al guardar');
+    } finally {
+      setSaving(prev => { const n = new Set(prev); n.delete(key); return n; });
+      setEditKey(null);
+    }
+  }, [authFetch]);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const startEdit = (key: EditKey) => { setSaveError(null); setEditKey(key); };
+  const cancelEdit = () => setEditKey(null);
+
+  const editableCell = (key: EditKey, canEdit: boolean, children: React.ReactNode) => {
+    if (!canEdit) return <>{children}</>;
+    return (
+      <span
+        onMouseEnter={() => setHoveredCell(key)}
+        onMouseLeave={() => setHoveredCell(null)}
+        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        onClick={() => startEdit(key)}
+      >
+        {children}
+        {hoveredCell === key && (
+          <span style={{ color: '#00C896', opacity: 0.7 }}><PencilIcon /></span>
+        )}
+      </span>
+    );
+  };
+
+  // ─── Loading / error states ─────────────────────────────────────────────────
+
+  if (loadError) {
+    return (
+      <div style={{ padding: '40px 24px', color: '#FF4757', fontFamily: 'inherit' }}>
+        <div style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: 10, padding: '16px 20px' }}>
+          ⚠️ {loadError}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div style={{ padding: '40px 24px', display: 'flex', alignItems: 'center', gap: 10, color: theme.dim, fontFamily: 'inherit' }}>
+        <Spinner /> Cargando datos de Fibra X100…
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // ─── Derived ──────────────────────────────────────────────────────────────
+
+  const { plazas, compromisos, historial } = data;
+  const totalClientes = plazas.reduce((s, p) => s + p.clientes, 0);
+  const pendientes = compromisos.filter(c => c.estado === 'pendiente').length;
   const criticos = RIESGOS.filter(r => r.nivel === 'critico').length;
 
-  const s: React.CSSProperties = {
-    fontFamily: 'inherit',
-    color: theme.text,
-    padding: '20px 24px',
-    maxWidth: 1100,
-  };
+  const compEstadoOptions = [
+    { value: 'pendiente', label: '⏳ Pendiente' },
+    { value: 'completado', label: '✓ Completado' },
+    { value: 'en-progreso', label: '🔄 En progreso' },
+    { value: 'bloqueado', label: '🔴 Bloqueado' },
+  ];
+
+  const faseEstadoOptions = [
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'progreso', label: 'En progreso' },
+    { value: 'completado', label: 'Completado' },
+    { value: 'bloqueado', label: 'Bloqueado' },
+  ];
+
+  const s: React.CSSProperties = { fontFamily: 'inherit', color: theme.text, padding: '20px 24px', maxWidth: 1100 };
 
   return (
     <div style={s}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
@@ -192,15 +417,30 @@ export default function FibraSection({ theme }: Props) {
             PROYECTO ACTIVO
           </span>
         </div>
-        <p style={{ fontSize: 13, color: theme.dim }}>Reunión técnica 15 jul 2026 · 3 plazas · 15 compromisos</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <p style={{ fontSize: 13, color: theme.dim }}>Reunión técnica 15 jul 2026 · 3 plazas · {compromisos.length} compromisos</p>
+          {user && (
+            <span style={{ fontSize: 11, color: '#00C896', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 12, padding: '1px 8px' }}>
+              ✏️ {user.nombre} · {isAdmin ? 'Acceso total' : 'Edita tus compromisos'}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Save error */}
+      {saveError && (
+        <div style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 12, color: '#FF4757', display: 'flex', alignItems: 'center', gap: 8 }}>
+          ⚠️ {saveError}
+          <button onClick={() => setSaveError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FF4757', marginLeft: 'auto', fontSize: 14 }}>✕</button>
+        </div>
+      )}
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         {[
           { label: 'Plazas activas', value: '3', sub: 'MTY · PN · SLT', color: '#00C896' },
           { label: 'Clientes activos', value: String(totalClientes), sub: '6 MTY · ~2 PN (piloto)', color: '#3B82F6' },
-          { label: 'Compromisos pendientes', value: String(pendientes), sub: `de ${COMPROMISOS.length} totales`, color: '#FFB703' },
+          { label: 'Compromisos pendientes', value: String(pendientes), sub: `de ${compromisos.length} totales`, color: '#FFB703' },
           { label: 'Riesgos críticos', value: String(criticos), sub: 'requieren atención urgente', color: '#FF4757' },
         ].map(k => (
           <Card key={k.label} theme={theme}>
@@ -234,17 +474,23 @@ export default function FibraSection({ theme }: Props) {
             fontSize: 13,
             fontWeight: tab === t.id ? 700 : 400,
             transition: 'all 0.15s',
+            position: 'relative',
           }}>
             {t.label}
+            {t.id === 'historial' && historial.length > 0 && (
+              <span style={{ marginLeft: 5, background: '#00C896', color: '#000', fontSize: 9, fontWeight: 800, borderRadius: 10, padding: '1px 5px' }}>
+                {historial.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* ── Tab: Plazas ────────────────────────────────────────────────────── */}
+      {/* ── Tab: Plazas ──────────────────────────────────────────────────────── */}
       {tab === 'plazas' && (
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            {PLAZAS.map((p, i) => (
+            {plazas.map((p, i) => (
               <button key={p.id} onClick={() => setPlazaIdx(i)} style={{
                 background: plazaIdx === i ? p.color + '22' : theme.card,
                 border: `1px solid ${plazaIdx === i ? p.color + '60' : theme.border}`,
@@ -259,21 +505,22 @@ export default function FibraSection({ theme }: Props) {
           </div>
 
           {(() => {
-            const p = PLAZAS[plazaIdx];
+            const p = plazas[plazaIdx];
+            if (!p) return null;
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <Card theme={theme}>
                   <SectionTitle accent={p.color}>Arquitectura · {p.nombre}</SectionTitle>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <tbody>
-                      {[
+                      {([
                         ['Core', p.core],
                         ['Infraestructura', p.infra],
                         ['Proveedor clave', p.proveedor],
                         ['Clientes activos', String(p.clientes)],
                         ['Estado', p.estado],
-                      ].map(([k, v]) => (
-                        <tr key={k} style={{ borderBottom: `1px solid ${theme.border}`}}>
+                      ] as [string, string][]).map(([k, v]) => (
+                        <tr key={k} style={{ borderBottom: `1px solid ${theme.border}` }}>
                           <td style={{ padding: '7px 4px', color: theme.dim, fontWeight: 600, width: 140, fontSize: 12 }}>{k}</td>
                           <td style={{ padding: '7px 4px', color: theme.text }}>{v}</td>
                         </tr>
@@ -284,17 +531,79 @@ export default function FibraSection({ theme }: Props) {
 
                 <Card theme={theme}>
                   <SectionTitle accent={p.color}>Fases del Proyecto</SectionTitle>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {p.fases.map(f => {
-                      const cfg = ESTADO_FASE[f.estado];
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {p.fases.map((f, fi) => {
+                      const cfg = ESTADO_FASE[f.estado] ?? { label: f.estado, color: '#6b7280' };
+                      const faseKey = `fase:${p.id}:${fi}`;
+                      const isSavingFase = saving.has(`${p.id}:${fi}`);
+
                       return (
                         <div key={f.nombre}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{f.nombre}</span>
-                            <span style={{ fontSize: 11, color: cfg.color, fontWeight: 700 }}>{cfg.label}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3, gap: 8 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: theme.text, flex: 1 }}>{f.nombre}</span>
+                            {isSavingFase ? (
+                              <Spinner />
+                            ) : isAdmin ? (
+                              editKey === `${faseKey}:estado` ? (
+                                <EstadoSelect
+                                  value={f.estado}
+                                  onChange={v => { if (v !== f.estado) saveFase(p.id, fi, { estado: v }); else cancelEdit(); }}
+                                  options={faseEstadoOptions}
+                                  color={cfg.color}
+                                />
+                              ) : (
+                                editableCell(`${faseKey}:estado`, true,
+                                  <span style={{ fontSize: 11, color: cfg.color, fontWeight: 700 }}>{cfg.label}</span>
+                                )
+                              )
+                            ) : (
+                              <span style={{ fontSize: 11, color: cfg.color, fontWeight: 700 }}>{cfg.label}</span>
+                            )}
                           </div>
-                          <ProgressBar pct={f.pct} color={cfg.color} theme={theme} />
-                          <div style={{ fontSize: 11, color: theme.dim, marginTop: 4 }}>{f.detalle}</div>
+
+                          {/* Progress bar with editable pct */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <ProgressBar pct={f.pct} color={cfg.color} theme={theme} />
+                            </div>
+                            {isAdmin ? (
+                              editKey === `${faseKey}:pct` ? (
+                                <InlineNumber
+                                  value={f.pct}
+                                  onSave={v => saveFase(p.id, fi, { pct: v })}
+                                  onCancel={cancelEdit}
+                                />
+                              ) : (
+                                <span
+                                  style={{ fontSize: 11, color: theme.dim, cursor: 'pointer', minWidth: 30, textAlign: 'right' }}
+                                  onClick={() => startEdit(`${faseKey}:pct`)}
+                                  title="Clic para editar"
+                                >
+                                  {f.pct}%
+                                </span>
+                              )
+                            ) : (
+                              <span style={{ fontSize: 11, color: theme.dim, minWidth: 30, textAlign: 'right' }}>{f.pct}%</span>
+                            )}
+                          </div>
+
+                          {/* Detalle editable */}
+                          {isAdmin && editKey === `${faseKey}:detalle` ? (
+                            <InlineInput
+                              value={f.detalle}
+                              onSave={v => saveFase(p.id, fi, { detalle: v })}
+                              onCancel={cancelEdit}
+                              style={{ fontSize: 11, marginTop: 4 }}
+                            />
+                          ) : (
+                            <div
+                              style={{ fontSize: 11, color: theme.dim, marginTop: 4, cursor: isAdmin ? 'pointer' : 'default' }}
+                              onClick={() => isAdmin && startEdit(`${faseKey}:detalle`)}
+                              title={isAdmin ? 'Clic para editar' : undefined}
+                            >
+                              {f.detalle}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -306,49 +615,86 @@ export default function FibraSection({ theme }: Props) {
         </div>
       )}
 
-      {/* ── Tab: Compromisos ───────────────────────────────────────────────── */}
+      {/* ── Tab: Compromisos ─────────────────────────────────────────────────── */}
       {tab === 'compromisos' && (
         <Card theme={theme} style={{ padding: 0 }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                  {['#', 'Responsable', 'Compromiso', 'Plaza', 'Prioridad', 'Estado'].map(h => (
+                  {['#', 'Responsable', 'Compromiso', 'Plaza', 'Prioridad', 'Estado', 'Nota'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: theme.dim, fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {COMPROMISOS.map((c, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
-                    <td style={{ padding: '9px 14px', color: theme.dim, fontSize: 11 }}>{i + 1}</td>
-                    <td style={{ padding: '9px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{c.responsable}</td>
-                    <td style={{ padding: '9px 14px', color: theme.text }}>{c.compromiso}</td>
-                    <td style={{ padding: '9px 14px', color: theme.dim, whiteSpace: 'nowrap', fontSize: 12 }}>{c.plaza}</td>
-                    <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
-                      <span style={{ color: PRIO_COLOR[c.prioridad], fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {c.prioridad === 'critica' ? '🔴' : c.prioridad === 'alta' ? '🟠' : c.prioridad === 'media' ? '🔵' : '⚪'} {c.prioridad}
-                      </span>
-                    </td>
-                    <td style={{ padding: '9px 14px' }}>
-                      <span style={{
-                        background: c.estado === 'completado' ? 'rgba(0,200,150,0.15)' : 'rgba(255,183,3,0.1)',
-                        color: c.estado === 'completado' ? '#00C896' : '#FFB703',
-                        border: `1px solid ${c.estado === 'completado' ? 'rgba(0,200,150,0.3)' : 'rgba(255,183,3,0.25)'}`,
-                        borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700,
-                      }}>
-                        {c.estado === 'completado' ? '✓ Listo' : '⏳ Pendiente'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {compromisos.map((c, i) => {
+                  const canEdit = canEditComp(c);
+                  const isSaving = saving.has(c.id);
+                  const estadoColor = c.estado === 'completado' ? '#00C896' : c.estado === 'bloqueado' ? '#FF4757' : c.estado === 'en-progreso' ? '#3B82F6' : '#FFB703';
+                  const estadoBg = estadoColor + '18';
+
+                  return (
+                    <tr key={c.id} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
+                      <td style={{ padding: '9px 14px', color: theme.dim, fontSize: 11 }}>{i + 1}</td>
+                      <td style={{ padding: '9px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{c.responsable}</td>
+                      <td style={{ padding: '9px 14px', color: theme.text }}>{c.compromiso}</td>
+                      <td style={{ padding: '9px 14px', color: theme.dim, whiteSpace: 'nowrap', fontSize: 12 }}>{c.plaza}</td>
+                      <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: PRIO_COLOR[c.prioridad], fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {c.prioridad === 'critica' ? '🔴' : c.prioridad === 'alta' ? '🟠' : c.prioridad === 'media' ? '🔵' : '⚪'} {c.prioridad}
+                        </span>
+                      </td>
+                      <td style={{ padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                        {isSaving ? <Spinner /> : canEdit && editKey === `comp:${c.id}:estado` ? (
+                          <EstadoSelect
+                            value={c.estado}
+                            onChange={v => { if (v !== c.estado) saveComp(c.id, { estado: v }); else cancelEdit(); }}
+                            options={compEstadoOptions}
+                            color={estadoColor}
+                          />
+                        ) : (
+                          editableCell(`comp:${c.id}:estado`, canEdit,
+                            <span style={{
+                              background: estadoBg, color: estadoColor,
+                              border: `1px solid ${estadoColor}40`,
+                              borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700,
+                            }}>
+                              {c.estado === 'completado' ? '✓ Listo' : c.estado === 'en-progreso' ? '🔄 En progreso' : c.estado === 'bloqueado' ? '🔴 Bloqueado' : '⏳ Pendiente'}
+                            </span>
+                          )
+                        )}
+                      </td>
+                      <td style={{ padding: '9px 14px', minWidth: 140 }}>
+                        {canEdit && editKey === `comp:${c.id}:nota` ? (
+                          <InlineInput
+                            value={c.nota ?? ''}
+                            onSave={v => saveComp(c.id, { nota: v })}
+                            onCancel={cancelEdit}
+                          />
+                        ) : (
+                          editableCell(`comp:${c.id}:nota`, canEdit,
+                            <span style={{ fontSize: 12, color: c.nota ? theme.text : theme.dim, fontStyle: c.nota ? 'normal' : 'italic' }}>
+                              {c.nota || (canEdit ? '+ agregar nota' : '—')}
+                            </span>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {!isAdmin && (
+            <div style={{ padding: '10px 14px', borderTop: `1px solid ${theme.border}`, fontSize: 11, color: theme.dim }}>
+              ℹ️ Puedes editar el estado y la nota de tus propios compromisos. Admin/Director pueden editar todos.
+            </div>
+          )}
         </Card>
       )}
 
-      {/* ── Tab: Proceso SIDF ─────────────────────────────────────────────── */}
+      {/* ── Tab: Proceso SIDF ──────────────────────────────────────────────── */}
       {tab === 'sidf' && (
         <div>
           <Card theme={theme} style={{ marginBottom: 16 }}>
@@ -418,16 +764,12 @@ export default function FibraSection({ theme }: Props) {
         </div>
       )}
 
-      {/* ── Tab: Riesgos ─────────────────────────────────────────────────── */}
+      {/* ── Tab: Riesgos ─────────────────────────────────────────────────────── */}
       {tab === 'riesgos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {RIESGOS.map((r, i) => (
             <Card key={i} theme={theme} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '12px 16px' }}>
-              <div style={{
-                width: 8, borderRadius: 4, flexShrink: 0, alignSelf: 'stretch',
-                background: NIVEL_COLOR[r.nivel],
-                minHeight: 40,
-              }} />
+              <div style={{ width: 8, borderRadius: 4, flexShrink: 0, alignSelf: 'stretch', background: NIVEL_COLOR[r.nivel], minHeight: 40 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>{r.riesgo}</span>
@@ -442,7 +784,7 @@ export default function FibraSection({ theme }: Props) {
         </div>
       )}
 
-      {/* ── Tab: Decisiones ───────────────────────────────────────────────── */}
+      {/* ── Tab: Decisiones ──────────────────────────────────────────────────── */}
       {tab === 'decisiones' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {DECISIONES.map((d, i) => (
@@ -457,8 +799,82 @@ export default function FibraSection({ theme }: Props) {
         </div>
       )}
 
+      {/* ── Tab: Historial ──────────────────────────────────────────────────── */}
+      {tab === 'historial' && (
+        <div>
+          {historial.length === 0 ? (
+            <Card theme={theme} style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+              <div style={{ color: theme.dim, fontSize: 13 }}>No hay cambios registrados aún.</div>
+              <div style={{ color: theme.dim, fontSize: 12, marginTop: 4 }}>Edita un compromiso o fase para ver el historial aquí.</div>
+            </Card>
+          ) : (
+            <Card theme={theme} style={{ padding: 0 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                      {['Fecha / Hora', 'Usuario', 'Entidad', 'Cambios'].map(h => (
+                        <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: theme.dim, fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historial.map((h, i) => {
+                      const fecha = new Date(h.ts + 'Z');
+                      const fechaStr = fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                      const horaStr = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+                      // Build entity description
+                      let entidad = '—';
+                      if (h.comp_id) {
+                        const comp = compromisos.find(c => c.id === h.comp_id);
+                        entidad = `📋 ${h.comp_id}${comp ? ` — ${comp.responsable}` : ''}`;
+                      } else if (h.plaza_id !== undefined) {
+                        const plaza = plazas.find(p => p.id === h.plaza_id);
+                        entidad = `📍 ${plaza?.nombre ?? h.plaza_id} · F${(h.fase_idx ?? 0) + 1}`;
+                      }
+
+                      // Build changes description
+                      const cambioLines = Object.entries(h.cambios ?? {}).map(([campo, { de, a }]) => (
+                        <div key={campo} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+                          <span style={{ fontSize: 11, color: theme.dim, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{campo}:</span>
+                          <span style={{ fontSize: 11, color: '#FF4757', background: 'rgba(255,71,87,0.1)', borderRadius: 4, padding: '0 4px' }}>{String(de ?? '—')}</span>
+                          <span style={{ fontSize: 10, color: theme.dim }}>→</span>
+                          <span style={{ fontSize: 11, color: '#00C896', background: 'rgba(0,200,150,0.1)', borderRadius: 4, padding: '0 4px' }}>{String(a ?? '—')}</span>
+                        </div>
+                      ));
+
+                      return (
+                        <tr key={i} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
+                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{fechaStr}</div>
+                            <div style={{ fontSize: 11, color: theme.dim }}>{horaStr} UTC</div>
+                          </td>
+                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#00C896' }}>{h.user_nombre ?? '—'}</div>
+                            <div style={{ fontSize: 10, color: theme.dim }}>{h.user_email ?? ''}</div>
+                          </td>
+                          <td style={{ padding: '10px 14px' }}>
+                            <div style={{ fontSize: 12, color: theme.text }}>{entidad}</div>
+                            {h.responsable && <div style={{ fontSize: 11, color: theme.dim }}>Resp: {h.responsable}</div>}
+                          </td>
+                          <td style={{ padding: '10px 14px' }}>
+                            {cambioLines.length > 0 ? cambioLines : <span style={{ color: theme.dim, fontSize: 11 }}>sin detalle</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
       <div style={{ marginTop: 20, padding: '10px 14px', background: 'rgba(255,183,3,0.06)', border: '1px solid rgba(255,183,3,0.15)', borderRadius: 8, fontSize: 12, color: theme.dim }}>
-        ⚠️ Próxima reunión: <strong style={{ color: '#FFB703' }}>martes mediodía</strong> · Cadencia semanal hasta 75–80% avance · Sesión 15 jul 2026 — 10 participantes · 15 compromisos generados
+        ⚠️ Próxima reunión: <strong style={{ color: '#FFB703' }}>martes mediodía</strong> · Cadencia semanal hasta 75–80% avance · Sesión 15 jul 2026 — 10 participantes · {compromisos.length} compromisos generados
       </div>
     </div>
   );

@@ -8365,6 +8365,112 @@ def syscom_status():
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+# ─── Fibra Óptica X100 ────────────────────────────────────────────────────────
+
+_FIBRA_FILE = os.path.join(BASE_DIR, "data", "fibra_x100.json")
+
+def _fibra_load() -> dict:
+    if not os.path.exists(_FIBRA_FILE):
+        return {"plazas": [], "compromisos": [], "historial": []}
+    with open(_FIBRA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def _fibra_save(data: dict):
+    with open(_FIBRA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@app.get("/api/fibra/data")
+def fibra_get_data(user: dict = Depends(require_auth)):
+    return _fibra_load()
+
+@app.patch("/api/fibra/compromisos/{comp_id}")
+def fibra_update_compromiso(
+    comp_id: str,
+    payload: dict,
+    user: dict = Depends(require_auth),
+):
+    data = _fibra_load()
+    comp = next((c for c in data.get("compromisos", []) if c["id"] == comp_id), None)
+    if not comp:
+        raise HTTPException(404, "Compromiso no encontrado")
+
+    # Permisos: admin/director editan cualquiera; demás usuarios solo los suyos
+    rol = user.get("rol", "")
+    nombre_user = user.get("nombre", "").lower()
+    responsable = comp.get("responsable", "").lower()
+    if rol not in ("admin", "director") and not any(p in responsable for p in nombre_user.split()):
+        raise HTTPException(403, "Solo puedes editar tus propios compromisos")
+
+    campos_editables = {"estado", "nota", "pct"}
+    old_vals = {}
+    for campo, valor in payload.items():
+        if campo in campos_editables:
+            old_vals[campo] = comp.get(campo)
+            comp[campo] = valor
+
+    # Historial de cambios
+    entrada = {
+        "ts": dt_datetime.utcnow().isoformat(),
+        "comp_id": comp_id,
+        "responsable": comp["responsable"],
+        "user_nombre": user.get("nombre"),
+        "user_email": user.get("email"),
+        "cambios": {k: {"de": old_vals[k], "a": payload[k]} for k in old_vals}
+    }
+    data.setdefault("historial", []).append(entrada)
+    _fibra_save(data)
+
+    # Trazabilidad en analytics log
+    try:
+        log_entry = json.dumps({"ts": entrada["ts"], "section": "fibra", "action": "edit", "entity": comp_id, "user": user.get("email")})
+        with open(ADMIN_LOG_FILE, "a", encoding="utf-8") as _f:
+            _f.write(log_entry + "\n")
+    except Exception:
+        pass
+
+    return {"ok": True, "compromiso": comp}
+
+@app.patch("/api/fibra/plazas/{plaza_id}/fases/{fase_idx}")
+def fibra_update_fase(
+    plaza_id: str,
+    fase_idx: int,
+    payload: dict,
+    user: dict = Depends(require_auth),
+):
+    if user.get("rol") not in ("admin", "director"):
+        raise HTTPException(403, "Solo admin/director pueden actualizar fases")
+
+    data = _fibra_load()
+    plaza = next((p for p in data.get("plazas", []) if p["id"] == plaza_id), None)
+    if not plaza:
+        raise HTTPException(404, "Plaza no encontrada")
+    if fase_idx < 0 or fase_idx >= len(plaza["fases"]):
+        raise HTTPException(404, "Fase no encontrada")
+
+    fase = plaza["fases"][fase_idx]
+    campos = {"estado", "pct", "detalle"}
+    old_vals = {}
+    for campo, valor in payload.items():
+        if campo in campos:
+            old_vals[campo] = fase.get(campo)
+            fase[campo] = valor
+
+    data.setdefault("historial", []).append({
+        "ts": dt_datetime.utcnow().isoformat(),
+        "tipo": "fase",
+        "plaza_id": plaza_id,
+        "fase_idx": fase_idx,
+        "user_email": user.get("email"),
+        "cambios": {k: {"de": old_vals[k], "a": payload[k]} for k in old_vals}
+    })
+    _fibra_save(data)
+    return {"ok": True, "fase": fase}
+
+@app.get("/api/fibra/historial")
+def fibra_get_historial(user: dict = Depends(require_auth)):
+    data = _fibra_load()
+    return {"historial": list(reversed(data.get("historial", [])))}
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")

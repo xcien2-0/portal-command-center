@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "created": "2026-07-17",
+    "fuente": "Sesión técnica 15 jul 2026",
+    "nota": "Estructura compatible con Odoo project.task para migración futura"
+  },
+  "plazas": [
+    {
+      "id": "mty",
+      "nombre": "Monterrey",
+      "emoji": "🟢",
+      "core": "Purísima",
+      "infra": "Anillo Alfa · 23 rutas KMZ",
+      "proveedor": "Neutral Networks (troncales)",
+      "clientes": 6,
+      "estado": "En piloto",
+      "color": "#00C896",
+      "fases": [
+        { "nombre": "F1 — Diseño y definición", "estado": "progreso", "pct": 45, "detalle": "SIDF en Odoo, kits, diagrama topológico, RZ Gustavo" },
+        { "nombre": "F2 — Despliegue + convenio Neutral", "estado": "bloqueado", "pct": 0, "detalle": "Requiere convenio firmado — blocker crítico" },
+        { "nombre": "F3 — CWDM + pruebas", "estado": "pendiente", "pct": 0, "detalle": "Depende de F2 · capacitación Raisecom" },
+        { "nombre": "F4 — Piloto y lanzamiento", "estado": "pendiente", "pct": 0, "detalle": "SLA 99.2% con 6 clientes piloto" }
+      ]
+    },
+    {
+      "id": "pn",
+      "nombre": "Piedras Negras",
+      "emoji": "🔵",
+      "core": "RB Piedras Negras",
+      "infra": "Anillo + Lancemex · 21 cajas",
+      "proveedor": "Monserrat (planta ext. · temporal)",
+      "clientes": 2,
+      "estado": "Construida",
+      "color": "#3B82F6",
+      "fases": [
+        { "nombre": "F1 — Diseño y definición", "estado": "completado", "pct": 100, "detalle": "Kits básicos. Pendiente formalización SIDF en Odoo" },
+        { "nombre": "F2 — Despliegue de fibra", "estado": "completado", "pct": 100, "detalle": "Anillo PN (71 pts, 11 cajas) + Lancemex (50 pts, 7 cajas)" },
+        { "nombre": "F3 — CWDM + migración topología", "estado": "bloqueado", "pct": 10, "detalle": "Electrónica CWDM incompleta · 1 hilo/cliente — fecha urgente a Ingeniería" },
+        { "nombre": "F4 — Activación y lanzamiento", "estado": "progreso", "pct": 25, "detalle": "~2.5 clientes activos. Expansión tras topología final" }
+      ]
+    },
+    {
+      "id": "slt",
+      "nombre": "Saltillo",
+      "emoji": "🟣",
+      "core": "Por definir",
+      "infra": "6 rutas KMZ disponibles",
+      "proveedor": "Por definir",
+      "clientes": 0,
+      "estado": "Mediano plazo",
+      "color": "#8B5CF6",
+      "fases": [
+        { "nombre": "F1 — Levantamiento y definición", "estado": "pendiente", "pct": 5, "detalle": "Requiere RZ de Gustavo. KMZ disponibles" },
+        { "nombre": "F2 — Diseño de arquitectura", "estado": "pendiente", "pct": 0, "detalle": "Core local, topología, switches. Depende F1" },
+        { "nombre": "F3 — Despliegue de fibra", "estado": "pendiente", "pct": 0, "detalle": "Red propia X100. Sin Neutral Networks" },
+        { "nombre": "F4 — CWDM + SIDF + clientes", "estado": "pendiente", "pct": 0, "detalle": "Piloto tras validar MTY y PN" }
+      ]
+    }
+  ],
+  "compromisos": [
+    { "id": "c01", "responsable": "Ingeniería", "compromiso": "Fecha exacta culminación electrónica CWDM en PN", "plaza": "PN", "prioridad": "critica", "estado": "pendiente", "nota": "" },
+    { "id": "c02", "responsable": "Oswaldo Lozano", "compromiso": "Cargar SIDF con precios homologados en sistema", "plaza": "Todas", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c03", "responsable": "Rodrigo Flores", "compromiso": "Entregar framework/diagrama de diseño de red", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c04", "responsable": "Pedro Botello", "compromiso": "Documentar topología red (salida por POP PN)", "plaza": "PN", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c05", "responsable": "Alejandro Guzmán", "compromiso": "KMZ MTY + lista parques industriales al Sheet", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c06", "responsable": "Cecilia Núñez", "compromiso": "Cotización estándar Preventa para OC Neutral", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c07", "responsable": "Cecilia Núñez", "compromiso": "Conjuntar requerimientos Preventa + Infraestructura", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c08", "responsable": "José Miguel", "compromiso": "Solicitar mapa red Neutral + contrato a Rodrigo", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c09", "responsable": "José Miguel", "compromiso": "Visita a Piedras Negras — validación distribución", "plaza": "PN", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c10", "responsable": "José Miguel", "compromiso": "Compartir HTML al equipo + Drive compartido", "plaza": "Todas", "prioridad": "alta", "estado": "completado", "nota": "Compartido en sesión 15 jul" },
+    { "id": "c11", "responsable": "JM + Oswaldo", "compromiso": "Documentar cajas de empalme con radios de alcance", "plaza": "Todas", "prioridad": "alta", "estado": "pendiente", "nota": "" },
+    { "id": "c12", "responsable": "Gustavo Cavazos", "compromiso": "Info red Neutral para mapa MTY", "plaza": "MTY", "prioridad": "media", "estado": "pendiente", "nota": "" },
+    { "id": "c13", "responsable": "Raúl Zapata", "compromiso": "KMZ validación rutas/empalmes MTY y SLT", "plaza": "MTY/SLT", "prioridad": "media", "estado": "pendiente", "nota": "" },
+    { "id": "c14", "responsable": "José Miguel", "compromiso": "Documentar Academia WISTI/ODU en base conocimiento", "plaza": "Interna", "prioridad": "media", "estado": "pendiente", "nota": "" },
+    { "id": "c15", "responsable": "Elizabeth Marines", "compromiso": "Llamar a José Miguel — grabación de sesión", "plaza": "Interna", "prioridad": "normal", "estado": "pendiente", "nota": "" }
+  ],
+  "historial": []
+}
