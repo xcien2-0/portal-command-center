@@ -636,10 +636,11 @@ interface CruceRow {
   sin_cuenta_odoo: boolean;
   km_semana: number;
   km_fuera: number;
+  km_madrugada: number;
+  km_finde: number;
   pct_fuera: number;
   horas_campo: number;
   n_viajes: number;
-  incidentes: number;
   tickets: number | 'sin cuenta';
   cerrados: number;
   abiertos: number;
@@ -648,6 +649,7 @@ interface CruceRow {
 
 interface CruceData {
   semana: string;
+  plaza: string;
   version: string;
   cruce: CruceRow[];
   sin_conductor: { vehiculo: string; placa: string }[];
@@ -662,7 +664,7 @@ interface CruceData {
     km_fuera_total: number;
     viajes_total: number;
     tickets_semana: number;
-    incidentes_total: number;
+    km_madrugada_total: number;
     alertas: number;
     alto_riesgo_count: number;
   };
@@ -682,8 +684,15 @@ const PERIODO_LABEL: Record<Periodo, string> = {
   mensual: 'Este mes',
 };
 
+const PLAZAS = [
+  { id: '',              label: 'Nacional' },
+  { id: 'piedras_negras', label: 'Piedras Negras' },
+  { id: 'yucatan',       label: 'Yucatán' },
+];
+
 function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
   const [periodo,    setPeriodo]    = useState<Periodo>('semanal');
+  const [plaza,      setPlaza]      = useState<string>('');
   const [data,       setData]       = useState<CruceData | null>(null);
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState<string | null>(null);
@@ -693,11 +702,13 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
   const [savingMap,  setSavingMap]  = useState(false);
   const [filterAlerta, setFilterAlerta] = useState<string>('todos');
 
-  const fetchCruce = async (p: Periodo) => {
+  const fetchCruce = async (p: Periodo, pz: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal?periodo=${p}`);
+      const params = new URLSearchParams({ periodo: p });
+      if (pz) params.set('plaza', pz);
+      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d: CruceData = await res.json();
       setData(d);
@@ -709,16 +720,19 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
     }
   };
 
-  useEffect(() => { fetchCruce(periodo); }, [periodo]);
+  useEffect(() => { fetchCruce(periodo, plaza); }, [periodo, plaza]);
 
   const generarReporte = async () => {
     setSending(true);
     setReportMsg(null);
     try {
-      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal/reporte?periodo=${periodo}`, { method: 'POST' });
+      const params = new URLSearchParams({ periodo });
+      if (plaza) params.set('plaza', plaza);
+      const res  = await fetch(`${API_BASE}/api/wfm/bidrillas/cruce-semanal/reporte?${params}`, { method: 'POST' });
       const json = await res.json();
+      const plazaLabel = PLAZAS.find(p => p.id === plaza)?.label || 'Nacional';
       setReportMsg(json.telegram
-        ? `PDF enviado a Telegram ✓ · ${json.semana}`
+        ? `PDF ${plazaLabel} enviado a Telegram ✓ · ${json.semana}`
         : `PDF generado (sin Telegram) · ${json.semana}`);
     } catch (e: any) {
       setReportMsg(`Error: ${e.message}`);
@@ -747,7 +761,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Period + actions bar */}
+      {/* Period + plaza + actions bar */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ fontSize: 11, color: theme.dim, fontWeight: 700 }}>PERÍODO:</div>
         {(['diario','semanal','mensual'] as Periodo[]).map(p => (
@@ -761,8 +775,21 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
             {PERIODO_LABEL[p]}
           </button>
         ))}
+        <div style={{ width: 1, height: 18, background: theme.border }} />
+        <div style={{ fontSize: 11, color: theme.dim, fontWeight: 700 }}>PLAZA:</div>
+        {PLAZAS.map(pz => (
+          <button key={pz.id} onClick={() => setPlaza(pz.id)}
+            style={{
+              padding: '6px 16px', borderRadius: 16, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: plaza === pz.id ? 700 : 400,
+              background: plaza === pz.id ? '#8B5CF625' : 'rgba(255,255,255,0.05)',
+              color: plaza === pz.id ? '#8B5CF6' : theme.dim,
+              boxShadow: plaza === pz.id ? '0 0 0 1.5px #8B5CF650' : 'none',
+            }}>
+            {pz.label}
+          </button>
+        ))}
         <div style={{ flex: 1 }} />
-        <button onClick={() => fetchCruce(periodo)} disabled={loading}
+        <button onClick={() => fetchCruce(periodo, plaza)} disabled={loading}
           style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.dim, fontSize: 11, cursor: 'pointer' }}>
           🔄 Actualizar
         </button>
@@ -813,6 +840,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
 
           <div style={{ fontSize: 10, color: theme.dim }}>
             Período: <b style={{ color: theme.text }}>{data.semana}</b>
+            {' · '}Plaza: <b style={{ color: '#8B5CF6' }}>{data.plaza}</b>
             {' · '}TN360 <i>defaultDriver</i> × Odoo Field Service · {rows.length} vehículos con conductor
             {data.resumen.sin_conductor > 0 && <span style={{ color: '#FFB703' }}> · {data.resumen.sin_conductor} sin conductor asignado</span>}
           </div>
@@ -841,14 +869,14 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
               <thead>
                 <tr style={{ background: '#0a0a0a' }}>
                   {[
-                    { h: 'Unidad',      align: 'left' as const },
-                    { h: 'Conductor',   align: 'left' as const },
-                    { h: 'KM sem.',     align: 'center' as const },
-                    { h: '% Fuera',     align: 'center' as const },
-                    { h: 'Viajes',      align: 'center' as const },
-                    { h: 'Incidentes',  align: 'center' as const },
-                    { h: 'Tickets',     align: 'center' as const },
-                    { h: 'Estado',      align: 'center' as const },
+                    { h: 'Unidad',       align: 'left' as const },
+                    { h: 'Conductor',    align: 'left' as const },
+                    { h: 'KM sem.',      align: 'center' as const },
+                    { h: '% Fuera',      align: 'center' as const },
+                    { h: 'Viajes',       align: 'center' as const },
+                    { h: 'KM Madrugada', align: 'center' as const },
+                    { h: 'Tickets',      align: 'center' as const },
+                    { h: 'Estado',       align: 'center' as const },
                   ].map(({ h, align }) => (
                     <th key={h} style={{ padding: '10px 12px', textAlign: align,
                       color: theme.accent, fontWeight: 700, fontSize: 9, letterSpacing: 0.5,
@@ -884,7 +912,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                         {r.pct_fuera > 0 ? `${r.pct_fuera}%` : '—'}
                       </td>
                       <td style={{ padding: '9px 12px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.n_viajes}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.incidentes > 0 ? '#FF4757' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.incidentes || '—'}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_madrugada > 0 ? '#FF4757' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.km_madrugada > 0 ? `${r.km_madrugada.toFixed(1)}` : '—'}</td>
                       <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
                         {r.tickets === 'sin cuenta'
                           ? <span style={{ color: theme.dim, fontStyle: 'italic', fontWeight: 400, fontSize: 9 }}>sin cuenta</span>

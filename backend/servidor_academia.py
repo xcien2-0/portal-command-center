@@ -3957,13 +3957,20 @@ def _classify_trip_time(ts_ms: int, tz_offset_hrs: int = -6) -> str:
         return "laboral"
     return "nocturno"                          # fuera de horario (mañana temprana / nocturno)
 
+# Mapeo de plaza → IDs de conductores TN360
+_PLAZA_DRIVERS: dict = {
+    "piedras_negras": {302876, 302869},   # Guillermo Hérnandez, Juan Ceniceros
+    "yucatan":        {302866, 302868},   # Amilcar Tun Chan, Geyder Villajuana
+}
+
 @app.get("/api/wfm/bidrillas/cruce-semanal")
-def get_cruce_semanal(periodo: str = "semanal"):
+def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
     """
     Cruce GPS TN360 × Odoo Field Service — V2.
     Usa defaultDriver de TN360, clasifica km por horario laboral vs fuera,
     cruza email conductor con login Odoo.
     periodo: diario | semanal | mensual
+    plaza: '' (toda la flota) | 'piedras_negras' | 'yucatan'
     """
     from concurrent.futures import ThreadPoolExecutor
     import xmlrpc.client as _xr
@@ -4077,6 +4084,14 @@ def get_cruce_semanal(periodo: str = "semanal"):
                 "pct_fuera": 0.0, "horas_campo": 0.0, "n_viajes": 0, "incidentes": 0,
             }
 
+    # ── Filtro de plaza ────────────────────────────────────────────────────────
+    plaza_label = ""
+    if plaza and plaza in _PLAZA_DRIVERS:
+        driver_ids = _PLAZA_DRIVERS[plaza]
+        vehicles_raw = [v for v in vehicles_raw if v.get("defaultDriver") in driver_ids]
+        plaza_labels = {"piedras_negras": "Piedras Negras", "yucatan": "Yucatán"}
+        plaza_label = plaza_labels.get(plaza, plaza.replace("_"," ").title())
+
     gps_list: list = []
     if vehicles_raw:
         with ThreadPoolExecutor(max_workers=12) as pool:
@@ -4166,10 +4181,11 @@ def get_cruce_semanal(periodo: str = "semanal"):
             "sin_cuenta_odoo": sin_odoo,
             "km_semana":     veh["km_semana"],
             "km_fuera":      veh["km_fuera"],
+            "km_madrugada":  veh.get("km_madrugada", 0.0),
+            "km_finde":      veh.get("km_finde", 0.0),
             "pct_fuera":     veh["pct_fuera"],
             "horas_campo":   veh["horas_campo"],
             "n_viajes":      veh["n_viajes"],
-            "incidentes":    veh["incidentes"],
             "tickets":       odoo_tec["tickets"]  if odoo_tec else (0 if not sin_odoo else "sin cuenta"),
             "cerrados":      odoo_tec["cerrados"] if odoo_tec else 0,
             "abiertos":      odoo_tec["abiertos"] if odoo_tec else 0,
@@ -4189,6 +4205,7 @@ def get_cruce_semanal(periodo: str = "semanal"):
     return {
         "semana":         periodo_label,
         "periodo":        periodo,
+        "plaza":          plaza_label or "Nacional",
         "version":        "2.0",
         "cruce":          cruce_rows,
         "sin_conductor":  [{"vehiculo": v["vehiculo"], "placa": v["placa"]} for v in sin_conductor],
@@ -4203,7 +4220,7 @@ def get_cruce_semanal(periodo: str = "semanal"):
             "km_fuera_total":       round(sum(v["km_fuera"] for v in gps_list), 1),
             "viajes_total":         sum(v["n_viajes"] for v in gps_list),
             "tickets_semana":       sum(t["tickets"] for t in odoo_by_email.values()),
-            "incidentes_total":     sum(v["incidentes"] for v in gps_list),
+            "km_madrugada_total":   round(sum(v.get("km_madrugada",0) for v in gps_list), 1),
             "alertas":              sum(1 for r in cruce_rows if r["alerta"] in ("sin_gps","sin_tickets")),
             "alto_riesgo_count":    len(alto_riesgo),
         },
@@ -4219,10 +4236,11 @@ def patch_veh_map(body: dict):
     return {"ok": True, "total": len(existing)}
 
 @app.post("/api/wfm/bidrillas/cruce-semanal/reporte")
-def post_cruce_reporte(periodo: str = "semanal"):
+def post_cruce_reporte(periodo: str = "semanal", plaza: str = ""):
     """
     Genera PDF reporte V2 GPS×Tickets (mismo formato que V1 jun-2026)
     y lo envía por Telegram.
+    plaza: '' (toda la flota) | 'piedras_negras' | 'yucatan'
     """
     import io
     try:
@@ -4241,10 +4259,11 @@ def post_cruce_reporte(periodo: str = "semanal"):
     if not HAS_RL:
         return {"ok": False, "error": "reportlab no instalado"}
 
-    data       = get_cruce_semanal(periodo=periodo)
+    data       = get_cruce_semanal(periodo=periodo, plaza=plaza)
     rows       = data["cruce"]
     resumen    = data["resumen"]
     semana     = data["semana"]
+    plaza_label = data.get("plaza", "Nacional")
     alto_riesgo = data["alto_riesgo"]
     sin_cond   = data["sin_conductor"]
 
@@ -4331,7 +4350,7 @@ def post_cruce_reporte(periodo: str = "semanal"):
     story.append(Spacer(1, 0.8*cm))
     story.append(Paragraph(f"ANÁLISIS DE USO FUERA DE<br/>HORARIO — FLOTA XCIEN", TITLE_STYLE))
     story.append(Spacer(1, 0.4*cm))
-    story.append(Paragraph(f"Cruce TN360 vs. Odoo · Toda la flota activa", SUB_STYLE))
+    story.append(Paragraph(f"Cruce TN360 vs. Odoo · Plaza {plaza_label}", SUB_STYLE))
     story.append(HRFlowable(width="60%", thickness=1, color=VERDE, hAlign="CENTER"))
     story.append(Spacer(1, 0.3*cm))
     story.append(Paragraph(f"Telemetría GPS contra órdenes de servicio · {semana}", PERIOD_STYLE))
@@ -4434,7 +4453,7 @@ def post_cruce_reporte(periodo: str = "semanal"):
         "Ordenado por % de kilometraje fuera de horario, de mayor a menor riesgo.", BODY_STYLE))
     story.append(Spacer(1, 8))
 
-    tbl_hdr = ["Unidad", "Conductor", "KM\nsemana", "% fuera\nhorario", "Incidentes", "Tickets\nOdoo"]
+    tbl_hdr = ["Unidad", "Conductor", "KM\nsemana", "% fuera\nhorario", "KM\nMadrugada", "Tickets\nOdoo"]
     tbl_data = [tbl_hdr]
     for r in rows:
         tickets_str = str(r["tickets"]) if r["tickets"] != "sin cuenta" else "sin cuenta"
@@ -4443,7 +4462,7 @@ def post_cruce_reporte(periodo: str = "semanal"):
             (r["conductor"] or "—")[:26],
             f"{r['km_semana']:,.1f} km",
             f"{r['pct_fuera']}%",
-            str(r["incidentes"]),
+            f"{r.get('km_madrugada',0):.1f} km",
             tickets_str,
         ])
 
@@ -4487,10 +4506,10 @@ def post_cruce_reporte(periodo: str = "semanal"):
     story.append(Spacer(1, 8))
 
     if alto_riesgo:
-        risk_hdr = ["Unidad", "Conductor", "KM total semana", "% fuera de horario", "Incidentes"]
+        risk_hdr = ["Unidad", "Conductor", "KM total semana", "% fuera de horario", "KM Madrugada"]
         risk_data = [risk_hdr] + [
             [r["vehiculo"], r["conductor"] or "—", f"{r['km_semana']:,.1f} km",
-             f"{r['pct_fuera']}%", str(r["incidentes"])]
+             f"{r['pct_fuera']}%", f"{r.get('km_madrugada',0):.1f} km"]
             for r in alto_riesgo
         ]
         risk_tbl = Table(risk_data, colWidths=[2*cm, 5*cm, 3.5*cm, 3.5*cm, 2*cm])
@@ -4513,7 +4532,7 @@ def post_cruce_reporte(periodo: str = "semanal"):
             bullet = (
                 f"<b>{r['vehiculo']} ({r['conductor']})</b>: {r['pct_fuera']}% del kilometraje "
                 f"de la semana fue fuera de horario sobre un total de {r['km_semana']:,.1f} km — "
-                f"{r['incidentes']} incidentes registrados, sin tickets que respalden el uso."
+                f"{r.get('km_madrugada',0):.1f} km en madrugada (00:00–06:00), sin tickets que respalden el uso."
             )
             story.append(Paragraph(f"• {bullet}", BODY_STYLE))
     else:
@@ -4573,11 +4592,12 @@ def post_cruce_reporte(periodo: str = "semanal"):
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN","")
     chat_id   = os.environ.get("TELEGRAM_CHAT_ID_REPORTES","") or os.environ.get("TELEGRAM_CHAT_ID","")
     sent_ok   = False
-    filename  = f"Reporte_Flota_XCIEN_Cruce_Tickets_V2_{semana.replace(' ','_').replace('–','-')}.pdf"
+    plaza_slug = plaza_label.replace(" ","_") if plaza_label != "Nacional" else "Nacional"
+    filename  = f"Reporte_Flota_XCIEN_{plaza_slug}_V2_{semana.replace(' ','_').replace('–','-')}.pdf"
     if bot_token and chat_id:
         try:
             caption = (
-                f"📊 *Reporte {periodo_titulo} GPS×Tickets V2*\n"
+                f"📊 *Reporte {periodo_titulo} GPS×Tickets V2 — {plaza_label}*\n"
                 f"📅 {semana}\n"
                 f"🚛 {n_activos} vehículos · {km_t:,.0f} km · {resumen['tickets_semana']} tickets\n"
                 f"⚠️ {resumen['alto_riesgo_count']} vehículos de alto riesgo"
