@@ -627,6 +627,22 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
 // ── Cruce GPS × Tickets Tab ───────────────────────────────────────────────────
 type Periodo = 'diario' | 'semanal' | 'mensual';
 
+interface ViajesFueraDet {
+  cls: 'nocturno' | 'madrugada' | 'finde';
+  hora_local: string;
+  km: number;
+  start: string;
+  end: string;
+  driver_uid: number | null;
+  driver_nombre: string;
+}
+
+interface ConductorReal {
+  nombre: string;
+  email: string;
+  n_viajes: number;
+}
+
 interface CruceRow {
   vehiculo_id: string;
   vehiculo: string;
@@ -645,6 +661,9 @@ interface CruceRow {
   cerrados: number;
   abiertos: number;
   alerta: 'ok' | 'sin_gps' | 'sin_tickets' | 'inactivo';
+  conductores_reales: ConductorReal[];
+  conductor_mismatch: boolean;
+  viajes_fuera_detalle: ViajesFueraDet[];
 }
 
 interface CruceData {
@@ -665,6 +684,7 @@ interface CruceData {
     viajes_total: number;
     tickets_semana: number;
     km_madrugada_total: number;
+    mismatch_conductores: number;
     alertas: number;
     alto_riesgo_count: number;
   };
@@ -701,6 +721,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
   const [editMap,    setEditMap]    = useState<Record<string, string>>({});
   const [savingMap,  setSavingMap]  = useState(false);
   const [filterAlerta, setFilterAlerta] = useState<string>('todos');
+  const [expanded,   setExpanded]   = useState<string | null>(null);
 
   const fetchCruce = async (p: Periodo, pz: string) => {
     setLoading(true);
@@ -892,16 +913,26 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                   const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
                   return (
                     <tr key={r.vehiculo_id}
-                      style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s' }}
+                      onClick={() => setExpanded(expanded === r.vehiculo_id ? null : r.vehiculo_id)}
+                      style={{ borderBottom: expanded === r.vehiculo_id ? 'none' : `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s', cursor: r.viajes_fuera_detalle.length > 0 ? 'pointer' : 'default' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${theme.accent}08`}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
                     >
-                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 700, fontFamily: 'monospace' }}>{r.vehiculo || '—'}</td>
+                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 700, fontFamily: 'monospace' }}>
+                        {r.viajes_fuera_detalle.length > 0 && <span style={{ color: theme.dim, fontSize: 9, marginRight: 4 }}>{expanded === r.vehiculo_id ? '▼' : '▶'}</span>}
+                        {r.vehiculo || '—'}
+                      </td>
                       <td style={{ padding: '9px 12px' }}>
                         {r.conductor
                           ? <div>
-                              <div style={{ color: theme.text, fontSize: 11 }}>{r.conductor}</div>
+                              <div style={{ color: theme.text, fontSize: 11 }}>
+                                {r.conductor}
+                                {r.conductor_mismatch && <span style={{ marginLeft: 6, fontSize: 8, color: '#FFB703', fontWeight: 700 }}>⚠ conductor ≠ defaultDriver</span>}
+                              </div>
                               {r.sin_cuenta_odoo && <div style={{ color: theme.dim, fontSize: 8, fontStyle: 'italic' }}>sin cuenta Odoo</div>}
+                              {r.conductor_mismatch && r.conductores_reales.map(cr => (
+                                <div key={cr.nombre} style={{ color: '#FFB703', fontSize: 8 }}>Real: {cr.nombre} ({cr.n_viajes}v)</div>
+                              ))}
                             </div>
                           : <span style={{ color: theme.dim, fontStyle: 'italic', fontSize: 10 }}>Sin conductor</span>}
                       </td>
@@ -924,6 +955,41 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                         </span>
                       </td>
                     </tr>
+                    {expanded === r.vehiculo_id && r.viajes_fuera_detalle.length > 0 && (
+                      <tr key={`${r.vehiculo_id}-detail`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                        <td colSpan={8} style={{ padding: '0 12px 12px 32px', background: 'rgba(139,92,246,0.04)' }}>
+                          <div style={{ fontSize: 9, color: '#8B5CF6', fontWeight: 700, marginBottom: 6, marginTop: 10, letterSpacing: 0.5 }}>
+                            VIAJES FUERA DE HORARIO — {r.viajes_fuera_detalle.length} registros
+                          </div>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
+                              <thead>
+                                <tr style={{ color: theme.dim }}>
+                                  {['Horario', 'Tipo', 'KM', 'Origen (GPS)', 'Destino (GPS)'].map(h => (
+                                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {r.viajes_fuera_detalle.map((vf, vi) => {
+                                  const clsColor = vf.cls === 'madrugada' ? '#FF4757' : vf.cls === 'nocturno' ? '#FFB703' : '#8B5CF6';
+                                  const clsLabel = vf.cls === 'madrugada' ? 'Madrugada' : vf.cls === 'nocturno' ? 'Nocturno' : 'Fin semana';
+                                  return (
+                                    <tr key={vi} style={{ borderBottom: `1px solid ${theme.border}20` }}>
+                                      <td style={{ padding: '4px 8px', color: theme.dim, whiteSpace: 'nowrap' }}>{vf.hora_local}</td>
+                                      <td style={{ padding: '4px 8px', color: clsColor, fontWeight: 700, whiteSpace: 'nowrap' }}>{clsLabel}</td>
+                                      <td style={{ padding: '4px 8px', color: '#00B4D8', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{vf.km > 0 ? `${vf.km.toFixed(1)} km` : '—'}</td>
+                                      <td style={{ padding: '4px 8px', color: theme.text, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vf.start || '—'}</td>
+                                      <td style={{ padding: '4px 8px', color: theme.text, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vf.end || '—'}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   );
                 })}
               </tbody>

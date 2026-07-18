@@ -4031,27 +4031,51 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
             if not isinstance(trips, list): trips = []
 
             km_total, km_fuera, km_nocturno, km_madrugada, km_finde = 0.0, 0.0, 0.0, 0.0, 0.0
-            incidentes = 0
+            conductores_reales: dict = {}   # {uid: {nombre, n_viajes}}
+            viajes_fuera_detalle: list = [] # hasta 20 viajes fuera de horario
 
             for t in trips:
                 km = max(0, (t.get("gpsOdoEnd") or 0) - (t.get("gpsOdoStart") or 0))
                 km_total += km
                 cls = _classify_trip_time(t.get("ignitionOn") or 0)
                 if cls == "laboral":
-                    pass  # km_laboral implícita
+                    pass
                 elif cls == "nocturno":
                     km_fuera    += km
                     km_nocturno += km
                 elif cls == "madrugada":
-                    km_fuera       += km
-                    km_madrugada   += km
+                    km_fuera     += km
+                    km_madrugada += km
                 else:  # finde
-                    km_fuera  += km
-                    km_finde  += km
-                # Incidentes = eventos del viaje
-                evts = t.get("events")
-                if isinstance(evts, list):
-                    incidentes += len(evts)
+                    km_fuera += km
+                    km_finde += km
+
+                # Conductor real del viaje (puede diferir del defaultDriver)
+                trip_user = t.get("user") or {}
+                trip_uid  = trip_user.get("id")
+                if trip_uid and trip_uid != driver_id:
+                    if trip_uid not in conductores_reales:
+                        conductores_reales[trip_uid] = {
+                            "nombre":   tn360_users.get(trip_uid, {}).get("name", f"uid:{trip_uid}"),
+                            "email":    tn360_users.get(trip_uid, {}).get("email", ""),
+                            "n_viajes": 0,
+                        }
+                    conductores_reales[trip_uid]["n_viajes"] += 1
+
+                # Detalle de viajes fuera de horario (startLocation / endLocation)
+                if cls != "laboral" and len(viajes_fuera_detalle) < 20:
+                    ts_ms = t.get("ignitionOn") or 0
+                    dt_local = (datetime.datetime.utcfromtimestamp(ts_ms / 1000)
+                                + datetime.timedelta(hours=-6)) if ts_ms else None
+                    viajes_fuera_detalle.append({
+                        "cls":        cls,
+                        "hora_local": dt_local.strftime("%a %d/%m %H:%M") if dt_local else "",
+                        "km":         round(km, 1),
+                        "start":      (t.get("startLocation") or "").split(",")[0][:60],
+                        "end":        (t.get("endLocation")   or "").split(",")[0][:60],
+                        "driver_uid": trip_uid,
+                        "driver_nombre": tn360_users.get(trip_uid, {}).get("name", "") if trip_uid else "",
+                    })
 
             pct_fuera = round(km_fuera / km_total * 100, 1) if km_total > 0 else 0.0
             dur_total = sum(
@@ -4059,21 +4083,23 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
                 for t in trips
             )
             return {
-                "id":          vid,
-                "vehiculo":    veh.get("name", ""),
-                "placa":       veh.get("registration", ""),
-                "driver_id":   driver_id,
-                "conductor":   driver_info["name"],
-                "email":       driver_info["email"],
-                "km_semana":   round(km_total, 1),
-                "km_fuera":    round(km_fuera, 1),
-                "km_nocturno": round(km_nocturno, 1),
-                "km_madrugada":round(km_madrugada, 1),
-                "km_finde":    round(km_finde, 1),
-                "pct_fuera":   pct_fuera,
-                "horas_campo": round(dur_total, 1),
-                "n_viajes":    len(trips),
-                "incidentes":  incidentes,
+                "id":                    vid,
+                "vehiculo":              veh.get("name", ""),
+                "placa":                 veh.get("registration", ""),
+                "driver_id":             driver_id,
+                "conductor":             driver_info["name"],
+                "email":                 driver_info["email"],
+                "km_semana":             round(km_total, 1),
+                "km_fuera":              round(km_fuera, 1),
+                "km_nocturno":           round(km_nocturno, 1),
+                "km_madrugada":          round(km_madrugada, 1),
+                "km_finde":              round(km_finde, 1),
+                "pct_fuera":             pct_fuera,
+                "horas_campo":           round(dur_total, 1),
+                "n_viajes":              len(trips),
+                "conductores_reales":    list(conductores_reales.values()),
+                "conductor_mismatch":    len(conductores_reales) > 0,
+                "viajes_fuera_detalle":  viajes_fuera_detalle,
             }
         except Exception as ex:
             logger.warning(f"Cruce V2 trip error vid={vid}: {ex}")
@@ -4081,7 +4107,8 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
                 "id": vid, "vehiculo": veh.get("name",""), "placa": veh.get("registration",""),
                 "driver_id": driver_id, "conductor": driver_info["name"], "email": driver_info["email"],
                 "km_semana": 0.0, "km_fuera": 0.0, "km_nocturno": 0.0, "km_madrugada": 0.0, "km_finde": 0.0,
-                "pct_fuera": 0.0, "horas_campo": 0.0, "n_viajes": 0, "incidentes": 0,
+                "pct_fuera": 0.0, "horas_campo": 0.0, "n_viajes": 0,
+                "conductores_reales": [], "conductor_mismatch": False, "viajes_fuera_detalle": [],
             }
 
     # ── Filtro de plaza ────────────────────────────────────────────────────────
@@ -4173,19 +4200,22 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
             alerta = "inactivo"
 
         cruce_rows.append({
-            "vehiculo_id":   str(vid),
-            "vehiculo":      veh["vehiculo"],
-            "placa":         veh["placa"],
-            "conductor":     veh["conductor"],
-            "email":         email_lower,
-            "sin_cuenta_odoo": sin_odoo,
-            "km_semana":     veh["km_semana"],
-            "km_fuera":      veh["km_fuera"],
-            "km_madrugada":  veh.get("km_madrugada", 0.0),
-            "km_finde":      veh.get("km_finde", 0.0),
-            "pct_fuera":     veh["pct_fuera"],
-            "horas_campo":   veh["horas_campo"],
-            "n_viajes":      veh["n_viajes"],
+            "vehiculo_id":          str(vid),
+            "vehiculo":             veh["vehiculo"],
+            "placa":                veh["placa"],
+            "conductor":            veh["conductor"],
+            "email":                email_lower,
+            "sin_cuenta_odoo":      sin_odoo,
+            "km_semana":            veh["km_semana"],
+            "km_fuera":             veh["km_fuera"],
+            "km_madrugada":         veh.get("km_madrugada", 0.0),
+            "km_finde":             veh.get("km_finde", 0.0),
+            "pct_fuera":            veh["pct_fuera"],
+            "horas_campo":          veh["horas_campo"],
+            "n_viajes":             veh["n_viajes"],
+            "conductores_reales":   veh.get("conductores_reales", []),
+            "conductor_mismatch":   veh.get("conductor_mismatch", False),
+            "viajes_fuera_detalle": veh.get("viajes_fuera_detalle", []),
             "tickets":       odoo_tec["tickets"]  if odoo_tec else (0 if not sin_odoo else "sin cuenta"),
             "cerrados":      odoo_tec["cerrados"] if odoo_tec else 0,
             "abiertos":      odoo_tec["abiertos"] if odoo_tec else 0,
@@ -4221,6 +4251,7 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
             "viajes_total":         sum(v["n_viajes"] for v in gps_list),
             "tickets_semana":       sum(t["tickets"] for t in odoo_by_email.values()),
             "km_madrugada_total":   round(sum(v.get("km_madrugada",0) for v in gps_list), 1),
+            "mismatch_conductores": sum(1 for r in cruce_rows if r.get("conductor_mismatch")),
             "alertas":              sum(1 for r in cruce_rows if r["alerta"] in ("sin_gps","sin_tickets")),
             "alto_riesgo_count":    len(alto_riesgo),
         },
@@ -4539,6 +4570,83 @@ def post_cruce_reporte(periodo: str = "semanal", plaza: str = ""):
         story.append(Paragraph("No se identificaron vehículos de alto riesgo en este período.", BODY_STYLE))
 
     story.append(Spacer(1, 16))
+
+    # ── SECCIÓN 3b: Ubicaciones fuera de horario ───────────────────────────────
+    # Recopilar los viajes fuera de horario de los vehículos de mayor riesgo (y todos si son pocos)
+    viajes_fuera_all = []
+    for r in rows:
+        for vf in r.get("viajes_fuera_detalle", []):
+            viajes_fuera_all.append({**vf, "vehiculo": r["vehiculo"], "conductor": r["conductor"] or "—"})
+    # Ordenar: madrugada primero, luego nocturno, luego finde; dentro de cada uno por fecha
+    cls_order = {"madrugada": 0, "nocturno": 1, "finde": 2}
+    viajes_fuera_all.sort(key=lambda x: (cls_order.get(x["cls"], 9), x["hora_local"]))
+
+    if viajes_fuera_all:
+        story.append(Paragraph("3b. Detalle de Viajes Fuera de Horario — Origen y Destino", H2_STYLE))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(
+            "Viajes realizados fuera del horario laboral (Lun–Vie 8:00–18:00). "
+            "Se muestran origen y destino según telemetría GPS de TN360.", BODY_STYLE))
+        story.append(Spacer(1, 8))
+
+        CLS_ES = {"madrugada": "Madrugada 00–06h", "nocturno": "Nocturno", "finde": "Fin de semana"}
+        loc_hdr = ["Unidad", "Conductor", "Horario", "Tipo", "KM", "Origen (GPS)", "Destino (GPS)"]
+        loc_data = [loc_hdr]
+        for vf in viajes_fuera_all[:30]:
+            # Indicar si el conductor del viaje difiere del asignado
+            drv_label = ""
+            if vf.get("driver_nombre") and vf["driver_nombre"] != vf["conductor"]:
+                drv_label = f"\n⚠ Conductor real: {vf['driver_nombre']}"
+            loc_data.append([
+                vf["vehiculo"],
+                (vf["conductor"] or "—")[:20] + drv_label,
+                vf["hora_local"],
+                CLS_ES.get(vf["cls"], vf["cls"]),
+                f"{vf['km']:.1f}",
+                vf["start"] or "—",
+                vf["end"]   or "—",
+            ])
+
+        col_loc = [1.8*cm, 3.5*cm, 2.5*cm, 2.5*cm, 1.2*cm, 4.2*cm, 4.2*cm]
+        loc_tbl = Table(loc_data, colWidths=col_loc, repeatRows=1)
+        row_cls_styles = [
+            ("BACKGROUND",   (0,0), (-1,0), NEGRO),
+            ("TEXTCOLOR",    (0,0), (-1,0), VERDE),
+            ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",     (0,0), (-1,-1), 7),
+            ("ALIGN",        (0,0), (0,-1), "CENTER"),
+            ("ALIGN",        (2,0), (4,-1), "CENTER"),
+            ("ROWBACKGROUNDS",(0,1), (-1,-1), [FONDO_GRIS, colors.white]),
+            ("GRID",         (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
+            ("TOPPADDING",   (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING",(0,0), (-1,-1), 3),
+            ("WORDWRAP",     (0,0), (-1,-1), True),
+        ]
+        # Colorear filas según tipo
+        for i, vf in enumerate(viajes_fuera_all[:30], start=1):
+            if vf["cls"] == "madrugada":
+                row_cls_styles.append(("TEXTCOLOR", (3,i), (3,i), ROJO))
+                row_cls_styles.append(("FONTNAME",  (3,i), (3,i), "Helvetica-Bold"))
+            elif vf["cls"] == "nocturno":
+                row_cls_styles.append(("TEXTCOLOR", (3,i), (3,i), AMBAR))
+        loc_tbl.setStyle(TableStyle(row_cls_styles))
+        story.append(loc_tbl)
+        if len(viajes_fuera_all) > 30:
+            story.append(Paragraph(
+                f"… y {len(viajes_fuera_all) - 30} viajes adicionales fuera de horario no mostrados.", BODY_STYLE))
+
+        # Alerta de conductor real distinto al asignado
+        mismatches = [vf for vf in viajes_fuera_all
+                      if vf.get("driver_nombre") and vf["driver_nombre"] != vf["conductor"]]
+        if mismatches:
+            story.append(Spacer(1, 8))
+            story.append(Paragraph(
+                f"<b>⚠ Conductor real distinto al asignado:</b> {len(mismatches)} viaje(s) fuera de horario "
+                f"fueron realizados por un conductor diferente al <i>defaultDriver</i> configurado en TN360. "
+                f"Esto puede indicar préstamo de vehículo o configuración incorrecta.",
+                ParagraphStyle("warn", parent=BODY_STYLE, textColor=AMBAR)))
+        story.append(Spacer(1, 16))
 
     # ── SECCIÓN 4: Limitaciones ────────────────────────────────────────────────
     story.append(Paragraph("4. Limitaciones del Análisis", H2_STYLE))
