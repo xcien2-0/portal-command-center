@@ -631,29 +631,40 @@ interface CruceRow {
   vehiculo_id: string;
   vehiculo: string;
   placa: string;
+  conductor: string | null;
+  email: string;
+  sin_cuenta_odoo: boolean;
   km_semana: number;
+  km_fuera: number;
+  pct_fuera: number;
   horas_campo: number;
   n_viajes: number;
-  tecnico: string | null;
-  tickets: number;
+  incidentes: number;
+  tickets: number | 'sin cuenta';
   cerrados: number;
   abiertos: number;
-  match_tipo: 'manual' | 'fuzzy' | 'sin_match';
   alerta: 'ok' | 'sin_gps' | 'sin_tickets' | 'inactivo';
 }
 
 interface CruceData {
   semana: string;
+  version: string;
   cruce: CruceRow[];
-  sin_vehiculo: { nombre: string; tickets: number; cerrados: number; abiertos: number }[];
+  sin_conductor: { vehiculo: string; placa: string }[];
+  alto_riesgo: CruceRow[];
   todos_tecnicos: string[];
   resumen: {
     vehiculos_activos: number;
     vehiculos_total: number;
+    con_conductor: number;
+    sin_conductor: number;
     km_total: number;
+    km_fuera_total: number;
     viajes_total: number;
     tickets_semana: number;
+    incidentes_total: number;
     alertas: number;
+    alto_riesgo_count: number;
   };
   veh_map: Record<string, string>;
 }
@@ -787,11 +798,11 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
           {/* KPI cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
             {[
-              { label: 'Vehículos activos', val: `${data.resumen.vehiculos_activos} / ${data.resumen.vehiculos_total}`, color: theme.accent },
-              { label: 'Km en campo',       val: `${data.resumen.km_total.toLocaleString('es-MX')} km`, color: '#00B4D8' },
-              { label: 'Viajes totales',    val: data.resumen.viajes_total, color: '#FF6B35' },
-              { label: 'Tickets Odoo',      val: data.resumen.tickets_semana, color: '#FFD700' },
-              { label: 'Alertas',           val: data.resumen.alertas, color: data.resumen.alertas > 0 ? '#FF4757' : '#00C896' },
+              { label: 'Con conductor',      val: `${data.resumen.con_conductor} / ${data.resumen.vehiculos_total}`, color: theme.accent },
+              { label: 'Km totales',         val: `${data.resumen.km_total.toLocaleString('es-MX')} km`, color: '#00B4D8' },
+              { label: 'Km fuera horario',   val: `${data.resumen.km_fuera_total.toLocaleString('es-MX')} km`, color: '#FFB703' },
+              { label: 'Tickets Odoo',       val: data.resumen.tickets_semana, color: '#FFD700' },
+              { label: 'Alto riesgo',        val: data.resumen.alto_riesgo_count, color: data.resumen.alto_riesgo_count > 0 ? '#FF4757' : '#00C896' },
             ].map(k => (
               <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: k.color, fontVariantNumeric: 'tabular-nums' }}>{k.val}</div>
@@ -802,11 +813,12 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
 
           <div style={{ fontSize: 10, color: theme.dim }}>
             Período: <b style={{ color: theme.text }}>{data.semana}</b>
-            {' · '}Fuentes: TN360 GPS + Odoo Field Service · {rows.length} vehículos cruzados
+            {' · '}TN360 <i>defaultDriver</i> × Odoo Field Service · {rows.length} vehículos con conductor
+            {data.resumen.sin_conductor > 0 && <span style={{ color: '#FFB703' }}> · {data.resumen.sin_conductor} sin conductor asignado</span>}
           </div>
 
           {/* Filter bar */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 10, color: theme.dim, fontWeight: 700 }}>FILTRAR:</span>
             {(['todos', 'ok', 'sin_gps', 'sin_tickets', 'inactivo'] as const).map(f => {
               const cfg = f === 'todos' ? { label: 'Todos', color: theme.accent } : { label: ALERTA_CFG[f].label, color: ALERTA_CFG[f].color };
@@ -823,14 +835,23 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
             <span style={{ fontSize: 10, color: theme.dim, marginLeft: 'auto' }}>{filteredRows.length} de {rows.length}</span>
           </div>
 
-          {/* Main cruce table */}
+          {/* Main cruce table — V2 con conductor y % fuera horario */}
           <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${theme.border}` }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  {['Vehículo','Placa','Técnico','Km sem.','Hrs campo','Viajes','Tickets','Cerr.','Abiert.','Estado'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Vehículo' || h === 'Técnico' || h === 'Placa' ? 'left' : 'center',
-                      color: theme.dim, fontWeight: 700, fontSize: 9, letterSpacing: 0.5,
+                <tr style={{ background: '#0a0a0a' }}>
+                  {[
+                    { h: 'Unidad',      align: 'left' as const },
+                    { h: 'Conductor',   align: 'left' as const },
+                    { h: 'KM sem.',     align: 'center' as const },
+                    { h: '% Fuera',     align: 'center' as const },
+                    { h: 'Viajes',      align: 'center' as const },
+                    { h: 'Incidentes',  align: 'center' as const },
+                    { h: 'Tickets',     align: 'center' as const },
+                    { h: 'Estado',      align: 'center' as const },
+                  ].map(({ h, align }) => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: align,
+                      color: theme.accent, fontWeight: 700, fontSize: 9, letterSpacing: 0.5,
                       borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>
                       {h.toUpperCase()}
                     </th>
@@ -840,28 +861,35 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
               <tbody>
                 {filteredRows.map((r, i) => {
                   const cfg = ALERTA_CFG[r.alerta];
+                  const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
                   return (
                     <tr key={r.vehiculo_id}
                       style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${theme.accent}08`}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
                     >
-                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 600 }}>{r.vehiculo || '—'}</td>
-                      <td style={{ padding: '9px 12px', color: theme.dim, fontFamily: 'monospace', fontSize: 10 }}>{r.placa}</td>
+                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 700, fontFamily: 'monospace' }}>{r.vehiculo || '—'}</td>
                       <td style={{ padding: '9px 12px' }}>
-                        {r.tecnico
-                          ? <span style={{ color: theme.text }}>
-                              {r.tecnico}
-                              {r.match_tipo === 'fuzzy' && <sup style={{ fontSize: 8, color: theme.dim, marginLeft: 3 }}>~</sup>}
-                            </span>
-                          : <span style={{ color: theme.dim, fontStyle: 'italic' }}>Sin match</span>}
+                        {r.conductor
+                          ? <div>
+                              <div style={{ color: theme.text, fontSize: 11 }}>{r.conductor}</div>
+                              {r.sin_cuenta_odoo && <div style={{ color: theme.dim, fontSize: 8, fontStyle: 'italic' }}>sin cuenta Odoo</div>}
+                            </div>
+                          : <span style={{ color: theme.dim, fontStyle: 'italic', fontSize: 10 }}>Sin conductor</span>}
                       </td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_semana > 0 ? '#00B4D8' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{r.km_semana}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.horas_campo}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: r.n_viajes > 0 ? 700 : 400 }}>{r.n_viajes}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: r.tickets > 0 ? '#FFD700' : theme.dim }}>{r.tickets}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: '#00C896', fontVariantNumeric: 'tabular-nums' }}>{r.cerrados}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.abiertos > 0 ? '#FFB703' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.abiertos}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_semana > 0 ? '#00B4D8' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                        {r.km_semana.toLocaleString('es-MX')}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: r.pct_fuera > 0 ? 700 : 400, color: pctColor }}>
+                        {r.pct_fuera > 0 ? `${r.pct_fuera}%` : '—'}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.n_viajes}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.incidentes > 0 ? '#FF4757' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.incidentes || '—'}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                        {r.tickets === 'sin cuenta'
+                          ? <span style={{ color: theme.dim, fontStyle: 'italic', fontWeight: 400, fontSize: 9 }}>sin cuenta</span>
+                          : <span style={{ color: (r.tickets as number) > 0 ? '#FFD700' : theme.dim }}>{r.tickets}</span>}
+                      </td>
                       <td style={{ padding: '9px 12px', textAlign: 'center' }}>
                         <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 9, fontWeight: 700, background: cfg.bg, color: cfg.color, whiteSpace: 'nowrap' }}>
                           {cfg.label}
@@ -874,46 +902,44 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
             </table>
           </div>
 
-          {/* Técnicos sin vehículo */}
-          {data.sin_vehiculo.length > 0 && (
+          {/* Vehículos sin conductor */}
+          {data.sin_conductor.length > 0 && (
             <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.dim, marginBottom: 12, letterSpacing: 0.5 }}>
-                TÉCNICOS SIN VEHÍCULO GPS ASIGNADO — {data.sin_vehiculo.length}
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#FFB703', marginBottom: 8, letterSpacing: 0.5 }}>
+                ⚠ VEHÍCULOS SIN CONDUCTOR ASIGNADO EN TN360 — {data.sin_conductor.length}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {data.sin_vehiculo.map(t => (
-                  <div key={t.nombre} style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${theme.border}` }}>
-                    <div style={{ fontSize: 11, color: theme.text, fontWeight: 600 }}>{t.nombre}</div>
-                    <div style={{ fontSize: 9, color: theme.dim, marginTop: 2 }}>
-                      {t.tickets} tickets · {t.cerrados} cerrados
-                    </div>
-                  </div>
+                {data.sin_conductor.map(v => (
+                  <span key={v.vehiculo} style={{ padding: '4px 12px', borderRadius: 8, background: 'rgba(255,183,3,0.08)', border: `1px solid rgba(255,183,3,0.2)`, fontSize: 10, color: '#FFB703', fontFamily: 'monospace' }}>
+                    {v.vehiculo} · {v.placa}
+                  </span>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Vehicle → Technician mapping editor */}
-          {rows.filter(r => r.alerta !== 'inactivo' && r.match_tipo === 'sin_match').length > 0 && (
+          {/* Email override editor for vehicles without Odoo match */}
+          {rows.filter(r => r.sin_cuenta_odoo).length > 0 && (
             <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#FFB703', marginBottom: 4, letterSpacing: 0.5 }}>
-                ⚙ ASIGNAR TÉCNICO A VEHÍCULO (sin match automático)
+                ⚙ CONDUCTORES SIN CUENTA ODOO LOCALIZABLE
               </div>
               <div style={{ fontSize: 10, color: theme.dim, marginBottom: 14 }}>
-                Asigna manualmente un técnico a cada vehículo sin coincidencia. Se guarda para futuros cruces.
+                El correo de TN360 no coincide con ningún login de Odoo. Puedes asignar el email correcto para el cruce:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {rows.filter(r => r.match_tipo === 'sin_match').map(r => (
+                {rows.filter(r => r.sin_cuenta_odoo).map(r => (
                   <div key={r.vehiculo_id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 180, fontSize: 11, color: theme.text, fontWeight: 600 }}>
-                      {r.vehiculo} <span style={{ color: theme.dim, fontWeight: 400 }}>· {r.placa}</span>
+                    <div style={{ width: 220, fontSize: 11, color: theme.text }}>
+                      <span style={{ fontWeight: 700 }}>{r.vehiculo}</span>
+                      <span style={{ color: theme.dim }}> · {r.conductor}</span>
                     </div>
                     <select
                       value={editMap[r.vehiculo_id] ?? ''}
                       onChange={e => setEditMap(m => ({ ...m, [r.vehiculo_id]: e.target.value }))}
                       style={{ flex: 1, padding: '6px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.text, fontSize: 11, outline: 'none' }}
                     >
-                      <option value="">— seleccionar técnico —</option>
+                      <option value="">— seleccionar correo Odoo —</option>
                       {data.todos_tecnicos.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>

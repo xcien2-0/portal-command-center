@@ -3925,7 +3925,9 @@ def get_gps_vehiculos():
                 return {"vehiculos": _gps_cache["data"], "total": len(_gps_cache["data"]), "cached": True, "stale": True}
             raise HTTPException(500, f"Error GPS: {e}")
 
-# ─── GPS × Tickets — Cruce Semanal ───────────────────────────────────────────
+
+# ─── GPS × Tickets — Cruce Semanal V2 ────────────────────────────────────────
+# Metodología: defaultDriver TN360 → email → Odoo, % fuera de horario real
 
 _VEH_MAP_FILE = os.path.join(BASE_DIR, "data", "vehiculo_tecnico_map.json")
 
@@ -3940,24 +3942,33 @@ def _veh_map_save(data: dict):
     with open(_VEH_MAP_FILE, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def _fuzzy_match_score(vehicle_name: str, tecnico_nombre: str) -> float:
-    """Word-overlap score: words from vehicle_name that appear in tecnico_nombre."""
-    v_words = set(vehicle_name.lower().split())
-    t_words = set(tecnico_nombre.lower().split())
-    if not v_words:
-        return 0.0
-    return len(v_words & t_words) / len(v_words)
+def _classify_trip_time(ts_ms: int, tz_offset_hrs: int = -6) -> str:
+    """Clasifica un viaje según hora local: laboral | nocturno | madrugada | finde."""
+    if not ts_ms:
+        return "laboral"
+    dt_local = datetime.datetime.utcfromtimestamp(ts_ms / 1000) + datetime.timedelta(hours=tz_offset_hrs)
+    weekday  = dt_local.weekday()  # 0=Mon … 6=Sun
+    hour     = dt_local.hour
+    if weekday >= 5:                           # sábado o domingo
+        return "finde"
+    if 0 <= hour < 6:                          # madrugada
+        return "madrugada"
+    if 8 <= hour < 18:                         # horario laboral
+        return "laboral"
+    return "nocturno"                          # fuera de horario (mañana temprana / nocturno)
 
 @app.get("/api/wfm/bidrillas/cruce-semanal")
 def get_cruce_semanal(periodo: str = "semanal"):
     """
-    Cruce GPS TN360 vs tickets Odoo.
+    Cruce GPS TN360 × Odoo Field Service — V2.
+    Usa defaultDriver de TN360, clasifica km por horario laboral vs fuera,
+    cruza email conductor con login Odoo.
     periodo: diario | semanal | mensual
     """
     from concurrent.futures import ThreadPoolExecutor
     import xmlrpc.client as _xr
 
-    # ── Rango de fechas según período (CST = UTC-6) ───────────────────────────
+    # ── Rango de fechas (CST = UTC-6) ─────────────────────────────────────────
     now_utc = datetime.datetime.utcnow()
     now_mx  = now_utc - datetime.timedelta(hours=6)
 
@@ -3972,52 +3983,107 @@ def get_cruce_semanal(periodo: str = "semanal"):
         start_mx  = monday_mx.replace(hour=0, minute=0, second=0, microsecond=0)
         periodo_label = f"{start_mx.strftime('%d %b')} – {now_mx.strftime('%d %b %Y')}"
 
-    start_utc     = start_mx + datetime.timedelta(hours=6)
-    from_dt       = start_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
-    to_dt         = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    start_utc      = start_mx + datetime.timedelta(hours=6)
+    from_dt        = start_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_dt          = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     week_start_iso = start_utc.strftime("%Y-%m-%d %H:%M:%S")
-    semana_label  = periodo_label
 
-    # ── 1. TN360: viajes de la semana ─────────────────────────────────────────
-    gps_by_vid: dict = {}
+    # ── 1. TN360: usuarios (conductores) ──────────────────────────────────────
+    tn360_users: dict = {}  # {user_id: {name, email}}
+    vehicles_raw: list = []
     try:
-        token   = _tn360_token()
-        hdr     = {"Authorization": f"Bearer {token}"}
-        veh_r   = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=hdr, timeout=15)
+        token = _tn360_token()
+        hdr   = {"Authorization": f"Bearer {token}"}
+
+        users_r = _requests.get(f"{TN360_API}/users?limit=500", headers=hdr, timeout=15)
+        if users_r.ok:
+            for u in (users_r.json() or []):
+                uid = u.get("id")
+                if uid:
+                    tn360_users[uid] = {
+                        "name":  u.get("name") or f"{u.get('firstName','')} {u.get('lastName','')}".strip(),
+                        "email": (u.get("email") or "").lower().strip(),
+                    }
+
+        veh_r       = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=hdr, timeout=15)
         vehicles_raw = veh_r.json() if veh_r.ok else []
-
-        def _get_trips(veh):
-            vid = veh["id"]
-            try:
-                r = _requests.get(
-                    f"{TN360_API}/trips?vehicleId={vid}&from={from_dt}&to={to_dt}&limit=200",
-                    headers=hdr, timeout=15
-                )
-                trips = r.json() if r.ok else []
-                if not isinstance(trips, list): trips = []
-                # TN360: gpsOdoStart/gpsOdoEnd in km; ignitionOn/Off in ms
-                km  = sum(
-                    max(0, (t.get("gpsOdoEnd") or 0) - (t.get("gpsOdoStart") or 0))
-                    for t in trips
-                )
-                dur = sum(
-                    max(0, ((t.get("ignitionOff") or 0) - (t.get("ignitionOn") or 0))) / 3_600_000
-                    for t in trips
-                )
-                return {"id": vid, "nombre": veh.get("name",""), "placa": veh.get("registration",""),
-                        "km_semana": round(km, 1), "horas_campo": round(dur, 1), "n_viajes": len(trips)}
-            except Exception:
-                return {"id": vid, "nombre": veh.get("name",""), "placa": veh.get("registration",""),
-                        "km_semana": 0.0, "horas_campo": 0.0, "n_viajes": 0}
-
-        with ThreadPoolExecutor(max_workers=12) as pool:
-            for item in pool.map(_get_trips, vehicles_raw):
-                gps_by_vid[item["id"]] = item
     except Exception as e:
-        logger.error(f"Cruce-semanal TN360 error: {e}")
+        logger.error(f"Cruce V2 TN360 fetch error: {e}")
 
-    # ── 2. Odoo: tareas Field Service de la semana ────────────────────────────
-    odoo_by_tec: dict = {}
+    # ── 2. Viajes de la semana por vehículo ───────────────────────────────────
+    def _get_trips_classified(veh):
+        vid         = veh["id"]
+        driver_id   = veh.get("defaultDriver")
+        driver_info = tn360_users.get(driver_id, {"name": None, "email": None}) if driver_id else {"name": None, "email": None}
+        try:
+            r = _requests.get(
+                f"{TN360_API}/trips?vehicleId={vid}&from={from_dt}&to={to_dt}&limit=500",
+                headers=hdr, timeout=20
+            )
+            trips = r.json() if r.ok else []
+            if not isinstance(trips, list): trips = []
+
+            km_total, km_fuera, km_nocturno, km_madrugada, km_finde = 0.0, 0.0, 0.0, 0.0, 0.0
+            incidentes = 0
+
+            for t in trips:
+                km = max(0, (t.get("gpsOdoEnd") or 0) - (t.get("gpsOdoStart") or 0))
+                km_total += km
+                cls = _classify_trip_time(t.get("ignitionOn") or 0)
+                if cls == "laboral":
+                    pass  # km_laboral implícita
+                elif cls == "nocturno":
+                    km_fuera    += km
+                    km_nocturno += km
+                elif cls == "madrugada":
+                    km_fuera       += km
+                    km_madrugada   += km
+                else:  # finde
+                    km_fuera  += km
+                    km_finde  += km
+                # Incidentes = eventos del viaje
+                evts = t.get("events")
+                if isinstance(evts, list):
+                    incidentes += len(evts)
+
+            pct_fuera = round(km_fuera / km_total * 100, 1) if km_total > 0 else 0.0
+            dur_total = sum(
+                max(0, ((t.get("ignitionOff") or 0) - (t.get("ignitionOn") or 0))) / 3_600_000
+                for t in trips
+            )
+            return {
+                "id":          vid,
+                "vehiculo":    veh.get("name", ""),
+                "placa":       veh.get("registration", ""),
+                "driver_id":   driver_id,
+                "conductor":   driver_info["name"],
+                "email":       driver_info["email"],
+                "km_semana":   round(km_total, 1),
+                "km_fuera":    round(km_fuera, 1),
+                "km_nocturno": round(km_nocturno, 1),
+                "km_madrugada":round(km_madrugada, 1),
+                "km_finde":    round(km_finde, 1),
+                "pct_fuera":   pct_fuera,
+                "horas_campo": round(dur_total, 1),
+                "n_viajes":    len(trips),
+                "incidentes":  incidentes,
+            }
+        except Exception as ex:
+            logger.warning(f"Cruce V2 trip error vid={vid}: {ex}")
+            return {
+                "id": vid, "vehiculo": veh.get("name",""), "placa": veh.get("registration",""),
+                "driver_id": driver_id, "conductor": driver_info["name"], "email": driver_info["email"],
+                "km_semana": 0.0, "km_fuera": 0.0, "km_nocturno": 0.0, "km_madrugada": 0.0, "km_finde": 0.0,
+                "pct_fuera": 0.0, "horas_campo": 0.0, "n_viajes": 0, "incidentes": 0,
+            }
+
+    gps_list: list = []
+    if vehicles_raw:
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            gps_list = list(pool.map(_get_trips_classified, vehicles_raw))
+
+    # ── 3. Odoo: tareas Field Service del período ──────────────────────────────
+    odoo_by_email: dict = {}  # {email_lower: {tickets, cerrados, abiertos}}
     try:
         odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
         odoo_db   = os.environ.get("ODOO_DB", "wispi17")
@@ -4035,58 +4101,52 @@ def get_cruce_semanal(periodo: str = "semanal"):
                   ["date_last_stage_update", ">=", week_start_iso],
         ]
         tasks = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
-            [domain], {"fields": ["id","name","stage_id","user_ids","create_date"], "limit": 1000})
+            [domain], {"fields": ["id","stage_id","user_ids","create_date"], "limit": 2000})
 
-        all_uids  = list({u for t in tasks for u in t["user_ids"]})
-        users_raw = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
-            [all_uids], {"fields": ["id","name"]}) if all_uids else []
-        uid_to_name = {u["id"]: u["name"] for u in users_raw}
+        all_uids = list({u for t in tasks for u in t["user_ids"]})
+        if all_uids:
+            users_r2 = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
+                [all_uids], {"fields": ["id","name","login"]})
+            uid_to = {u["id"]: {"name": u["name"], "login": (u["login"] or "").lower()} for u in users_r2}
+        else:
+            uid_to = {}
 
         for t in tasks:
             stage     = (t["stage_id"][1] if t["stage_id"] else "").lower()
             is_closed = any(kw in stage for kw in CLOSED_KW)
             for u_id in t["user_ids"]:
-                nombre = uid_to_name.get(u_id, f"User {u_id}")
-                if nombre not in odoo_by_tec:
-                    odoo_by_tec[nombre] = {"nombre": nombre, "tickets": 0, "cerrados": 0, "abiertos": 0}
-                odoo_by_tec[nombre]["tickets"] += 1
+                u_info = uid_to.get(u_id, {})
+                email  = u_info.get("login", "")
+                if not email: continue
+                if email not in odoo_by_email:
+                    odoo_by_email[email] = {"nombre": u_info.get("name",""), "tickets": 0, "cerrados": 0, "abiertos": 0}
+                odoo_by_email[email]["tickets"] += 1
                 if is_closed:
-                    odoo_by_tec[nombre]["cerrados"] += 1
+                    odoo_by_email[email]["cerrados"] += 1
                 else:
-                    odoo_by_tec[nombre]["abiertos"] += 1
+                    odoo_by_email[email]["abiertos"] += 1
     except Exception as e:
-        logger.error(f"Cruce-semanal Odoo error: {e}")
+        logger.error(f"Cruce V2 Odoo error: {e}")
 
-    # ── 3. Cruce por mapeo manual + fuzzy ─────────────────────────────────────
-    veh_map    = _veh_map_load()   # {str(vehiculo_id) → tecnico_nombre}
-    gps_list   = list(gps_by_vid.values())
-    odoo_matched: set = set()
-    cruce_rows = []
+    # ── 4. Enriquecer con Odoo + mapeo manual override ────────────────────────
+    manual_map   = _veh_map_load()  # {str(vid): email_override}
+    cruce_rows   = []
+    sin_conductor = []
 
     for veh in gps_list:
-        vid        = veh["id"]
-        tec_nombre = veh_map.get(str(vid))
-        match_tipo = "sin_match"
-        tec_data   = None
+        vid = veh["id"]
+        email = manual_map.get(str(vid)) or veh["email"] or ""
+        email_lower = email.lower().strip()
 
-        if tec_nombre and tec_nombre in odoo_by_tec:
-            tec_data   = odoo_by_tec[tec_nombre]
-            match_tipo = "manual"
-            odoo_matched.add(tec_nombre)
-        else:
-            best_score, best_tec = 0.0, None
-            for tec_n, tec_d in odoo_by_tec.items():
-                score = _fuzzy_match_score(veh["nombre"], tec_n)
-                if score > best_score and score >= 0.5:
-                    best_score, best_tec = score, tec_n
-            if best_tec:
-                tec_data   = odoo_by_tec[best_tec]
-                tec_nombre = best_tec
-                match_tipo = "fuzzy"
-                odoo_matched.add(best_tec)
+        odoo_tec  = odoo_by_email.get(email_lower)
+        sin_odoo  = not odoo_tec and bool(email_lower)  # tiene email TN360 pero no cruzó con Odoo
 
-        tiene_gps     = veh["n_viajes"] > 0
-        tiene_tickets = tec_data["tickets"] > 0 if tec_data else False
+        tiene_gps    = veh["n_viajes"] > 0
+        tiene_tickets = bool(odoo_tec and odoo_tec["tickets"] > 0)
+
+        if not veh["conductor"]:
+            sin_conductor.append(veh)
+            continue  # vehículo sin conductor asignado en TN360
 
         if tiene_gps and tiene_tickets:
             alerta = "ok"
@@ -4098,42 +4158,61 @@ def get_cruce_semanal(periodo: str = "semanal"):
             alerta = "inactivo"
 
         cruce_rows.append({
-            "vehiculo_id":  str(vid),
-            "vehiculo":     veh["nombre"],
-            "placa":        veh["placa"],
-            "km_semana":    veh["km_semana"],
-            "horas_campo":  veh["horas_campo"],
-            "n_viajes":     veh["n_viajes"],
-            "tecnico":      tec_nombre,
-            "tickets":      tec_data["tickets"]  if tec_data else 0,
-            "cerrados":     tec_data["cerrados"] if tec_data else 0,
-            "abiertos":     tec_data["abiertos"] if tec_data else 0,
-            "match_tipo":   match_tipo,
-            "alerta":       alerta,
+            "vehiculo_id":   str(vid),
+            "vehiculo":      veh["vehiculo"],
+            "placa":         veh["placa"],
+            "conductor":     veh["conductor"],
+            "email":         email_lower,
+            "sin_cuenta_odoo": sin_odoo,
+            "km_semana":     veh["km_semana"],
+            "km_fuera":      veh["km_fuera"],
+            "pct_fuera":     veh["pct_fuera"],
+            "horas_campo":   veh["horas_campo"],
+            "n_viajes":      veh["n_viajes"],
+            "incidentes":    veh["incidentes"],
+            "tickets":       odoo_tec["tickets"]  if odoo_tec else (0 if not sin_odoo else "sin cuenta"),
+            "cerrados":      odoo_tec["cerrados"] if odoo_tec else 0,
+            "abiertos":      odoo_tec["abiertos"] if odoo_tec else 0,
+            "alerta":        alerta,
         })
 
-    sin_vehiculo = [t for n, t in odoo_by_tec.items() if n not in odoo_matched]
-    cruce_rows.sort(key=lambda x: (-x["tickets"], -x["km_semana"]))
+    # Ordenar por % fuera de horario desc (mayor riesgo primero)
+    cruce_rows.sort(key=lambda x: (-(x["pct_fuera"]), -(x["km_semana"])))
+
+    # Vehículos de mayor riesgo: pct_fuera alto + tickets = 0 (y tienen conductor)
+    alto_riesgo = [
+        r for r in cruce_rows
+        if r["pct_fuera"] > 20 and r["km_semana"] > 0
+        and (r["tickets"] == 0 or r["tickets"] == "sin cuenta")
+    ]
 
     return {
-        "semana":     semana_label,
-        "cruce":      cruce_rows,
-        "sin_vehiculo": sin_vehiculo,
-        "todos_tecnicos": list(odoo_by_tec.keys()),
+        "semana":         periodo_label,
+        "periodo":        periodo,
+        "version":        "2.0",
+        "cruce":          cruce_rows,
+        "sin_conductor":  [{"vehiculo": v["vehiculo"], "placa": v["placa"]} for v in sin_conductor],
+        "alto_riesgo":    alto_riesgo,
+        "todos_tecnicos": list(odoo_by_email.keys()),
         "resumen": {
-            "vehiculos_activos": sum(1 for r in cruce_rows if r["n_viajes"] > 0),
-            "vehiculos_total":   len(cruce_rows),
-            "km_total":          round(sum(v["km_semana"] for v in gps_list), 1),
-            "viajes_total":      sum(v["n_viajes"] for v in gps_list),
-            "tickets_semana":    sum(t["tickets"] for t in odoo_by_tec.values()),
-            "alertas":           sum(1 for r in cruce_rows if r["alerta"] in ("sin_gps","sin_tickets")),
+            "vehiculos_total":      len(vehicles_raw),
+            "con_conductor":        len(cruce_rows),
+            "sin_conductor":        len(sin_conductor),
+            "vehiculos_activos":    sum(1 for r in cruce_rows if r["n_viajes"] > 0),
+            "km_total":             round(sum(v["km_semana"] for v in gps_list), 1),
+            "km_fuera_total":       round(sum(v["km_fuera"] for v in gps_list), 1),
+            "viajes_total":         sum(v["n_viajes"] for v in gps_list),
+            "tickets_semana":       sum(t["tickets"] for t in odoo_by_email.values()),
+            "incidentes_total":     sum(v["incidentes"] for v in gps_list),
+            "alertas":              sum(1 for r in cruce_rows if r["alerta"] in ("sin_gps","sin_tickets")),
+            "alto_riesgo_count":    len(alto_riesgo),
         },
-        "veh_map": veh_map,
+        "veh_map": manual_map,
     }
 
 @app.patch("/api/wfm/bidrillas/vehiculo-tecnico-map")
 def patch_veh_map(body: dict):
-    """Guarda mapeo vehiculo_id → tecnico_nombre. Body: {vid: nombre, ...}"""
+    """Guarda override de email para vehiculo_id → email. Body: {vid: email, ...}"""
     existing = _veh_map_load()
     existing.update(body)
     _veh_map_save(existing)
@@ -4141,175 +4220,387 @@ def patch_veh_map(body: dict):
 
 @app.post("/api/wfm/bidrillas/cruce-semanal/reporte")
 def post_cruce_reporte(periodo: str = "semanal"):
-    """Genera PDF del reporte GPS×Tickets para el período indicado y lo envía por Telegram."""
-    import io, textwrap
+    """
+    Genera PDF reporte V2 GPS×Tickets (mismo formato que V1 jun-2026)
+    y lo envía por Telegram.
+    """
+    import io
     try:
-        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.pagesizes import A4, letter
         from reportlab.lib import colors
         from reportlab.platypus import (SimpleDocTemplate, Paragraph, Table,
-                                        TableStyle, Spacer, HRFlowable)
+                                        TableStyle, Spacer, HRFlowable, Image,
+                                        PageBreak, KeepTogether)
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import cm
+        from reportlab.pdfgen import canvas as rl_canvas
         HAS_RL = True
     except ImportError:
         HAS_RL = False
 
-    cruce_data = get_cruce_semanal(periodo=periodo)
-    rows       = cruce_data["cruce"]
-    resumen    = cruce_data["resumen"]
-    semana     = cruce_data["semana"]
-    sin_v      = cruce_data["sin_vehiculo"]
-
     if not HAS_RL:
         return {"ok": False, "error": "reportlab no instalado"}
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-        topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
-    styles = getSampleStyleSheet()
-    VERDE  = colors.HexColor("#00C896")
-    OSCURO = colors.HexColor("#0A0A0A")
-    GRIS   = colors.HexColor("#555555")
-    ROJO   = colors.HexColor("#FF4757")
-    AMBAR  = colors.HexColor("#FFB703")
-    AZUL   = colors.HexColor("#00B4D8")
+    data       = get_cruce_semanal(periodo=periodo)
+    rows       = data["cruce"]
+    resumen    = data["resumen"]
+    semana     = data["semana"]
+    alto_riesgo = data["alto_riesgo"]
+    sin_cond   = data["sin_conductor"]
 
-    title_style = ParagraphStyle("title", fontName="Helvetica-Bold",
-        fontSize=18, textColor=VERDE, spaceAfter=4)
-    sub_style   = ParagraphStyle("sub",   fontName="Helvetica",
-        fontSize=10, textColor=GRIS, spaceAfter=2)
-    body_style  = ParagraphStyle("body",  fontName="Helvetica",
-        fontSize=9,  textColor=colors.black)
-    h2_style    = ParagraphStyle("h2",    fontName="Helvetica-Bold",
-        fontSize=12, textColor=OSCURO, spaceAfter=4, spaceBefore=10)
+    periodo_titulo = {"diario": "Diario", "mensual": "Mensual"}.get(periodo, "Semanal")
+
+    # ── Colores ────────────────────────────────────────────────────────────────
+    VERDE_OSCURO = colors.HexColor("#1B4D2E")
+    VERDE        = colors.HexColor("#00C896")
+    GRIS_TEXTO   = colors.HexColor("#444444")
+    GRIS_CLARO   = colors.HexColor("#888888")
+    NEGRO        = colors.HexColor("#111111")
+    ROJO         = colors.HexColor("#CC0000")
+    AMBAR        = colors.HexColor("#D97706")
+    FONDO_VERDE  = colors.HexColor("#F0FAF5")
+    FONDO_GRIS   = colors.HexColor("#F5F5F5")
+
+    buf = io.BytesIO()
+
+    # ── Page template con header/footer ───────────────────────────────────────
+    def on_page(canv, doc):
+        canv.saveState()
+        w, h = A4
+        # Header bar verde
+        canv.setFillColor(VERDE_OSCURO)
+        canv.rect(0, h - 2.4*cm, w, 2.4*cm, fill=1, stroke=0)
+        # Logo text placeholder
+        canv.setFillColor(colors.white)
+        canv.setFont("Helvetica-Bold", 14)
+        canv.drawString(2*cm, h - 1.5*cm, "xcien")
+        # Right header text
+        canv.setFont("Helvetica", 8)
+        canv.drawRightString(w - 2*cm, h - 1.1*cm, "Dirección General | Uso Exclusivo Interno")
+        # Footer line
+        canv.setStrokeColor(VERDE)
+        canv.setLineWidth(0.5)
+        canv.line(2*cm, 1.5*cm, w - 2*cm, 1.5*cm)
+        canv.setFillColor(GRIS_CLARO)
+        canv.setFont("Helvetica", 7)
+        canv.drawString(2*cm, 1.0*cm,
+            f"Xcien — Flota XCIEN — Cruce Tickets vs. Telemetría | Confidencial")
+        canv.drawRightString(w - 2*cm, 1.0*cm, f"Página {doc.page} de —")
+        canv.restoreState()
+
+    def on_first_page(canv, doc):
+        w, h = A4
+        canv.saveState()
+        # Header band verde
+        canv.setFillColor(VERDE_OSCURO)
+        canv.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
+        canv.setFillColor(colors.white)
+        canv.setFont("Helvetica-Bold", 18)
+        canv.drawString(2*cm, h - 2.3*cm, "xcien")
+        # Footer band
+        canv.setFillColor(VERDE_OSCURO)
+        canv.rect(0, 0, w, 2*cm, fill=1, stroke=0)
+        canv.setFillColor(colors.white)
+        canv.setFont("Helvetica", 7)
+        msg = "Xcien · Flota XCIEN — Cruce Tickets vs. Telemetría · Confidencial · Prohibida su reproducción sin autorización expresa"
+        canv.drawCentredString(w/2, 0.7*cm, msg)
+        canv.restoreState()
+
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+        topMargin=3*cm, bottomMargin=2.5*cm, leftMargin=2*cm, rightMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    CONF_STYLE = ParagraphStyle("conf", fontName="Helvetica", fontSize=7,
+        textColor=GRIS_CLARO, alignment=1, spaceAfter=2)
+    TITLE_STYLE = ParagraphStyle("title", fontName="Helvetica-Bold", fontSize=28,
+        textColor=NEGRO, leading=34, spaceAfter=6, alignment=1)
+    SUB_STYLE   = ParagraphStyle("sub", fontName="Helvetica-Bold", fontSize=14,
+        textColor=VERDE, leading=18, spaceAfter=4, alignment=1)
+    PERIOD_STYLE= ParagraphStyle("period", fontName="Helvetica", fontSize=10,
+        textColor=GRIS_CLARO, alignment=1, spaceAfter=20)
+    H2_STYLE    = ParagraphStyle("h2", fontName="Helvetica-Bold", fontSize=13,
+        textColor=NEGRO, spaceAfter=6, spaceBefore=14)
+    BODY_STYLE  = ParagraphStyle("body", fontName="Helvetica", fontSize=9,
+        textColor=GRIS_TEXTO, leading=14, spaceAfter=4)
 
     story = []
-    periodo_titulo = {"diario": "Reporte Diario", "mensual": "Reporte Mensual"}.get(periodo, "Reporte Semanal")
-    story.append(Paragraph(f"XCIEN Networks — {periodo_titulo}", title_style))
-    story.append(Paragraph(f"Cruce GPS × Tickets Field Service · {semana}", sub_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=VERDE))
+
+    # ── PORTADA ────────────────────────────────────────────────────────────────
+    story.append(Spacer(1, 1.5*cm))
+    story.append(Paragraph("DOCUMENTO INTERNO · CONFIDENCIAL · USO EXCLUSIVO DE DIRECCIÓN", CONF_STYLE))
+    story.append(Spacer(1, 0.8*cm))
+    story.append(Paragraph(f"ANÁLISIS DE USO FUERA DE<br/>HORARIO — FLOTA XCIEN", TITLE_STYLE))
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph(f"Cruce TN360 vs. Odoo · Toda la flota activa", SUB_STYLE))
+    story.append(HRFlowable(width="60%", thickness=1, color=VERDE, hAlign="CENTER"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(f"Telemetría GPS contra órdenes de servicio · {semana}", PERIOD_STYLE))
+
+    # Tabla de metadatos
+    import datetime as _dt
+    fecha_actual = _dt.datetime.now().strftime("%d de %B de %Y").replace(
+        "January","enero").replace("February","febrero").replace("March","marzo").replace(
+        "April","abril").replace("May","mayo").replace("June","junio").replace(
+        "July","julio").replace("August","agosto").replace("September","septiembre").replace(
+        "October","octubre").replace("November","noviembre").replace("December","diciembre")
+
+    meta_data = [
+        [Paragraph("<b>ELABORADO POR:</b>", ParagraphStyle("ml", fontName="Helvetica-Bold", fontSize=9, textColor=VERDE_OSCURO)),
+         Paragraph("José Miguel Macías", BODY_STYLE)],
+        [Paragraph("<b>DIRIGIDO A:</b>", ParagraphStyle("ml", fontName="Helvetica-Bold", fontSize=9, textColor=VERDE_OSCURO)),
+         Paragraph("Dirección de Operaciones — XCIEN Field Services", BODY_STYLE)],
+        [Paragraph("<b>FECHA:</b>", ParagraphStyle("ml", fontName="Helvetica-Bold", fontSize=9, textColor=VERDE_OSCURO)),
+         Paragraph(fecha_actual, BODY_STYLE)],
+        [Paragraph("<b>VERSIÓN:</b>", ParagraphStyle("ml", fontName="Helvetica-Bold", fontSize=9, textColor=VERDE_OSCURO)),
+         Paragraph("2.0", BODY_STYLE)],
+    ]
+    meta_table = Table(meta_data, colWidths=[4*cm, 11.7*cm])
+    meta_table.setStyle(TableStyle([
+        ("BACKGROUND",  (0,0), (-1,-1), FONDO_VERDE),
+        ("BOX",         (0,0), (-1,-1), 0.5, VERDE),
+        ("INNERGRID",   (0,0), (-1,-1), 0.2, colors.HexColor("#CCE8D8")),
+        ("TOPPADDING",  (0,0), (-1,-1), 6),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 6),
+        ("LEFTPADDING", (0,0), (-1,-1), 8),
+        ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
+    ]))
+    story.append(meta_table)
+    story.append(PageBreak())
+
+    # ── SECCIÓN 1: Resumen Ejecutivo ───────────────────────────────────────────
+    story.append(Paragraph("1. Resumen Ejecutivo", H2_STYLE))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+    story.append(Spacer(1, 8))
+
+    n_total      = resumen["vehiculos_total"]
+    n_con_cond   = resumen["con_conductor"]
+    n_sin_cond   = resumen["sin_conductor"]
+    n_activos    = resumen["vehiculos_activos"]
+    km_t         = resumen["km_total"]
+    km_f         = resumen["km_fuera_total"]
+    pct_f_global = round(km_f / km_t * 100, 1) if km_t > 0 else 0
+    sin_odoo     = sum(1 for r in rows if r.get("sin_cuenta_odoo"))
+
+    ejecutivo = (
+        f"Se analizaron {n_activos} vehículos activos registrados en TN360 (de {n_total} totales, "
+        f"excluyendo unidades de baja y sin actividad). "
+        f"Se identificó conductor asignado (<i>defaultDriver</i>) en {n_con_cond} de ellos; "
+        f"los restantes {n_sin_cond} no tienen conductor por defecto configurado en TN360 y "
+        f"no pudieron incluirse en este cruce. "
+        f"De los {n_con_cond} con conductor, {n_con_cond - sin_odoo} tienen cuenta verificable "
+        f"en Odoo (login = correo del conductor en TN360) y {sin_odoo} no — para estos últimos "
+        f"no se puede confirmar si el uso fuera de horario corresponde a trabajo real."
+    )
+    story.append(Paragraph(ejecutivo, BODY_STYLE))
+    story.append(Spacer(1, 6))
+
+    metodologia = (
+        "Metodología: para cada vehículo se descargó el detalle de viajes de TN360 del período "
+        f"{semana} (hora local Saltillo, UTC-6), clasificando cada viaje como <b>Laboral</b> "
+        "(Lun-Vie 8AM-6PM), <b>Nocturno</b> (Lun-Vie fuera de esa ventana), "
+        "<b>Madrugada</b> (12AM-6AM) o <b>Fin de Semana</b>. "
+        "Se cruzó el correo del conductor contra Odoo para contar tickets de project.task "
+        "asignados en ese mismo período."
+    )
+    story.append(Paragraph(metodologia, BODY_STYLE))
     story.append(Spacer(1, 10))
 
-    # KPIs
-    kpi_data = [
-        ["Vehículos activos", "Km totales", "Viajes", "Tickets semana", "Alertas"],
-        [
-            str(resumen["vehiculos_activos"]),
-            f"{resumen['km_total']:.0f} km",
-            str(resumen["viajes_total"]),
-            str(resumen["tickets_semana"]),
-            str(resumen["alertas"]),
-        ]
+    # KPIs en tabla
+    kpi_vals = [
+        ["Vehículos analizados", "Con conductor", "Km totales", "Km fuera de horario", "% fuera global", "Alertas"],
+        [str(n_activos), str(n_con_cond), f"{km_t:,.0f} km", f"{km_f:,.0f} km",
+         f"{pct_f_global}%", str(resumen["alertas"])],
     ]
-    kpi_table = Table(kpi_data, colWidths=[3.3*cm]*5)
-    kpi_table.setStyle(TableStyle([
-        ("BACKGROUND",  (0,0), (-1,0), VERDE),
+    kpi_t = Table(kpi_vals, colWidths=[2.7*cm]*6)
+    kpi_t.setStyle(TableStyle([
+        ("BACKGROUND",  (0,0), (-1,0), VERDE_OSCURO),
         ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
         ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
-        ("FONTSIZE",    (0,0), (-1,-1), 9),
+        ("FONTSIZE",    (0,0), (-1,-1), 8),
         ("ALIGN",       (0,0), (-1,-1), "CENTER"),
-        ("GRID",        (0,0), (-1,-1), 0.3, colors.white),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#F0FFF4"), colors.white]),
+        ("GRID",        (0,0), (-1,-1), 0.2, colors.white),
+        ("BACKGROUND",  (0,1), (-1,1), FONDO_VERDE),
+        ("TOPPADDING",  (0,0), (-1,-1), 5),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 5),
     ]))
-    story.append(kpi_table)
-    story.append(Spacer(1, 14))
+    story.append(kpi_t)
+    story.append(Spacer(1, 16))
 
-    # Tabla principal
-    story.append(Paragraph("Detalle por Vehículo / Técnico", h2_style))
+    # ── SECCIÓN 2: Tabla completa ──────────────────────────────────────────────
+    story.append(Paragraph(f"2. Tabla Completa — {n_con_cond} Vehículos con Conductor", H2_STYLE))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Ordenado por % de kilometraje fuera de horario, de mayor a menor riesgo.", BODY_STYLE))
+    story.append(Spacer(1, 8))
 
-    def alerta_icon(a):
-        return {"ok":"✓","sin_gps":"⚠ Sin GPS","sin_tickets":"ℹ Sin Tickets","inactivo":"— Inactivo"}.get(a, a)
-
-    hdr = ["Vehículo","Placa","Técnico","Km sem","Hrs campo","Viajes","Tickets","Cerr.","Alert."]
-    table_data = [hdr]
+    tbl_hdr = ["Unidad", "Conductor", "KM\nsemana", "% fuera\nhorario", "Incidentes", "Tickets\nOdoo"]
+    tbl_data = [tbl_hdr]
     for r in rows:
-        table_data.append([
-            r["vehiculo"][:18],
-            r["placa"],
-            (r["tecnico"] or "Sin match")[:20],
-            str(r["km_semana"]),
-            str(r["horas_campo"]),
-            str(r["n_viajes"]),
-            str(r["tickets"]),
-            str(r["cerrados"]),
-            alerta_icon(r["alerta"]),
+        tickets_str = str(r["tickets"]) if r["tickets"] != "sin cuenta" else "sin cuenta"
+        tbl_data.append([
+            r["vehiculo"],
+            (r["conductor"] or "—")[:26],
+            f"{r['km_semana']:,.1f} km",
+            f"{r['pct_fuera']}%",
+            str(r["incidentes"]),
+            tickets_str,
         ])
 
-    col_w = [3.5*cm, 2*cm, 4*cm, 1.5*cm, 1.8*cm, 1.5*cm, 1.5*cm, 1.5*cm, 2.2*cm]
-    main_table = Table(table_data, colWidths=col_w, repeatRows=1)
-
-    row_styles = [
-        ("BACKGROUND",  (0,0), (-1,0), OSCURO),
-        ("TEXTCOLOR",   (0,0), (-1,0), VERDE),
-        ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
-        ("FONTSIZE",    (0,0), (-1,-1), 8),
-        ("ALIGN",       (3,0), (-1,-1), "CENTER"),
-        ("GRID",        (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.HexColor("#FAFAFA"), colors.white]),
-        ("VALIGN",      (0,0), (-1,-1), "MIDDLE"),
-        ("TOPPADDING",  (0,0), (-1,-1), 3),
-        ("BOTTOMPADDING",(0,0), (-1,-1), 3),
+    col_w2 = [1.8*cm, 5.5*cm, 2.2*cm, 2.2*cm, 1.9*cm, 2.2*cm]
+    tbl = Table(tbl_data, colWidths=col_w2, repeatRows=1)
+    row_styles2 = [
+        ("BACKGROUND",   (0,0), (-1,0), NEGRO),
+        ("TEXTCOLOR",    (0,0), (-1,0), VERDE),
+        ("FONTNAME",     (0,0), (-1,0), "Helvetica-Bold"),
+        ("FONTSIZE",     (0,0), (-1,-1), 8),
+        ("ALIGN",        (0,0), (0,-1), "CENTER"),
+        ("ALIGN",        (2,0), (-1,-1), "CENTER"),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [FONDO_GRIS, colors.white]),
+        ("GRID",         (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
+        ("TOPPADDING",   (0,0), (-1,-1), 4),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 4),
     ]
+    # Color riesgo en columna % fuera
     for i, r in enumerate(rows, start=1):
-        if r["alerta"] == "sin_gps":
-            row_styles.append(("BACKGROUND", (8,i), (8,i), colors.HexColor("#FFF3CD")))
-            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), AMBAR))
-        elif r["alerta"] == "sin_tickets":
-            row_styles.append(("BACKGROUND", (8,i), (8,i), colors.HexColor("#E8F4FD")))
-            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), AZUL))
-        elif r["alerta"] == "ok":
-            row_styles.append(("TEXTCOLOR",  (8,i), (8,i), VERDE))
+        if r["pct_fuera"] >= 60:
+            row_styles2.append(("TEXTCOLOR", (3,i), (3,i), ROJO))
+            row_styles2.append(("FONTNAME",  (3,i), (3,i), "Helvetica-Bold"))
+        elif r["pct_fuera"] >= 30:
+            row_styles2.append(("TEXTCOLOR", (3,i), (3,i), AMBAR))
+        if r["tickets"] == "sin cuenta":
+            row_styles2.append(("TEXTCOLOR", (5,i), (5,i), GRIS_CLARO))
+            row_styles2.append(("FONTNAME",  (5,i), (5,i), "Helvetica-Oblique"))
+    tbl.setStyle(TableStyle(row_styles2))
+    story.append(tbl)
+    story.append(PageBreak())
 
-    main_table.setStyle(TableStyle(row_styles))
-    story.append(main_table)
+    # ── SECCIÓN 3: Mayor riesgo ────────────────────────────────────────────────
+    story.append(Paragraph(
+        "3. Vehículos de Mayor Riesgo (alto % fuera de horario, cero tickets confirmados)", H2_STYLE))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Estos vehículos combinan un porcentaje alto de kilometraje fuera de horario laboral con "
+        "cero tickets de Odoo registrados en el período para su conductor — es decir, no hay "
+        "ninguna orden de servicio que explique el uso fuera de horario.", BODY_STYLE))
+    story.append(Spacer(1, 8))
 
-    if sin_v:
-        story.append(Spacer(1, 12))
-        story.append(Paragraph("Técnicos sin vehículo GPS asignado", h2_style))
-        sv_data = [["Técnico","Tickets","Cerrados","Abiertos"]]
-        for t in sin_v:
-            sv_data.append([t["nombre"][:30], str(t["tickets"]), str(t["cerrados"]), str(t["abiertos"])])
-        sv_table = Table(sv_data, colWidths=[7*cm, 2*cm, 2*cm, 2*cm])
-        sv_table.setStyle(TableStyle([
-            ("BACKGROUND",  (0,0), (-1,0), OSCURO),
-            ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+    if alto_riesgo:
+        risk_hdr = ["Unidad", "Conductor", "KM total semana", "% fuera de horario", "Incidentes"]
+        risk_data = [risk_hdr] + [
+            [r["vehiculo"], r["conductor"] or "—", f"{r['km_semana']:,.1f} km",
+             f"{r['pct_fuera']}%", str(r["incidentes"])]
+            for r in alto_riesgo
+        ]
+        risk_tbl = Table(risk_data, colWidths=[2*cm, 5*cm, 3.5*cm, 3.5*cm, 2*cm])
+        risk_tbl.setStyle(TableStyle([
+            ("BACKGROUND",  (0,0), (-1,0), NEGRO),
+            ("TEXTCOLOR",   (0,0), (-1,0), VERDE),
             ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
             ("FONTSIZE",    (0,0), (-1,-1), 8),
+            ("ALIGN",       (2,0), (-1,-1), "CENTER"),
+            ("ROWBACKGROUNDS",(0,1), (-1,-1), [FONDO_GRIS, colors.white]),
             ("GRID",        (0,0), (-1,-1), 0.2, colors.HexColor("#DDDDDD")),
+            ("TOPPADDING",  (0,0), (-1,-1), 4),
+            ("BOTTOMPADDING",(0,0), (-1,-1), 4),
         ]))
-        story.append(sv_table)
+        story.append(risk_tbl)
+        story.append(Spacer(1, 10))
+
+        # Bullets para los top 4 de mayor riesgo
+        for r in alto_riesgo[:4]:
+            bullet = (
+                f"<b>{r['vehiculo']} ({r['conductor']})</b>: {r['pct_fuera']}% del kilometraje "
+                f"de la semana fue fuera de horario sobre un total de {r['km_semana']:,.1f} km — "
+                f"{r['incidentes']} incidentes registrados, sin tickets que respalden el uso."
+            )
+            story.append(Paragraph(f"• {bullet}", BODY_STYLE))
+    else:
+        story.append(Paragraph("No se identificaron vehículos de alto riesgo en este período.", BODY_STYLE))
 
     story.append(Spacer(1, 16))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
-    story.append(Paragraph(
-        f"Generado automáticamente — XCIEN Command Center · {semana}",
-        ParagraphStyle("foot", fontName="Helvetica", fontSize=7, textColor=GRIS)
-    ))
 
-    doc.build(story)
+    # ── SECCIÓN 4: Limitaciones ────────────────────────────────────────────────
+    story.append(Paragraph("4. Limitaciones del Análisis", H2_STYLE))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+    story.append(Spacer(1, 6))
+
+    sin_cond_names = ", ".join(r.get("vehiculo","") for r in sin_cond[:8])
+    sin_odoo_names = ", ".join(
+        r["conductor"] for r in rows if r.get("sin_cuenta_odoo") and r.get("conductor"))[:200]
+
+    limitaciones = [
+        f"{n_sin_cond} vehículos activos en TN360 no tienen conductor por defecto configurado "
+        f"({sin_cond_names or 'ver listado completo'}) — no se pudieron incluir en el cruce.",
+        f"{sin_odoo} conductores con vehículo asignado no tienen cuenta de Odoo localizable "
+        f"con su correo de TN360 ({sin_odoo_names or '—'}) — para estos no se puede confirmar "
+        f"ni descartar respaldo de tickets.",
+        "El conteo de tickets incluye tareas de Field Service creadas o actualizadas en el período "
+        "— no valida que el horario del ticket coincida exactamente con el del viaje fuera de "
+        "horario, solo que existió actividad asignada esa semana.",
+    ]
+    for lim in limitaciones:
+        story.append(Paragraph(f"• {lim}", BODY_STYLE))
+
+    story.append(Spacer(1, 16))
+
+    # ── SECCIÓN 5: Recomendaciones ─────────────────────────────────────────────
+    story.append(Paragraph("5. Recomendación", H2_STYLE))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_CLARO))
+    story.append(Spacer(1, 6))
+
+    top3 = [r["vehiculo"] for r in alto_riesgo[:3]]
+    recomendaciones = [
+        f"Priorizar revisión directa con {', '.join(top3) or 'los vehículos de mayor riesgo'} — "
+        f"son los de mayor exposición (alto % fuera de horario y/o alto kilometraje) sin ningún "
+        f"ticket que lo respalde.",
+        f"Solicitar a TN360/RRHH completar el campo de conductor por defecto en los {n_sin_cond} "
+        f"vehículos activos que no lo tienen — sin eso no hay manera de auditar su uso.",
+        f"Confirmar o corregir el correo de Odoo de los {sin_odoo} conductores sin cuenta "
+        f"localizable, para poder cruzarlos en el próximo corte.",
+        "Replicar el reporte individual detallado (hora por hora) para los vehículos de mayor "
+        "riesgo identificados en la sección 3.",
+    ]
+    for rec in recomendaciones:
+        story.append(Paragraph(f"• {rec}", BODY_STYLE))
+
+    # ── Build ──────────────────────────────────────────────────────────────────
+    doc.build(story, onFirstPage=on_first_page, onLaterPages=on_page)
     pdf_bytes = buf.getvalue()
 
-    # Enviar por Telegram
+    # ── Enviar a Telegram ──────────────────────────────────────────────────────
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN","")
     chat_id   = os.environ.get("TELEGRAM_CHAT_ID_REPORTES","") or os.environ.get("TELEGRAM_CHAT_ID","")
     sent_ok   = False
+    filename  = f"Reporte_Flota_XCIEN_Cruce_Tickets_V2_{semana.replace(' ','_').replace('–','-')}.pdf"
     if bot_token and chat_id:
         try:
-            import requests as _rq
-            caption = f"📊 *Reporte Semanal GPS×Tickets*\n{semana}\n✅ {resumen['vehiculos_activos']} vehículos · {resumen['km_total']} km · {resumen['tickets_semana']} tickets"
-            files   = {"document": (f"cruce_semanal_{semana.replace(' ','-').replace('–','-')}.pdf", pdf_bytes, "application/pdf")}
-            data    = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
-            _rq.post(f"https://api.telegram.org/bot{bot_token}/sendDocument", data=data, files=files, timeout=20)
+            caption = (
+                f"📊 *Reporte {periodo_titulo} GPS×Tickets V2*\n"
+                f"📅 {semana}\n"
+                f"🚛 {n_activos} vehículos · {km_t:,.0f} km · {resumen['tickets_semana']} tickets\n"
+                f"⚠️ {resumen['alto_riesgo_count']} vehículos de alto riesgo"
+            )
+            files = {"document": (filename, pdf_bytes, "application/pdf")}
+            _data = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+            import requests as _rq2
+            _rq2.post(f"https://api.telegram.org/bot{bot_token}/sendDocument",
+                      data=_data, files=files, timeout=30)
             sent_ok = True
         except Exception as te:
-            logger.error(f"Telegram send error: {te}")
+            logger.error(f"Telegram cruce PDF error: {te}")
 
     return {
-        "ok": True,
-        "semana": semana,
+        "ok":      True,
+        "version": "2.0",
+        "semana":  semana,
+        "filename": filename,
         "telegram": sent_ok,
-        "resumen": resumen,
+        "resumen":  resumen,
     }
+
+
 
 # ─── Integraciones Externas ──────────────────────────────────────────────────
 
