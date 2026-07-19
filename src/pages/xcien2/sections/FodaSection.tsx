@@ -101,6 +101,24 @@ export default function FodaSection({ theme }: { theme: ThemeConfig }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+
+      {/* Banner datos demo */}
+      {source === 'base' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          background: 'rgba(255,183,3,0.08)', border: '1px solid rgba(255,183,3,0.35)',
+          borderRadius: 10, padding: '10px 16px',
+        }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <div>
+            <span style={{ fontWeight: 700, color: '#FFB703', fontSize: 13 }}>Datos de demostración</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginLeft: 8 }}>
+              Este análisis FODA contiene contenido estático de ejemplo. Usa "Regenerar con IA" para obtener un análisis real basado en los datos actuales del portal.
+            </span>
+          </div>
+        </div>
+      )}
+
       <div style={{ borderBottom: `2px solid ${accent}`, paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>

@@ -47,8 +47,8 @@ const PROJECTS: Project[] = [
   { id: 'transacciones', name: 'Tokens Unificados', group: 'Administración', status: 'operativo', progress: 80, dataSource: 'token_service', notes: 'Audit log completo' },
 
   // Planeación
-  { id: 'foda', name: 'Análisis Estratégico', group: 'Planeación', status: 'mock', progress: 30, dataSource: 'Estático', notes: 'Contenido de demo, pendiente datos reales' },
-  { id: 'adopcion', name: 'Usuarios', group: 'Planeación', status: 'mock', progress: 20, dataSource: 'Estático', notes: 'Métricas de demo' },
+  { id: 'foda', name: 'Análisis Estratégico', group: 'Planeación', status: 'mock', progress: 30, dataSource: 'Estático / IA', notes: 'SWOT base estático con banner de advertencia; regenerable con IA' },
+  { id: 'adopcion', name: 'Usuarios', group: 'Planeación', status: 'en_progreso', progress: 65, dataSource: '/api/auth/usuarios', notes: 'Gestión real de usuarios por área; pendiente métricas de adopción por módulo' },
 
   // Infraestructura
   { id: 'agentes', name: 'Agentes IA', group: 'Infraestructura', status: 'en_progreso', progress: 55, dataSource: 'Claude API', notes: 'Chat funcional, Paperclip pendiente' },
