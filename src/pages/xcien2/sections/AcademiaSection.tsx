@@ -138,6 +138,7 @@ interface OdooLesson {
   id: number; name: string; type: string; category: string;
   duration_h: number; published: boolean; sequence: number;
   url: string; website_url: string; has_quiz: boolean; views: number;
+  contenido?: string[];
 }
 interface OdooCurso {
   id: number; name: string; description: string;
@@ -145,6 +146,7 @@ interface OdooCurso {
   members: number; published: boolean; enroll: string; channel_type: string;
   avg_completion: number; lessons: OdooLesson[];
   members_list: { name: string; pct: number; status: string }[];
+  is_local?: boolean;
 }
 
 // ── Academia Stats ────────────────────────────────────────────────────────────
@@ -228,6 +230,7 @@ function CursosView({ theme }: { theme: ThemeConfig }) {
   const [selected, setSelected] = useState<OdooCurso | null>(null);
   const [search, setSearch]     = useState('');
   const [hovId, setHovId]       = useState<number | null>(null);
+  const [expandedLesson, setExpandedLesson] = useState<number | null>(null);
   const A = theme.accent;
 
   const load = useCallback(async () => {
@@ -308,31 +311,61 @@ function CursosView({ theme }: { theme: ThemeConfig }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {selected.lessons.length === 0
             ? <div style={{ color: DIM, fontSize: 13, padding: '20px 0' }}>Sin lecciones registradas</div>
-            : selected.lessons.map((l, idx) => (
-              <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10 }}>
-                <span style={{ fontSize: 11, color: DIM, fontFamily: 'monospace', width: 20, textAlign: 'right', flexShrink: 0 }}>{idx + 1}</span>
-                <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{SLIDE_TYPE_ICON[l.type] || '📄'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</div>
-                  <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-                    {l.duration_h > 0 && <span style={{ fontSize: 10, color: DIM }}>{Math.round(l.duration_h * 60)} min</span>}
-                    {l.has_quiz && <span style={{ fontSize: 10, color: '#FFB703' }}>🧪 Quiz</span>}
-                    {l.views > 0 && <span style={{ fontSize: 10, color: DIM }}>{l.views} vistas</span>}
+            : selected.lessons.map((l, idx) => {
+              const isLocal = selected.is_local && Array.isArray(l.contenido) && l.contenido.length > 0;
+              const isExpanded = expandedLesson === l.id;
+              return (
+                <div key={l.id} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden' }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: isLocal ? 'pointer' : 'default' }}
+                    onClick={() => isLocal && setExpandedLesson(isExpanded ? null : l.id)}
+                  >
+                    <span style={{ fontSize: 11, color: DIM, fontFamily: 'monospace', width: 20, textAlign: 'right', flexShrink: 0 }}>{idx + 1}</span>
+                    <span style={{ fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0 }}>{SLIDE_TYPE_ICON[l.type] || '📄'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</div>
+                      <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+                        {l.duration_h > 0 && <span style={{ fontSize: 10, color: DIM }}>{Math.round(l.duration_h * 60)} min</span>}
+                        {l.has_quiz && <span style={{ fontSize: 10, color: '#FFB703' }}>🧪 Quiz</span>}
+                        {l.views > 0 && <span style={{ fontSize: 10, color: DIM }}>{l.views} vistas</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: l.published ? `${A}10` : 'rgba(255,71,87,0.1)', color: l.published ? A : RED }}>
+                        {l.published ? 'Publicada' : 'Borrador'}
+                      </span>
+                      {l.website_url && (
+                        <a href={`${brand.odooUrl}${l.website_url}`} target="_blank" rel="noreferrer"
+                          style={{ fontSize: 10, color: DIM, textDecoration: 'none', padding: '3px 8px', borderRadius: 6, border: `1px solid ${theme.border}` }}>
+                          Ver ↗
+                        </a>
+                      )}
+                      {isLocal && (
+                        <span style={{ fontSize: 11, color: A, padding: '3px 8px', borderRadius: 6, border: `1px solid ${A}40` }}>
+                          {isExpanded ? '▲ Cerrar' : '▼ Leer'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: l.published ? `${A}10` : 'rgba(255,71,87,0.1)', color: l.published ? A : RED }}>
-                    {l.published ? 'Publicada' : 'Borrador'}
-                  </span>
-                  {l.website_url && (
-                    <a href={`${brand.odooUrl}${l.website_url}`} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 10, color: DIM, textDecoration: 'none', padding: '3px 8px', borderRadius: 6, border: `1px solid ${theme.border}` }}>
-                      Ver ↗
-                    </a>
+                  {isLocal && isExpanded && (
+                    <div style={{ padding: '0 16px 16px 58px', borderTop: `1px solid ${theme.border}` }}>
+                      {l.contenido!.map((linea, i) => {
+                        const isBlank = linea.trim() === '';
+                        const isHeader = linea.toUpperCase() === linea && linea.trim().length > 0 && !linea.startsWith('•');
+                        const isBullet = linea.startsWith('•');
+                        return isBlank
+                          ? <div key={i} style={{ height: 8 }} />
+                          : isHeader
+                            ? <div key={i} style={{ fontSize: 11, fontWeight: 700, color: A, marginTop: 10, marginBottom: 3, letterSpacing: '0.05em' }}>{linea}</div>
+                            : isBullet
+                              ? <div key={i} style={{ fontSize: 12, color: theme.text, lineHeight: 1.6, paddingLeft: 12, marginBottom: 1 }}>{linea}</div>
+                              : <div key={i} style={{ fontSize: 12, color: theme.text, lineHeight: 1.7, marginBottom: 4 }}>{linea}</div>;
+                      })}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
       </div>
 

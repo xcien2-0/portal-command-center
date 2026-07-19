@@ -57,6 +57,7 @@ const TelegramBotSection = lazy(() => import('./sections/TelegramBotSection'));
 const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
+const AuditoriaOdooSection = lazy(() => import('./sections/AuditoriaOdooSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
 const ReportesKPISection      = lazy(() => import('./sections/ReportesKPISection'));
 const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'));
@@ -90,7 +91,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   admin:     '*',
   director:  ['inicio','impacto','noc','red','incidentes','ventas','integridad','reportes-kpi',
                'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases','estrategia2030',
-               'agentes','comite','docs','reportlab','analytics'],
+               'agentes','comite','docs','reportlab','analytics','auditoria-odoo'],
   noc:       ['inicio','noc','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs','radiobases'],
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas','radiobases'],
   comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
@@ -128,6 +129,7 @@ const NAV: NavEntry[] = [
   { id: 'call',          label: 'Call Center',          icon: '📞', group: 'Campo & Inventario' },
   { id: 'scan',          label: 'Inventario & Scanner', icon: '🔍', group: 'Campo & Inventario' },
   { id: 'inv-transfers', label: 'Transferencias',       icon: '🏷️', group: 'Campo & Inventario' },
+  { id: 'auditoria-odoo', label: 'Auditoría Odoo',     icon: '🔎', group: 'Campo & Inventario' },
 
   // ── Comercial ──────────────────────────────────────────────────────────────
   { id: 'ventas',             label: 'Resumen Ventas',       icon: '📈', group: 'Comercial' },
@@ -264,6 +266,7 @@ interface SidebarProps {
   backendStatus: 'online' | 'offline';
   collapsed: boolean;
   onToggleCollapse: () => void;
+  nav: NavEntry[];
   isMobile?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
@@ -271,7 +274,7 @@ interface SidebarProps {
 
 const COLLAPSED_BY_DEFAULT = new Set(['Sistema']);
 
-function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse, isMobile, mobileOpen, onMobileClose }: SidebarProps) {
+function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse, nav, isMobile, mobileOpen, onMobileClose }: SidebarProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(COLLAPSED_BY_DEFAULT);
 
   const toggleGroup = (label: string) => {
@@ -286,7 +289,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
     const grouped: { label: string | null; items: NavEntry[] }[] = [];
     let current: NavEntry[] = [];
     let currentLabel: string | null = null;
-    for (const entry of NAV) {
+    for (const entry of nav) {
       if (entry.group !== currentLabel) {
         if (current.length) grouped.push({ label: currentLabel, items: current });
         currentLabel = entry.group ?? null;
@@ -296,7 +299,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
     }
     if (current.length) grouped.push({ label: currentLabel, items: current });
     return grouped;
-  }, []);
+  }, [nav]);
 
   const mobileStyle: React.CSSProperties = isMobile ? {
     position: 'fixed',
@@ -632,6 +635,7 @@ function Content({
       {section === 'scan'          && <InventarioSection theme={theme} />}
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
+      {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'ventas'              && <VentasSection theme={theme} />}
       {section === 'ventas-efectividad'  && <VentasEfectividadSection />}
@@ -887,6 +891,7 @@ export default function Xcien2Page() {
           backendStatus={backendStatus}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(p => !p)}
+          nav={navFiltrado}
           isMobile={isMobile}
           mobileOpen={mobileNavOpen}
           onMobileClose={() => setMobileNavOpen(false)}

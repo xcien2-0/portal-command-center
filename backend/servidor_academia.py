@@ -219,6 +219,8 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "http://localhost:8002",
         "http://127.0.0.1:8002",
+        "https://portal-command-center.vercel.app",
+        "https://xcien-portal.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -494,6 +496,112 @@ def _get_odoo_employees():
 @app.get("/api/odoo/tecnicos")
 def api_odoo_tecnicos():
     return _get_odoo_employees()
+
+@app.get("/api/odoo/audit")
+def api_odoo_audit():
+    """Auditoría de calidad de datos Odoo: segmenta productos, socios y equipos en útil vs. basura."""
+    from datetime import datetime, timedelta
+    cutoff_2y = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+    cutoff_90d = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+
+    resultado = {}
+
+    # ── 1. Productos sin movimiento en 2+ años ────────────────────────────────
+    try:
+        quants = odoo_conn.execute('stock.quant', 'search_read',
+            [['in_date', '<', cutoff_2y], ['quantity', '>', 0]],
+            fields=['product_id', 'quantity', 'location_id', 'in_date'], limit=500)
+        resultado['productos_sin_movimiento'] = [
+            {'producto': q['product_id'][1] if q['product_id'] else '?',
+             'cantidad': q['quantity'],
+             'ubicacion': q['location_id'][1] if q['location_id'] else '?',
+             'desde': q['in_date']}
+            for q in (quants or [])
+        ]
+    except Exception as e:
+        resultado['productos_sin_movimiento'] = []
+        resultado['error_productos'] = str(e)
+
+    # ── 2. Órdenes de venta sin factura en 90+ días ───────────────────────────
+    try:
+        orders = odoo_conn.execute('sale.order', 'search_read',
+            [['state', 'in', ['sale', 'done']],
+             ['date_order', '<', cutoff_90d],
+             ['invoice_status', '!=', 'invoiced']],
+            fields=['name', 'partner_id', 'amount_total', 'date_order', 'invoice_status'], limit=200)
+        resultado['ordenes_sin_factura'] = [
+            {'orden': o['name'],
+             'cliente': o['partner_id'][1] if o['partner_id'] else '?',
+             'monto': o['amount_total'],
+             'fecha': o['date_order'],
+             'estado_factura': o['invoice_status']}
+            for o in (orders or [])
+        ]
+    except Exception as e:
+        resultado['ordenes_sin_factura'] = []
+        resultado['error_ordenes'] = str(e)
+
+    # ── 3. Socios duplicados (mismo email) ────────────────────────────────────
+    try:
+        partners = odoo_conn.execute('res.partner', 'search_read',
+            [['customer_rank', '>', 0], ['email', '!=', False]],
+            fields=['name', 'email', 'phone', 'street', 'active'], limit=1000)
+        email_map: dict = {}
+        for p in (partners or []):
+            e = (p.get('email') or '').lower().strip()
+            if e:
+                email_map.setdefault(e, []).append(p['name'])
+        resultado['socios_duplicados'] = [
+            {'email': email, 'nombres': nombres}
+            for email, nombres in email_map.items() if len(nombres) > 1
+        ]
+    except Exception as e:
+        resultado['socios_duplicados'] = []
+        resultado['error_socios'] = str(e)
+
+    # ── 4. Equipos (stock.lot) sin cliente asignado ───────────────────────────
+    try:
+        lots = odoo_conn.execute('stock.lot', 'search_read',
+            [['product_qty', '>', 0]],
+            fields=['name', 'product_id', 'product_qty', 'ref', 'company_id'], limit=500)
+        resultado['equipos_sin_numero_serie'] = [
+            {'lote': l['name'],
+             'producto': l['product_id'][1] if l['product_id'] else '?',
+             'cantidad': l['product_qty'],
+             'referencia': l.get('ref') or ''}
+            for l in (lots or []) if not l.get('ref')
+        ]
+    except Exception as e:
+        resultado['equipos_sin_numero_serie'] = []
+        resultado['error_equipos'] = str(e)
+
+    # ── 5. Productos sin categoría o con nombre genérico ─────────────────────
+    try:
+        products = odoo_conn.execute('product.template', 'search_read',
+            [['active', '=', True]],
+            fields=['name', 'categ_id', 'list_price', 'type', 'default_code'], limit=1000)
+        resultado['productos_sin_categoria'] = [
+            {'nombre': p['name'], 'precio': p['list_price'], 'tipo': p['type'],
+             'codigo': p.get('default_code') or ''}
+            for p in (products or [])
+            if not p.get('categ_id') or p['categ_id'][1] in ('All', 'Todos', 'All / Saleable', '')
+        ]
+        resultado['total_productos'] = len(products or [])
+    except Exception as e:
+        resultado['productos_sin_categoria'] = []
+        resultado['total_productos'] = 0
+        resultado['error_productos_cat'] = str(e)
+
+    # ── Resumen ───────────────────────────────────────────────────────────────
+    resultado['resumen'] = {
+        'sin_movimiento_2y': len(resultado.get('productos_sin_movimiento', [])),
+        'ordenes_pendientes_factura': len(resultado.get('ordenes_sin_factura', [])),
+        'socios_duplicados': len(resultado.get('socios_duplicados', [])),
+        'equipos_sin_serie': len(resultado.get('equipos_sin_numero_serie', [])),
+        'productos_sin_categoria': len(resultado.get('productos_sin_categoria', [])),
+    }
+    return resultado
+
 
 @app.post("/api/odoo/execute")
 def api_odoo_execute(req: OdooActionRequest):
@@ -5384,6 +5492,49 @@ def activate_user(user_id: str):
 # ── Academia / Odoo eLearning ─────────────────────────────────────────────────
 _academia_cache: dict = {"data": None, "ts": 0}
 _ACADEMIA_TTL = 120
+
+_ACADEMIA_LOCAL_PATH = os.path.join(os.path.dirname(__file__), "data", "academia_fibra_optica.json")
+
+def _academia_local_cursos() -> list:
+    """Carga cursos locales desde JSON (no dependen de Odoo)."""
+    try:
+        with open(_ACADEMIA_LOCAL_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return [data["curso"]]
+    except Exception as e:
+        logger.warning(f"[Academia local] No se pudo cargar: {e}")
+        return []
+
+def _academia_local_quizzes(channel_id: int):
+    """Retorna preguntas de un curso local (channel_id == curso.id), o None si no aplica."""
+    try:
+        with open(_ACADEMIA_LOCAL_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        if data["curso"]["id"] != channel_id:
+            return None
+        quizzes = data.get("quizzes", {})
+        lessons = {l["id"]: l["name"] for l in data["curso"]["lessons"]}
+        result = []
+        for lid_str, qs in quizzes.items():
+            lid = int(lid_str)
+            slide_name = lessons.get(lid, "")
+            for i, q in enumerate(qs):
+                answers = [
+                    {"id": (lid * 100) + j, "text": opt}
+                    for j, opt in enumerate(q["opciones"])
+                ]
+                result.append({
+                    "id":               (lid * 1000) + i,
+                    "question":         q["pregunta"],
+                    "slide_id":         lid,
+                    "slide":            slide_name,
+                    "answers":          answers,
+                    "correct_answer_id": (lid * 100) + q["correcta"],
+                })
+        return result
+    except Exception as e:
+        logger.warning(f"[Academia local quiz] Error: {e}")
+        return None
 # Cursos creados con la cuenta de JMMC pero cuyo autor real es otro instructor
 _CURSOS_EXCLUIDOS_MINE: set = {37}  # 37 = Gestión de Proyectos (Carlos Belloc)
 
@@ -5476,11 +5627,19 @@ async def get_academia_cursos():
             })
 
         result.sort(key=lambda x: (-len(x["lessons"]), -x["members"]))
+
+        # Inyectar cursos locales (no requieren Odoo)
+        result = _academia_local_cursos() + result
+
         _academia_cache["data"] = result
         _academia_cache["ts"]   = time.time()
         return result
     except Exception as e:
         logger.error(f"[Academia] Odoo error: {e}")
+        # Devolver al menos los cursos locales aunque Odoo esté caído
+        local = _academia_local_cursos()
+        if local:
+            return local
         raise HTTPException(status_code=503, detail=str(e))
 
 
@@ -5664,6 +5823,23 @@ async def submit_colocacion(body: ColocacionSubmitBody):
 @app.get("/api/academia/examen/{channel_id}/preguntas")
 async def get_examen_preguntas(channel_id: int):
     """Trae todas las preguntas y respuestas de un canal de examen desde Odoo eLearning"""
+    # Cursos locales (no requieren Odoo)
+    local_qs = _academia_local_quizzes(channel_id)
+    if local_qs is not None:
+        try:
+            with open(_ACADEMIA_LOCAL_PATH, encoding="utf-8") as f:
+                local_data = json.load(f)
+            nombre = local_data["curso"]["name"]
+        except Exception:
+            nombre = f"Curso local #{channel_id}"
+        return {
+            "channel_id": channel_id,
+            "name":       nombre,
+            "total":      len(local_qs),
+            "preguntas":  local_qs,
+            "is_local":   True,
+        }
+
     try:
         ODOO_URL = os.environ.get("ODOO_URL")
         ODOO_DB  = os.environ.get("ODOO_DB")
@@ -5742,6 +5918,30 @@ class ExamenSubmitBody(BaseModel):
 @app.post("/api/academia/examen/submit")
 async def submit_examen(body: ExamenSubmitBody):
     """Evalúa respuestas del examen y devuelve score + nivel asignado"""
+    # Cursos locales: evaluar sin Odoo
+    local_qs = _academia_local_quizzes(body.channel_id)
+    if local_qs is not None:
+        correct_map = {str(q["id"]): q["correct_answer_id"] for q in local_qs}
+        total = len(body.respuestas)
+        correctas = sum(
+            1 for qid, aid in body.respuestas.items()
+            if correct_map.get(str(qid)) == int(aid)
+        )
+        score_pct = round((correctas / total * 100) if total > 0 else 0, 1)
+        if score_pct >= 90:   nivel, xp_awarded = "Senior",       300
+        elif score_pct >= 75: nivel, xp_awarded = "Especialista", 200
+        elif score_pct >= 60: nivel, xp_awarded = "Técnico",      100
+        else:                 nivel, xp_awarded = "Aprendiz",      50
+        return {
+            "score_pct":  score_pct,
+            "correctas":  correctas,
+            "total":      total,
+            "nivel":      nivel,
+            "nivel_num":  ["Aprendiz","Técnico","Especialista","Senior"].index(nivel) + 1,
+            "xp_awarded": xp_awarded,
+            "aprobado":   score_pct >= 60,
+        }
+
     try:
         ODOO_URL = os.environ.get("ODOO_URL")
         ODOO_DB  = os.environ.get("ODOO_DB")
@@ -9276,10 +9476,90 @@ def fibra_get_historial(user: dict = Depends(get_current_user)):
     data = _fibra_load()
     return {"historial": list(reversed(data.get("historial", [])))}
 
+# ── Fibra: Sitios (control de despliegue) ─────────────────────────────────────
+
+@app.get("/api/fibra/sitios")
+def fibra_get_sitios(user: dict = Depends(get_current_user)):
+    data = _fibra_load()
+    return {"sitios": data.get("sitios", [])}
+
+@app.post("/api/fibra/sitios")
+def fibra_create_sitio(payload: dict, user: dict = Depends(get_current_user)):
+    if user.get("rol") not in ("admin", "director"):
+        raise HTTPException(status_code=403, detail="Solo admin o director puede crear sitios")
+    import uuid, datetime
+    data = _fibra_load()
+    nuevo = {
+        "id": f"sitio-{uuid.uuid4().hex[:8]}",
+        "nombre": payload.get("nombre", "Nuevo sitio"),
+        "plaza": payload.get("plaza", ""),
+        "estado": "prospecto",
+        "equipo_hw": payload.get("equipo_hw", ""),
+        "equipo_ns": payload.get("equipo_ns", ""),
+        "sfp": payload.get("sfp", ""),
+        "velocidad": payload.get("velocidad", "100M"),
+        "responsable": payload.get("responsable", ""),
+        "fecha_compromiso": payload.get("fecha_compromiso"),
+        "fecha_activacion": None,
+        "direccion": payload.get("direccion", ""),
+        "notas": payload.get("notas", ""),
+        "checklist": {
+            "levantamiento": False, "aprobacion_cliente": False,
+            "cable_instalado": False, "equipo_montado": False,
+            "sidf_odoo": False, "noc_monitoreado": False
+        },
+        "created_at": datetime.datetime.now().isoformat(),
+        "created_by": user.get("email", ""),
+    }
+    data.setdefault("sitios", []).append(nuevo)
+    _fibra_save(data)
+    return {"ok": True, "sitio": nuevo}
+
+@app.patch("/api/fibra/sitios/{sitio_id}")
+def fibra_update_sitio(sitio_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    if user.get("rol") not in ("admin", "director", "noc"):
+        raise HTTPException(status_code=403, detail="Sin permiso para editar sitios")
+    import datetime
+    data = _fibra_load()
+    sitios = data.get("sitios", [])
+    idx = next((i for i, s in enumerate(sitios) if s["id"] == sitio_id), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
+    sitio = sitios[idx]
+    editables = ["nombre","plaza","estado","equipo_hw","equipo_ns","sfp",
+                 "velocidad","responsable","fecha_compromiso","fecha_activacion",
+                 "direccion","notas","checklist"]
+    for campo in editables:
+        if campo in payload:
+            sitio[campo] = payload[campo]
+    sitio["updated_at"] = datetime.datetime.now().isoformat()
+    sitio["updated_by"] = user.get("email", "")
+    sitios[idx] = sitio
+    data["sitios"] = sitios
+    data.setdefault("historial", []).append({
+        "ts": sitio["updated_at"], "section": "sitios", "action": "edit",
+        "entity": sitio_id, "user": user.get("email"),
+        "cambio": {k: payload[k] for k in editables if k in payload}
+    })
+    _fibra_save(data)
+    return {"ok": True, "sitio": sitio}
+
+@app.delete("/api/fibra/sitios/{sitio_id}")
+def fibra_delete_sitio(sitio_id: str, user: dict = Depends(get_current_user)):
+    if user.get("rol") not in ("admin",):
+        raise HTTPException(status_code=403, detail="Solo admin puede eliminar sitios")
+    data = _fibra_load()
+    data["sitios"] = [s for s in data.get("sitios", []) if s["id"] != sitio_id]
+    _fibra_save(data)
+    return {"ok": True}
+
 # ─── Radio Bases ──────────────────────────────────────────────────────────────
 
 _RADIOBASES_DRIVE_FILE   = os.path.join(BASE_DIR, "data", "radiobases_drive.json")
 _RADIOBASES_OVERLAY_FILE = os.path.join(BASE_DIR, "data", "radiobases_overlay.json")
+_RADIOBASES_NYX_FILE     = os.path.join(BASE_DIR, "data", "radiobases_nyx.json")
+
+_NYX_BASE_URL = "https://nyx-system.replit.app"
 
 def _rb_overlay_load() -> dict:
     if not os.path.exists(_RADIOBASES_OVERLAY_FILE):
@@ -9346,16 +9626,184 @@ def _parse_renta(renta_str: str):
         v = v / 12
     return v, includes_iva
 
-# ── Merge ──────────────────────────────────────────────────────────────────────
+# ── Merge helpers ──────────────────────────────────────────────────────────────
 
 # All overlay-editable fields (besides operational state/notes)
 _RB_EDITABLE = {"estado_op", "notas", "ultima_visita", "direccion", "city", "state", "renta", "lat", "lng"}
+
+def _rb_norm_key(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
+
+def _rb_pop_match(pending: dict, name: str):
+    key = _rb_norm_key(name)
+    if key in pending:
+        return pending.pop(key)
+    stripped = re.sub(r"^(rb|rep|radiobase)\s*", "", name.lower()).strip()
+    sk = re.sub(r"[^a-z0-9]", "", stripped)
+    if sk and sk in pending:
+        return pending.pop(sk)
+    for ik in list(pending):
+        if len(sk) >= 4 and (ik.startswith(sk) or sk.startswith(ik)):
+            return pending.pop(ik)
+    return None
+
+def _nyx_rb_load() -> list:
+    if os.path.exists(_RADIOBASES_NYX_FILE):
+        with open(_RADIOBASES_NYX_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def _nyx_scrape() -> list:
+    from lxml import html as _lxml_html
+    nyx_user = os.environ.get("NYX_USER", "")
+    nyx_pass = os.environ.get("NYX_PASS", "")
+    if not nyx_user or not nyx_pass:
+        raise Exception("NYX_USER / NYX_PASS no configurados en .env")
+
+    sess = requests.Session()
+    sess.headers.update({"User-Agent": "Mozilla/5.0 (compatible; XCIEN-Portal/1.0)"})
+
+    # GET login page (may carry CSRF)
+    lg = sess.get(f"{_NYX_BASE_URL}/login", timeout=20)
+    tree = _lxml_html.fromstring(lg.text)
+    csrf_inputs = tree.xpath("//input[@name='csrf_token' or @name='_token' or @name='token']/@value")
+    post_data: dict = {"username": nyx_user, "password": nyx_pass}
+    if csrf_inputs:
+        post_data["csrf_token"] = csrf_inputs[0]
+
+    login_resp = sess.post(f"{_NYX_BASE_URL}/login", data=post_data, timeout=20, allow_redirects=True)
+    if login_resp.status_code >= 400:
+        raise Exception(f"Login Nyx falló HTTP {login_resp.status_code}")
+
+    # Discover radiobases URL from home navigation
+    home = sess.get(f"{_NYX_BASE_URL}/", timeout=20)
+    home_tree = _lxml_html.fromstring(home.text)
+    rb_path = None
+    for href in home_tree.xpath("//a/@href"):
+        slug = href.lower()
+        if any(x in slug for x in ["radiobase", "radio_base", "radio-base", "torre", "sitio"]):
+            rb_path = href
+            break
+    if not rb_path:
+        for text, href in zip(
+            home_tree.xpath("//a//text()"),
+            home_tree.xpath("//a/@href")
+        ):
+            if any(x in text.lower() for x in ["radio", "base", "torre", "sitio"]):
+                rb_path = href
+                break
+    if not rb_path:
+        rb_path = "/radiobases"
+
+    rb_url = rb_path if rb_path.startswith("http") else f"{_NYX_BASE_URL}{rb_path}"
+    rb_resp = sess.get(rb_url, timeout=20)
+    rb_tree = _lxml_html.fromstring(rb_resp.text)
+
+    radiobases: list = []
+
+    # Parse tables first
+    for table in rb_tree.xpath("//table"):
+        headers = [th.text_content().strip().lower() for th in table.xpath(".//th")]
+        # Map header positions by name for targeted column access
+        hdr_idx = {h: i for i, h in enumerate(headers) if h}
+
+        for tr in table.xpath(".//tbody/tr"):
+            tds_el = tr.xpath(".//td")
+            if not tds_el or len(tds_el) < 2:
+                continue
+
+            # For the RBS/name column: prefer the <a> link text to avoid emoji prefixes
+            rbs_col_i = hdr_idx.get("rbs", 0)
+            rbs_el    = tds_el[rbs_col_i] if rbs_col_i < len(tds_el) else tds_el[0]
+            name_links = rbs_el.xpath(".//a[@href]")
+            if name_links:
+                name       = name_links[0].text_content().strip()
+                detail_href = name_links[0].get("href", "")
+                detail_url  = detail_href if detail_href.startswith("http") else (
+                    f"{_NYX_BASE_URL}{detail_href}" if detail_href else "")
+            else:
+                name       = rbs_el.text_content().strip()
+                detail_url = ""
+
+            # Full text for each cell (for row dict)
+            tds = [td.text_content().strip() for td in tds_el]
+            row: dict = {}
+            for j, h in enumerate(headers):
+                if j < len(tds):
+                    row[h] = tds[j]
+
+            # Fallback name from other common keys
+            if not name:
+                name = (row.get("rbs") or row.get("nombre") or row.get("name") or
+                        row.get("sitio") or row.get("radiobase") or row.get("torre") or
+                        (tds[0] if tds else ""))
+
+            if not name or len(name) <= 1:
+                continue
+
+            # Extract PDF URL directly from the anchor in the PDF column
+            pdf_url = ""
+            pdf_col_i = hdr_idx.get("pdf")
+            if pdf_col_i is not None and pdf_col_i < len(tds_el):
+                pdf_hrefs = tds_el[pdf_col_i].xpath(".//a/@href")
+                if pdf_hrefs:
+                    pdf_url = pdf_hrefs[0]
+
+            entry = {
+                "nombre":     name,
+                "plaza":      row.get("plaza", ""),
+                "arrendador": row.get("arrendador", ""),
+                "renta":      row.get("renta mx$", "") or row.get("renta", ""),
+                "vencimiento": row.get("vencimiento", ""),
+                "inpc":       row.get("inpc", ""),
+                "pdf_url":    pdf_url,
+                "detail_url": detail_url,
+                "raw":        row,
+            }
+            radiobases.append(entry)
+
+    # Fallback: list/card elements
+    if not radiobases:
+        selectors = [
+            "//div[contains(@class,'card')]",
+            "//div[contains(@class,'site')]",
+            "//li[contains(@class,'radiobase')]",
+            "//li[contains(@class,'base')]",
+        ]
+        for sel in selectors:
+            for el in rb_tree.xpath(sel):
+                text = el.text_content().strip()
+                lines = [l.strip() for l in text.split("\n") if l.strip()]
+                if lines:
+                    radiobases.append({"nombre": lines[0], "raw": {"text": text[:200]}})
+            if radiobases:
+                break
+
+    return radiobases
+
+# ── Merge ──────────────────────────────────────────────────────────────────────
 
 def _rb_merge() -> list:
     with open(_RADIOBASES_DRIVE_FILE, "r", encoding="utf-8") as f:
         drive = json.load(f)
     ov_data = _rb_overlay_load()
     overlay_map = {o["name"]: o for o in ov_data.get("overlays", [])}
+
+    # Odoo enrichment (from in-memory cache — populated by /api/red/radiobases-odoo)
+    odoo_pending: dict = {}
+    if _radiobases_odoo_cache.get("data"):
+        for od in _radiobases_odoo_cache["data"]:
+            key = _rb_norm_key(od.get("nombre") or "")
+            if key:
+                odoo_pending[key] = od
+
+    # Nyx enrichment (from file cache)
+    nyx_pending: dict = {}
+    for nx in _nyx_rb_load():
+        key = _rb_norm_key(nx.get("nombre") or nx.get("name") or "")
+        if key:
+            nyx_pending[key] = nx
+
     result = []
     junk_patterns = ["pactualizar", "actualizar", "por actualizar"]
     for i, rb in enumerate(drive):
@@ -9364,21 +9812,84 @@ def _rb_merge() -> list:
             continue
         if any(p in name.lower() for p in junk_patterns):
             continue
-        ov = overlay_map.get(rb["name"], {})
-        merged = {**rb, "idx": i}
-        # Apply overlay overrides for any editable field
+        ov = overlay_map.get(name, {})
+        merged = {
+            **rb, "idx": i,
+            "fuente": "drive",
+            "clientes": None, "odoo_id": None, "odoo_estado": None,
+            "nyx_data": None,
+        }
         for field in _RB_EDITABLE:
             if field in ov:
                 merged[field] = ov[field]
-        # Defaults for operational fields
         merged.setdefault("estado_op", "sin_info")
         merged.setdefault("notas", "")
         merged.setdefault("ultima_visita", "")
-        # Parse renta to numeric
+
+        fuentes = ["drive"]
+
+        # Enrich with Odoo (client count, GPS fill-in)
+        od = _rb_pop_match(odoo_pending, name)
+        if od:
+            fuentes.append("odoo")
+            merged["clientes"] = od.get("clientes", 0)
+            merged["odoo_id"] = od.get("id")
+            merged["odoo_estado"] = od.get("estado", "")
+            if not merged.get("lat") and od.get("lat"):
+                merged["lat"] = od["lat"]
+                merged["lng"] = od["lng"]
+
+        # Enrich with Nyx
+        nx = _rb_pop_match(nyx_pending, name)
+        if nx:
+            fuentes.append("nyx")
+            merged["nyx_data"] = nx
+
+        if len(fuentes) > 1:
+            merged["fuente"] = "+".join(fuentes)
+
         renta_mxn, incluye_iva = _parse_renta(merged.get("renta", ""))
         merged["renta_mxn"]       = renta_mxn
         merged["renta_incluye_iva"] = incluye_iva
         result.append(merged)
+
+    # Odoo-only towers (not in Drive)
+    for od in odoo_pending.values():
+        result.append({
+            "idx": len(result), "name": od.get("nombre", ""),
+            "estatus": "", "vigencia": "", "direccion": "", "city": "", "state": "", "renta": "",
+            "lat": od.get("lat"), "lng": od.get("lng"),
+            "renta_mxn": None, "renta_incluye_iva": False,
+            "estado_op": "sin_info", "notas": "", "ultima_visita": "",
+            "fuente": "odoo",
+            "clientes": od.get("clientes", 0), "odoo_id": od.get("id"),
+            "odoo_estado": od.get("estado", ""), "nyx_data": None,
+        })
+
+    # Nyx-only bases (not in Drive nor Odoo)
+    for nx in nyx_pending.values():
+        raw = nx.get("raw", {})
+        # plaza = "Ciudad, Estado" → split
+        plaza_str = raw.get("plaza", "")
+        plaza_parts = [p.strip() for p in plaza_str.split(",", 1)] if plaza_str else []
+        nyx_city  = plaza_parts[0] if plaza_parts else ""
+        nyx_state = plaza_parts[1] if len(plaza_parts) > 1 else ""
+        nyx_renta = raw.get("renta mx$", "") or ""
+        nyx_vigencia = raw.get("vencimiento", "")
+        result.append({
+            "idx": len(result),
+            "name": nx.get("nombre") or nx.get("name", ""),
+            "estatus": "VENCIDO" if nyx_vigencia == "Vencida" else ("VIGENTE" if nyx_vigencia else ""),
+            "vigencia": nyx_vigencia if nyx_vigencia != "Vencida" else "",
+            "direccion": "", "city": nyx_city, "state": nyx_state,
+            "renta": nyx_renta if nyx_renta != "—" else "",
+            "lat": None, "lng": None,
+            "renta_mxn": None, "renta_incluye_iva": False,
+            "estado_op": "sin_info", "notas": "", "ultima_visita": "",
+            "fuente": "nyx",
+            "clientes": None, "odoo_id": None, "odoo_estado": None, "nyx_data": nx,
+        })
+
     return result
 
 @app.get("/api/radiobases/data")
@@ -9394,6 +9905,27 @@ def radiobases_get_data(user: dict = Depends(get_current_user)):
 def radiobases_get_historial(user: dict = Depends(get_current_user)):
     ov_data = _rb_overlay_load()
     return {"historial": list(reversed(ov_data.get("historial", [])))}
+
+@app.post("/api/radiobases/nyx/sync")
+def radiobases_nyx_sync(user: dict = Depends(get_current_user)):
+    if user.get("rol") not in ("admin", "director"):
+        raise HTTPException(403, "Solo admin/director pueden sincronizar Nyx")
+    try:
+        data = _nyx_scrape()
+        with open(_RADIOBASES_NYX_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return {"ok": True, "count": len(data), "data": data}
+    except Exception as e:
+        logger.error(f"[nyx-sync] {e}", exc_info=True)
+        raise HTTPException(503, f"Error sincronizando Nyx: {e}")
+
+@app.get("/api/radiobases/nyx/status")
+def radiobases_nyx_status(user: dict = Depends(get_current_user)):
+    data = _nyx_rb_load()
+    mtime = None
+    if os.path.exists(_RADIOBASES_NYX_FILE):
+        mtime = dt_datetime.fromtimestamp(os.path.getmtime(_RADIOBASES_NYX_FILE)).isoformat()
+    return {"count": len(data), "last_sync": mtime, "data": data}
 
 @app.patch("/api/radiobases/sitios/{site_name:path}")
 def radiobases_update_sitio(

@@ -17,10 +17,30 @@
       "estado": "En piloto",
       "color": "#00C896",
       "fases": [
-        { "nombre": "F1 — Diseño y definición", "estado": "progreso", "pct": 45, "detalle": "SIDF en Odoo, kits, diagrama topológico, RZ Gustavo" },
-        { "nombre": "F2 — Despliegue + convenio Neutral", "estado": "bloqueado", "pct": 0, "detalle": "Requiere convenio firmado — blocker crítico" },
-        { "nombre": "F3 — CWDM + pruebas", "estado": "pendiente", "pct": 0, "detalle": "Depende de F2 · capacitación Raisecom" },
-        { "nombre": "F4 — Piloto y lanzamiento", "estado": "pendiente", "pct": 0, "detalle": "SLA 99.2% con 6 clientes piloto" }
+        {
+          "nombre": "F1 — Diseño y definición",
+          "estado": "progreso",
+          "pct": 45,
+          "detalle": "SIDF en Odoo, kits, diagrama topológico, RZ Gustavo"
+        },
+        {
+          "nombre": "F2 — Despliegue + convenio Neutral",
+          "estado": "bloqueado",
+          "pct": 0,
+          "detalle": "Requiere convenio firmado — blocker crítico"
+        },
+        {
+          "nombre": "F3 — CWDM + pruebas",
+          "estado": "pendiente",
+          "pct": 0,
+          "detalle": "Depende de F2 · capacitación Raisecom"
+        },
+        {
+          "nombre": "F4 — Piloto y lanzamiento",
+          "estado": "pendiente",
+          "pct": 0,
+          "detalle": "SLA 99.2% con 6 clientes piloto"
+        }
       ]
     },
     {
@@ -34,10 +54,30 @@
       "estado": "Construida",
       "color": "#3B82F6",
       "fases": [
-        { "nombre": "F1 — Diseño y definición", "estado": "completado", "pct": 100, "detalle": "Kits básicos. Pendiente formalización SIDF en Odoo" },
-        { "nombre": "F2 — Despliegue de fibra", "estado": "completado", "pct": 100, "detalle": "Anillo PN (71 pts, 11 cajas) + Lancemex (50 pts, 7 cajas)" },
-        { "nombre": "F3 — CWDM + migración topología", "estado": "bloqueado", "pct": 10, "detalle": "Electrónica CWDM incompleta · 1 hilo/cliente — fecha urgente a Ingeniería" },
-        { "nombre": "F4 — Activación y lanzamiento", "estado": "progreso", "pct": 25, "detalle": "~2.5 clientes activos. Expansión tras topología final" }
+        {
+          "nombre": "F1 — Diseño y definición",
+          "estado": "completado",
+          "pct": 100,
+          "detalle": "Kits básicos. Pendiente formalización SIDF en Odoo"
+        },
+        {
+          "nombre": "F2 — Despliegue de fibra",
+          "estado": "completado",
+          "pct": 100,
+          "detalle": "Anillo PN (71 pts, 11 cajas) + Lancemex (50 pts, 7 cajas)"
+        },
+        {
+          "nombre": "F3 — CWDM + migración topología",
+          "estado": "bloqueado",
+          "pct": 10,
+          "detalle": "Electrónica CWDM incompleta · 1 hilo/cliente — fecha urgente a Ingeniería"
+        },
+        {
+          "nombre": "F4 — Activación y lanzamiento",
+          "estado": "progreso",
+          "pct": 25,
+          "detalle": "~2.5 clientes activos. Expansión tras topología final"
+        }
       ]
     },
     {
@@ -51,29 +91,438 @@
       "estado": "Mediano plazo",
       "color": "#8B5CF6",
       "fases": [
-        { "nombre": "F1 — Levantamiento y definición", "estado": "pendiente", "pct": 5, "detalle": "Requiere RZ de Gustavo. KMZ disponibles" },
-        { "nombre": "F2 — Diseño de arquitectura", "estado": "pendiente", "pct": 0, "detalle": "Core local, topología, switches. Depende F1" },
-        { "nombre": "F3 — Despliegue de fibra", "estado": "pendiente", "pct": 0, "detalle": "Red propia X100. Sin Neutral Networks" },
-        { "nombre": "F4 — CWDM + SIDF + clientes", "estado": "pendiente", "pct": 0, "detalle": "Piloto tras validar MTY y PN" }
+        {
+          "nombre": "F1 — Levantamiento y definición",
+          "estado": "pendiente",
+          "pct": 5,
+          "detalle": "Requiere RZ de Gustavo. KMZ disponibles"
+        },
+        {
+          "nombre": "F2 — Diseño de arquitectura",
+          "estado": "pendiente",
+          "pct": 0,
+          "detalle": "Core local, topología, switches. Depende F1"
+        },
+        {
+          "nombre": "F3 — Despliegue de fibra",
+          "estado": "pendiente",
+          "pct": 0,
+          "detalle": "Red propia X100. Sin Neutral Networks"
+        },
+        {
+          "nombre": "F4 — CWDM + SIDF + clientes",
+          "estado": "pendiente",
+          "pct": 0,
+          "detalle": "Piloto tras validar MTY y PN"
+        }
       ]
     }
   ],
   "compromisos": [
-    { "id": "c01", "responsable": "Ingeniería", "compromiso": "Fecha exacta culminación electrónica CWDM en PN", "plaza": "PN", "prioridad": "critica", "estado": "pendiente", "nota": "" },
-    { "id": "c02", "responsable": "Oswaldo Lozano", "compromiso": "Cargar SIDF con precios homologados en sistema", "plaza": "Todas", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c03", "responsable": "Rodrigo Flores", "compromiso": "Entregar framework/diagrama de diseño de red", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c04", "responsable": "Pedro Botello", "compromiso": "Documentar topología red (salida por POP PN)", "plaza": "PN", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c05", "responsable": "Alejandro Guzmán", "compromiso": "KMZ MTY + lista parques industriales al Sheet", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c06", "responsable": "Cecilia Núñez", "compromiso": "Cotización estándar Preventa para OC Neutral", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c07", "responsable": "Cecilia Núñez", "compromiso": "Conjuntar requerimientos Preventa + Infraestructura", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c08", "responsable": "José Miguel", "compromiso": "Solicitar mapa red Neutral + contrato a Rodrigo", "plaza": "MTY", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c09", "responsable": "José Miguel", "compromiso": "Visita a Piedras Negras — validación distribución", "plaza": "PN", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c10", "responsable": "José Miguel", "compromiso": "Compartir HTML al equipo + Drive compartido", "plaza": "Todas", "prioridad": "alta", "estado": "completado", "nota": "Compartido en sesión 15 jul" },
-    { "id": "c11", "responsable": "JM + Oswaldo", "compromiso": "Documentar cajas de empalme con radios de alcance", "plaza": "Todas", "prioridad": "alta", "estado": "pendiente", "nota": "" },
-    { "id": "c12", "responsable": "Gustavo Cavazos", "compromiso": "Info red Neutral para mapa MTY", "plaza": "MTY", "prioridad": "media", "estado": "pendiente", "nota": "" },
-    { "id": "c13", "responsable": "Raúl Zapata", "compromiso": "KMZ validación rutas/empalmes MTY y SLT", "plaza": "MTY/SLT", "prioridad": "media", "estado": "pendiente", "nota": "" },
-    { "id": "c14", "responsable": "José Miguel", "compromiso": "Documentar Academia WISTI/ODU en base conocimiento", "plaza": "Interna", "prioridad": "media", "estado": "pendiente", "nota": "" },
-    { "id": "c15", "responsable": "Elizabeth Marines", "compromiso": "Llamar a José Miguel — grabación de sesión", "plaza": "Interna", "prioridad": "normal", "estado": "pendiente", "nota": "" }
+    {
+      "id": "c01",
+      "responsable": "Ingeniería",
+      "compromiso": "Fecha exacta culminación electrónica CWDM en PN",
+      "plaza": "PN",
+      "prioridad": "critica",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c02",
+      "responsable": "Oswaldo Lozano",
+      "compromiso": "Cargar SIDF con precios homologados en sistema",
+      "plaza": "Todas",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c03",
+      "responsable": "Rodrigo Flores",
+      "compromiso": "Entregar framework/diagrama de diseño de red",
+      "plaza": "MTY",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c04",
+      "responsable": "Pedro Botello",
+      "compromiso": "Documentar topología red (salida por POP PN)",
+      "plaza": "PN",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c05",
+      "responsable": "Alejandro Guzmán",
+      "compromiso": "KMZ MTY + lista parques industriales al Sheet",
+      "plaza": "MTY",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c06",
+      "responsable": "Cecilia Núñez",
+      "compromiso": "Cotización estándar Preventa para OC Neutral",
+      "plaza": "MTY",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c07",
+      "responsable": "Cecilia Núñez",
+      "compromiso": "Conjuntar requerimientos Preventa + Infraestructura",
+      "plaza": "MTY",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c08",
+      "responsable": "José Miguel",
+      "compromiso": "Solicitar mapa red Neutral + contrato a Rodrigo",
+      "plaza": "MTY",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c09",
+      "responsable": "José Miguel",
+      "compromiso": "Visita a Piedras Negras — validación distribución",
+      "plaza": "PN",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c10",
+      "responsable": "José Miguel",
+      "compromiso": "Compartir HTML al equipo + Drive compartido",
+      "plaza": "Todas",
+      "prioridad": "alta",
+      "estado": "completado",
+      "nota": "Compartido en sesión 15 jul"
+    },
+    {
+      "id": "c11",
+      "responsable": "JM + Oswaldo",
+      "compromiso": "Documentar cajas de empalme con radios de alcance",
+      "plaza": "Todas",
+      "prioridad": "alta",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c12",
+      "responsable": "Gustavo Cavazos",
+      "compromiso": "Info red Neutral para mapa MTY",
+      "plaza": "MTY",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c13",
+      "responsable": "Raúl Zapata",
+      "compromiso": "KMZ validación rutas/empalmes MTY y SLT",
+      "plaza": "MTY/SLT",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c14",
+      "responsable": "José Miguel",
+      "compromiso": "Documentar Academia WISTI/ODU en base conocimiento",
+      "plaza": "Interna",
+      "prioridad": "media",
+      "estado": "pendiente",
+      "nota": ""
+    },
+    {
+      "id": "c15",
+      "responsable": "Elizabeth Marines",
+      "compromiso": "Llamar a José Miguel — grabación de sesión",
+      "plaza": "Interna",
+      "prioridad": "normal",
+      "estado": "pendiente",
+      "nota": ""
+    }
   ],
-  "historial": []
+  "historial": [
+    {
+      "ts": "2026-07-18T05:17:10.272733",
+      "comp_id": "c02",
+      "responsable": "Oswaldo Lozano",
+      "user_nombre": "Administrador XCIEN",
+      "user_email": "admin@xcien.com",
+      "cambios": {
+        "nota": {
+          "de": "",
+          "a": ""
+        }
+      }
+    }
+  ],
+  "sitios": [
+    {
+      "id": "pn-001",
+      "nombre": "Municipio de Piedras Negras",
+      "plaza": "pn",
+      "estado": "activo",
+      "equipo_hw": "",
+      "equipo_ns": "SIDP-40",
+      "sfp": "",
+      "velocidad": "40M",
+      "responsable": "NOC PN",
+      "fecha_compromiso": null,
+      "fecha_activacion": null,
+      "direccion": "Av. 16 de Septiembre S/N, Piedras Negras, Coahuila",
+      "notas": "Cliente SIDP-40 · $13,642/mes · Administración Municipal · Odoo activo",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": true
+      }
+    },
+    {
+      "id": "pn-002",
+      "nombre": "Cliente PN activo #2 (por confirmar)",
+      "plaza": "pn",
+      "estado": "activo",
+      "equipo_hw": "",
+      "equipo_ns": "",
+      "sfp": "",
+      "velocidad": "",
+      "responsable": "NOC PN",
+      "fecha_compromiso": null,
+      "fecha_activacion": null,
+      "direccion": "Piedras Negras, Coahuila",
+      "notas": "Aprox. 2.5 clientes activos en PN — pendiente identificar en Odoo",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "pn-003",
+      "nombre": "Cliente PN en espera CWDM",
+      "plaza": "pn",
+      "estado": "instalacion",
+      "equipo_hw": "RAX711-C-DC/D",
+      "equipo_ns": "",
+      "sfp": "USFP+-192/SS12",
+      "velocidad": "100M",
+      "responsable": "NOC PN",
+      "fecha_compromiso": "2026-08-31",
+      "fecha_activacion": null,
+      "direccion": "Piedras Negras, Coahuila",
+      "notas": "Bloqueado: electrónica CWDM incompleta — 1 hilo/cliente vs topología definitiva",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "pn-004",
+      "nombre": "Gobierno del Estado de Coahuila (PN)",
+      "plaza": "pn",
+      "estado": "prospecto",
+      "equipo_hw": "",
+      "equipo_ns": "",
+      "sfp": "",
+      "velocidad": "",
+      "responsable": "Comercial PN",
+      "fecha_compromiso": null,
+      "fecha_activacion": null,
+      "direccion": "Piedras Negras / Saltillo, Coahuila",
+      "notas": "SO46377 en Odoo · $0.01 — orden marco/framework. Pendiente alcance real.",
+      "checklist": {
+        "levantamiento": false,
+        "aprobacion_cliente": false,
+        "cable_instalado": false,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "mty-001",
+      "nombre": "Delicias y Hospedaje IKAAN",
+      "plaza": "mty",
+      "estado": "instalacion",
+      "equipo_hw": "",
+      "equipo_ns": "S-INST-FO",
+      "sfp": "",
+      "velocidad": "1G",
+      "responsable": "RZ Gustavo",
+      "fecha_compromiso": "2025-09-25",
+      "fecha_activacion": null,
+      "direccion": "Matamoros Poniente, Monterrey, NL",
+      "notas": "SO51074 · S-INST-FO $1,854,840 · Instalación fibra óptica MTY — proyecto mayor",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": false,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "mty-002",
+      "nombre": "Piloto Purísima MTY-02",
+      "plaza": "mty",
+      "estado": "aprobado",
+      "equipo_hw": "ISCOM S2600-24T4X-PWH-DC/D",
+      "equipo_ns": "",
+      "sfp": "USFP+-192/SS23",
+      "velocidad": "1G",
+      "responsable": "RZ Gustavo",
+      "fecha_compromiso": "2026-09-01",
+      "fecha_activacion": null,
+      "direccion": "Purísima, Monterrey, NL",
+      "notas": "Bloqueado por convenio Neutral Networks — parte del plan 6 pilotos",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": false,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "mty-003",
+      "nombre": "Prospectos Parques Industriales MTY",
+      "plaza": "mty",
+      "estado": "levantamiento",
+      "equipo_hw": "",
+      "equipo_ns": "",
+      "sfp": "",
+      "velocidad": "100M",
+      "responsable": "Comercial MTY",
+      "fecha_compromiso": "2026-10-01",
+      "fecha_activacion": null,
+      "direccion": "Monterrey y área metropolitana, NL",
+      "notas": "4 prospectos restantes del plan de 6 pilotos MTY · KMZ pendiente Alejandro Guzmán",
+      "checklist": {
+        "levantamiento": false,
+        "aprobacion_cliente": false,
+        "cable_instalado": false,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "slt-001",
+      "nombre": "Manufacturas Zapaliname (VIP3)",
+      "plaza": "slt",
+      "estado": "activo",
+      "equipo_hw": "",
+      "equipo_ns": "S-INST-FO",
+      "sfp": "",
+      "velocidad": "",
+      "responsable": "NOC SLT",
+      "fecha_compromiso": "2024-04-30",
+      "fecha_activacion": "2024-04-30",
+      "direccion": "Km Zacatecas-Saltillo, Saltillo, Coahuila CP 25315",
+      "notas": "SO41957 · S-INST-FO $238,268 · Parque VIP3 · Activo desde abr 2024",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "slt-002",
+      "nombre": "Universidad Tecnológica de Coahuila",
+      "plaza": "slt",
+      "estado": "instalacion",
+      "equipo_hw": "",
+      "equipo_ns": "S-INST-FO",
+      "sfp": "",
+      "velocidad": "",
+      "responsable": "Ingeniería SLT",
+      "fecha_compromiso": "2024-12-31",
+      "fecha_activacion": null,
+      "direccion": "Coahuila",
+      "notas": "SO45526 · S-INST-FO $742,793 · Proyecto educativo — confirmar estado actual",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": false,
+        "equipo_montado": false,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "slt-003",
+      "nombre": "Instituto Registral y Catastral Coahuila",
+      "plaza": "slt",
+      "estado": "activo",
+      "equipo_hw": "",
+      "equipo_ns": "S-INST-FO",
+      "sfp": "",
+      "velocidad": "",
+      "responsable": "NOC SLT",
+      "fecha_compromiso": "2024-03-31",
+      "fecha_activacion": "2024-03-31",
+      "direccion": "Castelar S/N, Saltillo, Coahuila",
+      "notas": "SO41167 · S-INST-FO $1,200 · Instalación pequeña · Activo desde mar 2024",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      }
+    },
+    {
+      "id": "slt-004",
+      "nombre": "Luminet WAN (Carrier — Poder Judicial + Retemsa)",
+      "plaza": "slt",
+      "estado": "activo",
+      "equipo_hw": "",
+      "equipo_ns": "SIDP-15",
+      "sfp": "",
+      "velocidad": "15M",
+      "responsable": "NOC SLT",
+      "fecha_compromiso": null,
+      "fecha_activacion": null,
+      "direccion": "Nazario Ortiz Garza 2060, Saltillo, Coahuila",
+      "notas": "Modelo carrier — Luminet revende a clientes finales: Poder Judicial Coahuila + Retemsa · $900/mes",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": true
+      }
+    }
+  ]
 }

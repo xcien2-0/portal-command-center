@@ -48,10 +48,35 @@ interface HistorialEntry {
   cambios: Record<string, { de: unknown; a: unknown }>;
 }
 
+interface Sitio {
+  id: string;
+  nombre: string;
+  plaza: string;
+  estado: string;
+  equipo_hw: string;
+  equipo_ns: string;
+  sfp: string;
+  velocidad: string;
+  responsable: string;
+  fecha_compromiso: string | null;
+  fecha_activacion: string | null;
+  direccion: string;
+  notas: string;
+  checklist: {
+    levantamiento: boolean;
+    aprobacion_cliente: boolean;
+    cable_instalado: boolean;
+    equipo_montado: boolean;
+    sidf_odoo: boolean;
+    noc_monitoreado: boolean;
+  };
+}
+
 interface FibraData {
   plazas: Plaza[];
   compromisos: Compromiso[];
   historial: HistorialEntry[];
+  sitios?: Sitio[];
 }
 
 // ─── Static data (no editable via API) ───────────────────────────────────────
@@ -221,9 +246,11 @@ const PencilIcon = () => (
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'plazas' | 'compromisos' | 'sidf' | 'riesgos' | 'decisiones' | 'historial';
+type Tab = 'despliegue' | 'diagnostico' | 'plazas' | 'compromisos' | 'sidf' | 'riesgos' | 'decisiones' | 'historial';
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; core?: boolean }[] = [
+  { id: 'despliegue',  label: '🚀 Despliegue', core: true },
+  { id: 'diagnostico', label: '📊 Diagnóstico', core: true },
   { id: 'plazas',      label: '📍 Plazas' },
   { id: 'compromisos', label: '✅ Compromisos' },
   { id: 'sidf',        label: '🔁 Proceso SIDF' },
@@ -231,6 +258,549 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'decisiones',  label: '📌 Decisiones' },
   { id: 'historial',   label: '🕐 Historial' },
 ];
+
+// ─── Despliegue Tab ──────────────────────────────────────────────────────────
+
+const PIPELINE: { id: string; label: string; color: string; emoji: string }[] = [
+  { id: 'prospecto',    label: 'Prospecto',    color: '#6B7280', emoji: '🔍' },
+  { id: 'levantamiento',label: 'Levantamiento',color: '#3B82F6', emoji: '📐' },
+  { id: 'aprobado',     label: 'Aprobado',     color: '#F59E0B', emoji: '✅' },
+  { id: 'instalacion',  label: 'Instalación',  color: '#8B5CF6', emoji: '🔧' },
+  { id: 'activo',       label: 'Activo',       color: '#10B981', emoji: '🟢' },
+  { id: 'monitoreado',  label: 'Monitoreado',  color: '#00C896', emoji: '📡' },
+];
+
+const CHECKLIST_LABELS: Record<string, string> = {
+  levantamiento:     'Levantamiento físico',
+  aprobacion_cliente:'Aprobación cliente',
+  cable_instalado:   'Cable FO instalado',
+  equipo_montado:    'Equipo Raisecom montado',
+  sidf_odoo:         'SIDF registrado en Odoo',
+  noc_monitoreado:   'Activo en NOCBoard',
+};
+
+const PLAZAS_MAP: Record<string, string> = {
+  mty: 'Monterrey', pn: 'Piedras Negras', slt: 'Saltillo',
+  ags: 'Aguascalientes', gdl: 'Guadalajara',
+};
+
+function DespliegueTab({
+  sitios: initialSitios, plazas, isAdmin, authFetch, theme,
+}: {
+  sitios: Sitio[];
+  plazas: Plaza[];
+  isAdmin: boolean;
+  authFetch: (url: string, opts?: RequestInit) => Promise<Response>;
+  theme: ThemeConfig;
+}) {
+  const [sitios, setSitios] = useState<Sitio[]>(initialSitios);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [filterPlaza, setFilterPlaza] = useState('');
+  const [saving, setSaving] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [newSitio, setNewSitio] = useState({ nombre: '', plaza: plazas[0]?.id ?? '', velocidad: '100M', responsable: '', direccion: '' });
+
+  const TEAL = '#00C896';
+
+  const filtered = sitios.filter(s => !filterPlaza || s.plaza === filterPlaza);
+
+  const patchSitio = async (id: string, patch: Partial<Sitio>) => {
+    setSaving(id);
+    try {
+      const res = await authFetch(`/api/fibra/sitios/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        const { sitio } = await res.json();
+        setSitios(prev => prev.map(s => s.id === id ? { ...s, ...sitio } : s));
+      }
+    } finally { setSaving(null); }
+  };
+
+  const createSitio = async () => {
+    const res = await authFetch('/api/fibra/sitios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSitio),
+    });
+    if (res.ok) {
+      const { sitio } = await res.json();
+      setSitios(prev => [...prev, sitio]);
+      setShowForm(false);
+      setNewSitio({ nombre: '', plaza: plazas[0]?.id ?? '', velocidad: '100M', responsable: '', direccion: '' });
+    }
+  };
+
+  const selectedSitio = sitios.find(s => s.id === selected) ?? null;
+  const checkPct = (s: Sitio) => {
+    const keys = Object.keys(s.checklist) as (keyof typeof s.checklist)[];
+    return Math.round(keys.filter(k => s.checklist[k]).length / keys.length * 100);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 6,
+    padding: '5px 10px', color: theme.text, fontSize: 12, outline: 'none', width: '100%',
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 16, minHeight: 500 }}>
+      {/* Left: Pipeline Kanban */}
+      <div style={{ flex: 1, overflowX: 'auto' }}>
+        {/* Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <select value={filterPlaza} onChange={e => setFilterPlaza(e.target.value)}
+            style={{ ...inputStyle, width: 'auto', fontSize: 11 }}>
+            <option value=''>Todas las plazas</option>
+            {plazas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+          <div style={{ fontSize: 11, color: theme.dim }}>{filtered.length} sitios</div>
+          {isAdmin && (
+            <button onClick={() => setShowForm(!showForm)} style={{
+              marginLeft: 'auto', padding: '5px 12px', borderRadius: 6, fontSize: 11,
+              fontWeight: 700, border: 'none', cursor: 'pointer',
+              background: TEAL, color: '#000',
+            }}>+ Nuevo sitio</button>
+          )}
+        </div>
+
+        {/* New sitio form */}
+        {showForm && isAdmin && (
+          <div style={{ background: theme.card, border: `1px solid ${TEAL}44`, borderRadius: 8,
+            padding: '12px 16px', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <input placeholder='Nombre del sitio' value={newSitio.nombre}
+              onChange={e => setNewSitio(p => ({ ...p, nombre: e.target.value }))}
+              style={{ ...inputStyle, flex: '1 0 180px' }} />
+            <select value={newSitio.plaza} onChange={e => setNewSitio(p => ({ ...p, plaza: e.target.value }))}
+              style={{ ...inputStyle, flex: '0 0 auto' }}>
+              {plazas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+            <input placeholder='Velocidad (ej. 100M)' value={newSitio.velocidad}
+              onChange={e => setNewSitio(p => ({ ...p, velocidad: e.target.value }))}
+              style={{ ...inputStyle, flex: '0 0 100px' }} />
+            <input placeholder='Responsable' value={newSitio.responsable}
+              onChange={e => setNewSitio(p => ({ ...p, responsable: e.target.value }))}
+              style={{ ...inputStyle, flex: '1 0 140px' }} />
+            <input placeholder='Dirección / ubicación' value={newSitio.direccion}
+              onChange={e => setNewSitio(p => ({ ...p, direccion: e.target.value }))}
+              style={{ ...inputStyle, flex: '2 0 200px' }} />
+            <div style={{ display: 'flex', gap: 6, alignSelf: 'flex-end' }}>
+              <button onClick={createSitio} style={{ padding: '5px 14px', background: TEAL, color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Crear</button>
+              <button onClick={() => setShowForm(false)} style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Cancelar</button>
+            </div>
+          </div>
+        )}
+
+        {/* Kanban columns */}
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+          {PIPELINE.map(col => {
+            const cards = filtered.filter(s => s.estado === col.id);
+            return (
+              <div key={col.id} style={{ flex: '0 0 170px', minWidth: 160 }}>
+                {/* Column header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8,
+                  padding: '5px 8px', background: `${col.color}15`, borderRadius: 6,
+                  borderTop: `2px solid ${col.color}` }}>
+                  <span style={{ fontSize: 13 }}>{col.emoji}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: col.color }}>{col.label}</span>
+                  <span style={{ fontSize: 10, color: theme.dim, marginLeft: 'auto' }}>{cards.length}</span>
+                </div>
+                {/* Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {cards.map(s => {
+                    const pct = checkPct(s);
+                    const isSelected = selected === s.id;
+                    return (
+                      <div key={s.id} onClick={() => setSelected(isSelected ? null : s.id)}
+                        style={{
+                          background: isSelected ? `${col.color}12` : theme.card,
+                          border: `1px solid ${isSelected ? col.color : theme.border}`,
+                          borderRadius: 7, padding: '9px 10px', cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: theme.text, marginBottom: 3, lineHeight: 1.3 }}>{s.nombre}</div>
+                        <div style={{ fontSize: 10, color: theme.dim, marginBottom: 6 }}>
+                          {PLAZAS_MAP[s.plaza] ?? s.plaza} · {s.velocidad}
+                        </div>
+                        {/* Checklist progress bar */}
+                        <div style={{ height: 3, background: theme.border, borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#10B981' : col.color, transition: 'width 0.3s' }} />
+                        </div>
+                        <div style={{ fontSize: 9, color: theme.dim, marginTop: 3 }}>{pct}% checklist</div>
+                        {isAdmin && (
+                          <select value={s.estado}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => patchSitio(s.id, { estado: e.target.value })}
+                            style={{ marginTop: 6, fontSize: 10, background: `${col.color}15`,
+                              color: col.color, border: `1px solid ${col.color}44`,
+                              borderRadius: 4, padding: '2px 4px', cursor: 'pointer', outline: 'none', width: '100%' }}>
+                            {PIPELINE.map(p => <option key={p.id} value={p.id}>{p.emoji} {p.label}</option>)}
+                          </select>
+                        )}
+                        {saving === s.id && <div style={{ fontSize: 9, color: TEAL, marginTop: 3 }}>Guardando…</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right: Detail panel */}
+      {selectedSitio && (() => {
+        const s = selectedSitio;
+        const col = PIPELINE.find(p => p.id === s.estado) ?? PIPELINE[0];
+        const clKeys = Object.keys(s.checklist) as (keyof typeof s.checklist)[];
+        return (
+          <div style={{ width: 280, flexShrink: 0, background: theme.card,
+            border: `1px solid ${theme.border}`, borderRadius: 10, padding: '14px 16px',
+            alignSelf: 'flex-start', position: 'sticky', top: 0 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: theme.text, lineHeight: 1.3 }}>{s.nombre}</div>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.dim, fontSize: 16, lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* Estado badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${col.color}18`,
+              border: `1px solid ${col.color}44`, borderRadius: 20, padding: '3px 10px', marginBottom: 12 }}>
+              <span>{col.emoji}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: col.color }}>{col.label}</span>
+            </div>
+
+            {/* Meta */}
+            {[
+              ['Plaza', PLAZAS_MAP[s.plaza] ?? s.plaza],
+              ['Velocidad', s.velocidad],
+              ['Responsable', s.responsable || '—'],
+              ['Equipo', s.equipo_hw || '—'],
+              ['SFP', s.sfp || '—'],
+              ['N° serie', s.equipo_ns || '—'],
+              ['Compromiso', s.fecha_compromiso || '—'],
+              ['Activación', s.fecha_activacion || '—'],
+              ['Dirección', s.direccion || '—'],
+            ].map(([label, val]) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 10, color: theme.dim }}>{label}</span>
+                <span style={{ fontSize: 11, color: theme.text, fontWeight: 500, textAlign: 'right', maxWidth: '55%' }}>{val}</span>
+              </div>
+            ))}
+
+            {/* Checklist */}
+            <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: 10, paddingTop: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: theme.dim, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>Checklist de instalación</div>
+              {clKeys.map(k => {
+                const done = s.checklist[k];
+                return (
+                  <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    {isAdmin ? (
+                      <input type='checkbox' checked={done} onChange={e => {
+                        const updated = { ...s.checklist, [k]: e.target.checked };
+                        patchSitio(s.id, { checklist: updated });
+                        setSitios(prev => prev.map(x => x.id === s.id ? { ...x, checklist: updated } : x));
+                      }} style={{ cursor: 'pointer', accentColor: TEAL }} />
+                    ) : (
+                      <span style={{ fontSize: 13, lineHeight: 1 }}>{done ? '✅' : '⬜'}</span>
+                    )}
+                    <span style={{ fontSize: 11, color: done ? theme.text : theme.dim,
+                      textDecoration: done ? 'none' : 'none' }}>
+                      {CHECKLIST_LABELS[k] ?? k}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Notas */}
+            {isAdmin && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 10, color: theme.dim, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.06em' }}>Notas</div>
+                <textarea defaultValue={s.notas}
+                  onBlur={e => { if (e.target.value !== s.notas) patchSitio(s.id, { notas: e.target.value }); }}
+                  rows={3}
+                  style={{ width: '100%', ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, boxSizing: 'border-box' }} />
+              </div>
+            )}
+            {!isAdmin && s.notas && (
+              <div style={{ marginTop: 10, fontSize: 11, color: theme.dim, fontStyle: 'italic' }}>{s.notas}</div>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ─── Diagnóstico Core component ──────────────────────────────────────────────
+
+function DiagnosticoCore({ theme }: { theme: ThemeConfig }) {
+  const TEAL = '#00C896', AMBER = '#FFB703', RED = '#FF4757', BLUE = '#3B82F6', SLATE = '#8AAEC8';
+
+  const kpis = [
+    { label: 'Equipos Raisecom', value: '56', sub: 'Total en inventario activo', color: TEAL },
+    { label: 'Desplegados en campo', value: '38', sub: 'Switches + demarcadores', color: BLUE },
+    { label: 'Servicios SIDF activos', value: '~9', sub: 'Estimado · 0 formal en Odoo', color: AMBER },
+    { label: 'Monitoreo NOC', value: '0%', sub: 'Raisecom sin integrar', color: RED },
+    { label: 'Capacidad disponible', value: '+24', sub: 'Sitios nuevos sin compra', color: TEAL },
+  ];
+
+  const hardware = [
+    { modelo: 'ISCOM S2600-24T4X-PWH-DC/D', tipo: 'Switch PoE 24p + 4×10G', desp: 16, stock: 11, total: 27 },
+    { modelo: 'RAX711-C-DC/D', tipo: 'Demarcador datos 1G', desp: 15, stock: 13, total: 28 },
+    { modelo: 'RAX701-GC-WP-02', tipo: 'Demarcador FO 1G', desp: 3, stock: 9, total: 12 },
+    { modelo: 'RAX711-C-R', tipo: 'Demarcador 10G enterprise', desp: 2, stock: 2, total: 4 },
+    { modelo: 'ISCOM S2600-24T4X-DC', tipo: 'Switch DC sin PoE', desp: 1, stock: 1, total: 2 },
+    { modelo: 'ISCOM S2600-8T4X-PWR-AC', tipo: 'Switch PoE 8p + 4×10G', desp: 2, stock: 1, total: 3 },
+  ];
+
+  const sfp = [
+    { modelo: 'USFP+-192/SS12', spec: '10G BiDi 15km', qty: 6 },
+    { modelo: 'USFP+-192/SS22', spec: '10G BiDi 40km', qty: 5 },
+    { modelo: 'USFP+-192/SS23', spec: '10G BiDi 40km', qty: 5 },
+    { modelo: 'USFP-GB-M-D-R', spec: '1.25G SM 20km', qty: 4 },
+    { modelo: 'USFP-GE/AN-R', spec: '1G Opt→Eth', qty: 2 },
+    { modelo: 'USFP+-192/M', spec: '10G SR 300m', qty: 2 },
+    { modelo: 'USFP-GB-S1-D-R', spec: '1.25G SM', qty: 2 },
+    { modelo: 'USFP-GB/SS34', spec: '1.25G 1490nm', qty: 1 },
+  ];
+
+  const status = [
+    { label: 'Equipamiento disponible (Raisecom)', ok: 'ok' },
+    { label: 'Cable FO en almacén (ADSS / Drop G.652D)', ok: 'ok' },
+    { label: 'Producto SIDF en catálogo Odoo', ok: 'warn' },
+    { label: 'Estándar de instalación documentado', ok: 'red' },
+    { label: 'Servicios registrados en Odoo (órdenes)', ok: 'red', note: '0 registros' },
+    { label: 'Monitoreo en NOCBoard / Observium', ok: 'red' },
+    { label: 'Sección portal cliente para SIDF', ok: 'red' },
+    { label: 'Trazabilidad equipo → cliente → sitio', ok: 'red' },
+  ];
+
+  const gaps = [
+    { sev: 'critico', title: 'Sin registros SIDF en Odoo — 0 órdenes de venta', desc: 'Los ~9 servicios activos no tienen orden, contrato ni factura bajo SIDF en wispi19. Riesgo de ingresos no facturados e imposibilidad de auditoría.', impact: 'Sin corrección, los ingresos por fibra son invisibles para contabilidad.' },
+    { sev: 'critico', title: 'Estándar de producto SIDF sin definir', desc: 'No existe documento con catálogo de velocidades, SLAs, precios, proceso de instalación ni criterios de aceptación. Pendiente Pedro + Samara.', impact: 'Sin estándar es imposible vender, cotizar ni operar fibra de manera repetible.' },
+    { sev: 'alto', title: 'Cero visibilidad de Raisecom en el NOC', desc: 'Los 38 equipos desplegados no están en NOCBoard ni UISP. Observium (172.31.150.244:4301) requiere VPN para confirmar cobertura SNMP.', impact: 'Fallas en clientes fibra solo se detectan cuando el cliente reporta.' },
+    { sev: 'alto', title: 'Sin sección fibra en Portal de Clientes', desc: 'Clientes SIDF no pueden ver su estado, consumo ni tickets diferenciados. Clientes wireless sí tienen visibilidad vía UISP.', impact: 'Mayor carga de soporte y desventaja competitiva.' },
+    { sev: 'medio', title: 'Equipos en campo sin vinculación cliente-sitio', desc: 'Los movimientos de stock Raisecom no tienen partner_id. 38 equipos sin registro de ubicación, número de serie ni cliente asignado.', impact: 'Sin trazabilidad no hay auditoría de campo ni cálculo de costo por servicio.' },
+  ];
+
+  const acciones = [
+    { pri: 1, accion: 'Definir estándar SIDF: velocidades, SLA, precios, instalación', resp: 'Pedro · Samara', plazo: '1–2 sem' },
+    { pri: 1, accion: 'Migrar ~9 servicios activos a órdenes SIDF en Odoo', resp: 'Operaciones', plazo: '3–5 días' },
+    { pri: 1, accion: 'Auditar Observium (VPN) — confirmar Raisecom SNMP', resp: 'NOC · JM', plazo: '1 día' },
+    { pri: 2, accion: 'Integrar Raisecom a NOCBoard si no está en Observium', resp: 'JM', plazo: '2–3 días' },
+    { pri: 2, accion: 'Vincular equipos → cliente + ubicación + serie en Odoo', resp: 'Almacén · NOC', plazo: '1 semana' },
+    { pri: 2, accion: 'Crear sección SIDF en Portal XCIEN para clientes', resp: 'Desarrollo', plazo: '1–2 sem' },
+    { pri: 3, accion: 'Definir esquema VLAN para SIDF en ISCOM S2600', resp: 'NOC · Redes', plazo: '2–3 días' },
+    { pri: 3, accion: 'Habilitar alertas DDM en transceptores USFP', resp: 'NOC', plazo: '1 día' },
+  ];
+
+  const sevColor = (s: string) => s === 'critico' ? RED : s === 'alto' ? AMBER : BLUE;
+  const priColor = (p: number) => p === 1 ? RED : p === 2 ? AMBER : BLUE;
+  const dotColor = (ok: string) => ok === 'ok' ? TEAL : ok === 'warn' ? AMBER : RED;
+  const dotLabel = (ok: string, note?: string) => {
+    if (note) return note;
+    return ok === 'ok' ? '✓ Listo' : ok === 'warn' ? '⚠ Parcial' : '✗ Pendiente';
+  };
+
+  return (
+    <div>
+      {/* CORE badge + meta */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+        <span style={{ background: 'rgba(59,130,246,0.15)', color: BLUE, border: `1px solid rgba(59,130,246,0.35)`, borderRadius: 4, padding: '3px 10px', fontSize: 10, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}>
+          INFRAESTRUCTURA CORE
+        </span>
+        <span style={{ fontSize: 12, color: theme.dim }}>Diagnóstico Raisecom · Fuente: Odoo wispi19 · Julio 2026</span>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>
+        {kpis.map(k => (
+          <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '14px 16px', borderTop: `3px solid ${k.color}` }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: k.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{k.value}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.text, marginTop: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2, lineHeight: 1.4 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Conclusion callout */}
+      <div style={{ background: `rgba(0,200,150,0.07)`, border: `1px solid rgba(0,200,150,0.25)`, borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: theme.text, lineHeight: 1.6 }}>
+        <strong style={{ color: TEAL }}>Conclusión ejecutiva: </strong>
+        XCIEN tiene el hardware para escalar fibra de 9 a más de 30 sitios <strong>sin inversión adicional en equipo</strong>. El cuello de botella es proceso: falta el estándar SIDF, los servicios no están en Odoo, y Raisecom no tiene monitoreo en el NOC.
+      </div>
+
+      {/* Inventory + Status grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Hardware table */}
+        <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: TEAL }}>
+            Hardware Activo — Switches & Demarcadores
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                  {['Modelo', 'Desp.', 'Stock', 'Total'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Modelo' ? 'left' : 'right', color: theme.dim, fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {hardware.map((r, i) => (
+                  <tr key={r.modelo} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
+                    <td style={{ padding: '9px 12px' }}>
+                      <div style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: theme.text }}>{r.modelo}</div>
+                      <div style={{ fontSize: 10, color: theme.dim, marginTop: 1 }}>{r.tipo}</div>
+                    </td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: TEAL, fontVariantNumeric: 'tabular-nums' }}>{r.desp}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.stock}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 800, color: theme.text, fontVariantNumeric: 'tabular-nums' }}>{r.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Totals summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '10px 14px', borderTop: `2px solid ${theme.border}`, gap: 10 }}>
+            {[
+              { label: 'Switches', val: '19 desp + 13 stock', color: TEAL },
+              { label: 'Demarcadores', val: '20 desp + 24 stock', color: AMBER },
+              { label: 'Total hardware', val: '39 desp + 37 stock', color: BLUE },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: theme.dim, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SFP table + Service status */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* SFP */}
+          <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden', flex: '0 0 auto' }}>
+            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: SLATE }}>
+              Transceptores SFP / SFP+
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                    {['Modelo', 'Especificación', 'Cant.'].map(h => (
+                      <th key={h} style={{ padding: '7px 12px', textAlign: h === 'Cant.' ? 'right' : 'left', color: theme.dim, fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sfp.map((r, i) => (
+                    <tr key={r.modelo} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
+                      <td style={{ padding: '7px 12px', fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: theme.text, whiteSpace: 'nowrap' }}>{r.modelo}</td>
+                      <td style={{ padding: '7px 12px', fontSize: 11, color: theme.dim }}>{r.spec}</td>
+                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: SLATE, fontVariantNumeric: 'tabular-nums' }}>{r.qty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Service status checklist */}
+          <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '14px 16px', flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: theme.dim, marginBottom: 12 }}>Estado del Servicio SIDF</div>
+            <div>
+              {status.map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: i < status.length - 1 ? `1px solid ${theme.border}` : 'none' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor(s.ok), flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ flex: 1, fontSize: 12, color: theme.text }}>{s.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: dotColor(s.ok), whiteSpace: 'nowrap' }}>{dotLabel(s.ok, s.note)}</span>
+                </div>
+              ))}
+            </div>
+            {/* Maturity gauge */}
+            <div style={{ marginTop: 12, padding: '10px 12px', background: `rgba(255,71,87,0.07)`, border: `1px solid rgba(255,71,87,0.2)`, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: RED, minWidth: 48 }}>20%</div>
+              <div style={{ fontSize: 12, color: theme.dim, lineHeight: 1.5 }}>Madurez del servicio SIDF. Solo 2 de 8 componentes están operativos. El hardware está listo.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Gaps */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: theme.dim, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${theme.border}` }}>
+          Análisis de Brechas — 5 riesgos identificados
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {gaps.map((g, i) => (
+            <div key={i} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, overflow: 'hidden', display: 'flex' }}>
+              <div style={{ width: 5, background: sevColor(g.sev), flexShrink: 0 }} />
+              <div style={{ padding: '12px 14px', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 5, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>{g.title}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20, background: sevColor(g.sev) + '18', color: sevColor(g.sev), border: `1px solid ${sevColor(g.sev)}40`, textTransform: 'uppercase', letterSpacing: '.06em', whiteSpace: 'nowrap' }}>
+                    {g.sev}
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: theme.dim, lineHeight: 1.6, marginBottom: 6 }}>{g.desc}</p>
+                <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ color: TEAL, fontSize: 14 }}>→</span> {g.impact}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Action plan table */}
+      <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: TEAL }}>
+          Plan de Acción — Q3 / Q4 2026
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${theme.border}`, background: theme.bg }}>
+                {['Pri', 'Acción', 'Responsable', 'Plazo'].map(h => (
+                  <th key={h} style={{ padding: '9px 14px', textAlign: 'left', color: theme.dim, fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {acciones.map((a, i) => (
+                <tr key={i} style={{ borderBottom: `1px solid ${theme.border}`, background: i % 2 === 0 ? theme.bg : 'transparent' }}>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: priColor(a.pri) + '18', color: priColor(a.pri), fontSize: 12, fontWeight: 800, border: `1px solid ${priColor(a.pri)}30` }}>
+                      {a.pri}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px', color: theme.text }}>{a.accion}</td>
+                  <td style={{ padding: '10px 14px', color: theme.dim, fontFamily: 'monospace', fontSize: 11, whiteSpace: 'nowrap' }}>{a.resp}</td>
+                  <td style={{ padding: '10px 14px', color: theme.dim, whiteSpace: 'nowrap', fontSize: 11 }}>{a.plazo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Cronograma strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: `2px solid ${theme.border}` }}>
+          {[
+            { mes: 'Agosto 2026', desc: 'P1: Estándar SIDF · Odoo · Observium', color: RED },
+            { mes: 'Septiembre 2026', desc: 'P2: NOC Raisecom · Trazabilidad · Portal', color: AMBER },
+            { mes: 'Octubre 2026', desc: 'P3: VLAN SIDF · DDM · Expansión sitios', color: BLUE },
+          ].map((m, i) => (
+            <div key={m.mes} style={{ padding: '12px 16px', borderRight: i < 2 ? `1px solid ${theme.border}` : 'none' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: m.color, marginBottom: 4 }}>{m.mes}</div>
+              <div style={{ fontSize: 12, color: theme.dim, lineHeight: 1.5 }}>{m.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // EditCell key: "comp:{id}:{field}" or "fase:{plaza_id}:{fase_idx}:{field}"
 type EditKey = string;
@@ -461,7 +1031,7 @@ export default function FibraSection({ theme }: Props) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${theme.border}`, marginBottom: 20, flexWrap: 'wrap' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             background: tab === t.id ? 'rgba(0,200,150,0.12)' : 'transparent',
@@ -475,16 +1045,38 @@ export default function FibraSection({ theme }: Props) {
             fontWeight: tab === t.id ? 700 : 400,
             transition: 'all 0.15s',
             position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}>
             {t.label}
+            {t.core && (
+              <span style={{ background: 'rgba(59,130,246,0.2)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 3, padding: '0px 5px', fontSize: 9, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                CORE
+              </span>
+            )}
             {t.id === 'historial' && historial.length > 0 && (
-              <span style={{ marginLeft: 5, background: '#00C896', color: '#000', fontSize: 9, fontWeight: 800, borderRadius: 10, padding: '1px 5px' }}>
+              <span style={{ background: '#00C896', color: '#000', fontSize: 9, fontWeight: 800, borderRadius: 10, padding: '1px 5px' }}>
                 {historial.length}
               </span>
             )}
           </button>
         ))}
       </div>
+
+      {/* ── Tab: Despliegue ──────────────────────────────────────────────────── */}
+      {tab === 'despliegue' && (
+        <DespliegueTab
+          sitios={data?.sitios ?? []}
+          plazas={plazas}
+          isAdmin={isAdmin}
+          authFetch={authFetch}
+          theme={theme}
+        />
+      )}
+
+      {/* ── Tab: Diagnóstico Core ────────────────────────────────────────────── */}
+      {tab === 'diagnostico' && <DiagnosticoCore theme={theme} />}
 
       {/* ── Tab: Plazas ──────────────────────────────────────────────────────── */}
       {tab === 'plazas' && (

@@ -63,12 +63,7 @@ function SparkBar({ data, color, height = 40 }: { data: number[]; color: string;
   );
 }
 
-interface Radiobase {
-  name: string; estatus: string; vigencia: string; direccion: string;
-  city: string; state: string; renta: string; lat: number | null; lng: number | null; source: 'drive';
-}
-
-type ListItem = (PowerDevice & { _source: 'nocboard'; _key: string }) | (Radiobase & { _source: 'drive'; _key: string });
+type ListItem = PowerDevice & { _source: 'nocboard'; _key: string };
 
 const TILE_LAYERS: Record<string, { url: string; label: string }> = {
   dark: { url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', label: 'Oscuro' },
@@ -90,7 +85,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'Coyotepec': [19.7703, -99.2058], 'San Juan del Río': [20.3893, -99.9960],
 };
 
-function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobases: Radiobase[]; U: any }) {
+function MapPanel({ devices, U }: { devices: PowerDevice[]; U: any }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const tileRef = useRef<any>(null);
@@ -137,7 +132,6 @@ function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobas
       const makeIcon = (color: string, size = 10, glow = true) => L.divIcon({ className: '', html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 ${glow?'8':'4'}px ${color}${glow?'':'80'}"></div>`, iconSize: [size+4, size+4], iconAnchor: [(size+4)/2, (size+4)/2] });
       const snmpActiveIcon = makeIcon('#00ff88', 12, true);
       const nocIcon = makeIcon(CYAN, 10, false);
-      const driveIcon = makeIcon(PURPLE, 10, false);
       const offlineIcon = makeIcon(RED, 10, false);
 
       devices.forEach(d => {
@@ -152,17 +146,8 @@ function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobas
         markersRef.current.addLayer(marker);
       });
 
-      radiobases.forEach(rb => {
-        const coords = rb.lat && rb.lng ? [rb.lat, rb.lng] as [number, number] : CITY_COORDS[rb.city];
-        if (!coords) return;
-        const jitter = () => (Math.random() - 0.5) * 0.015;
-        const marker = L.marker([coords[0] + jitter(), coords[1] + jitter()], { icon: driveIcon });
-        marker.bindTooltip(rb.name, { permanent: false, direction: 'top', className: 'noc-tooltip', offset: [0, -8] });
-        marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px;min-width:180px"><b>${rb.name}</b><br><span style="color:#888">${rb.city}, ${rb.state}</span><br>${rb.estatus}</div>`);
-        markersRef.current.addLayer(marker);
-      });
     });
-  }, [devices, radiobases]);
+  }, [devices]);
 
   return (
     <div style={{ background: U.card, border: `1px solid ${U.border}`, borderRadius: 14, overflow: 'hidden', marginTop: 16 }}>
@@ -198,11 +183,10 @@ function MapPanel({ devices, radiobases, U }: { devices: PowerDevice[]; radiobas
 
 export default function InfraEnergiaSection({ theme }: Props) {
   const [devices, setDevices] = useState<PowerDevice[]>([]);
-  const [radiobases, setRadiobases] = useState<Radiobase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviews, setReviews] = useState<Record<string, ReviewStatus>>(loadReviews);
-  const [filter, setFilter] = useState<'all' | 'revisada' | 'por_revisar' | 'online' | 'offline' | 'nocboard' | 'drive'>('all');
+  const [filter, setFilter] = useState<'all' | 'revisada' | 'por_revisar' | 'online' | 'offline'>('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'city' | 'status' | 'type'>('city');
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -218,15 +202,15 @@ export default function InfraEnergiaSection({ theme }: Props) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [rPower, rBases] = await Promise.all([
-        fetch(`${API_BASE}/api/noc/energia/power`),
-        fetch(`${API_BASE}/api/noc/energia/radiobases`),
-      ]);
-      if (rPower.ok) { const d = await rPower.json(); setDevices(d.devices || []); }
-      if (rBases.ok) { const d = await rBases.json(); setRadiobases(d.sites || []); }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const r = await fetch(`${API_BASE}/api/noc/energia/power`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (r.ok) { const d = await r.json(); setDevices(d.devices || []); }
       setError('');
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') setError(e.message);
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -238,36 +222,23 @@ export default function InfraEnergiaSection({ theme }: Props) {
     setReviews(next); saveReviews(next);
   };
 
-  const nocNames = new Set(devices.map(d => d.name.replace(/_/g, ' ').toUpperCase().trim()));
-  const dedupedBases = radiobases.filter(r => {
-    const rName = r.name.toUpperCase().trim();
-    return !nocNames.has(rName) && ![...nocNames].some(n => n.includes(rName) || rName.includes(n.split(' ')[0]));
-  });
+  const allItems: ListItem[] = devices.map(d => ({ ...d, _source: 'nocboard' as const, _key: `noc-${d.ip}` }));
 
-  const allItems: ListItem[] = [
-    ...devices.map(d => ({ ...d, _source: 'nocboard' as const, _key: `noc-${d.ip}` })),
-    ...dedupedBases.map((r, i) => ({ ...r, _source: 'drive' as const, _key: `drive-${i}-${r.name}` })),
-  ];
-
-  const totalAll = allItems.length;
   const totalNoc = devices.length;
-  const totalDrive = radiobases.length;
   const online = devices.filter(d => d.status === 'online').length;
   const offline = totalNoc - online;
-  const withMetrics = devices.filter(d => d.hasMetrics).length;
   const reviewed = allItems.filter(item => reviews[item._key] === 'revisada').length;
-  const reviewPct = totalAll > 0 ? Math.round((reviewed / totalAll) * 100) : 0;
+  const reviewPct = totalNoc > 0 ? Math.round((reviewed / totalNoc) * 100) : 0;
   const availPct = totalNoc > 0 ? +((online / totalNoc) * 100).toFixed(1) : 0;
-  const vigentes = radiobases.filter(r => r.estatus.toUpperCase().includes('VIGENTE')).length;
   const snmpOk = devices.filter(d => d.hasMetrics).length;
   const snmpPending = devices.filter(d => !d.hasMetrics && d.protocol === 'snmpV2c').length;
   const snmpNone = devices.filter(d => d.protocol === 'icmp' || d.protocol === 'modbusTCP' || !d.protocol).length;
   const snmpPct = totalNoc > 0 ? Math.round((snmpOk / totalNoc) * 100) : 0;
 
-  const allCities = [...new Set(allItems.map(item => item.city).filter(Boolean))].sort();
+  const allCities = [...new Set(devices.map(d => d.city).filter(Boolean))].sort();
   const byCity = allCities.map(c => ({
     city: c,
-    total: allItems.filter(item => item.city === c).length,
+    total: devices.filter(d => d.city === c).length,
     online: devices.filter(d => d.city === c && d.status === 'online').length,
     reviewed: allItems.filter(item => item.city === c && reviews[item._key] === 'revisada').length,
   })).sort((a, b) => b.total - a.total);
@@ -282,10 +253,8 @@ export default function InfraEnergiaSection({ theme }: Props) {
 
   const filtered = allItems
     .filter(item => {
-      if (filter === 'nocboard') return item._source === 'nocboard';
-      if (filter === 'drive') return item._source === 'drive';
-      if (filter === 'online') return item._source === 'nocboard' && (item as PowerDevice).status === 'online';
-      if (filter === 'offline') return item._source === 'nocboard' && (item as PowerDevice).status !== 'online';
+      if (filter === 'online') return item.status === 'online';
+      if (filter === 'offline') return item.status !== 'online';
       if (filter === 'revisada') return reviews[item._key] === 'revisada';
       if (filter === 'por_revisar') return reviews[item._key] !== 'revisada';
       return true;
@@ -293,24 +262,13 @@ export default function InfraEnergiaSection({ theme }: Props) {
     .filter(item => {
       if (!search) return true;
       const s = search.toLowerCase();
-      const n = item.name.toLowerCase();
-      const c = item.city.toLowerCase();
-      if (item._source === 'nocboard') {
-        const d = item as PowerDevice & { _source: 'nocboard' };
-        return n.includes(s) || c.includes(s) || d.ip.includes(s) || d.site.toLowerCase().includes(s);
-      }
-      const r = item as Radiobase & { _source: 'drive' };
-      return n.includes(s) || c.includes(s) || r.state.toLowerCase().includes(s) || r.direccion.toLowerCase().includes(s);
+      return item.name.toLowerCase().includes(s) || item.city.toLowerCase().includes(s) || item.ip.includes(s) || item.site.toLowerCase().includes(s);
     })
     .sort((a, b) => {
       if (sortBy === 'city') return (a.city || '').localeCompare(b.city || '');
       if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
-      if (sortBy === 'type') return a._source.localeCompare(b._source);
-      if (sortBy === 'status') {
-        const sa = a._source === 'nocboard' ? (a as any).status || '' : (a as any).estatus || '';
-        const sb = b._source === 'nocboard' ? (b as any).status || '' : (b as any).estatus || '';
-        return sa.localeCompare(sb);
-      }
+      if (sortBy === 'type') return (a.vendor || '').localeCompare(b.vendor || '');
+      if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
       return (a.name || '').localeCompare(b.name || '');
     });
 
@@ -329,7 +287,7 @@ export default function InfraEnergiaSection({ theme }: Props) {
           <span style={{ color: GREEN }}>ENERGÍA</span>
         </h1>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: U.dim }}>
-          {totalNoc} dispositivos NOCBoard + {totalDrive} radiobases Drive · {allCities.length} ciudades
+          {totalNoc} dispositivos NOCBoard · {allCities.length} ciudades · {snmpOk} con SNMP activo
         </p>
       </div>
 
@@ -337,9 +295,9 @@ export default function InfraEnergiaSection({ theme }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 20 }}>
         {[
           { label: 'DISPOSITIVOS', value: totalNoc, sub: `${online} online · ${offline} offline`, color: CYAN, icon: '⚡' },
-          { label: 'SNMP ACTIVO', value: snmpOk, sub: `${snmpPct}% del total`, color: GREEN, icon: '📡' },
+          { label: 'SNMP ACTIVO', value: snmpOk, sub: `${snmpPending} pendientes · ${snmpNone} sin SNMP`, color: GREEN, icon: '📡' },
           { label: 'DISPONIBILIDAD', value: `${availPct}%`, sub: `${online} de ${totalNoc}`, color: availPct >= 90 ? GREEN : availPct >= 70 ? YELLOW : RED, icon: '✓' },
-          { label: 'RADIOBASES', value: totalDrive, sub: `${vigentes} vigentes`, color: PURPLE, icon: '📋' },
+          { label: 'REVISIÓN', value: `${reviewPct}%`, sub: `${reviewed} de ${totalNoc} revisados`, color: PURPLE, icon: '✓' },
         ].map((kpi, i) => (
           <div key={i} style={cardStyle({ position: 'relative', overflow: 'hidden' })}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -357,7 +315,7 @@ export default function InfraEnergiaSection({ theme }: Props) {
       </div>
 
       {/* Mapa — primero lo visual */}
-      <MapPanel devices={devices} radiobases={dedupedBases} U={U} />
+      <MapPanel devices={devices} U={U} />
 
       {/* SNMP Status + Disponibilidad — lado a lado */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 16 }}>
@@ -444,14 +402,14 @@ export default function InfraEnergiaSection({ theme }: Props) {
       <div style={{ display: 'flex', gap: 8, marginTop: 24, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar torre, ciudad, IP..."
           style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${U.border}`, borderRadius: 8, padding: '8px 14px', color: U.text, fontSize: 12, minWidth: 220, outline: 'none' }} />
-        {(['all', 'nocboard', 'drive', 'por_revisar', 'revisada', 'online', 'offline'] as const).map(f => (
+        {(['all', 'por_revisar', 'revisada', 'online', 'offline'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             background: filter === f ? 'rgba(0,200,150,0.15)' : 'rgba(255,255,255,0.04)',
             border: `1px solid ${filter === f ? GREEN : U.border}`,
             borderRadius: 20, padding: '5px 14px', color: filter === f ? GREEN : U.dim,
             fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
           }}>
-            {{ all: 'Todos', nocboard: 'NOCBoard', drive: 'Radiobases', por_revisar: 'Por revisar', revisada: 'Revisadas', online: 'En línea', offline: 'Offline' }[f]}
+            {{ all: 'Todos', por_revisar: 'Por revisar', revisada: 'Revisadas', online: 'En línea', offline: 'Offline' }[f]}
           </button>
         ))}
         <span style={{ fontSize: 11, color: U.dim, marginLeft: 'auto' }}>{filtered.length} resultados</span>
@@ -478,12 +436,12 @@ export default function InfraEnergiaSection({ theme }: Props) {
           <tbody>
             {filtered.map(item => {
               const rev = reviews[item._key] === 'revisada';
-              const isNoc = item._source === 'nocboard';
-              const srcColor = isNoc ? CYAN : PURPLE;
-              const srcLabel = isNoc ? 'NOCBoard' : 'Radiobase';
-
+              const srcColor = CYAN;
+              const srcLabel = 'NOCBoard';
               const isEditing = editingKey === item._key;
               const noteVal = notes[item._key] || '';
+              const d = item as PowerDevice & { _source: 'nocboard'; _key: string };
+              const vc = VENDOR_COLORS[d.vendor] || VENDOR_COLORS.unknown;
 
               const editPanel = isEditing ? (
                 <tr key={item._key + '-edit'} style={{ borderBottom: `1px solid ${U.border}`, borderLeft: `3px solid ${srcColor}` }}>
@@ -504,61 +462,6 @@ export default function InfraEnergiaSection({ theme }: Props) {
                 </tr>
               ) : null;
 
-              if (isNoc) {
-                const d = item as PowerDevice & { _source: 'nocboard'; _key: string };
-                const vc = VENDOR_COLORS[d.vendor] || VENDOR_COLORS.unknown;
-                return (<>
-                  <tr key={item._key} onClick={() => setEditingKey(isEditing ? null : item._key)} style={{ borderBottom: isEditing ? 'none' : `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}`, cursor: 'pointer' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: `${srcColor}20`, color: srcColor, fontWeight: 700 }}>{srcLabel}</span>
-                        <span style={{ fontWeight: 600, color: U.text }}>{d.name.replace(/_/g, ' ')}</span>
-                        {noteVal && <span style={{ fontSize: 8, color: YELLOW }}>●</span>}
-                      </div>
-                      <div style={{ fontSize: 10, color: U.dim, marginTop: 2 }}>{d.ip} · {d.site}</div>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: U.text, fontSize: 12 }}>{d.city}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, color: vc, background: `${vc}15`, border: `1px solid ${vc}30` }}>
-                        {d.vendor.toUpperCase()} · {TYPE_LABELS[d.type] || d.type}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600,
-                        color: d.status === 'online' ? GREEN : RED,
-                        background: d.status === 'online' ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)' }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.status === 'online' ? GREEN : RED }} />
-                        {d.status === 'online' ? 'Online' : 'Offline'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {d.hasMetrics && d.metrics ? (
-                        <div style={{ fontSize: 10, lineHeight: 1.7 }}>
-                          <div><span style={{ color: U.dim }}>Bat:</span> <span style={{ color: BLUE, fontWeight: 600 }}>{d.metrics.batteryVoltage ?? '—'}V</span></div>
-                          <div><span style={{ color: U.dim }}>AC:</span> <span style={{ color: GREEN, fontWeight: 600 }}>{d.metrics.acOutputVoltage ?? '—'}V</span></div>
-                          <div><span style={{ color: U.dim }}>CFE:</span> <span style={{ color: d.metrics.mainsPresent ? GREEN : RED, fontWeight: 600 }}>{d.metrics.mainsPresent ? 'SÍ' : 'NO'}</span></div>
-                        </div>
-                      ) : <span style={{ fontSize: 10, color: U.dim }}>—</span>}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => toggleReview(item._key)} style={{
-                        padding: '5px 14px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                        cursor: 'pointer', border: 'none', transition: 'all 0.2s',
-                        background: rev ? 'rgba(0,200,150,0.15)' : 'rgba(255,183,3,0.12)',
-                        color: rev ? GREEN : YELLOW,
-                      }}>
-                        {rev ? '✓ Revisada' : 'Por revisar'}
-                      </button>
-                    </td>
-                  </tr>
-                  {editPanel}
-                </>);
-              }
-
-              const rb = item as Radiobase & { _source: 'drive'; _key: string };
-              const esVigente = rb.estatus.toUpperCase().includes('VIGENTE');
               return (<>
                 <tr key={item._key} onClick={() => setEditingKey(isEditing ? null : item._key)} style={{ borderBottom: isEditing ? 'none' : `1px solid ${U.border}`, transition: 'background 0.15s', borderLeft: `3px solid ${srcColor}`, cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
@@ -566,31 +469,33 @@ export default function InfraEnergiaSection({ theme }: Props) {
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: `${srcColor}20`, color: srcColor, fontWeight: 700 }}>{srcLabel}</span>
-                      <span style={{ fontWeight: 600, color: U.text }}>{rb.name}</span>
+                      <span style={{ fontWeight: 600, color: U.text }}>{d.name.replace(/_/g, ' ')}</span>
                       {noteVal && <span style={{ fontSize: 8, color: YELLOW }}>●</span>}
                     </div>
-                    <div style={{ fontSize: 10, color: U.dim, marginTop: 2 }}>{rb.direccion || '—'}</div>
+                    <div style={{ fontSize: 10, color: U.dim, marginTop: 2 }}>{d.ip} · {d.site}</div>
                   </td>
-                  <td style={{ padding: '12px 16px', color: U.text, fontSize: 12 }}>
-                    <div>{rb.city || '—'}</div>
-                    <div style={{ fontSize: 10, color: U.dim }}>{rb.state}</div>
-                  </td>
+                  <td style={{ padding: '12px 16px', color: U.text, fontSize: 12 }}>{d.city}</td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600,
-                      color: PURPLE, background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
-                      RADIOBASE
+                    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, color: vc, background: `${vc}15`, border: `1px solid ${vc}30` }}>
+                      {d.vendor.toUpperCase()} · {TYPE_LABELS[d.type] || d.type}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600,
-                      color: esVigente ? GREEN : RED,
-                      background: esVigente ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: esVigente ? GREEN : RED }} />
-                      {rb.estatus || '—'}
+                      color: d.status === 'online' ? GREEN : RED,
+                      background: d.status === 'online' ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.status === 'online' ? GREEN : RED }} />
+                      {d.status === 'online' ? 'Online' : 'Offline'}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ fontSize: 10, color: U.dim }}>Sin SNMP</span>
+                    {d.hasMetrics && d.metrics ? (
+                      <div style={{ fontSize: 10, lineHeight: 1.7 }}>
+                        <div><span style={{ color: U.dim }}>Bat:</span> <span style={{ color: BLUE, fontWeight: 600 }}>{d.metrics.batteryVoltage ?? '—'}V</span></div>
+                        <div><span style={{ color: U.dim }}>AC:</span> <span style={{ color: GREEN, fontWeight: 600 }}>{d.metrics.acOutputVoltage ?? '—'}V</span></div>
+                        <div><span style={{ color: U.dim }}>CFE:</span> <span style={{ color: d.metrics.mainsPresent ? GREEN : RED, fontWeight: 600 }}>{d.metrics.mainsPresent ? 'SÍ' : 'NO'}</span></div>
+                      </div>
+                    ) : <span style={{ fontSize: 10, color: U.dim }}>—</span>}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => toggleReview(item._key)} style={{

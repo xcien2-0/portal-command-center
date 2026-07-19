@@ -911,7 +911,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                 {filteredRows.map((r, i) => {
                   const cfg = ALERTA_CFG[r.alerta];
                   const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
-                  return (
+                  return (<>
                     <tr key={r.vehiculo_id}
                       onClick={() => setExpanded(expanded === r.vehiculo_id ? null : r.vehiculo_id)}
                       style={{ borderBottom: expanded === r.vehiculo_id ? 'none' : `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s', cursor: r.viajes_fuera_detalle.length > 0 ? 'pointer' : 'default' }}
@@ -990,7 +990,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                         </td>
                       </tr>
                     )}
-                  );
+                  </>);
                 })}
               </tbody>
             </table>
