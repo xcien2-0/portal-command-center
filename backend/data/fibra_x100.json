@@ -292,7 +292,9 @@
         "equipo_montado": true,
         "sidf_odoo": false,
         "noc_monitoreado": true
-      }
+      },
+      "lat": 28.7004,
+      "lng": -100.5221
     },
     {
       "id": "pn-002",
@@ -315,7 +317,9 @@
         "equipo_montado": true,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 28.6985,
+      "lng": -100.5245
     },
     {
       "id": "pn-003",
@@ -338,7 +342,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 28.702,
+      "lng": -100.5198
     },
     {
       "id": "pn-004",
@@ -361,7 +367,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 28.6952,
+      "lng": -100.5262
     },
     {
       "id": "mty-001",
@@ -384,7 +392,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.6798,
+      "lng": -100.3204
     },
     {
       "id": "mty-002",
@@ -407,7 +417,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.6866,
+      "lng": -100.3161
     },
     {
       "id": "mty-003",
@@ -430,7 +442,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.721,
+      "lng": -100.2785
     },
     {
       "id": "slt-001",
@@ -453,7 +467,9 @@
         "equipo_montado": true,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.3802,
+      "lng": -101.0015
     },
     {
       "id": "slt-002",
@@ -476,7 +492,9 @@
         "equipo_montado": false,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.4232,
+      "lng": -100.9928
     },
     {
       "id": "slt-003",
@@ -499,7 +517,9 @@
         "equipo_montado": true,
         "sidf_odoo": false,
         "noc_monitoreado": false
-      }
+      },
+      "lat": 25.4512,
+      "lng": -100.9698
     },
     {
       "id": "slt-004",
@@ -522,7 +542,9 @@
         "equipo_montado": true,
         "sidf_odoo": false,
         "noc_monitoreado": true
-      }
+      },
+      "lat": 25.435,
+      "lng": -100.9822
     }
   ]
 }

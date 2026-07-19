@@ -346,6 +346,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [showRbOdoo,      setShowRbOdoo]       = useState(false);
   const [showRbInfra,     setShowRbInfra]      = useState(false);
   const [rbOdooData,      setRbOdooData]        = useState<any[]>([]);
+  const [showFibra,       setShowFibra]         = useState(false);
+  const [fibraSitios,     setFibraSitios]       = useState<any[]>([]);
+  const [showGps,         setShowGps]           = useState(false);
+  const [gpsVehiculos,    setGpsVehiculos]      = useState<any[]>([]);
   const showOdoo = showInnet || showOffnet || showInter || showSinClas;
 
   const mapRef       = useRef<any>(null);
@@ -358,6 +362,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const sitiosCache  = useRef<any>(null);
   const rbOdooLayer  = useRef<any>(null);
   const rbInfraLayer = useRef<any>(null);
+  const fibraLayer   = useRef<any>(null);
+  const gpsLayer     = useRef<any>(null);
   const tileRef   = useRef<any>(null);
   const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
   const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
@@ -785,6 +791,96 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     }
   }, [showSitios]);
 
+  // ── Capa Fibra ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (fibraLayer.current) { fibraLayer.current.clearLayers(); }
+    else { fibraLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showFibra) return;
+
+    const FIBRA_COLORS: Record<string, string> = {
+      activo:       '#22c55e',
+      instalacion:  '#f59e0b',
+      aprobado:     '#22d3ee',
+      levantamiento:'#f97316',
+      prospecto:    '#94a3b8',
+    };
+
+    const doRender = (sitios: any[]) => {
+      sitios.forEach((s: any) => {
+        const color = FIBRA_COLORS[s.estado] || '#94a3b8';
+        const m = L.circleMarker([s.lat, s.lng], {
+          radius: 7, fillColor: color, color: '#000', weight: 1, fillOpacity: 0.9,
+        });
+        m.bindTooltip(
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">🔵 ${s.id}</div>
+           <div style="font-weight:600;font-size:12px">${s.nombre}</div>
+           <div style="color:rgba(255,255,255,0.5);font-size:10px">${s.plaza} · ${s.velocidad}</div>
+           <div style="margin-top:4px"><span style="background:${color}22;color:${color};padding:1px 7px;border-radius:8px;font-weight:700;font-size:9px">${s.estado}</span></div>`,
+          { className: 'noc-tooltip', sticky: true }
+        );
+        m.addTo(fibraLayer.current);
+      });
+    };
+
+    if (fibraSitios.length > 0) {
+      doRender(fibraSitios);
+    } else {
+      fetch(`${API_BASE}/api/red/fibra-geo`)
+        .then(r => r.ok ? r.json() : { sitios: [] })
+        .then(data => {
+          const list = data.sitios || [];
+          setFibraSitios(list);
+          doRender(list);
+        })
+        .catch(() => {});
+    }
+  }, [showFibra, fibraSitios]);
+
+  // ── Capa GPS ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+
+    if (gpsLayer.current) { gpsLayer.current.clearLayers(); }
+    else { gpsLayer.current = L.layerGroup().addTo(mapRef.current); }
+
+    if (!showGps) return;
+
+    const doRender = (vehiculos: any[]) => {
+      vehiculos.forEach((v: any) => {
+        if (!v.lat || !v.lng) return;
+        const color = v.activo ? '#22d3ee' : '#64748b';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="width:24px;height:24px;background:${color};border:2px solid #000;border-radius:50% 50% 0 50%;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;font-size:9px">🚗</div>`,
+          iconAnchor: [12, 12],
+        });
+        const m = L.marker([v.lat, v.lng], { icon });
+        m.bindTooltip(
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">🚗 ${v.nombre}</div>
+           <div style="font-size:11px;color:rgba(255,255,255,0.7)">${v.placa}</div>
+           <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">${v.velocidad ?? 0} km/h · ${v.ubicacion ?? ''}</div>
+           <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">${v.ultima_vez ?? ''}</div>`,
+          { className: 'noc-tooltip', sticky: true }
+        );
+        m.addTo(gpsLayer.current);
+      });
+    };
+
+    fetch(`${API_BASE}/api/gps/vehiculos`)
+      .then(r => r.ok ? r.json() : { vehiculos: [] })
+      .then(data => {
+        const list = data.vehiculos || [];
+        setGpsVehiculos(list);
+        doRender(list);
+      })
+      .catch(() => {});
+  }, [showGps]);
+
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
     if (!mapRef.current || !leafRef.current) return;
@@ -997,6 +1093,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           { key: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b', active: showSinClas, count: null },
           { key: 'sitios',        label: 'Sitios',    color: '#c8ff00', active: showSitios,  count: 3727 },
           { key: 'rb-odoo',       label: 'RB Odoo',   color: '#00ffcc', active: showRbOdoo,  count: rbOdooData.length || null },
+          { key: 'fibra',         label: 'Fibra',     color: '#f97316', active: showFibra,   count: fibraSitios.length || null },
+          { key: 'gps',           label: 'GPS',       color: '#22d3ee', active: showGps,     count: gpsVehiculos.length || null },
         ] as const).map(layer => (
           <button key={layer.key}
             onClick={() => {
@@ -1008,6 +1106,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
               else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
               else if (layer.key === 'sitios')        setShowSitios(p => !p);
               else if (layer.key === 'rb-odoo')       setShowRbOdoo(p => !p);
+              else if (layer.key === 'fibra')         setShowFibra(p => !p);
+              else if (layer.key === 'gps')           setShowGps(p => !p);
             }}
             style={{
               padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',

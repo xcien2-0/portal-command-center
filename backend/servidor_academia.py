@@ -9549,6 +9549,26 @@ def fibra_delete_sitio(sitio_id: str, user: dict = Depends(get_current_user)):
     _fibra_save(data)
     return {"ok": True}
 
+@app.get("/api/red/fibra-geo")
+def red_fibra_geo():
+    """Sitios de fibra con coordenadas para la capa del Mapa de Red. Sin auth (solo lectura pública)."""
+    data = _fibra_load()
+    sitios = [
+        {
+            "id":        s["id"],
+            "nombre":    s.get("nombre", ""),
+            "plaza":     s.get("plaza", ""),
+            "estado":    s.get("estado", "prospecto"),
+            "velocidad": s.get("velocidad", ""),
+            "direccion": s.get("direccion", ""),
+            "lat":       s["lat"],
+            "lng":       s["lng"],
+        }
+        for s in data.get("sitios", [])
+        if s.get("lat") and s.get("lng")
+    ]
+    return {"sitios": sitios, "total": len(sitios)}
+
 # ─── Radio Bases ──────────────────────────────────────────────────────────────
 
 _RADIOBASES_DRIVE_FILE   = os.path.join(BASE_DIR, "data", "radiobases_drive.json")
