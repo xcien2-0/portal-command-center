@@ -5636,10 +5636,6 @@ async def get_academia_cursos():
         return result
     except Exception as e:
         logger.error(f"[Academia] Odoo error: {e}")
-        # Devolver al menos los cursos locales aunque Odoo esté caído
-        local = _academia_local_cursos()
-        if local:
-            return local
         raise HTTPException(status_code=503, detail=str(e))
 
 

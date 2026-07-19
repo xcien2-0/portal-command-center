@@ -6,6 +6,25 @@ interface Props { theme: ThemeConfig }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface PowerMetrics {
+  batteryVoltage: number | null;
+  acOutputVoltage: number | null;
+  mainsVoltage: number | null;
+  mainsPresent: boolean | null;
+  loadPower: number | null;
+  batteryRuntimeMinutes: number | null;
+  batterySOC: number | null;
+  timestamp: string | null;
+}
+
+interface PowerDevice {
+  name: string; ip: string; city: string; site: string; status: string;
+  type: string; vendor: string; healthScore: number;
+  ping: { reachable: boolean; latency: number; packetLoss: number };
+  hasMetrics: boolean;
+  metrics?: PowerMetrics;
+}
+
 interface RadioBase {
   idx: number;
   name: string;
@@ -24,6 +43,12 @@ interface RadioBase {
   estado_op: 'operativa' | 'degradada' | 'en_mantenimiento' | 'sin_info';
   notas: string;
   ultima_visita: string;
+  // Enrichment
+  fuente?: string;
+  clientes?: number | null;
+  odoo_id?: number | null;
+  odoo_estado?: string | null;
+  nyx_data?: { nombre: string; raw: Record<string, string> } | null;
 }
 
 interface HistorialEntry {
@@ -155,11 +180,16 @@ export default function RadioBasesSection({ theme }: Props) {
   const [data, setData] = useState<RadioBasesData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('inventario');
+  const [powerDevices, setPowerDevices] = useState<PowerDevice[]>([]);
+  const [nyxSyncing, setNyxSyncing] = useState(false);
+  const [nyxMsg, setNyxMsg] = useState<string | null>(null);
 
   // List filters
   const [search, setSearch] = useState('');
   const [filterEstatus, setFilterEstatus] = useState<string>('todos');
   const [filterEstadoOp, setFilterEstadoOp] = useState<string>('todos');
+  const [listPage, setListPage] = useState(0);
+  const LIST_PAGE_SIZE = 50;
 
   // Selection + editing
   const [selectedName, setSelectedName] = useState<string | null>(null);
@@ -177,9 +207,36 @@ export default function RadioBasesSection({ theme }: Props) {
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then((d: RadioBasesData) => setData(d))
       .catch(() => setLoadError('Error cargando Radio Bases. Verifica tu sesión.'));
+    // Load power devices — fire-and-forget with timeout so it never blocks the main list
+    const ac = new AbortController();
+    const tid = setTimeout(() => ac.abort(), 5000);
+    authFetch('/api/noc/energia/power', { signal: ac.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d?.devices && setPowerDevices(d.devices))
+      .catch(() => {})
+      .finally(() => clearTimeout(tid));
   }, [authFetch]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const syncNyx = useCallback(async () => {
+    setNyxSyncing(true);
+    setNyxMsg(null);
+    try {
+      const r = await authFetch('/api/radiobases/nyx/sync', { method: 'POST' });
+      const d = await r.json();
+      if (r.ok) {
+        setNyxMsg(`✅ Nyx sincronizado — ${d.count} bases encontradas`);
+        loadData();
+      } else {
+        setNyxMsg(`⚠️ ${d.detail || 'Error en sync'}`);
+      }
+    } catch {
+      setNyxMsg('⚠️ Error conectando con Nyx');
+    } finally {
+      setNyxSyncing(false);
+    }
+  }, [authFetch, loadData]);
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
@@ -256,6 +313,7 @@ export default function RadioBasesSection({ theme }: Props) {
   // ── Filtered list ──────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
+    setListPage(0);
     if (!data) return [];
     const q = search.toLowerCase();
     return data.radiobases.filter(rb => {
@@ -269,9 +327,35 @@ export default function RadioBasesSection({ theme }: Props) {
     });
   }, [data, search, filterEstatus, filterEstadoOp]);
 
+  const pagedFiltered = useMemo(
+    () => filtered.slice(listPage * LIST_PAGE_SIZE, (listPage + 1) * LIST_PAGE_SIZE),
+    [filtered, listPage]
+  );
+  const totalPages = Math.ceil(filtered.length / LIST_PAGE_SIZE);
+
   const selected = useMemo(() =>
     data?.radiobases.find(rb => rb.name === selectedName) ?? null,
   [data, selectedName]);
+
+  const energyBySite = useMemo(() => {
+    const map: Record<string, PowerDevice[]> = {};
+    for (const pd of powerDevices) {
+      const siteName = (pd.site || pd.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!siteName) continue;
+      if (!map[siteName]) map[siteName] = [];
+      map[siteName].push(pd);
+    }
+    return map;
+  }, [powerDevices]);
+
+  const getSiteDevices = useCallback((name: string): PowerDevice[] => {
+    const key = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (energyBySite[key]) return energyBySite[key];
+    for (const [k, devs] of Object.entries(energyBySite)) {
+      if (key.length >= 4 && (k.includes(key) || key.includes(k))) return devs;
+    }
+    return [];
+  }, [energyBySite]);
 
   // ── Loading / error ────────────────────────────────────────────────────────
 
@@ -300,6 +384,9 @@ export default function RadioBasesSection({ theme }: Props) {
   const vigentes  = data.radiobases.filter(rb => normalizeEstatus(rb.estatus) === 'vigente').length;
   const vencidos  = data.radiobases.filter(rb => normalizeEstatus(rb.estatus) === 'vencido').length;
   const conCoords = data.radiobases.filter(rb => rb.lat !== null && rb.lng !== null).length;
+  const conEnergia = data.radiobases.filter(rb => getSiteDevices(rb.name).length > 0).length;
+  const deSoloOdoo = data.radiobases.filter(rb => rb.fuente === 'odoo').length;
+  const deNyx = data.radiobases.filter(rb => (rb.fuente || '').includes('nyx')).length;
 
   const fmtMXN = (n: number) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -312,21 +399,45 @@ export default function RadioBasesSection({ theme }: Props) {
 
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 22 }}>📡</span>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: theme.text }}>Radio Bases XCIEN</h1>
           <span style={{ background: 'rgba(0,200,150,0.15)', color: '#00C896', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
             {total} SITIOS
           </span>
+          {powerDevices.length > 0 && (
+            <span style={{ background: 'rgba(255,183,3,0.15)', color: '#FFB703', border: '1px solid rgba(255,183,3,0.3)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
+              ⚡ {powerDevices.length} dispositivos energía
+            </span>
+          )}
+          {isAdmin && (
+            <button
+              onClick={syncNyx}
+              disabled={nyxSyncing}
+              style={{
+                marginLeft: 'auto', background: nyxSyncing ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.15)',
+                color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.3)',
+                borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 700,
+                cursor: nyxSyncing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {nyxSyncing ? '⏳ Sincronizando…' : '🔄 Sync Nyx'}
+            </button>
+          )}
         </div>
         <p style={{ fontSize: 13, color: theme.dim }}>
-          Inventario de radiobases y repetidores · contratos de arrendamiento de sitios
+          Inventario de radiobases · contratos, energía (NOCBoard) y datos Nyx
           {isAdmin && (
             <span style={{ marginLeft: 12, fontSize: 11, color: '#00C896', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 12, padding: '1px 8px' }}>
               ✏️ Edición activa — {user?.nombre}
             </span>
           )}
         </p>
+        {nyxMsg && (
+          <div style={{ marginTop: 6, fontSize: 12, color: nyxMsg.startsWith('✅') ? '#00C896' : '#FFB703' }}>
+            {nyxMsg}
+          </div>
+        )}
       </div>
 
       {/* Save error */}
@@ -340,10 +451,10 @@ export default function RadioBasesSection({ theme }: Props) {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { label: 'Total sitios',          value: total,     sub: 'en inventario',        color: '#00C896' },
-          { label: 'Contratos vigentes',    value: vigentes,  sub: 'vigente / vigente x contrato', color: '#3B82F6' },
-          { label: 'Contratos vencidos',    value: vencidos,  sub: 'requieren renovación', color: '#FF4757' },
-          { label: 'Con coordenadas GPS',   value: conCoords, sub: `de ${total} sitios`,   color: '#FFB703' },
+          { label: 'Total sitios',          value: total,      sub: 'inventario completo',           color: '#00C896' },
+          { label: 'Contratos vigentes',    value: vigentes,   sub: 'vigente / vigente x contrato',  color: '#3B82F6' },
+          { label: 'Con energía NOCBoard',  value: conEnergia, sub: `de ${total} sitios`,            color: '#FFB703' },
+          { label: 'Solo Odoo / Nyx',       value: deSoloOdoo + deNyx, sub: `${deSoloOdoo} Odoo · ${deNyx} Nyx`, color: '#8B5CF6' },
         ].map(k => (
           <div key={k.label} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '14px 18px' }}>
             <div style={{ fontSize: 24, fontWeight: 800, color: k.color }}>{k.value}</div>
@@ -444,11 +555,14 @@ export default function RadioBasesSection({ theme }: Props) {
                 <option value="sin_info">Sin info</option>
               </select>
             </div>
-            <div style={{ fontSize: 11, color: theme.dim }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</div>
+            <div style={{ fontSize: 11, color: theme.dim }}>
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+              {totalPages > 1 && ` · pág. ${listPage + 1}/${totalPages}`}
+            </div>
 
             {/* Scrollable list */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {filtered.map(rb => {
+              {pagedFiltered.map(rb => {
                 const isSelected = rb.name === selectedName;
                 const opCfg = ESTADO_OP_CFG[rb.estado_op] ?? ESTADO_OP_CFG.sin_info;
                 const esCfg = ESTATUS_CFG[rb.estatus] ?? ESTATUS_CFG[''];
@@ -468,13 +582,24 @@ export default function RadioBasesSection({ theme }: Props) {
                       <span style={{ fontSize: 12, fontWeight: 700, color: isSelected ? '#00C896' : theme.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {rb.name}
                       </span>
+                      {getSiteDevices(rb.name).length > 0 && (
+                        <span title="Tiene dispositivos de energía" style={{ fontSize: 10 }}>⚡</span>
+                      )}
                       <Badge label={esCfg.label} color={esCfg.color} />
                     </div>
-                    {(rb.city || rb.state) && (
-                      <div style={{ fontSize: 11, color: theme.dim, paddingLeft: 15 }}>
-                        {[rb.city, rb.state].filter(Boolean).join(', ')}
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 15 }}>
+                      {(rb.city || rb.state) && (
+                        <span style={{ fontSize: 11, color: theme.dim }}>
+                          {[rb.city, rb.state].filter(Boolean).join(', ')}
+                        </span>
+                      )}
+                      {rb.clientes != null && (
+                        <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 700 }}>· {rb.clientes} clientes</span>
+                      )}
+                      {(rb.fuente || '').includes('nyx') && (
+                        <span style={{ fontSize: 9, color: '#8B5CF6', fontWeight: 700 }}>NYX</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -484,6 +609,23 @@ export default function RadioBasesSection({ theme }: Props) {
                 </div>
               )}
             </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: `1px solid ${theme.border}` }}>
+                <button
+                  onClick={() => setListPage(p => Math.max(0, p - 1))}
+                  disabled={listPage === 0}
+                  style={{ padding: '4px 12px', borderRadius: 6, fontSize: 11, border: `1px solid ${theme.border}`, background: theme.card, color: listPage === 0 ? theme.dim : theme.text, cursor: listPage === 0 ? 'default' : 'pointer' }}
+                >← Anterior</button>
+                <span style={{ fontSize: 11, color: theme.dim }}>{listPage + 1} / {totalPages}</span>
+                <button
+                  onClick={() => setListPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={listPage === totalPages - 1}
+                  style={{ padding: '4px 12px', borderRadius: 6, fontSize: 11, border: `1px solid ${theme.border}`, background: theme.card, color: listPage === totalPages - 1 ? theme.dim : theme.text, cursor: listPage === totalPages - 1 ? 'default' : 'pointer' }}
+                >Siguiente →</button>
+              </div>
+            )}
           </div>
 
           {/* Right: detail panel */}
@@ -507,11 +649,20 @@ export default function RadioBasesSection({ theme }: Props) {
                         {[selected.city, selected.state].filter(Boolean).join(', ') || 'Sin ubicación registrada'}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {(() => {
                         const esCfg = ESTATUS_CFG[selected.estatus] ?? ESTATUS_CFG[''];
                         return <Badge label={esCfg.label} color={esCfg.color} />;
                       })()}
+                      {selected.fuente && selected.fuente !== 'drive' && (
+                        <Badge
+                          label={selected.fuente.toUpperCase().replace(/\+/g, ' + ')}
+                          color={selected.fuente.includes('nyx') ? '#8B5CF6' : selected.fuente === 'odoo' ? '#3B82F6' : '#00C896'}
+                        />
+                      )}
+                      {selected.clientes != null && (
+                        <Badge label={`${selected.clientes} clientes`} color='#3B82F6' />
+                      )}
                     </div>
                   </div>
 
@@ -629,6 +780,105 @@ export default function RadioBasesSection({ theme }: Props) {
                     </a>
                   )}
                 </div>
+
+                {/* Energy devices widget */}
+                {(() => {
+                  const devs = getSiteDevices(selected.name);
+                  if (!devs.length) return null;
+                  const VENDOR_COLORS: Record<string, string> = { eltek: '#4F46E5', samlex: '#00B4D8', mei: '#FF6B35', victron: '#059669', unknown: '#6B7280' };
+                  const TYPE_LABELS: Record<string, string> = { rectifier: 'Rectificador', inverter: 'Inversor', siteMonitor: 'Site Monitor' };
+                  return (
+                    <div style={{ background: theme.card, border: `1px solid rgba(255,183,3,0.25)`, borderRadius: 12, padding: '14px 20px' }}>
+                      <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#FFB703', marginBottom: 12 }}>
+                        ⚡ Energía en sitio · {devs.length} dispositivo{devs.length !== 1 ? 's' : ''}
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {devs.map(d => {
+                          const online = d.status === 'online';
+                          const vc = VENDOR_COLORS[d.vendor?.toLowerCase()] ?? VENDOR_COLORS.unknown;
+                          return (
+                            <div key={d.ip} style={{ background: theme.bg, borderRadius: 8, padding: '10px 14px', border: `1px solid ${theme.border}` }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: online ? '#00C896' : '#FF4757', flexShrink: 0 }} />
+                                <span style={{ fontSize: 12, fontWeight: 700, color: theme.text, flex: 1 }}>{d.name}</span>
+                                <Badge label={TYPE_LABELS[d.type] || d.type || 'Dispositivo'} color={vc} />
+                                <span style={{ fontSize: 10, color: theme.dim, fontFamily: 'monospace' }}>{d.ip}</span>
+                              </div>
+                              {d.metrics && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                                  {d.metrics.batteryVoltage != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>Bat. voltaje</div>
+                                      <div style={{ color: '#FFB703', fontWeight: 700 }}>{d.metrics.batteryVoltage.toFixed(1)} V</div>
+                                    </div>
+                                  )}
+                                  {d.metrics.mainsPresent != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>Red eléctrica</div>
+                                      <div style={{ color: d.metrics.mainsPresent ? '#00C896' : '#FF4757', fontWeight: 700 }}>
+                                        {d.metrics.mainsPresent ? 'Presente' : 'Ausente'}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {d.metrics.batteryRuntimeMinutes != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>Autonomía bat.</div>
+                                      <div style={{ color: '#3B82F6', fontWeight: 700 }}>
+                                        {d.metrics.batteryRuntimeMinutes >= 60
+                                          ? `${(d.metrics.batteryRuntimeMinutes / 60).toFixed(1)} h`
+                                          : `${Math.round(d.metrics.batteryRuntimeMinutes)} min`}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {d.metrics.acOutputVoltage != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>AC salida</div>
+                                      <div style={{ color: theme.text, fontWeight: 700 }}>{d.metrics.acOutputVoltage.toFixed(0)} V</div>
+                                    </div>
+                                  )}
+                                  {d.metrics.loadPower != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>Carga</div>
+                                      <div style={{ color: theme.text, fontWeight: 700 }}>{d.metrics.loadPower.toFixed(0)} W</div>
+                                    </div>
+                                  )}
+                                  {d.metrics.batterySOC != null && (
+                                    <div style={{ fontSize: 11 }}>
+                                      <div style={{ color: theme.dim, marginBottom: 1 }}>SOC batería</div>
+                                      <div style={{ color: d.metrics.batterySOC > 50 ? '#00C896' : d.metrics.batterySOC > 20 ? '#FFB703' : '#FF4757', fontWeight: 700 }}>
+                                        {d.metrics.batterySOC.toFixed(0)}%
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {!d.metrics && (
+                                <div style={{ fontSize: 11, color: theme.dim, fontStyle: 'italic' }}>Sin métricas SNMP</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Nyx data */}
+                {selected.nyx_data && (
+                  <div style={{ background: theme.card, border: `1px solid rgba(139,92,246,0.25)`, borderRadius: 12, padding: '14px 20px' }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8B5CF6', marginBottom: 12 }}>
+                      Datos Nyx
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {Object.entries(selected.nyx_data.raw || {}).map(([k, v]) => v && (
+                        <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                          <span style={{ color: theme.dim, fontWeight: 600, minWidth: 120, textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}</span>
+                          <span style={{ color: theme.text }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Editable fields */}
                 {isAdmin && (
