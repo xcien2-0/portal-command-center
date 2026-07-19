@@ -5493,31 +5493,46 @@ def activate_user(user_id: str):
 _academia_cache: dict = {"data": None, "ts": 0}
 _ACADEMIA_TTL = 120
 
-_ACADEMIA_LOCAL_PATH = os.path.join(os.path.dirname(__file__), "data", "academia_fibra_optica.json")
+_ACADEMIA_LOCAL_DIR = os.path.join(os.path.dirname(__file__), "data")
 
-def _academia_local_cursos() -> list:
-    """Carga cursos locales desde JSON (no dependen de Odoo)."""
-    try:
-        with open(_ACADEMIA_LOCAL_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        return [data["curso"]]
-    except Exception as e:
-        logger.warning(f"[Academia local] No se pudo cargar: {e}")
-        return []
+def _academia_local_all():
+    """Carga todos los cursos y quizzes de archivos academia_*.json en data/."""
+    import glob
+    all_courses = []
+    all_quizzes = {}
+    pattern = os.path.join(_ACADEMIA_LOCAL_DIR, "academia_*.json")
+    for path in sorted(glob.glob(pattern)):
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            if "cursos" in data:
+                all_courses.extend(data["cursos"])
+            elif "curso" in data:
+                all_courses.append(data["curso"])
+            all_quizzes.update(data.get("quizzes", {}))
+        except Exception as e:
+            logger.warning(f"[Academia local] Error cargando {path}: {e}")
+    return all_courses, all_quizzes
 
-def _academia_local_quizzes(channel_id: int):
+def _academia_local_cursos():
+    """Retorna lista de cursos locales (todos los archivos academia_*.json)."""
+    courses, _ = _academia_local_all()
+    return courses
+
+def _academia_local_quizzes(channel_id):
     """Retorna preguntas de un curso local (channel_id == curso.id), o None si no aplica."""
     try:
-        with open(_ACADEMIA_LOCAL_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        if data["curso"]["id"] != channel_id:
+        courses, quizzes = _academia_local_all()
+        course = next((c for c in courses if c["id"] == channel_id), None)
+        if not course:
             return None
-        quizzes = data.get("quizzes", {})
-        lessons = {l["id"]: l["name"] for l in data["curso"]["lessons"]}
+        lessons = {l["id"]: l["name"] for l in course.get("lessons", [])}
         result = []
         for lid_str, qs in quizzes.items():
             lid = int(lid_str)
-            slide_name = lessons.get(lid, "")
+            if lid not in lessons:
+                continue
+            slide_name = lessons[lid]
             for i, q in enumerate(qs):
                 answers = [
                     {"id": (lid * 100) + j, "text": opt}
@@ -5531,7 +5546,7 @@ def _academia_local_quizzes(channel_id: int):
                     "answers":          answers,
                     "correct_answer_id": (lid * 100) + q["correcta"],
                 })
-        return result
+        return result if result else None
     except Exception as e:
         logger.warning(f"[Academia local quiz] Error: {e}")
         return None
@@ -5635,7 +5650,10 @@ async def get_academia_cursos():
         _academia_cache["ts"]   = time.time()
         return result
     except Exception as e:
-        logger.error(f"[Academia] Odoo error: {e}")
+        logger.warning(f"[Academia] Odoo no disponible, devolviendo cursos locales: {e}")
+        local = _academia_local_cursos()
+        if local:
+            return local
         raise HTTPException(status_code=503, detail=str(e))
 
 
