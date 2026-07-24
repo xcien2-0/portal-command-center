@@ -61,7 +61,7 @@ const PROSPECTOS_PN = [
   { name: 'Path Logistics',         lat: 28.64937799999907,  lng: -100.5590679999905 },
   { name: 'PKC Group',              lat: 28.68128599999895,  lng: -100.5539429999882 },
   { name: 'Prossesa',               lat: 28.59684599999918,  lng: -100.5851339999924 },
-  { name: 'Prysmian WH',            lat: 28.72056499999888,  lng: -100.4581829999852 },
+  { name: 'Prysmian WH',            lat: 28.72056499999888,  lng: -100.5210000000000 },
   { name: 'Prysmian',               lat: 28.68763799999897,  lng: -100.5556909999884 },
   { name: 'Rassini',                lat: 28.68875299999897,  lng: -100.5209539999869 },
   { name: 'Regal 2',                lat: 28.68195299999895,  lng: -100.5524769999882 },
