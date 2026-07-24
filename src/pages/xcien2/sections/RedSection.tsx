@@ -35,6 +35,63 @@ const VENDOR_ICONS: Record<string, string> = {
 interface KmzLayer  { id: string; name: string; }
 interface KmzGroup  { id: string; label: string; color: string; layers: KmzLayer[]; }
 
+// ── Prospectos industriales Piedras Negras (Next Ventures → destino XCIEN) ────
+const PROSPECTOS_PN = [
+  { name: 'Asfaltos y Pegamentos',  lat: 28.67908270651087,  lng: -100.5687768526713 },
+  { name: 'Day Star Trim',          lat: 28.67957388231126,  lng: -100.5705253784698 },
+  { name: 'Elastomeros',            lat: 28.68704699999893,  lng: -100.5553179999887 },
+  { name: 'Elektrocontact',         lat: 28.64844999999912,  lng: -100.5601849999906 },
+  { name: 'Elektrokontakt PDS',     lat: 28.64547999999907,  lng: -100.5298349999871 },
+  { name: 'ERICH JAEGER',           lat: 28.69730099999897,  lng: -100.5556609999869 },
+  { name: 'Fujikura',               lat: 28.69810599999892,  lng: -100.5567639999884 },
+  { name: 'Fujikura 2',             lat: 28.67908099999895,  lng: -100.5508979999869 },
+  { name: 'Fujikura 3',             lat: 28.67910199999896,  lng: -100.5529309999877 },
+  { name: 'General Aluminium',      lat: 28.68695699999899,  lng: -100.5551649999885 },
+  { name: 'GI Grupo',               lat: 28.72919399999885,  lng: -100.5199099999862 },
+  { name: 'Gondi',                  lat: 28.68706899999893,  lng: -100.5574139999884 },
+  { name: 'Lear 1',                 lat: 28.68133899999895,  lng: -100.5521769999882 },
+  { name: 'Lear 2',                 lat: 28.68122699999896,  lng: -100.5701909999888 },
+  { name: 'Lear 3',                 lat: 28.68129099999896,  lng: -100.5714159999887 },
+  { name: 'Lear 4',                 lat: 28.67739999999897,  lng: -100.5698699999888 },
+  { name: 'Lear 5',                 lat: 28.64570299999908,  lng: -100.5594769999907 },
+  { name: 'Littelfuse',             lat: 28.64529299999908,  lng: -100.5356489999875 },
+  { name: 'M&B Hangers',            lat: 28.64697599999908,  lng: -100.5578429999906 },
+  { name: 'Mex Star',               lat: 28.64604399999908,  lng: -100.5591019999905 },
+  { name: 'Nesse',                  lat: 28.72532699999888,  lng: -100.5227969999864 },
+  { name: 'Path Logistics',         lat: 28.64937799999907,  lng: -100.5590679999905 },
+  { name: 'PKC Group',              lat: 28.68128599999895,  lng: -100.5539429999882 },
+  { name: 'Prossesa',               lat: 28.59684599999918,  lng: -100.5851339999924 },
+  { name: 'Prysmian WH',            lat: 28.72056499999888,  lng: -100.4581829999852 },
+  { name: 'Prysmian',               lat: 28.68763799999897,  lng: -100.5556909999884 },
+  { name: 'Rassini',                lat: 28.68875299999897,  lng: -100.5209539999869 },
+  { name: 'Regal 2',                lat: 28.68195299999895,  lng: -100.5524769999882 },
+  { name: 'Regal 3',                lat: 28.67693399999897,  lng: -100.5512549999883 },
+  { name: 'Regal Amistad Sur',      lat: 28.64604399999908,  lng: -100.5211749999872 },
+  { name: 'Remy Borg Warner',       lat: 28.72832699999884,  lng: -100.5245059999864 },
+  { name: 'Structural Graphics',    lat: 28.68385699999896,  lng: -100.5562659999884 },
+  { name: 'Transformadores PN',     lat: 28.68758299999897,  lng: -100.5570529999883 },
+  { name: 'Us Liner',               lat: 28.64222499999908,  lng: -100.5299469999872 },
+] as const;
+
+// ── Layer Registry — fuente única de verdad para capas del mapa ───────────────
+const LAYER_REGISTRY = [
+  { id: 'nocboard',      label: 'NOC',      color: '#00ff88' },
+  { id: 'wireless',      label: 'Wireless',  color: '#3b82f6' },
+  { id: 'core',          label: 'Core',      color: '#ff3366' },
+  { id: 'onnet',         label: 'OnNet',     color: '#00A651' },
+  { id: 'offnet',        label: 'OffNet',    color: '#ff3366' },
+  { id: 'inter',         label: 'Inter',     color: '#a855f7' },
+  { id: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b' },
+  { id: 'sitios',        label: 'Sitios',    color: '#c8ff00' },
+  { id: 'rb-odoo',       label: 'RB Odoo',   color: '#00ffcc' },
+  { id: 'fibra',         label: 'Fibra',     color: '#f97316' },
+  { id: 'sidf',          label: 'SIDF',      color: '#00e5ff' },
+  { id: 'gps',           label: 'GPS',       color: '#22d3ee' },
+  { id: 'prospectos-pn', label: 'Prospectos', color: '#39FF14' },
+] as const;
+
+type LayerId = typeof LAYER_REGISTRY[number]['id'];
+
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface NOCHost {
   id: string;
@@ -334,39 +391,46 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [selectedHost, setSelectedHost] = useState<NOCHost | null>(null);
   const [mapLayer, setMapLayer]         = useState<'dark' | 'satellite' | 'topo'>('dark');
 
-  const [kmzGroups,       setKmzGroups]       = useState<KmzGroup[]>([]);
-  const [kmzActive,       setKmzActive]       = useState<Record<string, boolean>>({});
-  const [uispStatus,      setUispStatus]       = useState<{ ok: boolean; error: string | null } | null>(null);
-  const [odooServicios,   setOdooServicios]    = useState<any[]>([]);
-  const [showInnet,       setShowInnet]        = useState(false);
-  const [showOffnet,      setShowOffnet]       = useState(false);
-  const [showInter,       setShowInter]        = useState(false);
-  const [showSinClas,     setShowSinClas]      = useState(false);
-  const [showSitios,      setShowSitios]       = useState(false);
-  const [showRbOdoo,      setShowRbOdoo]       = useState(false);
-  const [showRbInfra,     setShowRbInfra]      = useState(false);
-  const [rbOdooData,      setRbOdooData]        = useState<any[]>([]);
-  const [showFibra,       setShowFibra]         = useState(false);
-  const [fibraSitios,     setFibraSitios]       = useState<any[]>([]);
-  const [showGps,         setShowGps]           = useState(false);
-  const [gpsVehiculos,    setGpsVehiculos]      = useState<any[]>([]);
-  const showOdoo = showInnet || showOffnet || showInter || showSinClas;
+  const [kmzGroups,     setKmzGroups]   = useState<KmzGroup[]>([]);
+  const [kmzActive,     setKmzActive]   = useState<Record<string, boolean>>({});
+  const [uispStatus,    setUispStatus]  = useState<{ ok: boolean; error: string | null } | null>(null);
+  const [odooServicios, setOdooServicios] = useState<any[]>([]);
+  const [rbOdooData,    setRbOdooData]  = useState<any[]>([]);
+  const [fibraSitios,   setFibraSitios] = useState<any[]>([]);
+  const [clientesSIDF,  setClientesSIDF] = useState<any[]>([]);
+  const [gpsVehiculos,  setGpsVehiculos] = useState<any[]>([]);
 
-  const mapRef       = useRef<any>(null);
-  const leafRef      = useRef<any>(null);
-  const layerRef     = useRef<any>(null);
-  const topoLayer    = useRef<any>(null);
-  const devicesLayer = useRef<any>(null);
-  const odooLayer    = useRef<any>(null);
-  const sitiosLayer  = useRef<any>(null);
-  const sitiosCache  = useRef<any>(null);
-  const rbOdooLayer  = useRef<any>(null);
-  const rbInfraLayer = useRef<any>(null);
-  const fibraLayer   = useRef<any>(null);
-  const gpsLayer     = useRef<any>(null);
-  const tileRef   = useRef<any>(null);
-  const kmzLayers = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
-  const kmzCache  = useRef<Record<string, any>>({}); // layerId → GeoJSON
+  // Capas activas — única fuente de verdad para visibilidad
+  const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(
+    () => new Set<LayerId>(['nocboard', 'wireless'])
+  );
+  const toggleLayer = (id: LayerId) =>
+    setActiveLayers(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const showOdoo = (['onnet', 'offnet', 'inter', 'sinclasificar'] as LayerId[]).some(id => activeLayers.has(id));
+
+  const mapRef      = useRef<any>(null);
+  const leafRef     = useRef<any>(null);
+  const tileRef     = useRef<any>(null);
+  const sitiosCache = useRef<any>(null);
+  const leafLayers  = useRef<Record<string, any>>({}); // layerId → Leaflet LayerGroup
+  const kmzLayers   = useRef<Record<string, any[]>>({}); // groupId → Leaflet layers[]
+  const kmzCache    = useRef<Record<string, any>>({}); // layerId → GeoJSON
+
+  // Helper: obtiene o crea un LayerGroup para la capa dada
+  const getLayer = (id: string) => {
+    const L = leafRef.current;
+    const map = mapRef.current;
+    if (!L || !map) return null;
+    if (!leafLayers.current[id]) {
+      leafLayers.current[id] = L.layerGroup().addTo(map);
+    }
+    return leafLayers.current[id];
+  };
 
   // ── Cargar datos ─────────────────────────────────────────────────────────────
   const cargar = useCallback(async () => {
@@ -502,16 +566,18 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     tileRef.current = L.tileLayer(url, opts).addTo(map);
 
     // Re-agregar overlay layers encima del tile nuevo
-    if (topoLayer.current) { map.removeLayer(topoLayer.current); topoLayer.current.addTo(map); }
-    if (layerRef.current)  { map.removeLayer(layerRef.current);  layerRef.current.addTo(map);  }
+    Object.values(leafLayers.current).forEach((lyr: any) => {
+      if (lyr && map.hasLayer(lyr)) { map.removeLayer(lyr); lyr.addTo(map); }
+    });
   }, [mapLayer]);
 
-  // ── Renderizar marcadores ─────────────────────────────────────────────────────
+  // ── Renderizar marcadores NOC (ciudades) ──────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
     const L = leafRef.current;
-    if (layerRef.current) layerRef.current.clearLayers();
-    else layerRef.current = L.layerGroup().addTo(mapRef.current);
+    const lyr = getLayer('nocboard');
+    if (!lyr) return;
+    lyr.clearLayers();
 
     cities.forEach(city => {
       const total = city.online + city.offline || 1;
@@ -545,18 +611,17 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           <div style="color:rgba(255,255,255,0.3);font-size:10px;margin-top:4px">Clic para ver dispositivos</div>
         `, { className: 'noc-tooltip' })
         .on('click', () => { setSelectedHost(null); setSelectedCity(city); })
-        .addTo(layerRef.current);
+        .addTo(lyr);
     });
   }, [cities]);
 
   // ── Renderizar topología ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
-    if (topoLayer.current) { topoLayer.current.clearLayers(); }
-    else { topoLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showTopo) return;
+    const lyr = getLayer('core');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('core')) return;
 
     const filtered = vendorFilter.length === 0
       ? topoLinks
@@ -602,19 +667,18 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
          <div style="font-weight:600;color:rgba(255,255,255,0.8)">${link.from_site} → ${link.to_site}</div>
          ${qualityLine}${signalLine}${bwBadge ? `<div>${bwBadge}</div>` : ''}${modeLine}`,
         { className: 'noc-tooltip' }
-      ).addTo(topoLayer.current);
+      ).addTo(lyr);
     });
-  }, [showTopo, topoLinks, vendorFilter]);
+  }, [activeLayers, topoLinks, vendorFilter]);
 
   // ── Renderizar dispositivos UISP sobre el mapa ───────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
     const L = leafRef.current;
-
-    if (devicesLayer.current) { devicesLayer.current.clearLayers(); }
-    else { devicesLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showDevices || geoDevices.length === 0) return;
+    const lyr = getLayer('wireless');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('wireless') || geoDevices.length === 0) return;
 
     // Color por calidad de señal
     const signalColor = (signal: number | null, status: string): string => {
@@ -655,18 +719,17 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
          ${dev.stations != null ? `<div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:2px">Estaciones: ${dev.stations}</div>` : ''}
          <div style="color:rgba(255,255,255,0.3);font-size:9px;margin-top:3px">${dev.site}</div>`,
         { className: 'noc-tooltip' }
-      ).addTo(devicesLayer.current);
+      ).addTo(lyr);
     });
-  }, [showDevices, geoDevices]);
+  }, [activeLayers, geoDevices]);
 
   // ── Renderizar servicios Odoo ────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
     const L = leafRef.current;
-
-    if (odooLayer.current) { odooLayer.current.clearLayers(); }
-    else { odooLayer.current = L.layerGroup().addTo(mapRef.current); }
-
+    const lyr = getLayer('odoo');
+    if (!lyr) return;
+    lyr.clearLayers();
     if (!showOdoo || odooServicios.length === 0) return;
 
     // Colores por tipo de entrega (onnet/offnet)
@@ -690,10 +753,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     const iconoAcceso: Record<string, string> = { radio: '📡', fiber: '🔌', other: '🌐' };
 
     const visibles = odooServicios.filter(s => {
-      if (s.entrega === 'innet')  return showInnet;
-      if (s.entrega === 'offnet') return showOffnet;
-      if (s.entrega === 'inter')  return showInter;
-      return showSinClas;
+      if (s.entrega === 'innet')  return activeLayers.has('onnet');
+      if (s.entrega === 'offnet') return activeLayers.has('offnet');
+      if (s.entrega === 'inter')  return activeLayers.has('inter');
+      return activeLayers.has('sinclasificar');
     });
 
     visibles.forEach(srv => {
@@ -737,19 +800,17 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
          </div>`,
         { className: 'noc-popup', maxWidth: 260 }
       )
-      .addTo(odooLayer.current);
+      .addTo(lyr);
     });
-  }, [showOdoo, odooServicios, showInnet, showOffnet, showInter, showSinClas]);
+  }, [activeLayers, odooServicios, showOdoo]);
 
   // ── Renderizar sitios telecom (KMZ portfolios MTP / CAPSA) ──────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
-
-    if (sitiosLayer.current) { sitiosLayer.current.clearLayers(); }
-    else { sitiosLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showSitios) return;
+    const lyr = getLayer('sitios');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('sitios')) return;
 
     const render = (geojson: any) => {
       L.geoJSON(geojson, {
@@ -778,7 +839,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             { className: 'noc-tooltip', sticky: true }
           );
         },
-      }).addTo(sitiosLayer.current);
+      }).addTo(lyr);
     };
 
     if (sitiosCache.current) {
@@ -789,17 +850,16 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         .then(data => { if (data) { sitiosCache.current = data; render(data); } })
         .catch(() => {});
     }
-  }, [showSitios]);
+  }, [activeLayers]);
 
   // ── Capa Fibra ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
     const L = leafRef.current;
-
-    if (fibraLayer.current) { fibraLayer.current.clearLayers(); }
-    else { fibraLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showFibra) return;
+    const lyr = getLayer('fibra');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('fibra')) return;
 
     const FIBRA_COLORS: Record<string, string> = {
       activo:       '#22c55e',
@@ -822,7 +882,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
            <div style="margin-top:4px"><span style="background:${color}22;color:${color};padding:1px 7px;border-radius:8px;font-weight:700;font-size:9px">${s.estado}</span></div>`,
           { className: 'noc-tooltip', sticky: true }
         );
-        m.addTo(fibraLayer.current);
+        m.addTo(lyr);
       });
     };
 
@@ -838,36 +898,124 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         })
         .catch(() => {});
     }
-  }, [showFibra, fibraSitios]);
+  }, [activeLayers, fibraSitios]);
+
+  // ── Capa Clientes SIDF ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const L = leafRef.current;
+    const lyr = getLayer('sidf');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('sidf')) return;
+
+    const SIDF_COLOR: Record<string, { fill: string; border: string; label: string }> = {
+      activo:      { fill: '#00e5ff', border: '#0ea5e9', label: '● Activo'      },
+      instalacion: { fill: '#FFB703', border: '#d97706', label: '● Instalación' },
+      aprobado:    { fill: '#3B82F6', border: '#1d4ed8', label: '● Aprobado'    },
+    };
+
+    const doRender = (clientes: any[]) => {
+      clientes.forEach((c: any) => {
+        const cfg   = SIDF_COLOR[c.estado] ?? SIDF_COLOR.activo;
+        const noc   = c.noc_monitoreado;
+        const alertas: string[] = c.alertas || [];
+        const hasAlert = alertas.length > 0;
+        const coordOk  = c.coord_verificada === true;
+        const alertHtml = hasAlert
+          ? `<div style="margin-top:4px;padding:3px 6px;background:#ff475722;border-left:2px solid #ff4757;font-size:9px;color:#ff4757">${alertas.join(' · ')}</div>`
+          : '';
+        const coordWarn = !coordOk
+          ? `<div style="margin-top:4px;padding:2px 6px;background:#fbbf2422;border-left:2px solid #fbbf24;font-size:9px;color:#fbbf24">⚠ coordenadas aproximadas — sin verificar</div>`
+          : '';
+        const m = L.circleMarker([c.lat, c.lng], {
+          radius: c.estado === 'activo' ? 10 : 8,
+          fillColor: cfg.fill,
+          color: hasAlert ? '#ff4757' : cfg.border,
+          weight: hasAlert ? 3 : 2,
+          fillOpacity: 0.9,
+          dashArray: coordOk ? undefined : '4 3',
+        });
+        m.bindTooltip(
+          `<div style="font-weight:700;color:${cfg.fill};margin-bottom:3px">🔷 SIDF · ${c.id.toUpperCase()}</div>
+           <div style="font-weight:600;font-size:12px">${c.nombre}</div>
+           <div style="color:rgba(255,255,255,0.55);font-size:10px">${c.plaza.toUpperCase()} · ${c.velocidad || '—'}</div>
+           ${c.equipo_hw ? `<div style="color:rgba(255,255,255,0.4);font-size:9px;margin-top:2px">${c.equipo_hw}</div>` : ''}
+           <div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">
+             <span style="background:${cfg.fill}22;color:${cfg.fill};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">${cfg.label}</span>
+             <span style="background:${noc ? '#00e5ff22' : '#6b728022'};color:${noc ? '#00e5ff' : '#94a3b8'};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">
+               ${noc ? '✓ NOC' : '✗ sin NOC'}
+             </span>
+             <span style="background:${c.sidf_odoo ? '#22c55e22' : '#f9731622'};color:${c.sidf_odoo ? '#22c55e' : '#f97316'};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">
+               ${c.sidf_odoo ? '✓ Odoo' : '✗ sin Odoo'}
+             </span>
+           </div>
+           ${alertHtml}${coordWarn}`,
+          { className: 'noc-tooltip', sticky: true }
+        );
+        m.addTo(lyr);
+      });
+    };
+
+    if (clientesSIDF.length > 0) {
+      doRender(clientesSIDF);
+    } else {
+      fetch(`${API_BASE}/api/red/clientes-sidf`)
+        .then(r => r.ok ? r.json() : { clientes: [] })
+        .then(data => {
+          const list = data.clientes || [];
+          setClientesSIDF(list);
+          doRender(list);
+        })
+        .catch(() => {});
+    }
+  }, [activeLayers, clientesSIDF]);
 
   // ── Capa GPS ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
-
-    if (gpsLayer.current) { gpsLayer.current.clearLayers(); }
-    else { gpsLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showGps) return;
+    const lyr = getLayer('gps');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('gps')) return;
 
     const doRender = (vehiculos: any[]) => {
       vehiculos.forEach((v: any) => {
         if (!v.lat || !v.lng) return;
-        const color = v.activo ? '#22d3ee' : '#64748b';
+        // verde = en movimiento, azul = activo hoy detenido, gris = sin actividad
+        const color = v.activo ? '#00ff88' : v.activo_hoy ? '#38BDF8' : '#64748b';
+        const ring  = v.activo
+          ? `<circle cx="14" cy="14" r="12" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.6"/>`
+          : '';
+        const truck = `<path d="M3 17h2v1a1 1 0 002 0v-1h10v1a1 1 0 002 0v-1h2v-4l-2.5-5H3v9zm2-7h12l2 4H5v-4z" fill="${color}" opacity="0.9"/>`;
+        const svg = encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r="12" fill="${color}" fill-opacity="0.12" stroke="${color}" stroke-width="1.6"/>
+            ${ring}${truck}
+          </svg>`
+        );
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:24px;height:24px;background:${color};border:2px solid #000;border-radius:50% 50% 0 50%;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;font-size:9px">🚗</div>`,
-          iconAnchor: [12, 12],
+          html: `<img src="data:image/svg+xml,${svg}" width="28" height="28"/>`,
+          iconSize: [28, 28], iconAnchor: [14, 14],
         });
+        const km    = (v.km_hoy ?? 0).toFixed(0);
+        const cond  = v.conductor ? `<div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px">👤 ${v.conductor}</div>` : '';
         const m = L.marker([v.lat, v.lng], { icon });
         m.bindTooltip(
-          `<div style="font-weight:700;color:${color};margin-bottom:3px">🚗 ${v.nombre}</div>
-           <div style="font-size:11px;color:rgba(255,255,255,0.7)">${v.placa}</div>
-           <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">${v.velocidad ?? 0} km/h · ${v.ubicacion ?? ''}</div>
-           <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">${v.ultima_vez ?? ''}</div>`,
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">🚛 ${v.nombre}</div>
+           <div style="font-size:11px;color:rgba(255,255,255,0.7)">${v.placa}${v.make ? ' · ' + v.make : ''}</div>
+           <div style="display:flex;gap:10px;margin-top:5px">
+             <span style="font-size:11px;font-weight:700;color:${color}">${v.velocidad ?? 0} km/h</span>
+             <span style="font-size:11px;color:#38BDF8">${km} km hoy</span>
+             <span style="font-size:11px;color:#a78bfa">${v.viajes_hoy ?? 0} viajes</span>
+           </div>
+           ${cond}
+           <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px">${v.ubicacion ?? ''}</div>
+           <div style="font-size:9px;color:rgba(255,255,255,0.25);margin-top:2px">${v.ultima_vez ?? ''}</div>`,
           { className: 'noc-tooltip', sticky: true }
         );
-        m.addTo(gpsLayer.current);
+        m.addTo(lyr);
       });
     };
 
@@ -879,7 +1027,27 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         doRender(list);
       })
       .catch(() => {});
-  }, [showGps]);
+  }, [activeLayers]);
+
+  // ── Prospectos PN ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !leafRef.current) return;
+    const lyr = getLayer('prospectos-pn');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('prospectos-pn')) return;
+    const L = leafRef.current;
+    PROSPECTOS_PN.forEach(p => {
+      L.circleMarker([p.lat, p.lng], {
+        radius: 8, color: '#000000', fillColor: '#39FF14',
+        fillOpacity: 0.9, weight: 2,
+      }).bindTooltip(
+        `<div style="font-weight:700;color:#39FF14;margin-bottom:2px">🏭 ${p.name}</div>
+         <div style="font-size:10px;color:rgba(255,255,255,0.55)">Prospecto industrial · Piedras Negras</div>`,
+        { className: 'noc-tooltip', sticky: true }
+      ).addTo(lyr);
+    });
+  }, [activeLayers]);
 
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
@@ -933,12 +1101,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   // ── Renderizar radiobases Odoo ───────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
-
-    if (rbOdooLayer.current) { rbOdooLayer.current.clearLayers(); }
-    else { rbOdooLayer.current = L.layerGroup().addTo(mapRef.current); }
-
-    if (!showRbOdoo || rbOdooData.length === 0) return;
+    const lyr = getLayer('rb-odoo');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!activeLayers.has('rb-odoo') || rbOdooData.length === 0) return;
 
     rbOdooData.forEach((rb: any) => {
       const enInfra  = rb.en_infra;
@@ -1021,9 +1187,9 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
            </div>`,
           { className: 'noc-popup', maxWidth: 280 }
         )
-        .addTo(rbOdooLayer.current);
+        .addTo(lyr);
     });
-  }, [showRbOdoo, rbOdooData]);
+  }, [activeLayers, rbOdooData]);
 
   // ── Toggle vendor ─────────────────────────────────────────────────────────────
   const toggleVendor = (v: string) => {
@@ -1082,47 +1248,37 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         {/* Separador */}
         <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
-        {/* Capas — solo mapa, etiquetas cortas */}
-        {mainView === 'map' && ([
-          { key: 'nocboard',    label: 'NOC',      color: '#00ff88', active: true,        count: `${hosts.filter(h=>h.status==='online').length}/${hosts.length}` },
-          { key: 'wireless',    label: 'Wireless',  color: '#3b82f6', active: showDevices, count: hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length || null },
-          { key: 'core',        label: 'Core',      color: '#ff3366', active: showTopo,    count: offline > 0 ? offline : null },
-          { key: 'onnet',         label: 'OnNet',     color: brand.accentColor, active: showInnet,   count: null },
-          { key: 'offnet',        label: 'OffNet',    color: '#ff3366', active: showOffnet,  count: null },
-          { key: 'inter',         label: 'Inter',     color: '#a855f7', active: showInter,   count: null },
-          { key: 'sinclasificar', label: 'Sin cls',   color: '#f59e0b', active: showSinClas, count: null },
-          { key: 'sitios',        label: 'Sitios',    color: '#c8ff00', active: showSitios,  count: 3727 },
-          { key: 'rb-odoo',       label: 'RB Odoo',   color: '#00ffcc', active: showRbOdoo,  count: rbOdooData.length || null },
-          { key: 'fibra',         label: 'Fibra',     color: '#f97316', active: showFibra,   count: fibraSitios.length || null },
-          { key: 'gps',           label: 'GPS',       color: '#22d3ee', active: showGps,     count: gpsVehiculos.length || null },
-        ] as const).map(layer => (
-          <button key={layer.key}
-            onClick={() => {
-              if (layer.key === 'wireless')           setShowDevices(p => !p);
-              else if (layer.key === 'core')          setShowTopo(p => !p);
-              else if (layer.key === 'onnet')         setShowInnet(p => !p);
-              else if (layer.key === 'offnet')        setShowOffnet(p => !p);
-              else if (layer.key === 'inter')         setShowInter(p => !p);
-              else if (layer.key === 'sinclasificar') setShowSinClas(p => !p);
-              else if (layer.key === 'sitios')        setShowSitios(p => !p);
-              else if (layer.key === 'rb-odoo')       setShowRbOdoo(p => !p);
-              else if (layer.key === 'fibra')         setShowFibra(p => !p);
-              else if (layer.key === 'gps')           setShowGps(p => !p);
-            }}
+        {/* Capas — generadas desde LAYER_REGISTRY */}
+        {mainView === 'map' && LAYER_REGISTRY.map(layer => {
+          const active = layer.id === 'nocboard' ? true : activeLayers.has(layer.id);
+          const count: number | string | null =
+            layer.id === 'nocboard'  ? `${hosts.filter(h=>h.status==='online').length}/${hosts.length}` :
+            layer.id === 'wireless'  ? (hosts.filter(h=>['Mimosa','Ubiquiti','Cambium'].includes(h.vendor)).length || null) :
+            layer.id === 'core'      ? (offline > 0 ? offline : null) :
+            layer.id === 'sitios'    ? 3727 :
+            layer.id === 'rb-odoo'  ? (rbOdooData.length || null) :
+            layer.id === 'fibra'     ? (fibraSitios.length || null) :
+            layer.id === 'sidf'      ? (clientesSIDF.length || null) :
+            layer.id === 'gps'       ? (gpsVehiculos.length || null) :
+            null;
+          return (
+          <button key={layer.id}
+            onClick={() => { if (layer.id !== 'nocboard') toggleLayer(layer.id); }}
             style={{
-              padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: 'pointer',
-              background: layer.active ? `${layer.color}15` : 'transparent',
-              border: `1px solid ${layer.active ? layer.color + '80' : 'rgba(255,255,255,0.1)'}`,
-              color: layer.active ? layer.color : 'rgba(255,255,255,0.35)',
+              padding: '3px 8px', borderRadius: 12, fontSize: 10, cursor: layer.id === 'nocboard' ? 'default' : 'pointer',
+              background: active ? `${layer.color}15` : 'transparent',
+              border: `1px solid ${active ? layer.color + '80' : 'rgba(255,255,255,0.1)'}`,
+              color: active ? layer.color : 'rgba(255,255,255,0.35)',
               display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.12s', flexShrink: 0,
             }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: layer.active ? layer.color : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: active ? layer.color : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
             {layer.label}
-            {layer.count !== null && layer.count !== 0 && (
-              <span style={{ color: layer.color, fontWeight: 700, fontSize: 9 }}>{layer.count}</span>
+            {count !== null && count !== 0 && (
+              <span style={{ color: layer.color, fontWeight: 700, fontSize: 9 }}>{count}</span>
             )}
           </button>
-        ))}
+          );
+        })}
 
         {/* Refresh — solo ícono */}
         <button onClick={() => { setLoading(true); cargar(); }}
@@ -1275,7 +1431,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         )}
 
         {/* Leyenda — dispositivos por calidad de señal */}
-        {showDevices && (
+        {activeLayers.has('wireless') && (
           <div style={{
             position: 'absolute', bottom: 24, right: 16, zIndex: 999,
             background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(255,255,255,0.08)',
@@ -1309,7 +1465,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         {showOdoo && (
           <div style={{
             position: 'absolute',
-            bottom: showDevices ? 200 : 24,
+            bottom: activeLayers.has('wireless') ? 200 : 24,
             right: 16, zIndex: 999,
             background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 12, padding: '10px 14px', minWidth: 170,
@@ -1336,10 +1492,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         )}
 
         {/* Leyenda — sitios telecom */}
-        {showSitios && (
+        {activeLayers.has('sitios') && (
           <div style={{
             position: 'absolute',
-            bottom: (() => { let b = 24; if (showOdoo) b += 176; if (showDevices) b += 176; return b; })(),
+            bottom: (() => { let b = 24; if (showOdoo) b += 176; if (activeLayers.has('wireless')) b += 176; return b; })(),
             right: 16, zIndex: 999,
             background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(200,255,0,0.15)',
             borderRadius: 12, padding: '10px 14px', minWidth: 170,
@@ -1364,10 +1520,10 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         )}
 
         {/* Leyenda — radiobases Odoo */}
-        {showRbOdoo && rbOdooData.length > 0 && (
+        {activeLayers.has('rb-odoo') && rbOdooData.length > 0 && (
           <div style={{
             position: 'absolute',
-            bottom: (() => { let b = 24; if (showSitios) b += 130; if (showOdoo) b += 176; if (showDevices) b += 176; return b; })(),
+            bottom: (() => { let b = 24; if (activeLayers.has('sitios')) b += 130; if (showOdoo) b += 176; if (activeLayers.has('wireless')) b += 176; return b; })(),
             right: 16, zIndex: 999,
             background: 'rgba(5,8,16,0.92)', border: '1px solid rgba(0,255,204,0.2)',
             borderRadius: 12, padding: '10px 14px', minWidth: 190,
@@ -1404,7 +1560,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         )}
 
         {/* Leyenda — topología + fibra activas */}
-        {(showTopo && topoLinks.length > 0) || kmzGroups.some(g => kmzActive[g.id]) ? (
+        {(activeLayers.has('core') && topoLinks.length > 0) || kmzGroups.some(g => kmzActive[g.id]) ? (
           <div style={{
             position: 'absolute', bottom: 24, left: 16, zIndex: 999,
             background: 'rgba(5,15,10,0.92)', border: '1px solid rgba(255,255,255,0.1)',
@@ -1413,7 +1569,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
           }}>
 
             {/* Topología */}
-            {showTopo && topoLinks.length > 0 && (
+            {activeLayers.has('core') && topoLinks.length > 0 && (
               <div style={{ marginBottom: kmzGroups.some(g => kmzActive[g.id]) ? 10 : 0 }}>
                 <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>Topología</div>
                 {[...new Set(topoLinks.map(l => l.vendor))].map(v => (
@@ -1429,7 +1585,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             {/* Fibra óptica activa */}
             {kmzGroups.some(g => kmzActive[g.id]) && (
               <div>
-                {showTopo && topoLinks.length > 0 && (
+                {activeLayers.has('core') && topoLinks.length > 0 && (
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '0 0 8px' }} />
                 )}
                 <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>Fibra Óptica</div>
