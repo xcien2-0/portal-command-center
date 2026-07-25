@@ -70,6 +70,7 @@ const HelpdeskSection         = lazy(() => import('./sections/HelpdeskSection'))
 const Net2PhoneSection        = lazy(() => import('./sections/Net2PhoneSection'));
 const CallCenterHubSection    = lazy(() => import('./sections/CallCenterHubSection'));
 const FibraSection            = lazy(() => import('./sections/FibraSection'));
+const IBlackSection           = lazy(() => import('./sections/IBlackSection'));
 const RadioBasesSection       = lazy(() => import('./sections/RadioBasesSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
@@ -150,6 +151,7 @@ const NAV: NavEntry[] = [
   { id: 'proyectos', label: 'Tablero de Proyectos', icon: '📊', group: 'Planeación' },
   { id: 'fibra',       label: 'Fibra Óptica X100',    icon: '🔆', group: 'Planeación' },
   { id: 'radiobases', label: 'Radio Bases',          icon: '📡', group: 'Planeación' },
+  { id: 'iblack',    label: 'iBlack · Producto',    icon: '🖤', group: 'Planeación' },
 
   // ── IA & Automatización ────────────────────────────────────────────────────
   { id: 'cerebro',       label: 'Infraestructura IA', icon: '🧠', group: 'IA & Automatización' },
@@ -231,6 +233,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   proyectos: 'Tablero de Proyectos',
   fibra:      'Fibra Óptica X100',
   radiobases: 'Radio Bases XCIEN',
+  iblack:     'iBlack · Zona de Cliente + Cuadrillas',
   'infra-energia': 'Infraestructura Energía',
   cerebro: 'Infraestructura IA',
   'inv-transfers': 'Transferencias de Inventario',
@@ -636,6 +639,7 @@ function Content({
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
+      {section === 'iblack'         && <IBlackSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'ventas'              && <VentasSection theme={theme} />}
       {section === 'ventas-efectividad'  && <VentasEfectividadSection />}
