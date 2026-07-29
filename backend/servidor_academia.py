@@ -34,7 +34,7 @@ load_dotenv(os.path.join(ROOT_DIR, ".env"), override=True)
 load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)  # backend/.env si existe
 
 # Importar Agentes Corporativos
-from agents.director_general_v2 import DirectorGeneralV2
+from agents.director_claude import DirectorClaude as DirectorGeneralV2
 from agents.telegram_bot import TelegramBot
 from agents import token_service
 from agents import asset_service
