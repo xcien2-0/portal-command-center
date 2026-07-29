@@ -8247,6 +8247,7 @@ CEREBRO_CONTEXT_MODULES = {
     "ventas":     {"label": "Ventas / MRR",       "icon": "💰",  "endpoint": "/api/ventas/mrr"},
     "rrhh":       {"label": "RRHH",               "icon": "👤",  "endpoint": "/api/rrhh/empleados"},
     "incidentes": {"label": "Incidentes activos", "icon": "🚨",  "endpoint": "/api/incidentes"},
+    "fibra":      {"label": "Fibra Óptica",       "icon": "🌐",  "endpoint": "/api/fibra/data"},
 }
 
 # ── Personas de agentes ────────────────────────────────────────────────────────
@@ -8259,6 +8260,7 @@ RESPONSABILIDADES:
 - Consultar y mostrar tickets abiertos, backlog y tickets por vencer SLA
 - Reportar sitios caídos, alertas NOC activas y estado de dependencias
 - Mostrar órdenes de campo, cuadrillas asignadas y estado de campo
+- Reportar el estado del despliegue de fibra, compromisos, fases de plazas y avance de red física
 - Responder preguntas operativas con datos del momento
 - Mantener contexto operativo reciente
 
@@ -8276,6 +8278,7 @@ ROL: Interpretar datos, detectar tendencias, priorizar problemas y generar anál
 RESPONSABILIDADES:
 - Analizar cumplimiento de SLA y detectar tendencias de incumplimiento
 - Medir reincidencias e identificar causas raíz
+- Analizar riesgos de cumplimiento en despliegue de fibra por plaza y compromisos
 - Generar reportes ejecutivos para dirección y gobierno
 - Proponer acciones correctivas y priorización de ciudades/sitios
 - Ayudar con planeación estratégica, BMAD y roadmap
@@ -8296,6 +8299,7 @@ _TARS_KEYWORDS = {
     "cuadrilla", "cuadrillas", "campo", "orden", "órdenes", "estado", "ahora", "hoy",
     "actual", "actualmente", "cuántos", "listar", "mostrar", "qué hay", "qué tiene",
     "están", "tiene", "hay", "dependencia", "dependencias", "host", "hosts",
+    "fibra", "despliegue", "compromiso", "compromisos", "plaza", "plazas",
 }
 
 _CASE_KEYWORDS = {
@@ -8346,12 +8350,18 @@ async def _assemble_context(modules: List[str], request: Request) -> str:
             if not cfg:
                 continue
             try:
-                r = await client.get(f"{base}{cfg['endpoint']}")
-                if r.status_code == 200:
+                if mod == "fibra":
+                    # Llamar al cargador interno de fibra directamente para evitar 401 de auth en localhost
+                    data = _fibra_load()
+                else:
+                    r = await client.get(f"{base}{cfg['endpoint']}")
+                    if r.status_code != 200:
+                        raise Exception(f"HTTP {r.status_code}")
                     data = r.json()
-                    # compact summary
-                    summary = json.dumps(data, ensure_ascii=False)[:2000]
-                    parts.append(f"[{cfg['label']}]\n{summary}")
+                
+                # compact summary
+                summary = json.dumps(data, ensure_ascii=False)[:2000]
+                parts.append(f"[{cfg['label']}]\n{summary}")
             except Exception as e:
                 parts.append(f"[{cfg['label']}] No disponible: {str(e)[:80]}")
     return "\n\n".join(parts)
