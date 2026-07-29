@@ -2115,15 +2115,6 @@ function slaStatusDynamic(order: WFMOrder, limites: Record<string, SLALimite>): 
   return 'ok';
 }
 
-function slaStatus(order: WFMOrder): 'ok' | 'alerta' | 'critico' {
-  if (order.estado === 'CERRADO' || order.estado === 'FACTURACION' || order.estado === 'BACKLOG') return 'ok';
-  const limit = SLA_LIMITS[order.estado] ?? 3;
-  const dias  = diasEnEstado(order);
-  if (dias >= limit) return 'critico';
-  if (dias >= limit * 0.7) return 'alerta';
-  return 'ok';
-}
-
 interface EscEntry {
   esc_id: string; triggered_at: string; order_id: string; cliente: string;
   estado: string; severity: string; dias_sla: number; owner_node: string;
@@ -3274,34 +3265,6 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
     fetchOrders();
   };
 
-  const handleAlmacenAsignar = async () => {
-    if (!selectedId) return;
-    await fetch(`${API_BASE}/api/wfm/almacen/asignar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        order_id: selectedId, 
-        equipos: [{ modelo: 'CCR2004', sn: 'SN-' + Math.random().toString(36).substring(7).toUpperCase() }],
-        usuario: 'Jefe Almacén'
-      })
-    });
-    fetchOrders();
-  };
-
-  const handleAprovisionar = async () => {
-    if (!selectedId) return;
-    await fetch(`${API_BASE}/api/wfm/aprovisionar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        order_id: selectedId, 
-        config: { vlan: 4000, bw: '1GB' },
-        usuario: 'Ing. NOC'
-      })
-    });
-    fetchOrders();
-  };
-
   const selectedOrder = orders.find(o => o.id === selectedId);
 
   return (
@@ -3337,8 +3300,8 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
         />
       )}
 
-      {/* ── Vista Cuellos de Botella — disponible para ambos data sources ── */}
-      {viewMode === 'visibilidad' && (
+      {/* ── Vista Cuellos de Botella — solo Pipeline Comercial ── */}
+      {dataSource === 'comercial' && viewMode === 'visibilidad' && (
         <VisibilidadView theme={theme} orders={orders} fieldTickets={fieldTickets} />
       )}
 

@@ -3292,7 +3292,10 @@ async def get_wfm_orders(background_tasks: BackgroundTasks, estado: str = None):
 
 # ── Field Service: habilitaciones y fallas desde Odoo helpdesk ─────────────────
 CAST_TEAM_IDS   = [6, 39, 60, 41, 44, 48, 67]
-FS_TYPE_IDS     = [34, 8, 6, 4]   # INSTALACION, Falla General, Visita Técnica, Soporte
+# IDs actualizados wispi19 (los originales 34/8/6/4 correspondían a wispi17)
+FS_TYPE_IDS_FALLA       = [43, 55]    # Falla General, ST-Falla electrica radio base
+FS_TYPE_IDS_HABILITACION= [42, 41]    # Visita Técnica, Proactivo
+FS_TYPE_IDS_ALL         = [39, 41, 42, 43, 44, 52, 53, 54, 55]  # todos los tipos de campo
 
 # Mapeo etapa Odoo → etapa operativa (0=NOC, 1=Dispatch, 2=Almacén, 3=Operaciones, 4=NOC Cierra)
 STAGE_TO_OP = {
@@ -3349,17 +3352,12 @@ def get_field_tickets(limit: int = 150, tipo: str = None, estado_op: int = None)
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error conectando Odoo: {e}")
 
-    # Construir dominio
-    type_filter = [34, 8, 6]  # INSTALACION, Falla General, Visita Técnica
+    # Construir dominio — sin filtro de tipo por defecto (muchos tickets tienen tipo=False)
+    domain: list = [["team_id", "in", CAST_TEAM_IDS]]
     if tipo == "habilitacion":
-        type_filter = [34]
+        domain.append(["ticket_type_id", "in", FS_TYPE_IDS_HABILITACION])
     elif tipo == "falla":
-        type_filter = [8, 4]
-
-    domain = [
-        ["team_id", "in", CAST_TEAM_IDS],
-        ["ticket_type_id", "in", type_filter],
-    ]
+        domain.append(["ticket_type_id", "in", FS_TYPE_IDS_FALLA])
 
     fields = ["id", "name", "stage_id", "ticket_type_id", "priority",
               "partner_id", "user_id", "create_date", "close_date", "kanban_state", "description"]
@@ -3594,10 +3592,15 @@ def get_bidrillas():
     all_user_ids = list({uid_val for t in tasks for uid_val in t["user_ids"]})
 
     # Obtener nombres y roles desde hr.employee
-    employees = models.execute_kw(odoo_db, uid, odoo_pass, "hr.employee", "search_read",
-        [[["user_id", "in", all_user_ids]]],
-        {"fields": ["user_id", "name", "job_title"], "limit": 200})
-    emp_by_user = {e["user_id"][0]: e for e in employees if e["user_id"]}
+    # Odoo 19 agrega version_id (campo restringido) — fallback a res.users si el usuario no tiene permisos Officer
+    try:
+        employees = models.execute_kw(odoo_db, uid, odoo_pass, "hr.employee", "search_read",
+            [[["user_id", "in", all_user_ids]]],
+            {"fields": ["user_id", "name", "job_title"], "limit": 200})
+        emp_by_user = {e["user_id"][0]: e for e in employees if e["user_id"]}
+    except Exception as _emp_err:
+        logger.warning(f"[bidrillas] hr.employee sin permisos ({_emp_err}); usando res.users")
+        emp_by_user = {}
 
     # Nombres desde res.users como fallback
     users = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
@@ -3966,41 +3969,92 @@ def _fetch_gps_all() -> list:
     token   = _tn360_token()
     headers = {"Authorization": f"Bearer {token}"}
     now_dt  = datetime.datetime.utcnow()
-    from_dt = (now_dt - datetime.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    to_dt   = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # hoy desde medianoche UTC para calcular km_hoy
+    today_start = now_dt.replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # también 48h atrás para posición de vehículos que no movieron hoy
+    from_48h = (now_dt - datetime.timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_dt    = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     vehicles_resp = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=headers, timeout=15)
     vehicles = vehicles_resp.json() if vehicles_resp.ok else []
 
+    # mapa de conductores: id → nombre
+    users_resp = _requests.get(f"{TN360_API}/users?limit=500", headers=headers, timeout=15)
+    users_list = users_resp.json() if users_resp.ok else []
+    user_map   = {
+        u["id"]: f"{u.get('firstName','')} {u.get('lastName','')}".strip()
+        for u in users_list if isinstance(u, dict)
+    }
+
     def _get_vehicle_gps(veh):
-        vid  = veh["id"]
-        name = veh.get("name", str(vid))
-        reg  = veh.get("registration", "")
+        vid   = veh["id"]
+        name  = veh.get("name", str(vid))
+        reg   = veh.get("registration", "")
+        make  = veh.get("make", "")
+        model = veh.get("model", "")
         try:
-            trips_resp = _requests.get(
-                f"{TN360_API}/trips?vehicleId={vid}&from={from_dt}&to={to_dt}&limit=1",
-                headers=headers, timeout=10
+            # trips de hoy para km_hoy y viajes_hoy
+            today_resp = _requests.get(
+                f"{TN360_API}/trips?vehicleId={vid}&from={today_start}&to={to_dt}&limit=500",
+                headers=headers, timeout=12
             )
-            trips = trips_resp.json() if trips_resp.ok else []
-            if not isinstance(trips, list) or not trips:
+            today_trips = today_resp.json() if today_resp.ok else []
+            if not isinstance(today_trips, list):
+                today_trips = []
+
+            def _km(t):
+                km = t.get("gpsOdoEnd", 0) - t.get("gpsOdoStart", 0)
+                return km if 0 < km < 2000 else 0
+
+            valid_trips = [t for t in today_trips if t.get("plausible", True)]
+            km_hoy     = round(sum(_km(t) for t in valid_trips), 1)
+            viajes_hoy = len(valid_trips)
+
+            # conductor: usuario más frecuente en trips de hoy
+            conductor = ""
+            if valid_trips:
+                uid = valid_trips[0].get("user", {}).get("id")
+                conductor = user_map.get(uid, "")
+
+            # posición: último trip de hoy; si no hay, buscar en 48h
+            trips_for_pos = today_trips
+            if not trips_for_pos:
+                pos_resp = _requests.get(
+                    f"{TN360_API}/trips?vehicleId={vid}&from={from_48h}&to={to_dt}&limit=1",
+                    headers=headers, timeout=10
+                )
+                trips_for_pos = pos_resp.json() if pos_resp.ok else []
+                if not isinstance(trips_for_pos, list):
+                    trips_for_pos = []
+
+            if not trips_for_pos:
                 return None
-            trip = trips[0]
+            trip = trips_for_pos[0]
             gps  = trip.get("IgnOffGPS") or trip.get("IgnOnGPS")
             if not gps or not gps.get("valid"):
                 return None
+
             ts_ms  = gps.get("At", 0)
             ts_iso = datetime.datetime.utcfromtimestamp(ts_ms / 1000).strftime("%Y-%m-%d %H:%M") if ts_ms else None
+            activo_hoy = viajes_hoy > 0
+
             return {
-                "id":         vid,
-                "nombre":     name,
-                "placa":      reg,
-                "lat":        round(gps["Lat"], 6),
-                "lng":        round(gps["Lng"], 6),
-                "velocidad":  round(gps.get("Spd", 0), 1),
-                "direccion":  round(gps.get("Dir", 0), 0),
-                "ultima_vez": ts_iso,
-                "ubicacion":  trip.get("endLocation") or trip.get("startLocation") or "",
-                "activo":     gps.get("Spd", 0) > 2,
+                "id":          vid,
+                "nombre":      name,
+                "placa":       reg,
+                "make":        make,
+                "model":       model,
+                "lat":         round(gps["Lat"], 6),
+                "lng":         round(gps["Lng"], 6),
+                "velocidad":   round(gps.get("Spd", 0), 1),
+                "direccion":   round(gps.get("Dir", 0), 0),
+                "ultima_vez":  ts_iso,
+                "ubicacion":   trip.get("endLocation") or trip.get("startLocation") or "",
+                "activo":      gps.get("Spd", 0) > 2,
+                "activo_hoy":  activo_hoy,
+                "km_hoy":      km_hoy,
+                "viajes_hoy":  viajes_hoy,
+                "conductor":   conductor,
             }
         except Exception:
             return None
@@ -9586,6 +9640,33 @@ def red_fibra_geo():
         if s.get("lat") and s.get("lng")
     ]
     return {"sitios": sitios, "total": len(sitios)}
+
+@app.get("/api/red/clientes-sidf")
+def red_clientes_sidf():
+    """Clientes SIDF para capa del Mapa de Red — activo, instalacion y aprobado."""
+    _VISIBLE = {"activo", "instalacion", "aprobado"}
+    data = _fibra_load()
+    clientes = [
+        {
+            "id":        s["id"],
+            "nombre":    s.get("nombre", ""),
+            "plaza":     s.get("plaza", ""),
+            "estado":    s.get("estado", ""),
+            "velocidad": s.get("velocidad", ""),
+            "direccion": s.get("direccion", ""),
+            "equipo_hw": s.get("equipo_hw", ""),
+            "equipo_ns": s.get("equipo_ns", ""),
+            "noc_monitoreado": s.get("checklist", {}).get("noc_monitoreado", False),
+            "sidf_odoo":       s.get("checklist", {}).get("sidf_odoo", False),
+            "alertas":          s.get("alertas", []),
+            "coord_verificada": s.get("coord_verificada", False),
+            "lat":              s["lat"],
+            "lng":              s["lng"],
+        }
+        for s in data.get("sitios", [])
+        if s.get("lat") and s.get("lng") and s.get("estado") in _VISIBLE
+    ]
+    return {"clientes": clientes, "total": len(clientes)}
 
 # ─── Radio Bases ──────────────────────────────────────────────────────────────
 

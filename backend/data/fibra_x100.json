@@ -50,7 +50,7 @@
       "core": "RB Piedras Negras",
       "infra": "Anillo + Lancemex · 21 cajas",
       "proveedor": "Monserrat (planta ext. · temporal)",
-      "clientes": 2,
+      "clientes": 4,
       "estado": "Construida",
       "color": "#3B82F6",
       "fases": [
@@ -268,6 +268,19 @@
           "a": ""
         }
       }
+    },
+    {
+      "ts": "2026-07-28T16:53:55.013370",
+      "comp_id": "c13",
+      "responsable": "Raúl Zapata",
+      "user_nombre": "Administrador XCIEN",
+      "user_email": "admin@xcien.com",
+      "cambios": {
+        "nota": {
+          "de": "",
+          "a": ""
+        }
+      }
     }
   ],
   "sitios": [
@@ -293,6 +306,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": true
       },
+      "coord_verificada": false,
       "lat": 28.7004,
       "lng": -100.5221
     },
@@ -318,6 +332,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 28.6985,
       "lng": -100.5245
     },
@@ -343,6 +358,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 28.702,
       "lng": -100.5198
     },
@@ -368,6 +384,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 28.6952,
       "lng": -100.5262
     },
@@ -393,6 +410,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 25.6798,
       "lng": -100.3204
     },
@@ -418,6 +436,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 25.6866,
       "lng": -100.3161
     },
@@ -443,6 +462,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 25.721,
       "lng": -100.2785
     },
@@ -468,6 +488,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 25.3802,
       "lng": -101.0015
     },
@@ -493,6 +514,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
+      "coord_verificada": false,
       "lat": 25.4232,
       "lng": -100.9928
     },
@@ -518,8 +540,70 @@
         "sidf_odoo": false,
         "noc_monitoreado": false
       },
-      "lat": 25.4512,
-      "lng": -100.9698
+      "coord_verificada": false,
+      "lat": 25.4169,
+      "lng": -100.9864
+    },
+    {
+      "id": "pn-005",
+      "nombre": "Neese de México",
+      "plaza": "pn",
+      "estado": "activo",
+      "equipo_hw": "RAX711-C-DC/D",
+      "equipo_ns": "SIDP-300",
+      "sfp": "USFP+-192/SS12",
+      "velocidad": "300M + MW 100M failover",
+      "responsable": "Alejandra Mora (CAE)",
+      "fecha_compromiso": "2026-06-10",
+      "fecha_activacion": "2026-07-08",
+      "direccion": "Zona Industrial, Piedras Negras, Coahuila",
+      "notas": "SO58063 SIDP-300 + SO58968 SIDP-100 (failover). CAE cerrado. PENDIENTE: config failover FO/MW modo 1/0 en Provisioning (3 tickets Nuevo sin asignar desde 26-jun).",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": false
+      },
+      "alertas": [
+        "provisioning_pendiente",
+        "sin_alta_noc"
+      ],
+      "coord_verificada": false,
+      "lat": 28.678,
+      "lng": -100.512
+    },
+    {
+      "id": "pn-006",
+      "nombre": "Industrias Lancermex [VIP-3]",
+      "plaza": "pn",
+      "estado": "activo",
+      "equipo_hw": "ISCOM S2600",
+      "equipo_ns": "SIDP-1G",
+      "sfp": "sfp-sfpplus1-FO",
+      "velocidad": "1G",
+      "responsable": "Alejandra Mora (CAE)",
+      "fecha_compromiso": "2026-01-14",
+      "fecha_activacion": "2026-01-16",
+      "direccion": "Av. Doctor Salvador Chavarría 100, Piedras Negras, Coahuila",
+      "notas": "SO55933 SIDP-1G Sandur. VIP-3. ALERTAS ACTIVAS: FO link down (SOP-17728 PENDIENTE sin deadline), 4+ outages abr-may 2026, /29 IPs pendiente 6 meses (Provisioning Nuevo sin asignar).",
+      "checklist": {
+        "levantamiento": true,
+        "aprobacion_cliente": true,
+        "cable_instalado": true,
+        "equipo_montado": true,
+        "sidf_odoo": false,
+        "noc_monitoreado": true
+      },
+      "alertas": [
+        "fo_link_down",
+        "provisioning_pendiente",
+        "outages_recurrentes"
+      ],
+      "coord_verificada": false,
+      "lat": 28.6965,
+      "lng": -100.5278
     },
     {
       "id": "slt-004",
@@ -543,6 +627,7 @@
         "sidf_odoo": false,
         "noc_monitoreado": true
       },
+      "coord_verificada": false,
       "lat": 25.435,
       "lng": -100.9822
     }

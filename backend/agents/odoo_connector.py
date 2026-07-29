@@ -68,7 +68,8 @@ class OdooConnector:
 
     def search_read(self, model: str, domain: List = [], fields: List = [], limit: int = 80) -> List[Dict]:
         """Busca y lee registros"""
-        result = self.execute(model, 'search_read', [domain], **{'fields': fields, 'limit': limit})
+        # domain va directo — execute lo envuelve en args=(domain,) → execute_kw recibe [[domain]] que es lo que Odoo espera
+        result = self.execute(model, 'search_read', domain, **{'fields': fields, 'limit': limit})
         return result if result else []
 
 odoo_conn = OdooConnector()

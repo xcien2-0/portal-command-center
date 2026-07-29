@@ -431,6 +431,8 @@ interface Vehiculo {
   id: number;
   nombre: string;
   placa: string;
+  make: string;
+  model: string;
   lat: number;
   lng: number;
   velocidad: number;
@@ -438,19 +440,29 @@ interface Vehiculo {
   ultima_vez: string | null;
   ubicacion: string;
   activo: boolean;
+  activo_hoy: boolean;
+  km_hoy: number;
+  viajes_hoy: number;
+  conductor: string;
 }
 
-function vehiculoIcon(activo: boolean) {
-  const color = activo ? '#00ff88' : '#00B4D8';
+function vehiculoIcon(v: Vehiculo) {
+  // verde = en movimiento ahora, azul = activo hoy, gris = sin actividad hoy
+  const color = v.activo ? '#00ff88' : v.activo_hoy ? '#38BDF8' : '#556070';
+  const ring  = v.activo
+    ? `<circle cx="16" cy="16" r="14" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.6"/>`
+    : '';
+  // ícono de camioneta
+  const truck = `<path d="M5 19h2v1a1 1 0 002 0v-1h10v1a1 1 0 002 0v-1h2v-5l-3-6H5v11zm2-9h14l2.4 5H7V10z" fill="${color}" opacity="0.9"/>`;
   const svg = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <circle cx="16" cy="16" r="14" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="2"/>
-      <circle cx="16" cy="16" r="6" fill="${color}"/>
-      ${activo ? `<circle cx="16" cy="16" r="14" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.5"/>` : ''}
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="14" fill="${color}" fill-opacity="0.12" stroke="${color}" stroke-width="1.8"/>
+      ${ring}
+      ${truck}
     </svg>`);
   return L.divIcon({
-    html: `<img src="data:image/svg+xml,${svg}" width="32" height="32"/>`,
-    className: '', iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18],
+    html: `<img src="data:image/svg+xml,${svg}" width="36" height="36"/>`,
+    className: '', iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20],
   });
 }
 
@@ -490,8 +502,18 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchGPS]);
 
-  const activos  = vehiculos.filter(v => v.activo).length;
-  const detenidos = vehiculos.length - activos;
+  const enMovimiento = vehiculos.filter(v => v.activo).length;
+  const activosHoy   = vehiculos.filter(v => v.activo_hoy).length;
+  const sinActividad = vehiculos.filter(v => !v.activo_hoy).length;
+  const kmTotales    = vehiculos.reduce((s, v) => s + (v.km_hoy ?? 0), 0);
+  const [filtro, setFiltro] = useState<'todos' | 'movimiento' | 'hoy' | 'sin'>('todos');
+
+  const vehiculosFiltrados = vehiculos.filter(v => {
+    if (filtro === 'movimiento') return v.activo;
+    if (filtro === 'hoy')        return v.activo_hoy && !v.activo;
+    if (filtro === 'sin')        return !v.activo_hoy;
+    return true;
+  });
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: 80, color: theme.dim }}>
@@ -500,124 +522,202 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
       {/* KPI bar */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {[
-          { label: 'Total unidades', val: vehiculos.length, col: theme.accent },
-          { label: 'En movimiento',  val: activos,           col: '#00ff88'  },
-          { label: 'Detenidas',      val: detenidos,         col: '#FFB703'  },
+          { label: 'Total c/ GPS',    val: vehiculos.length,            col: theme.accent,  f: 'todos'      },
+          { label: 'En movimiento',   val: enMovimiento,                col: '#00ff88',     f: 'movimiento' },
+          { label: 'Activas hoy',     val: activosHoy,                  col: '#38BDF8',     f: 'hoy'        },
+          { label: 'Sin actividad',   val: sinActividad,                col: '#556070',     f: 'sin'        },
+          { label: 'KM totales hoy',  val: `${kmTotales.toFixed(0)} km`, col: '#FFB703',    f: null         },
         ].map(k => (
-          <div key={k.label} style={{ flex: 1, minWidth: 100, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '12px 16px' }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: k.col }}>{k.val}</div>
-            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2 }}>{k.label}</div>
+          <div
+            key={k.label}
+            onClick={() => k.f && setFiltro(k.f as any)}
+            style={{
+              flex: 1, minWidth: 90, background: theme.card,
+              border: `1px solid ${filtro === k.f ? k.col + '80' : theme.border}`,
+              borderRadius: 10, padding: '10px 14px',
+              cursor: k.f ? 'pointer' : 'default',
+              transition: 'border-color 0.15s',
+            }}
+          >
+            <div style={{ fontSize: 22, fontWeight: 800, color: k.col }}>{k.val}</div>
+            <div style={{ fontSize: 9, color: theme.dim, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</div>
           </div>
         ))}
-        <div style={{ flex: 1, minWidth: 100, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ fontSize: 10, color: theme.dim }}>Última actualización</div>
-          <div style={{ fontSize: 13, color: theme.text, fontWeight: 600, marginTop: 2 }}>{lastUpdate}</div>
-          <div style={{ fontSize: 9, color: theme.dim, marginTop: 2 }}>Refresco cada 90 seg</div>
+        <div style={{ flex: 1, minWidth: 90, background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '10px 14px' }}>
+          <div style={{ fontSize: 10, color: theme.dim }}>Última sync</div>
+          <div style={{ fontSize: 12, color: theme.text, fontWeight: 600, marginTop: 3 }}>{lastUpdate}</div>
+          <div style={{ fontSize: 9, color: theme.dim, marginTop: 2 }}>Auto · 90 seg</div>
         </div>
       </div>
 
+      {/* Leyenda colores */}
+      <div style={{ display: 'flex', gap: 16, fontSize: 10, color: theme.dim }}>
+        <span><span style={{ color: '#00ff88' }}>●</span> En movimiento ahora</span>
+        <span><span style={{ color: '#38BDF8' }}>●</span> Activa hoy · detenida</span>
+        <span><span style={{ color: '#556070' }}>●</span> Sin actividad hoy</span>
+      </div>
+
       {/* Mapa + lista lado a lado */}
-      <div style={{ display: 'flex', gap: 16, height: 480 }}>
+      <div style={{ display: 'flex', gap: 14, height: 520 }}>
+
         {/* Mapa */}
-        <div style={{ flex: 1, borderRadius: 16, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
-          {vehiculos.length > 0 && (
+        <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
+          {vehiculosFiltrados.length > 0 ? (
             <MapContainer
-              center={[vehiculos[0].lat, vehiculos[0].lng]}
-              zoom={10}
+              center={[25.6, -100.3]}
+              zoom={9}
               style={{ height: '100%', width: '100%' }}
-              zoomControl={true}
             >
               <TileLayer
                 url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                attribution='&copy; CARTO'
               />
-              <MapFitter vehiculos={vehiculos} />
-              {vehiculos.map(v => (
+              <MapFitter vehiculos={vehiculosFiltrados} />
+              {vehiculosFiltrados.map(v => (
                 <Marker
                   key={v.id}
                   position={[v.lat, v.lng]}
-                  icon={vehiculoIcon(v.activo)}
+                  icon={vehiculoIcon(v)}
                   eventHandlers={{ click: () => setSelected(v) }}
                 >
                   <Popup>
-                    <div style={{ fontFamily: 'sans-serif', fontSize: 12, minWidth: 160 }}>
-                      <b style={{ fontSize: 14 }}>{v.nombre}</b><br/>
-                      <span style={{ color: '#666' }}>{v.placa}</span><br/>
-                      <span style={{ color: v.activo ? '#00C896' : '#888' }}>
-                        {v.activo ? '🟢 En movimiento' : '🔵 Detenido'}
-                      </span><br/>
-                      <b>{v.velocidad} km/h</b><br/>
-                      <span style={{ color: '#666', fontSize: 10 }}>{v.ubicacion}</span><br/>
-                      <span style={{ color: '#aaa', fontSize: 10 }}>{v.ultima_vez}</span>
+                    <div style={{ fontFamily: 'system-ui,sans-serif', fontSize: 12, minWidth: 190 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{v.nombre}</div>
+                      <div style={{ color: '#666', marginBottom: 6 }}>{v.placa} · {v.make} {v.model}</div>
+                      <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
+                        <div style={{ flex: 1, background: '#f4f4f4', borderRadius: 6, padding: '4px 8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: v.activo ? '#00C896' : '#555' }}>{v.velocidad}</div>
+                          <div style={{ fontSize: 9, color: '#888' }}>km/h</div>
+                        </div>
+                        <div style={{ flex: 1, background: '#f4f4f4', borderRadius: 6, padding: '4px 8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: '#2980B9' }}>{(v.km_hoy ?? 0).toFixed(0)}</div>
+                          <div style={{ fontSize: 9, color: '#888' }}>km hoy</div>
+                        </div>
+                        <div style={{ flex: 1, background: '#f4f4f4', borderRadius: 6, padding: '4px 8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: '#8B5CF6' }}>{v.viajes_hoy}</div>
+                          <div style={{ fontSize: 9, color: '#888' }}>viajes</div>
+                        </div>
+                      </div>
+                      {v.conductor && <div style={{ fontSize: 11, color: '#444', marginBottom: 4 }}>👤 {v.conductor}</div>}
+                      <div style={{ fontSize: 10, color: '#888', lineHeight: 1.4 }}>{v.ubicacion}</div>
+                      <div style={{ fontSize: 9, color: '#aaa', marginTop: 3 }}>{v.ultima_vez} UTC</div>
                     </div>
                   </Popup>
                 </Marker>
               ))}
             </MapContainer>
-          )}
-          {vehiculos.length === 0 && (
+          ) : (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.dim }}>
-              Sin datos de GPS disponibles
+              Sin vehículos para el filtro seleccionado
             </div>
           )}
         </div>
 
-        {/* Lista de vehículos */}
-        <div style={{ width: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {vehiculos.map(v => (
-            <div
-              key={v.id}
-              onClick={() => setSelected(v)}
-              style={{
-                padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
-                background: selected?.id === v.id ? `${theme.accent}15` : theme.card,
-                border: `1px solid ${selected?.id === v.id ? theme.accent + '60' : theme.border}`,
-                transition: 'all 0.15s',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>{v.nombre}</span>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 10, background: v.activo ? '#00ff8820' : '#00B4D820', color: v.activo ? '#00ff88' : '#00B4D8' }}>
-                  {v.activo ? '▶ mov' : '⏸ det'}
-                </span>
-              </div>
-              <div style={{ fontSize: 10, color: theme.dim, marginTop: 3 }}>{v.placa}</div>
-              <div style={{ fontSize: 10, color: theme.dim, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.ubicacion}</div>
-              <div style={{ fontSize: 11, color: v.activo ? '#00ff88' : theme.dim, marginTop: 2, fontWeight: v.activo ? 700 : 400 }}>
-                {v.velocidad > 0 ? `${v.velocidad} km/h` : 'Detenido'}
-                <span style={{ color: theme.dim, fontWeight: 400 }}> · {v.ultima_vez}</span>
-              </div>
-            </div>
-          ))}
+        {/* Tabla lateral con header fijo */}
+        <div style={{ width: 360, display: 'flex', flexDirection: 'column', border: `1px solid ${theme.border}`, borderRadius: 12, overflow: 'hidden' }}>
+          {/* Header fijo */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '28px 1fr 70px 52px 36px',
+            gap: 0,
+            padding: '9px 12px',
+            background: theme.surface ?? theme.card,
+            borderBottom: `2px solid ${theme.border}`,
+            position: 'sticky', top: 0, zIndex: 2,
+            flexShrink: 0,
+          }}>
+            {['', 'Unidad / Conductor', 'KM hoy', 'Viajes', 'Vel'].map((h, i) => (
+              <div key={i} style={{ fontSize: 11, fontWeight: 700, color: theme.dim, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: i >= 2 ? 'right' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {/* Filas scrollables */}
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {vehiculosFiltrados.map(v => {
+              const dotColor = v.activo ? '#00ff88' : v.activo_hoy ? '#38BDF8' : '#556070';
+              const isSelected = selected?.id === v.id;
+              return (
+                <div
+                  key={v.id}
+                  onClick={() => setSelected(v)}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '28px 1fr 70px 52px 36px',
+                    gap: 0,
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                    background: isSelected ? `${theme.accent}14` : 'transparent',
+                    borderBottom: `1px solid ${theme.border}`,
+                    borderLeft: `3px solid ${isSelected ? theme.accent : 'transparent'}`,
+                    transition: 'background 0.12s',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* dot estado */}
+                  <div style={{ fontSize: 13, color: dotColor, lineHeight: 1 }}>●</div>
+                  {/* Unidad + conductor */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {v.nombre}
+                    </div>
+                    <div style={{ fontSize: 12, color: theme.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                      {v.conductor || v.placa}
+                    </div>
+                  </div>
+                  {/* KM hoy */}
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#38BDF8' }}>{(v.km_hoy ?? 0).toFixed(0)}</span>
+                    <span style={{ fontSize: 11, color: theme.dim }}> km</span>
+                  </div>
+                  {/* Viajes */}
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#a78bfa', textAlign: 'right' }}>{v.viajes_hoy ?? 0}</div>
+                  {/* Velocidad */}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: v.activo ? '#00ff88' : theme.dim, textAlign: 'right' }}>
+                    {v.activo ? v.velocidad : '—'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Detalle seleccionado */}
+      {/* Panel detalle */}
       {selected && (
-        <div style={{ background: theme.card, border: `1px solid ${theme.accent}40`, borderRadius: 12, padding: 16, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ background: theme.card, border: `1px solid ${theme.accent}40`, borderRadius: 12, padding: 16, display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 10, color: theme.dim }}>UNIDAD</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: theme.text }}>{selected.nombre}</div>
-            <div style={{ fontSize: 11, color: theme.dim }}>{selected.placa}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10, color: theme.dim }}>VELOCIDAD</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: selected.activo ? '#00ff88' : theme.accent }}>{selected.velocidad} <span style={{ fontSize: 12 }}>km/h</span></div>
+            <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Unidad</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: theme.text }}>{selected.nombre}</div>
+            <div style={{ fontSize: 11, color: theme.dim }}>{selected.placa} · {selected.make} {selected.model}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: theme.dim }}>RUMBO</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: theme.text }}>{selected.direccion}°</div>
+            <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>Velocidad</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: selected.activo ? '#00ff88' : theme.accent }}>{selected.velocidad} <span style={{ fontSize: 11 }}>km/h</span></div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 10, color: theme.dim }}>ÚLTIMA UBICACIÓN</div>
-            <div style={{ fontSize: 12, color: theme.text, marginTop: 2 }}>{selected.ubicacion || '—'}</div>
-            <div style={{ fontSize: 10, color: theme.dim, marginTop: 2 }}>{selected.ultima_vez}</div>
+          <div>
+            <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>KM hoy</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#38BDF8' }}>{(selected.km_hoy ?? 0).toFixed(1)}</div>
           </div>
-          <button onClick={() => setSelected(null)} style={{ alignSelf: 'flex-start', padding: '4px 10px', borderRadius: 6, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, cursor: 'pointer', fontSize: 11 }}>✕</button>
+          <div>
+            <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>Viajes hoy</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#8B5CF6' }}>{selected.viajes_hoy}</div>
+          </div>
+          {selected.conductor && (
+            <div>
+              <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>Conductor</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginTop: 2 }}>👤 {selected.conductor}</div>
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 9, color: theme.dim, textTransform: 'uppercase' }}>Última ubicación</div>
+            <div style={{ fontSize: 12, color: theme.text, marginTop: 2, lineHeight: 1.4 }}>{selected.ubicacion || '—'}</div>
+            <div style={{ fontSize: 10, color: theme.dim, marginTop: 3 }}>{selected.ultima_vez} UTC</div>
+          </div>
+          <button onClick={() => setSelected(null)} style={{ padding: '4px 10px', borderRadius: 6, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, cursor: 'pointer', fontSize: 11 }}>✕</button>
         </div>
       )}
     </div>
@@ -884,116 +984,141 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
             <span style={{ fontSize: 10, color: theme.dim, marginLeft: 'auto' }}>{filteredRows.length} de {rows.length}</span>
           </div>
 
-          {/* Main cruce table — V2 con conductor y % fuera horario */}
-          <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${theme.border}` }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-              <thead>
-                <tr style={{ background: '#0a0a0a' }}>
-                  {[
-                    { h: 'Unidad',       align: 'left' as const },
-                    { h: 'Conductor',    align: 'left' as const },
-                    { h: 'KM sem.',      align: 'center' as const },
-                    { h: '% Fuera',      align: 'center' as const },
-                    { h: 'Viajes',       align: 'center' as const },
-                    { h: 'KM Madrugada', align: 'center' as const },
-                    { h: 'Tickets',      align: 'center' as const },
-                    { h: 'Estado',       align: 'center' as const },
-                  ].map(({ h, align }) => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: align,
-                      color: theme.accent, fontWeight: 700, fontSize: 9, letterSpacing: 0.5,
-                      borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>
-                      {h.toUpperCase()}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((r, i) => {
-                  const cfg = ALERTA_CFG[r.alerta];
-                  const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
-                  return (<>
-                    <tr key={r.vehiculo_id}
-                      onClick={() => setExpanded(expanded === r.vehiculo_id ? null : r.vehiculo_id)}
-                      style={{ borderBottom: expanded === r.vehiculo_id ? 'none' : `1px solid ${theme.border}`, background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', transition: 'background 0.1s', cursor: r.viajes_fuera_detalle.length > 0 ? 'pointer' : 'default' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${theme.accent}08`}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
-                    >
-                      <td style={{ padding: '9px 12px', color: theme.text, fontWeight: 700, fontFamily: 'monospace' }}>
-                        {r.viajes_fuera_detalle.length > 0 && <span style={{ color: theme.dim, fontSize: 9, marginRight: 4 }}>{expanded === r.vehiculo_id ? '▼' : '▶'}</span>}
-                        {r.vehiculo || '—'}
-                      </td>
-                      <td style={{ padding: '9px 12px' }}>
-                        {r.conductor
-                          ? <div>
-                              <div style={{ color: theme.text, fontSize: 11 }}>
-                                {r.conductor}
-                                {r.conductor_mismatch && <span style={{ marginLeft: 6, fontSize: 8, color: '#FFB703', fontWeight: 700 }}>⚠ conductor ≠ defaultDriver</span>}
+          {/* Main cruce table — header fijo, filas scrollables */}
+          <div style={{ borderRadius: 12, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 520 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
+                  <tr style={{ background: theme.card }}>
+                    {[
+                      { h: 'Unidad',        align: 'left'   as const, w: 110 },
+                      { h: 'Conductor',     align: 'left'   as const, w: 180 },
+                      { h: 'KM período',    align: 'center' as const, w: 100 },
+                      { h: '% Fuera',       align: 'center' as const, w: 80  },
+                      { h: 'Viajes',        align: 'center' as const, w: 70  },
+                      { h: 'KM Madrugada', align: 'center' as const, w: 110 },
+                      { h: 'Tickets',       align: 'center' as const, w: 80  },
+                      { h: 'Estado',        align: 'center' as const, w: 110 },
+                    ].map(({ h, align, w }) => (
+                      <th key={h} style={{
+                        padding: '12px 14px', textAlign: align, minWidth: w,
+                        color: theme.accent, fontWeight: 700, fontSize: 11,
+                        letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                        borderBottom: `2px solid ${theme.border}`,
+                        background: theme.card,
+                      }}>
+                        {h.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((r, i) => {
+                    const cfg = ALERTA_CFG[r.alerta];
+                    const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
+                    return (<>
+                      <tr key={r.vehiculo_id}
+                        onClick={() => setExpanded(expanded === r.vehiculo_id ? null : r.vehiculo_id)}
+                        style={{
+                          borderBottom: expanded === r.vehiculo_id ? 'none' : `1px solid ${theme.border}`,
+                          background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.018)',
+                          transition: 'background 0.1s',
+                          cursor: r.viajes_fuera_detalle.length > 0 ? 'pointer' : 'default',
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${theme.accent}0A`}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.018)'}
+                      >
+                        <td style={{ padding: '11px 14px', color: theme.text, fontWeight: 700, fontFamily: 'monospace', fontSize: 13, whiteSpace: 'nowrap' }}>
+                          {r.viajes_fuera_detalle.length > 0 && (
+                            <span style={{ color: theme.dim, fontSize: 10, marginRight: 5 }}>
+                              {expanded === r.vehiculo_id ? '▼' : '▶'}
+                            </span>
+                          )}
+                          {r.vehiculo || '—'}
+                        </td>
+                        <td style={{ padding: '11px 14px' }}>
+                          {r.conductor
+                            ? <div>
+                                <div style={{ color: theme.text, fontSize: 13 }}>
+                                  {r.conductor}
+                                  {r.conductor_mismatch && (
+                                    <span style={{ marginLeft: 7, fontSize: 10, color: '#FFB703', fontWeight: 700 }}>⚠ ≠ defaultDriver</span>
+                                  )}
+                                </div>
+                                {r.sin_cuenta_odoo && (
+                                  <div style={{ color: theme.dim, fontSize: 11, fontStyle: 'italic', marginTop: 1 }}>sin cuenta Odoo</div>
+                                )}
+                                {r.conductor_mismatch && r.conductores_reales.map(cr => (
+                                  <div key={cr.nombre} style={{ color: '#FFB703', fontSize: 11, marginTop: 1 }}>
+                                    Real: {cr.nombre} ({cr.n_viajes}v)
+                                  </div>
+                                ))}
                               </div>
-                              {r.sin_cuenta_odoo && <div style={{ color: theme.dim, fontSize: 8, fontStyle: 'italic' }}>sin cuenta Odoo</div>}
-                              {r.conductor_mismatch && r.conductores_reales.map(cr => (
-                                <div key={cr.nombre} style={{ color: '#FFB703', fontSize: 8 }}>Real: {cr.nombre} ({cr.n_viajes}v)</div>
-                              ))}
-                            </div>
-                          : <span style={{ color: theme.dim, fontStyle: 'italic', fontSize: 10 }}>Sin conductor</span>}
-                      </td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_semana > 0 ? '#00B4D8' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                        {r.km_semana.toLocaleString('es-MX')}
-                      </td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: r.pct_fuera > 0 ? 700 : 400, color: pctColor }}>
-                        {r.pct_fuera > 0 ? `${r.pct_fuera}%` : '—'}
-                      </td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.n_viajes}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', color: r.km_madrugada > 0 ? '#FF4757' : theme.dim, fontVariantNumeric: 'tabular-nums' }}>{r.km_madrugada > 0 ? `${r.km_madrugada.toFixed(1)}` : '—'}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-                        {r.tickets === 'sin cuenta'
-                          ? <span style={{ color: theme.dim, fontStyle: 'italic', fontWeight: 400, fontSize: 9 }}>sin cuenta</span>
-                          : <span style={{ color: (r.tickets as number) > 0 ? '#FFD700' : theme.dim }}>{r.tickets}</span>}
-                      </td>
-                      <td style={{ padding: '9px 12px', textAlign: 'center' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 10, fontSize: 9, fontWeight: 700, background: cfg.bg, color: cfg.color, whiteSpace: 'nowrap' }}>
-                          {cfg.label}
-                        </span>
-                      </td>
-                    </tr>
-                    {expanded === r.vehiculo_id && r.viajes_fuera_detalle.length > 0 && (
-                      <tr key={`${r.vehiculo_id}-detail`} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                        <td colSpan={8} style={{ padding: '0 12px 12px 32px', background: 'rgba(139,92,246,0.04)' }}>
-                          <div style={{ fontSize: 9, color: '#8B5CF6', fontWeight: 700, marginBottom: 6, marginTop: 10, letterSpacing: 0.5 }}>
-                            VIAJES FUERA DE HORARIO — {r.viajes_fuera_detalle.length} registros
-                          </div>
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
-                              <thead>
-                                <tr style={{ color: theme.dim }}>
-                                  {['Horario', 'Tipo', 'KM', 'Origen (GPS)', 'Destino (GPS)'].map(h => (
-                                    <th key={h} style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {r.viajes_fuera_detalle.map((vf, vi) => {
-                                  const clsColor = vf.cls === 'madrugada' ? '#FF4757' : vf.cls === 'nocturno' ? '#FFB703' : '#8B5CF6';
-                                  const clsLabel = vf.cls === 'madrugada' ? 'Madrugada' : vf.cls === 'nocturno' ? 'Nocturno' : 'Fin semana';
-                                  return (
-                                    <tr key={vi} style={{ borderBottom: `1px solid ${theme.border}20` }}>
-                                      <td style={{ padding: '4px 8px', color: theme.dim, whiteSpace: 'nowrap' }}>{vf.hora_local}</td>
-                                      <td style={{ padding: '4px 8px', color: clsColor, fontWeight: 700, whiteSpace: 'nowrap' }}>{clsLabel}</td>
-                                      <td style={{ padding: '4px 8px', color: '#00B4D8', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{vf.km > 0 ? `${vf.km.toFixed(1)} km` : '—'}</td>
-                                      <td style={{ padding: '4px 8px', color: theme.text, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vf.start || '—'}</td>
-                                      <td style={{ padding: '4px 8px', color: theme.text, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vf.end || '—'}</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                            : <span style={{ color: theme.dim, fontStyle: 'italic', fontSize: 12 }}>Sin conductor</span>}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', color: r.km_semana > 0 ? '#00B4D8' : theme.dim, fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 14 }}>
+                          {r.km_semana.toLocaleString('es-MX')}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 14, color: pctColor }}>
+                          {r.pct_fuera > 0 ? `${r.pct_fuera}%` : <span style={{ color: theme.dim, fontWeight: 400 }}>—</span>}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', color: r.n_viajes > 0 ? '#FF6B35' : theme.dim, fontVariantNumeric: 'tabular-nums', fontSize: 14, fontWeight: 700 }}>
+                          {r.n_viajes}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', color: r.km_madrugada > 0 ? '#FF4757' : theme.dim, fontVariantNumeric: 'tabular-nums', fontSize: 14, fontWeight: r.km_madrugada > 0 ? 700 : 400 }}>
+                          {r.km_madrugada > 0 ? `${r.km_madrugada.toFixed(1)}` : '—'}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 14 }}>
+                          {r.tickets === 'sin cuenta'
+                            ? <span style={{ color: theme.dim, fontStyle: 'italic', fontWeight: 400, fontSize: 11 }}>sin cuenta</span>
+                            : <span style={{ color: (r.tickets as number) > 0 ? '#FFD700' : theme.dim }}>{r.tickets}</span>}
+                        </td>
+                        <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                          <span style={{ padding: '4px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, whiteSpace: 'nowrap' }}>
+                            {cfg.label}
+                          </span>
                         </td>
                       </tr>
-                    )}
-                  </>);
-                })}
-              </tbody>
-            </table>
+                      {expanded === r.vehiculo_id && r.viajes_fuera_detalle.length > 0 && (
+                        <tr key={`${r.vehiculo_id}-detail`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                          <td colSpan={8} style={{ padding: '0 14px 14px 36px', background: 'rgba(139,92,246,0.05)' }}>
+                            <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 700, marginBottom: 8, marginTop: 12, letterSpacing: '0.07em' }}>
+                              VIAJES FUERA DE HORARIO — {r.viajes_fuera_detalle.length} registros
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                <thead>
+                                  <tr style={{ color: theme.dim }}>
+                                    {['Horario', 'Tipo', 'KM', 'Origen (GPS)', 'Destino (GPS)'].map(h => (
+                                      <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {r.viajes_fuera_detalle.map((vf, vi) => {
+                                    const clsColor = vf.cls === 'madrugada' ? '#FF4757' : vf.cls === 'nocturno' ? '#FFB703' : '#8B5CF6';
+                                    const clsLabel = vf.cls === 'madrugada' ? 'Madrugada' : vf.cls === 'nocturno' ? 'Nocturno' : 'Fin semana';
+                                    return (
+                                      <tr key={vi} style={{ borderBottom: `1px solid ${theme.border}20` }}>
+                                        <td style={{ padding: '6px 10px', color: theme.dim, whiteSpace: 'nowrap', fontSize: 12 }}>{vf.hora_local}</td>
+                                        <td style={{ padding: '6px 10px', color: clsColor, fontWeight: 700, whiteSpace: 'nowrap', fontSize: 12 }}>{clsLabel}</td>
+                                        <td style={{ padding: '6px 10px', color: '#00B4D8', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontSize: 12 }}>{vf.km > 0 ? `${vf.km.toFixed(1)} km` : '—'}</td>
+                                        <td style={{ padding: '6px 10px', color: theme.text, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{vf.start || '—'}</td>
+                                        <td style={{ padding: '6px 10px', color: theme.text, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{vf.end || '—'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>);
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Vehículos sin conductor */}

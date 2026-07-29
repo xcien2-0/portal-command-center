@@ -1,0 +1,302 @@
+[
+  {
+    "nombre": "PODI",
+    "plaza": "MTY",
+    "arrendador": "WIspi/JH",
+    "renta": "—",
+    "vencimiento": "01/04/2029",
+    "inpc": "01/04/2027",
+    "pdf_url": "https://drive.google.com/file/d/1yWindaQFDglIuMGJrAvuUy9sDazv_wGt/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/1",
+    "raw": {
+      "rbs": "🚨\n                PODI",
+      "plaza": "MTY",
+      "arrendador": "WIspi/JH",
+      "renta mx$": "—",
+      "vencimiento": "01/04/2029",
+      "inpc": "01/04/2027",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB HOSPITAL MAC CELAYA",
+    "plaza": "Celaya, Guanajuato",
+    "arrendador": "Hector Manuel Gonzalez Figueroa",
+    "renta": "—",
+    "vencimiento": "18/09/2026",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1IcRAYa1SXlbehDmr7zLxVQsgwDvBsNkI/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/2",
+    "raw": {
+      "rbs": "RB HOSPITAL MAC CELAYA",
+      "plaza": "Celaya, Guanajuato",
+      "arrendador": "Hector Manuel Gonzalez Figueroa",
+      "renta mx$": "—",
+      "vencimiento": "18/09/2026",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "REP VALLE DE SANTIAGO III",
+    "plaza": "Celaya, Guanajuato",
+    "arrendador": "Jaime Israel Corona Diaz",
+    "renta": "$3,000.00",
+    "vencimiento": "Vencida",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1AHEUisaq_PLcW4okdPJBHPMXEOQ_Vw0H/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/4",
+    "raw": {
+      "rbs": "REP VALLE DE SANTIAGO III",
+      "plaza": "Celaya, Guanajuato",
+      "arrendador": "Jaime Israel Corona Diaz",
+      "renta mx$": "$3,000.00",
+      "vencimiento": "Vencida",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB CERRO DEL 4",
+    "plaza": "Guadalajara, Jalisco",
+    "arrendador": "Isela Ochoa Chavez",
+    "renta": "$24,820.71",
+    "vencimiento": "25/02/2027",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1vZKRAthJIuD8Jw3Wq7JZ1U-_eIfeCXqL/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/3",
+    "raw": {
+      "rbs": "RB CERRO DEL 4",
+      "plaza": "Guadalajara, Jalisco",
+      "arrendador": "Isela Ochoa Chavez",
+      "renta mx$": "$24,820.71",
+      "vencimiento": "25/02/2027",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB Cardenal",
+    "plaza": "Guadalajara, Jalisco",
+    "arrendador": "Juan Hector Medina Segura",
+    "renta": "$8,000.00",
+    "vencimiento": "07/04/2032",
+    "inpc": "07/04/2026",
+    "pdf_url": "https://drive.google.com/file/d/1EUVWj8rQP84Ayov0Rxo6zuIZmpC514jq/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/5",
+    "raw": {
+      "rbs": "RB Cardenal",
+      "plaza": "Guadalajara, Jalisco",
+      "arrendador": "Juan Hector Medina Segura",
+      "renta mx$": "$8,000.00",
+      "vencimiento": "07/04/2032",
+      "inpc": "07/04/2026",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB Centinela",
+    "plaza": "Guadalajara, Jalisco",
+    "arrendador": "Juan Hector Medina Segura",
+    "renta": "$3,500.00",
+    "vencimiento": "07/04/2032",
+    "inpc": "07/04/2026",
+    "pdf_url": "https://drive.google.com/file/d/1VaZTpihEWKyM_vimcGEPVg-6KSeOTtGK/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/6",
+    "raw": {
+      "rbs": "RB Centinela",
+      "plaza": "Guadalajara, Jalisco",
+      "arrendador": "Juan Hector Medina Segura",
+      "renta mx$": "$3,500.00",
+      "vencimiento": "07/04/2032",
+      "inpc": "07/04/2026",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB PDH",
+    "plaza": "Guadalajara, Jalisco",
+    "arrendador": "Jairo Medina",
+    "renta": "—",
+    "vencimiento": "—",
+    "inpc": "—",
+    "pdf_url": "",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/7",
+    "raw": {
+      "rbs": "RB PDH",
+      "plaza": "Guadalajara, Jalisco",
+      "arrendador": "Jairo Medina",
+      "renta mx$": "—",
+      "vencimiento": "—",
+      "inpc": "—",
+      "pdf": "—",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "REP HUEHUENTON II",
+    "plaza": "Guadalajara, Jalisco",
+    "arrendador": "Rogelio Santana Gomez",
+    "renta": "$4,000.00",
+    "vencimiento": "Vencida",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1SOZYgLQIRkyqN-WKkRmnbsmUxn1Clbuu/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/9",
+    "raw": {
+      "rbs": "REP HUEHUENTON II",
+      "plaza": "Guadalajara, Jalisco",
+      "arrendador": "Rogelio Santana Gomez",
+      "renta mx$": "$4,000.00",
+      "vencimiento": "Vencida",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB FLORESTA",
+    "plaza": "Leon, Guanajuato",
+    "arrendador": "Juan Hector Medina Segura",
+    "renta": "$3,500.00",
+    "vencimiento": "07/04/2032",
+    "inpc": "07/04/2027",
+    "pdf_url": "https://drive.google.com/file/d/1rERw7-MCpxfBSBr1_82jqoVUizJdBgj0/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/11",
+    "raw": {
+      "rbs": "RB FLORESTA",
+      "plaza": "Leon, Guanajuato",
+      "arrendador": "Juan Hector Medina Segura",
+      "renta mx$": "$3,500.00",
+      "vencimiento": "07/04/2032",
+      "inpc": "07/04/2027",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB GRUPO SOL",
+    "plaza": "Leon, Guanajuato",
+    "arrendador": "Jose Refugio Lozano Loza",
+    "renta": "$7,300.00",
+    "vencimiento": "Vencida",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1jw76KjpaMPJQC4M5X2G5yh9u9_STV-pk/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/10",
+    "raw": {
+      "rbs": "RB GRUPO SOL",
+      "plaza": "Leon, Guanajuato",
+      "arrendador": "Jose Refugio Lozano Loza",
+      "renta mx$": "$7,300.00",
+      "vencimiento": "Vencida",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB MAC IRAPUATO",
+    "plaza": "Leon, Guanajuato",
+    "arrendador": "Flavio",
+    "renta": "—",
+    "vencimiento": "—",
+    "inpc": "—",
+    "pdf_url": "",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/13",
+    "raw": {
+      "rbs": "RB MAC IRAPUATO",
+      "plaza": "Leon, Guanajuato",
+      "arrendador": "Flavio",
+      "renta mx$": "—",
+      "vencimiento": "—",
+      "inpc": "—",
+      "pdf": "—",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "REP CUBILETE",
+    "plaza": "Leon, Guanajuato",
+    "arrendador": "Segto s.a. de c.v / Benito Enrique Tajonar Amezcua",
+    "renta": "$17,710.00",
+    "vencimiento": "Vencida",
+    "inpc": "—",
+    "pdf_url": "https://drive.google.com/file/d/1NmtMccck9t6T1_oHkamQ3izwuB3ruwJo/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/12",
+    "raw": {
+      "rbs": "REP CUBILETE",
+      "plaza": "Leon, Guanajuato",
+      "arrendador": "Segto s.a. de c.v / Benito Enrique Tajonar Amezcua",
+      "renta mx$": "$17,710.00",
+      "vencimiento": "Vencida",
+      "inpc": "—",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB TELCHAC",
+    "plaza": "Merida, Yucatan",
+    "arrendador": "—",
+    "renta": "—",
+    "vencimiento": "—",
+    "inpc": "—",
+    "pdf_url": "",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/15",
+    "raw": {
+      "rbs": "RB TELCHAC",
+      "plaza": "Merida, Yucatan",
+      "arrendador": "—",
+      "renta mx$": "—",
+      "vencimiento": "—",
+      "inpc": "—",
+      "pdf": "—",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB TELCO",
+    "plaza": "Piedras Negras, Coahuila",
+    "arrendador": "Claudio Quiroga Peña",
+    "renta": "$14,000.00",
+    "vencimiento": "16/06/2028",
+    "inpc": "16/06/2026",
+    "pdf_url": "https://drive.google.com/file/d/12-sW2kzOXjzmC1Sw9CrAk_bmNbZ1hMYD/view",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/14",
+    "raw": {
+      "rbs": "RB TELCO",
+      "plaza": "Piedras Negras, Coahuila",
+      "arrendador": "Claudio Quiroga Peña",
+      "renta mx$": "$14,000.00",
+      "vencimiento": "16/06/2028",
+      "inpc": "16/06/2026",
+      "pdf": "Ver",
+      "": "Ver →"
+    }
+  },
+  {
+    "nombre": "RB MUZQUIZ",
+    "plaza": "Sabinas, Coahuila",
+    "arrendador": "Rogelio Santana / Jesus Garza",
+    "renta": "—",
+    "vencimiento": "—",
+    "inpc": "—",
+    "pdf_url": "",
+    "detail_url": "https://nyx-system.replit.app/radio-bases/8",
+    "raw": {
+      "rbs": "RB MUZQUIZ",
+      "plaza": "Sabinas, Coahuila",
+      "arrendador": "Rogelio Santana / Jesus Garza",
+      "renta mx$": "—",
+      "vencimiento": "—",
+      "inpc": "—",
+      "pdf": "—",
+      "": "Ver →"
+    }
+  }
+]
