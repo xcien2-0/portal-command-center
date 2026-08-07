@@ -37,6 +37,17 @@ module.exports = {
     error_file: '/Users/mesquite/Antigravity/logs/noc-reporte-err.log',
     out_file:   '/Users/mesquite/Antigravity/logs/noc-reporte-out.log',
   }, {
+    name: 'reporte-flotilla-semanal',
+    script: 'reporte_flotilla_semanal.py',
+    interpreter: '/Users/mesquite/Proyectos/xcien-portal/.venv/bin/python3',
+    cwd: '/Users/mesquite/Proyectos/xcien-portal/backend',
+    env_file: '/Users/mesquite/Proyectos/xcien-portal/backend/.env',
+    cron_restart: '0 8 * * 5',   // cada viernes a las 08:00 AM CST
+    autorestart: false,
+    watch: false,
+    error_file: '/Users/mesquite/Proyectos/xcien-portal/logs/flotilla-err.log',
+    out_file:   '/Users/mesquite/Proyectos/xcien-portal/logs/flotilla-out.log',
+  }, {
     name: 'iblack-bot',
     script: 'bot_iblack.py',
     interpreter: 'python3',

@@ -72,6 +72,11 @@ const CallCenterHubSection    = lazy(() => import('./sections/CallCenterHubSecti
 const FibraSection            = lazy(() => import('./sections/FibraSection'));
 const IBlackSection           = lazy(() => import('./sections/IBlackSection'));
 const RadioBasesSection       = lazy(() => import('./sections/RadioBasesSection'));
+const FlotillaSection         = lazy(() => import('./sections/FlotillaSection'));
+const OdooDocsSection         = lazy(() => import('./sections/OdooDocsSection'));
+const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSection'));
+const MonterreyOSSection      = lazy(() => import('./sections/MonterreyOSSection'));
+const SaltilloOSSection       = lazy(() => import('./sections/SaltilloOSSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -121,6 +126,9 @@ const NAV: NavEntry[] = [
   { id: 'noc',           label: 'NOC Virtual',             icon: '📡', group: 'Monitoreo' },
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
+  { id: 'blackstone',    label: 'blackstoneOS · PDN',      icon: '🏙️', group: 'Monitoreo' },
+  { id: 'city-mty',     label: 'monterreyOS · MTY',       icon: '🏔️', group: 'Monitoreo' },
+  { id: 'city-slt',     label: 'saltilloOS · SLT',        icon: '🏭', group: 'Monitoreo' },
   { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
   { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
 
@@ -131,6 +139,8 @@ const NAV: NavEntry[] = [
   { id: 'scan',          label: 'Inventario & Scanner', icon: '🔍', group: 'Campo & Inventario' },
   { id: 'inv-transfers', label: 'Transferencias',       icon: '🏷️', group: 'Campo & Inventario' },
   { id: 'auditoria-odoo', label: 'Auditoría Odoo',     icon: '🔎', group: 'Campo & Inventario' },
+  { id: 'odoo-docs',      label: 'Guías Odoo',          icon: '📖', group: 'Campo & Inventario' },
+  { id: 'flotilla',      label: 'Expediente Flotilla', icon: '🚗', group: 'Campo & Inventario' },
 
   // ── Comercial ──────────────────────────────────────────────────────────────
   { id: 'ventas',             label: 'Resumen Ventas',       icon: '📈', group: 'Comercial' },
@@ -638,7 +648,12 @@ function Content({
       {section === 'scan'          && <InventarioSection theme={theme} />}
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
+      {section === 'blackstone'     && <BlackstoneOSSection theme={theme} />}
+      {section === 'city-mty'       && <MonterreyOSSection theme={theme} />}
+      {section === 'city-slt'       && <SaltilloOSSection theme={theme} />}
       {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
+      {section === 'odoo-docs'      && <OdooDocsSection theme={theme} />}
+      {section === 'flotilla'       && <FlotillaSection theme={theme} />}
       {section === 'iblack'         && <IBlackSection theme={theme} />}
       {section === 'gerencia' && <Gerencia />}
       {section === 'ventas'              && <VentasSection theme={theme} />}

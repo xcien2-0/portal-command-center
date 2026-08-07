@@ -28,6 +28,7 @@ import InvitePage from "./pages/InvitePage.tsx";
 import Migracion from "./pages/Migracion.tsx";
 import Metricas from "./pages/Metricas.tsx";
 import Bitacora from "./pages/Bitacora.tsx";
+import CiudadOSPage from "./pages/CiudadOSPage.tsx";
 import { useViewMode } from "./contexts/ViewModeContext.tsx";
 import { ViewModeProvider } from "./contexts/ViewModeContext.tsx";
 import { AuthProvider, RequireAuth, useAuth } from "./contexts/AuthContext.tsx";
@@ -97,6 +98,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/portal" element={<RequireAuth><Xcien2Page /></RequireAuth>} />
           <Route path="/invite" element={<InvitePage />} />
+
+          {/* City OS — standalone público, sin auth */}
+          <Route path="/pdn" element={<CiudadOSPage plaza="pdn" />} />
+          <Route path="/mty" element={<CiudadOSPage plaza="mty" />} />
+          <Route path="/slt" element={<CiudadOSPage plaza="slt" />} />
 
           {/* Full-screen routes (no sidebar) — protegidas */}
           <Route path="/plan2026" element={<RequireAuth><Plan2026Page /></RequireAuth>} />
