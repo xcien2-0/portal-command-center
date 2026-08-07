@@ -380,28 +380,37 @@ function MapaPDN({ C }: { C: C }) {
   useEffect(() => {
     const L = leafRef.current; const map = mapRef.current;
     if (!L || !map) return;
-    // Limpiar layers KMZ previos
     kmzRef.current.forEach(lyr => map.removeLayer(lyr));
     kmzRef.current = [];
     if (!active.has('kmz')) return;
-    fetch(`${API_BASE}/api/red/kmz/negras`)
-      .then(r => r.ok ? r.json() : null)
-      .then(geojson => {
-        if (!geojson) return;
-        const color = '#f97316';
-        const lyr = L.geoJSON(geojson, {
-          style: () => ({ color, weight: 2.5, opacity: 0.85, fillColor: color, fillOpacity: 0.2 }),
-          pointToLayer: (_: any, latlng: any) =>
-            L.circleMarker(latlng, { radius: 4, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85 }),
-          onEachFeature: (feat: any, layer: any) => {
-            const name = feat.properties?.name;
-            if (name) layer.bindTooltip(
-              `<span style="font-size:11px;color:${color};font-weight:600">🔌 ${name}</span>`,
-              { className: 'pdn-tooltip', sticky: true }
-            );
-          },
-        }).addTo(map);
-        kmzRef.current = [lyr];
+    const color = '#f97316';
+    // Buscar las capas del grupo 'negras' en el índice para obtener los IDs correctos
+    fetch(`${API_BASE}/api/red/kmz-capas`)
+      .then(r => r.ok ? r.json() : [])
+      .then(async (groups: any[]) => {
+        const grupo = groups.find((g: any) => g.id === 'negras');
+        if (!grupo) return;
+        const added: any[] = [];
+        for (const layer of grupo.layers) {
+          const res = await fetch(`${API_BASE}/api/red/kmz/${layer.id}`);
+          if (!res.ok) continue;
+          const geojson = await res.json();
+          if (!geojson?.features) continue;
+          const lyr = L.geoJSON(geojson, {
+            style: () => ({ color, weight: 2.5, opacity: 0.85, fillColor: color, fillOpacity: 0.2 }),
+            pointToLayer: (_: any, latlng: any) =>
+              L.circleMarker(latlng, { radius: 4, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85 }),
+            onEachFeature: (feat: any, lyrItem: any) => {
+              const name = feat.properties?.name || layer.name;
+              if (name) lyrItem.bindTooltip(
+                `<span style="font-size:11px;color:${color};font-weight:600">🔌 ${name}</span>`,
+                { className: 'pdn-tooltip', sticky: true }
+              );
+            },
+          }).addTo(map);
+          added.push(lyr);
+        }
+        kmzRef.current = added;
       }).catch(() => {});
   }, [active]);
 
