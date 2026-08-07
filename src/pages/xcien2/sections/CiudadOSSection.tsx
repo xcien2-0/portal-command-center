@@ -302,6 +302,43 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
     setTimeout(() => setCopiedOutput(false), 2000);
   };
 
+  const handlePrint = (content: string, title: string) => {
+    const GD = '#1a3d2b';
+    const GM = '#2d7a3a';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+<style>
+  @page { margin: 1.8cm 1.5cm 1.5cm 1.5cm; }
+  body { font-family: 'Helvetica Neue', sans-serif; font-size: 11px; color: #1a1a1a; line-height: 1.6; }
+  .header { background: ${GD}; color: #fff; padding: 10px 16px; margin: -1.8cm -1.5cm 16px -1.5cm;
+            font-size: 13px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+  .header span { font-size: 10px; opacity: 0.8; }
+  h1 { color: ${GD}; font-size: 14px; margin: 0 0 4px; }
+  h2 { color: ${GM}; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+       border-bottom: 1px solid #c8dccb; padding-bottom: 3px; margin: 16px 0 6px; }
+  pre { font-family: 'SF Mono', 'Courier New', monospace; font-size: 9.5px;
+        background: #f8fdf9; border: 1px solid #c8dccb; border-radius: 4px;
+        padding: 12px; white-space: pre-wrap; word-break: break-word; }
+  .footer { position: fixed; bottom: 0; left: 0; right: 0; background: ${GD};
+            color: #fff; font-size: 8px; padding: 4px 16px;
+            display: flex; justify-content: space-between; }
+</style></head><body>
+<div class="header"><b>⊪⊪⊪  xcien</b><span>CONFIDENCIAL · XCIEN Networks</span></div>
+<h1>${title}</h1>
+<pre>${content.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+<div class="footer"><span>XCIEN Networks · Uso interno</span><span>Piedras Negras OS</span></div>
+</body></html>`;
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument!.write(html);
+    iframe.contentDocument!.close();
+    iframe.contentWindow!.focus();
+    setTimeout(() => {
+      iframe.contentWindow!.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 300);
+  };
+
   const fallas         = tickets.filter(t => t.tipo === 'falla');
   const habilitaciones = tickets.filter(t => t.tipo === 'habilitacion');
   const criticas       = alertas.filter(a => a.severity === 'critical');
@@ -869,7 +906,19 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
               )}
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {noteText.trim() && (
+                  <button
+                    onClick={() => handlePrint(noteText, `Minuta — ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+                      border: `1px solid ${C.border}`, background: 'transparent',
+                      color: C.muted, fontSize: 12, fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                    }}
+                  >🖨 Imprimir</button>
+                )}
+                <div style={{ flex: 1 }} />
                 <button onClick={() => setShowInput(false)} style={{
                   padding: '8px 18px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${C.border}`, background: 'transparent',
@@ -938,6 +987,18 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
                   {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
               </div>
+              <button
+                onClick={() => handlePrint(
+                  generateOutput(),
+                  `Reporte ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`
+                )}
+                style={{
+                  padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
+                  border: `1px solid ${C.border}`, background: 'transparent',
+                  color: C.muted, fontSize: 11, fontFamily: 'inherit', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >🖨 Imprimir</button>
               <button
                 onClick={handleCopyOutput}
                 style={{
