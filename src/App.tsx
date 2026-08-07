@@ -100,7 +100,7 @@ const App = () => (
           <Route path="/invite" element={<InvitePage />} />
 
           {/* City OS — standalone público, sin auth */}
-          <Route path="/pdn" element={<CiudadOSPage plaza="pdn" />} />
+          <Route path="/pdn" element={<CiudadOSPage />} />
 
           {/* Full-screen routes (no sidebar) — protegidas */}
           <Route path="/plan2026" element={<RequireAuth><Plan2026Page /></RequireAuth>} />

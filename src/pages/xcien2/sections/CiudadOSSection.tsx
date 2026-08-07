@@ -906,21 +906,28 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
               )}
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {noteText.trim() && (
-                  <button
-                    onClick={() => handlePrint(noteText, `Minuta — ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`)}
-                    style={{
-                      padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
-                      border: `1px solid ${C.border}`, background: 'transparent',
-                      color: C.muted, fontSize: 12, fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', gap: 5,
-                    }}
-                  >🖨 Imprimir</button>
-                )}
+              <div style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                paddingTop: 4, borderTop: `1px solid ${C.border}`, marginTop: 4,
+              }}>
+                <button
+                  onClick={() => handlePrint(noteText, `Minuta — ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`)}
+                  disabled={!noteText.trim()}
+                  style={{
+                    padding: '9px 16px', borderRadius: 8,
+                    cursor: noteText.trim() ? 'pointer' : 'not-allowed',
+                    border: `1px solid ${C.border}`,
+                    background: noteText.trim() ? C.surface2 : 'transparent',
+                    color: noteText.trim() ? C.text : C.dim,
+                    fontSize: 13, fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    opacity: noteText.trim() ? 1 : 0.4,
+                    transition: 'all 0.15s',
+                  }}
+                >🖨 Imprimir</button>
                 <div style={{ flex: 1 }} />
                 <button onClick={() => setShowInput(false)} style={{
-                  padding: '8px 18px', borderRadius: 8, cursor: 'pointer',
+                  padding: '9px 18px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${C.border}`, background: 'transparent',
                   color: C.muted, fontSize: 12, fontFamily: 'inherit',
                 }}>Cancelar</button>
@@ -928,7 +935,8 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
                   onClick={handleSaveNote}
                   disabled={!noteText.trim()}
                   style={{
-                    padding: '8px 22px', borderRadius: 8, cursor: noteText.trim() ? 'pointer' : 'default',
+                    padding: '9px 22px', borderRadius: 8,
+                    cursor: noteText.trim() ? 'pointer' : 'default',
                     border: 'none',
                     background: noteSaved ? C.green : noteText.trim() ? C.green : C.border,
                     color: '#fff', fontSize: 12, fontFamily: 'inherit', fontWeight: 700,
@@ -987,31 +995,6 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
                   {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
               </div>
-              <button
-                onClick={() => handlePrint(
-                  generateOutput(),
-                  `Reporte ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`
-                )}
-                style={{
-                  padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
-                  border: `1px solid ${C.border}`, background: 'transparent',
-                  color: C.muted, fontSize: 11, fontFamily: 'inherit', fontWeight: 600,
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}
-              >🖨 Imprimir</button>
-              <button
-                onClick={handleCopyOutput}
-                style={{
-                  padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
-                  border: `1px solid ${copiedOutput ? C.green : C.border}`,
-                  background: copiedOutput ? C.greenDim : 'transparent',
-                  color: copiedOutput ? C.green : C.muted,
-                  fontSize: 11, fontFamily: 'inherit', fontWeight: 600,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {copiedOutput ? '✓ Copiado' : 'Copiar'}
-              </button>
               <button onClick={() => setShowOutput(false)} style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: C.muted, fontSize: 18, lineHeight: 1, padding: 4,
@@ -1029,6 +1012,43 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
             }}>
               {generateOutput()}
             </pre>
+
+            {/* Barra de acciones — siempre visible al fondo */}
+            <div style={{
+              padding: '12px 20px',
+              borderTop: `1px solid ${C.border}`,
+              background: C.surface2,
+              display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0,
+            }}>
+              <button
+                onClick={() => handlePrint(
+                  generateOutput(),
+                  `Reporte ${config.nombre} · ${new Date().toLocaleDateString('es-MX')}`
+                )}
+                style={{
+                  padding: '9px 18px', borderRadius: 8, cursor: 'pointer',
+                  border: `1px solid ${C.border}`,
+                  background: C.surface, color: C.text,
+                  fontSize: 13, fontFamily: 'inherit', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  boxShadow: C.shadow,
+                }}
+              >🖨 Imprimir</button>
+              <div style={{ flex: 1 }} />
+              <button
+                onClick={handleCopyOutput}
+                style={{
+                  padding: '9px 20px', borderRadius: 8, cursor: 'pointer',
+                  border: `1px solid ${copiedOutput ? C.green : C.border}`,
+                  background: copiedOutput ? C.greenDim : C.surface,
+                  color: copiedOutput ? C.green : C.muted,
+                  fontSize: 12, fontFamily: 'inherit', fontWeight: 600,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {copiedOutput ? '✓ Copiado' : 'Copiar texto'}
+              </button>
+            </div>
           </div>
         </div>
       )}
