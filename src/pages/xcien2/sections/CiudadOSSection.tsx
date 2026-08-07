@@ -182,15 +182,36 @@ const PROSPECTOS_PDN = [
 ] as const;
 
 // ── MapaPDN ───────────────────────────────────────────────────────────────────
+type MapTile = 'dark' | 'satellite' | 'hybrid';
+
+const TILE_URLS: Record<MapTile, { base: string; labels?: string; opts: object }> = {
+  dark: {
+    base: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
+    opts: { subdomains: 'abcd', maxZoom: 19 },
+  },
+  satellite: {
+    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts: { maxZoom: 19 },
+  },
+  hybrid: {
+    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    labels: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    opts: { maxZoom: 19 },
+  },
+};
+
 function MapaPDN({ C }: { C: C }) {
   const mapRef    = useRef<any>(null);
   const leafRef   = useRef<any>(null);
   const layerRef  = useRef<Record<string, any>>({});
   const kmzRef    = useRef<any[]>([]);
+  const tileRef   = useRef<any>(null);
+  const labelsRef = useRef<any>(null);
 
   const [rbData,   setRbData]   = useState<any[]>([]);
   const [sidfData, setSidfData] = useState<any[]>([]);
   const [gpsData,  setGpsData]  = useState<any[]>([]);
+  const [mapTile,  setMapTile]  = useState<MapTile>('dark');
 
   const [active, setActive] = useState(() => new Set<string>(['rb', 'sidf', 'prospectos']));
   const toggle = (id: string) => setActive(prev => {
@@ -208,16 +229,35 @@ function MapaPDN({ C }: { C: C }) {
         center: PDN_CENTER, zoom: 12,
         zoomControl: true, attributionControl: false, minZoom: 10,
       });
-      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd', maxZoom: 19,
-      }).addTo(map);
+      const cfg = TILE_URLS.dark;
+      tileRef.current = L.tileLayer(cfg.base, cfg.opts).addTo(map);
       leafRef.current = L;
       mapRef.current  = map;
     });
     return () => {
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; leafRef.current = null; layerRef.current = {}; kmzRef.current = []; }
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; leafRef.current = null; layerRef.current = {}; kmzRef.current = []; tileRef.current = null; labelsRef.current = null; }
     };
   }, []);
+
+  // Cambiar capa base
+  useEffect(() => {
+    const L = leafRef.current; const map = mapRef.current;
+    if (!L || !map || !tileRef.current) return;
+    map.removeLayer(tileRef.current);
+    if (labelsRef.current) { map.removeLayer(labelsRef.current); labelsRef.current = null; }
+    const cfg = TILE_URLS[mapTile];
+    tileRef.current = L.tileLayer(cfg.base, cfg.opts).addTo(map);
+    if (cfg.labels) {
+      labelsRef.current = L.tileLayer(cfg.labels, { maxZoom: 19, opacity: 0.9 }).addTo(map);
+    }
+    // Re-subir overlays encima del tile nuevo
+    Object.values(layerRef.current).forEach((lyr: any) => {
+      if (lyr && map.hasLayer(lyr)) { map.removeLayer(lyr); lyr.addTo(map); }
+    });
+    kmzRef.current.forEach((lyr: any) => {
+      if (lyr && map.hasLayer(lyr)) { map.removeLayer(lyr); lyr.addTo(map); }
+    });
+  }, [mapTile]);
 
   // Fetch data
   useEffect(() => {
@@ -424,7 +464,7 @@ function MapaPDN({ C }: { C: C }) {
 
   return (
     <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
-      {/* Layer toggles */}
+      {/* Layer toggles — arriba izquierda */}
       <div style={{
         position: 'absolute', top: 12, left: 12, zIndex: 1000,
         display: 'flex', gap: 6, flexWrap: 'wrap',
@@ -446,6 +486,29 @@ function MapaPDN({ C }: { C: C }) {
           </button>
         ))}
       </div>
+
+      {/* Selector de capa base — arriba derecha */}
+      <div style={{
+        position: 'absolute', top: 12, right: 12, zIndex: 1000,
+        display: 'flex', gap: 4, backdropFilter: 'blur(6px)',
+        background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '3px 4px',
+        outline: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        {([
+          { id: 'dark',      label: '🌑 Oscuro'    },
+          { id: 'satellite', label: '🛰 Satélite'   },
+          { id: 'hybrid',    label: '🗺 Híbrido'    },
+        ] as { id: MapTile; label: string }[]).map(opt => (
+          <button key={opt.id} onClick={() => setMapTile(opt.id)} style={{
+            padding: '3px 10px', borderRadius: 16, fontSize: 10, cursor: 'pointer', border: 'none',
+            background: mapTile === opt.id ? 'rgba(255,255,255,0.15)' : 'transparent',
+            color: mapTile === opt.id ? '#fff' : 'rgba(255,255,255,0.4)',
+            fontWeight: mapTile === opt.id ? 700 : 400,
+            transition: 'all 0.15s',
+          }}>{opt.label}</button>
+        ))}
+      </div>
+
       {/* Map container */}
       <div id="pdn-os-map" style={{ width: '100%', height: '100%' }} />
       <style>{`
