@@ -1,5 +1,24 @@
 import type { PlazaConfig } from './CiudadOSSection';
+import type { ThemeConfig } from '../types';
 
+// ── Tema institucional XCIEN — blanco + verde corporativo ─────────────────────
+// Colores: GD=#1a3d2b (verde oscuro) GM=#2d7a3a (verde medio) LN=#c8dccb (bordes)
+export const XCIEN_CORPORATE_THEME: ThemeConfig = {
+  accent:       '#2d7a3a',
+  bg:           '#f8fdf9',
+  card:         '#ffffff',
+  sidebar:      '#f0f9f3',
+  border:       '#c8dccb',
+  text:         '#1a1a1a',
+  dim:          '#5a5a5a',
+  sidebarWidth: 260,
+  radius:       8,
+  baseFontSize: 14,
+  animations:   true,
+  compact:      false,
+};
+
+// ── Plaza Piedras Negras ───────────────────────────────────────────────────────
 export const PDN_CONFIG: PlazaConfig = {
   id: 'pdn',
   nombre: 'Piedras Negras',
@@ -14,39 +33,5 @@ export const PDN_CONFIG: PlazaConfig = {
     { nombre: 'Francisco Alday',        rol: 'Responsable de plaza',  emoji: '👔' },
     { nombre: 'Guillermo Hernandez F.', rol: 'Técnico campo',         emoji: '🔧', activo: true },
     { nombre: 'José Miguel Macías',     rol: 'Supervisor / Auditor',  emoji: '🛡️' },
-  ],
-};
-
-export const MTY_CONFIG: PlazaConfig = {
-  id: 'mty',
-  nombre: 'Monterrey',
-  estado_mx: 'Nuevo León',
-  emoji: '🏔️',
-  fibra_plaza_id: 'mty',
-  tecnico_filter: '',
-  ticket_terms: ['monterrey', 'mty', 'alpha', 'alfa', 'guadalupe', 'apodaca', 'escobedo',
-                 'linares', 'montemorelos', 'nuevo leon', 'nuevo león', 'nl'],
-  noc_terms: ['monterrey', 'mty', 'purisima', 'purísima', 'alpha', 'alfa', 'guadalupe', 'neutral'],
-  equipo: [
-    { nombre: 'Rodrigo Flores',     rol: 'Operaciones / Comercial', emoji: '📋' },
-    { nombre: 'Alejandro Guzmán',  rol: 'Ingeniería de red',        emoji: '🌐' },
-    { nombre: 'Gustavo Cavazos',   rol: 'Red Neutral — troncales',  emoji: '🔗' },
-    { nombre: 'José Miguel Macías', rol: 'Supervisor',              emoji: '🛡️' },
-  ],
-};
-
-export const SLT_CONFIG: PlazaConfig = {
-  id: 'slt',
-  nombre: 'Saltillo',
-  estado_mx: 'Coahuila',
-  emoji: '🏭',
-  fibra_plaza_id: 'slt',
-  tecnico_filter: 'raul',
-  ticket_terms: ['saltillo', 'slt', 'zapaliname', 'arteaga', 'ramos arizpe', 'torreon', 'torreón'],
-  noc_terms: ['saltillo', 'slt', 'zapaliname', 'luminet', 'registral', 'finsa', 'ramos'],
-  blocker: 'Todo por definir — piloto en evaluación · 0 clientes activos · Sitios en instalación',
-  equipo: [
-    { nombre: 'Raúl Zapata',        rol: 'Técnico campo', emoji: '🔧', activo: true },
-    { nombre: 'José Miguel Macías', rol: 'Supervisor',    emoji: '🛡️' },
   ],
 };

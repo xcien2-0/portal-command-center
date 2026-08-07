@@ -75,8 +75,6 @@ const RadioBasesSection       = lazy(() => import('./sections/RadioBasesSection'
 const FlotillaSection         = lazy(() => import('./sections/FlotillaSection'));
 const OdooDocsSection         = lazy(() => import('./sections/OdooDocsSection'));
 const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSection'));
-const MonterreyOSSection      = lazy(() => import('./sections/MonterreyOSSection'));
-const SaltilloOSSection       = lazy(() => import('./sections/SaltilloOSSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -127,8 +125,6 @@ const NAV: NavEntry[] = [
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
   { id: 'blackstone',    label: 'blackstoneOS · PDN',      icon: '🏙️', group: 'Monitoreo' },
-  { id: 'city-mty',     label: 'monterreyOS · MTY',       icon: '🏔️', group: 'Monitoreo' },
-  { id: 'city-slt',     label: 'saltilloOS · SLT',        icon: '🏭', group: 'Monitoreo' },
   { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
   { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
 
@@ -649,8 +645,7 @@ function Content({
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'blackstone'     && <BlackstoneOSSection theme={theme} />}
-      {section === 'city-mty'       && <MonterreyOSSection theme={theme} />}
-      {section === 'city-slt'       && <SaltilloOSSection theme={theme} />}
+
       {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
       {section === 'odoo-docs'      && <OdooDocsSection theme={theme} />}
       {section === 'flotilla'       && <FlotillaSection theme={theme} />}
