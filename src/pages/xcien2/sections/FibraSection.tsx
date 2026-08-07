@@ -1008,8 +1008,8 @@ export default function FibraSection({ theme }: Props) {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'Plazas activas', value: '3', sub: 'MTY · PN · SLT', color: '#00C896' },
-          { label: 'Clientes activos', value: String(totalClientes), sub: '6 MTY · ~2 PN (piloto)', color: '#3B82F6' },
+          { label: 'Plazas activas', value: '1', sub: 'PN — Piedras Negras', color: '#00C896' },
+          { label: 'Clientes activos', value: String(totalClientes), sub: '~2 PN (piloto)', color: '#3B82F6' },
           { label: 'Compromisos pendientes', value: String(pendientes), sub: `de ${compromisos.length} totales`, color: '#FFB703' },
           { label: 'Riesgos críticos', value: String(criticos), sub: 'requieren atención urgente', color: '#FF4757' },
         ].map(k => (
