@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
 import FibraSection from './FibraSection';
+import 'leaflet/dist/leaflet.css';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -137,7 +138,323 @@ function saveNote(plazaId: string, note: MeetingNote): void {
   localStorage.setItem(`xcien-city-notes-${plazaId}`, JSON.stringify([note, ...existing].slice(0, 20)));
 }
 
-type OSTab = 'ops' | 'fibra';
+type OSTab = 'ops' | 'fibra' | 'mapa';
+
+// ── Mapa PDN — constantes ─────────────────────────────────────────────────────
+const PDN_CENTER: [number, number] = [28.703, -100.535];
+const PDN_BOUNDS = { latMin: 28.3, latMax: 29.2, lngMin: -101.5, lngMax: -100.0 };
+
+const PROSPECTOS_PDN = [
+  { name: 'Asfaltos y Pegamentos',  lat: 28.67908, lng: -100.56878 },
+  { name: 'Day Star Trim',          lat: 28.67957, lng: -100.57053 },
+  { name: 'Elastomeros',            lat: 28.68705, lng: -100.55532 },
+  { name: 'Elektrocontact',         lat: 28.64845, lng: -100.56018 },
+  { name: 'Elektrokontakt PDS',     lat: 28.64548, lng: -100.52983 },
+  { name: 'ERICH JAEGER',           lat: 28.69730, lng: -100.55566 },
+  { name: 'Fujikura',               lat: 28.69811, lng: -100.55676 },
+  { name: 'Fujikura 2',             lat: 28.67908, lng: -100.55090 },
+  { name: 'Fujikura 3',             lat: 28.67910, lng: -100.55293 },
+  { name: 'General Aluminium',      lat: 28.68696, lng: -100.55516 },
+  { name: 'GI Grupo',               lat: 28.72919, lng: -100.51991 },
+  { name: 'Gondi',                  lat: 28.68707, lng: -100.55741 },
+  { name: 'Lear 1',                 lat: 28.68134, lng: -100.55218 },
+  { name: 'Lear 2',                 lat: 28.68123, lng: -100.57019 },
+  { name: 'Lear 3',                 lat: 28.68129, lng: -100.57142 },
+  { name: 'Lear 4',                 lat: 28.67740, lng: -100.56987 },
+  { name: 'Lear 5',                 lat: 28.64570, lng: -100.55948 },
+  { name: 'Littelfuse',             lat: 28.64529, lng: -100.53565 },
+  { name: 'M&B Hangers',            lat: 28.64698, lng: -100.55784 },
+  { name: 'Mex Star',               lat: 28.64604, lng: -100.55910 },
+  { name: 'Nesse',                  lat: 28.72533, lng: -100.52280 },
+  { name: 'Path Logistics',         lat: 28.64938, lng: -100.55907 },
+  { name: 'PKC Group',              lat: 28.68129, lng: -100.55394 },
+  { name: 'Prossesa',               lat: 28.59685, lng: -100.58513 },
+  { name: 'Prysmian WH',            lat: 28.72056, lng: -100.52100 },
+  { name: 'Prysmian',               lat: 28.68764, lng: -100.55569 },
+  { name: 'Rassini',                lat: 28.68875, lng: -100.52095 },
+  { name: 'Regal 2',                lat: 28.68195, lng: -100.55248 },
+  { name: 'Regal 3',                lat: 28.67693, lng: -100.55125 },
+  { name: 'Regal Amistad Sur',      lat: 28.64604, lng: -100.52117 },
+  { name: 'Remy Borg Warner',       lat: 28.72833, lng: -100.52451 },
+  { name: 'Structural Graphics',    lat: 28.68386, lng: -100.55627 },
+  { name: 'Transformadores PN',     lat: 28.68758, lng: -100.55705 },
+  { name: 'Us Liner',               lat: 28.64222, lng: -100.52995 },
+] as const;
+
+// ── MapaPDN ───────────────────────────────────────────────────────────────────
+function MapaPDN({ C }: { C: C }) {
+  const mapRef    = useRef<any>(null);
+  const leafRef   = useRef<any>(null);
+  const layerRef  = useRef<Record<string, any>>({});
+  const kmzRef    = useRef<any[]>([]);
+
+  const [rbData,   setRbData]   = useState<any[]>([]);
+  const [sidfData, setSidfData] = useState<any[]>([]);
+  const [gpsData,  setGpsData]  = useState<any[]>([]);
+
+  const [active, setActive] = useState(() => new Set<string>(['rb', 'sidf', 'prospectos']));
+  const toggle = (id: string) => setActive(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  // Inicializar Leaflet cuando el div ya está en el DOM
+  useEffect(() => {
+    if (mapRef.current) return;
+    const el = document.getElementById('pdn-os-map');
+    if (!el) return;
+    import('leaflet').then(L => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      const map = L.map('pdn-os-map', {
+        center: PDN_CENTER, zoom: 12,
+        zoomControl: true, attributionControl: false, minZoom: 10,
+      });
+      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19,
+      }).addTo(map);
+      leafRef.current = L;
+      mapRef.current  = map;
+    });
+    return () => {
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; leafRef.current = null; layerRef.current = {}; kmzRef.current = []; }
+    };
+  }, []);
+
+  // Fetch data
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/radiobases-odoo`)
+      .then(r => r.ok ? r.json() : [])
+      .then((d: any) => {
+        const all: any[] = Array.isArray(d) ? d : [];
+        setRbData(all.filter(rb => rb.lat && rb.lng &&
+          rb.lat > PDN_BOUNDS.latMin && rb.lat < PDN_BOUNDS.latMax &&
+          rb.lng > PDN_BOUNDS.lngMin && rb.lng < PDN_BOUNDS.lngMax));
+      }).catch(() => {});
+
+    fetch(`${API_BASE}/api/red/clientes-sidf`)
+      .then(r => r.ok ? r.json() : { clientes: [] })
+      .then((d: any) => setSidfData((d.clientes || []).filter((c: any) => c.plaza === 'pn')))
+      .catch(() => {});
+
+    fetch(`${API_BASE}/api/gps/vehiculos`)
+      .then(r => r.ok ? r.json() : { vehiculos: [] })
+      .then((d: any) => setGpsData((d.vehiculos || []).filter((v: any) => v.lat && v.lng)))
+      .catch(() => {});
+  }, []);
+
+  const getLayer = (id: string) => {
+    const L = leafRef.current; const map = mapRef.current;
+    if (!L || !map) return null;
+    if (!layerRef.current[id]) layerRef.current[id] = L.layerGroup().addTo(map);
+    return layerRef.current[id];
+  };
+
+  // ── Radiobases ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const L = leafRef.current; const lyr = getLayer('rb');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!active.has('rb') || !L) return;
+    rbData.forEach(rb => {
+      const color = rb.en_infra ? '#00ffcc' : '#ffaa00';
+      const tw = 11, th = 20, W = tw + 4, H = th + 2;
+      const icon = L.divIcon({
+        className: '', iconSize: [W, H], iconAnchor: [W / 2, H],
+        html: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
+          <line x1="${W/2}" y1="0" x2="${W/2}" y2="6" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="${W/2-5}" y1="4" x2="${W/2+5}" y2="4" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="${W/2-5}" y1="4" x2="${W/2-5}" y2="7" stroke="${color}" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="${W/2+5}" y1="4" x2="${W/2+5}" y2="7" stroke="${color}" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="${W/2}" y1="7" x2="${W/2 - tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="${W/2}" y1="7" x2="${W/2 + tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="${W/2 - tw*0.11}" y1="${7 + (th-9)*0.25}" x2="${W/2 + tw*0.11}" y2="${7 + (th-9)*0.25}" stroke="${color}" stroke-width="1"/>
+          <line x1="${W/2 - tw*0.23}" y1="${7 + (th-9)*0.55}" x2="${W/2 + tw*0.23}" y2="${7 + (th-9)*0.55}" stroke="${color}" stroke-width="1"/>
+          <line x1="${W/2 - tw*0.35}" y1="${7 + (th-9)*0.85}" x2="${W/2 + tw*0.35}" y2="${7 + (th-9)*0.85}" stroke="${color}" stroke-width="1.1"/>
+          <line x1="${W/2 - tw*0.42}" y1="${th-2}" x2="${W/2 + tw*0.42}" y2="${th-2}" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="${W/2}" cy="3" r="2" fill="${color}" opacity="0.95"/>
+        </svg>`,
+      });
+      L.marker([rb.lat, rb.lng], { icon })
+        .bindTooltip(
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">📡 ${rb.nombre}</div>
+           <div style="color:rgba(255,255,255,0.6);font-size:10px">${rb.sop || ''}</div>
+           <div style="margin-top:5px;font-size:10px">
+             <span style="color:${color};font-weight:700">${rb.clientes || 0} clientes</span>
+             <span style="background:${color}22;color:${color};padding:1px 6px;border-radius:8px;margin-left:6px;font-size:9px">
+               ${rb.en_infra ? '✓ En Infra' : 'Solo Odoo'}
+             </span>
+           </div>`,
+          { className: 'pdn-tooltip', sticky: true }
+        )
+        .bindPopup(
+          `<div style="min-width:200px">
+             <div style="font-weight:700;color:${color};font-size:13px;margin-bottom:4px">📡 ${rb.nombre}</div>
+             <div style="color:#64748b;font-size:11px;margin-bottom:8px">${rb.partner || rb.sop || ''}</div>
+             <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:10px;margin-bottom:6px">
+               <span style="background:${color}22;color:${color};padding:2px 8px;border-radius:8px;font-weight:700">${rb.clientes || 0} clientes</span>
+             </div>
+             <a href="https://odoo.wispi.mx/web#id=${rb.id}&model=running.services&view_type=form&cids=25" target="_blank" rel="noopener noreferrer"
+                style="display:block;text-align:center;padding:6px 12px;background:${color};color:#000;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;margin-top:8px">
+               Ver en Odoo →
+             </a>
+           </div>`,
+          { maxWidth: 240 }
+        )
+        .addTo(lyr);
+    });
+  }, [active, rbData]);
+
+  // ── SIDF ─────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const L = leafRef.current; const lyr = getLayer('sidf');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!active.has('sidf') || !L) return;
+    sidfData.forEach(c => {
+      const color = c.estado === 'activo' ? '#00e5ff' : c.estado === 'instalacion' ? '#FFB703' : '#3B82F6';
+      L.circleMarker([c.lat, c.lng], {
+        radius: 10, fillColor: color, color: c.alertas?.length ? '#ff4757' : color,
+        weight: c.alertas?.length ? 3 : 2, fillOpacity: 0.88,
+        dashArray: c.coord_verificada ? undefined : '4 3',
+      }).bindTooltip(
+        `<div style="font-weight:700;color:${color};margin-bottom:3px">🔷 SIDF · ${c.id.toUpperCase()}</div>
+         <div style="font-weight:600;font-size:12px">${c.nombre}</div>
+         <div style="color:rgba(255,255,255,0.5);font-size:10px">PN · ${c.velocidad || '—'}</div>
+         <div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">
+           <span style="background:${color}22;color:${color};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">● ${c.estado}</span>
+           ${c.noc_monitoreado ? '<span style="background:#00e5ff22;color:#00e5ff;padding:1px 6px;border-radius:6px;font-size:9px">✓ NOC</span>' : ''}
+         </div>
+         ${!c.coord_verificada ? '<div style="margin-top:4px;font-size:9px;color:#fbbf24">⚠ coords aproximadas</div>' : ''}`,
+        { className: 'pdn-tooltip', sticky: true }
+      ).addTo(lyr);
+    });
+  }, [active, sidfData]);
+
+  // ── Prospectos industriales ───────────────────────────────────────────────────
+  useEffect(() => {
+    const L = leafRef.current; const lyr = getLayer('prospectos');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!active.has('prospectos') || !L) return;
+    PROSPECTOS_PDN.forEach(p => {
+      L.circleMarker([p.lat, p.lng], {
+        radius: 7, fillColor: '#39FF14', color: '#000', weight: 1, fillOpacity: 0.88,
+      }).bindTooltip(
+        `<div style="font-weight:700;color:#39FF14;margin-bottom:2px">🏭 ${p.name}</div>
+         <div style="font-size:10px;color:rgba(255,255,255,0.5)">Prospecto industrial · Amistad</div>`,
+        { className: 'pdn-tooltip', sticky: true }
+      ).addTo(lyr);
+    });
+  }, [active]);
+
+  // ── GPS ───────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const L = leafRef.current; const lyr = getLayer('gps');
+    if (!lyr) return;
+    lyr.clearLayers();
+    if (!active.has('gps') || !L) return;
+    gpsData.forEach(v => {
+      const color = v.activo ? '#00ff88' : v.activo_hoy ? '#38BDF8' : '#64748b';
+      const truck = `<path d="M3 17h2v1a1 1 0 002 0v-1h10v1a1 1 0 002 0v-1h2v-4l-2.5-5H3v9zm2-7h12l2 4H5v-4z" fill="${color}" opacity="0.9"/>`;
+      const svg = encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+          <circle cx="14" cy="14" r="12" fill="${color}" fill-opacity="0.12" stroke="${color}" stroke-width="1.6"/>
+          ${truck}</svg>`
+      );
+      const icon = L.divIcon({ className: '', html: `<img src="data:image/svg+xml,${svg}" width="28" height="28"/>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+      L.marker([v.lat, v.lng], { icon })
+        .bindTooltip(
+          `<div style="font-weight:700;color:${color};margin-bottom:3px">🚛 ${v.nombre}</div>
+           <div style="font-size:11px;color:rgba(255,255,255,0.7)">${v.placa}${v.make ? ' · ' + v.make : ''}</div>
+           <div style="display:flex;gap:10px;margin-top:5px">
+             <span style="font-size:11px;font-weight:700;color:${color}">${v.velocidad ?? 0} km/h</span>
+             <span style="font-size:11px;color:#38BDF8">${(v.km_hoy ?? 0).toFixed(0)} km hoy</span>
+           </div>
+           ${v.conductor ? `<div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px">👤 ${v.conductor}</div>` : ''}
+           <div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px">${v.ubicacion ?? ''}</div>`,
+          { className: 'pdn-tooltip', sticky: true }
+        ).addTo(lyr);
+    });
+  }, [active, gpsData]);
+
+  // ── KMZ Fibra Piedras Negras ──────────────────────────────────────────────────
+  useEffect(() => {
+    const L = leafRef.current; const map = mapRef.current;
+    if (!L || !map) return;
+    // Limpiar layers KMZ previos
+    kmzRef.current.forEach(lyr => map.removeLayer(lyr));
+    kmzRef.current = [];
+    if (!active.has('kmz')) return;
+    fetch(`${API_BASE}/api/red/kmz/negras`)
+      .then(r => r.ok ? r.json() : null)
+      .then(geojson => {
+        if (!geojson) return;
+        const color = '#f97316';
+        const lyr = L.geoJSON(geojson, {
+          style: () => ({ color, weight: 2.5, opacity: 0.85, fillColor: color, fillOpacity: 0.2 }),
+          pointToLayer: (_: any, latlng: any) =>
+            L.circleMarker(latlng, { radius: 4, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85 }),
+          onEachFeature: (feat: any, layer: any) => {
+            const name = feat.properties?.name;
+            if (name) layer.bindTooltip(
+              `<span style="font-size:11px;color:${color};font-weight:600">🔌 ${name}</span>`,
+              { className: 'pdn-tooltip', sticky: true }
+            );
+          },
+        }).addTo(map);
+        kmzRef.current = [lyr];
+      }).catch(() => {});
+  }, [active]);
+
+  const LAYERS: { id: string; label: string; color: string; count: number }[] = [
+    { id: 'rb',         label: 'Radiobases', color: '#00ffcc', count: rbData.length },
+    { id: 'sidf',       label: 'SIDF',       color: '#00e5ff', count: sidfData.length },
+    { id: 'prospectos', label: 'Prospectos', color: '#39FF14', count: PROSPECTOS_PDN.length },
+    { id: 'gps',        label: 'GPS Flotilla', color: '#00ff88', count: gpsData.length },
+    { id: 'kmz',        label: 'Fibra KMZ',  color: '#f97316', count: 1 },
+  ];
+
+  return (
+    <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+      {/* Layer toggles */}
+      <div style={{
+        position: 'absolute', top: 12, left: 12, zIndex: 1000,
+        display: 'flex', gap: 6, flexWrap: 'wrap',
+      }}>
+        {LAYERS.map(l => (
+          <button key={l.id} onClick={() => toggle(l.id)} style={{
+            padding: '4px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', border: 'none',
+            background: active.has(l.id) ? `${l.color}20` : 'rgba(0,0,0,0.65)',
+            outline: `1px solid ${active.has(l.id) ? l.color + '99' : 'rgba(255,255,255,0.12)'}`,
+            color: active.has(l.id) ? l.color : 'rgba(255,255,255,0.4)',
+            display: 'flex', alignItems: 'center', gap: 5,
+            backdropFilter: 'blur(6px)', transition: 'all 0.15s',
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: active.has(l.id) ? l.color : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+            {l.label}
+            {l.count > 0 && (
+              <span style={{ fontWeight: 700, fontSize: 9, color: active.has(l.id) ? l.color : 'rgba(255,255,255,0.3)' }}>{l.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      {/* Map container */}
+      <div id="pdn-os-map" style={{ width: '100%', height: '100%' }} />
+      <style>{`
+        .pdn-tooltip {
+          background: rgba(5,15,10,0.97) !important;
+          border: 1px solid rgba(0,255,136,0.15) !important;
+          border-radius: 10px !important;
+          padding: 10px 14px !important;
+          font-size: 12px !important;
+          line-height: 1.6 !important;
+          color: rgba(255,255,255,0.7) !important;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
+        }
+        .pdn-tooltip::before { display:none !important; }
+      `}</style>
+    </div>
+  );
+}
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -553,6 +870,7 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
       }}>
         {([
           { id: 'ops',   icon: '⚙', label: 'Operaciones' },
+          { id: 'mapa',  icon: '◍', label: 'Mapa' },
           { id: 'fibra', icon: '◎', label: `Fibra X100 · ${config.id.toUpperCase()}` },
         ] as { id: OSTab; icon: string; label: string }[]).map(t => (
           <button
@@ -575,6 +893,13 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
           </button>
         ))}
       </div>
+
+      {/* ── MAPA TAB ───────────────────────────────────────────────────────── */}
+      {osTab === 'mapa' && (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <MapaPDN C={C} />
+        </div>
+      )}
 
       {/* ── FIBRA TAB ──────────────────────────────────────────────────────── */}
       {osTab === 'fibra' && (
