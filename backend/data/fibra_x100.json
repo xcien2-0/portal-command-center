@@ -281,6 +281,19 @@
           "a": ""
         }
       }
+    },
+    {
+      "ts": "2026-08-07T19:02:59.266533",
+      "tipo": "fase",
+      "plaza_id": "pn",
+      "fase_idx": 0,
+      "user_email": "miguel.macias@xcien.com",
+      "cambios": {
+        "detalle": {
+          "de": "Kits básicos. Pendiente formalización SIDF en Odoo",
+          "a": "Kits básicos. Pendiente formalización SIDF en Odoo"
+        }
+      }
     }
   ],
   "sitios": [
