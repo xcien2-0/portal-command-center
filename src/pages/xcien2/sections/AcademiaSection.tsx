@@ -1204,6 +1204,127 @@ function ExamenView({ theme }: { theme: ThemeConfig }) {
   );
 }
 
+// ── Promoción interna ─────────────────────────────────────────────────────────
+const PROMOCIONES = [
+  {
+    desde: 'Auxiliar',
+    hacia: 'Técnico de Operaciones',
+    icono: '🔧',
+    color: '#00C896',
+    descripcion: 'Examen teórico para ascender de Auxiliar a Técnico. Evalúa RF, networking MikroTik, estándares de instalación, seguridad y atención al cliente.',
+    preguntas: '15 preguntas de opción múltiple',
+    aprobatorio: '80% mínimo (12/15)',
+    tiempo: '90 minutos',
+    odooUrl: 'https://odoo.wispi.mx/slides/certificacion-tecnico-de-operaciones-91',
+    cursoId: 91,
+  },
+  {
+    desde: 'Técnico de Operaciones',
+    hacia: 'Líder de Campo',
+    icono: '🏆',
+    color: '#FFB703',
+    descripcion: 'Examen avanzado para ascender de Técnico a Líder de Campo. Evalúa RF avanzado (Mimosa/Ubiquiti), troubleshooting, diagnóstico de infraestructura y caso práctico.',
+    preguntas: '13 MC + 2 preguntas abiertas',
+    aprobatorio: '85% mínimo (en preguntas de opción múltiple)',
+    tiempo: 'Sin límite',
+    odooUrl: 'https://odoo.wispi.mx/slides/certificacion-lider-de-campo-avanzado-92',
+    cursoId: 92,
+  },
+];
+
+function PromocionView({ theme }: { theme: ThemeConfig }) {
+  const [copied, setCopied] = useState<number | null>(null);
+
+  const copyLink = (url: string, id: number) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(id);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.accent, marginBottom: 8 }}>Certificaciones Internas</div>
+        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Ruta de Promoción XCIEN</div>
+        <div style={{ fontSize: 13, color: DIM, lineHeight: 1.6 }}>
+          Para aplicar un examen, abre el link de Odoo y compártelo con el candidato. El sistema registra automáticamente el resultado.
+        </div>
+      </div>
+
+      {/* Escalera visual */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 36, padding: '16px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}>
+        {['Auxiliar', 'Técnico de Operaciones', 'Líder de Campo'].map((nivel, i) => (
+          <div key={nivel} style={{ display: 'flex', alignItems: 'center', flex: i === 1 ? 1 : 'none' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: i === 0 ? 20 : i === 1 ? 24 : 28, marginBottom: 4 }}>
+                {i === 0 ? '👤' : i === 1 ? '🔧' : '🏆'}
+              </div>
+              <div style={{ fontSize: i === 1 ? 12 : 11, fontWeight: i === 1 ? 700 : 600, color: i === 0 ? DIM : i === 1 ? '#00C896' : '#FFB703', whiteSpace: 'nowrap' }}>{nivel}</div>
+            </div>
+            {i < 2 && (
+              <div style={{ flex: 1, height: 2, background: `linear-gradient(90deg, ${i === 0 ? '#00C896' : '#FFB703'}40, ${i === 0 ? '#00C896' : '#FFB703'})`, margin: '0 16px', minWidth: 40 }} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Cards de examen */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {PROMOCIONES.map(p => (
+          <div key={p.cursoId} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${p.color}30`, borderRadius: 16, overflow: 'hidden' }}>
+            {/* Top bar */}
+            <div style={{ padding: '14px 20px', background: `${p.color}10`, borderBottom: `1px solid ${p.color}20`, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>{p.icono}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: p.color, marginBottom: 2 }}>{p.desde} →</div>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>{p.hacia}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => copyLink(p.odooUrl, p.cursoId)}
+                  style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${p.color}40`, background: 'transparent', color: copied === p.cursoId ? p.color : DIM, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+                  {copied === p.cursoId ? '✓ Copiado' : '🔗 Copiar link'}
+                </button>
+                <a href={p.odooUrl} target="_blank" rel="noreferrer"
+                  style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: p.color, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Abrir en Odoo ↗
+                </a>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Preguntas</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.preguntas}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Aprobatorio</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: p.color }}>{p.aprobatorio}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Tiempo límite</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.tiempo}</div>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Contenido evaluado</div>
+                <div style={{ fontSize: 12, color: DIM, lineHeight: 1.6 }}>{p.descripcion}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Nota proceso */}
+      <div style={{ marginTop: 24, padding: '12px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, fontSize: 12, color: DIM, lineHeight: 1.7 }}>
+        <span style={{ color: '#fff', fontWeight: 600 }}>Proceso de promoción:</span> El candidato toma el examen teórico (Fase 1) → evaluación práctica en campo con auditor (Fase 2) → dictamen final por coordinación. Tiempo total: 2 semanas.
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 interface Props { theme: ThemeConfig; activeThemeId?: string }
 export default function AcademiaSection({ theme, activeThemeId }: Props) {
@@ -1216,7 +1337,7 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   const [forceView, setForceView] = useState<'gerencial' | 'tecnico' | null>(null);
   const vistaActual = forceView ?? (esGerencial ? 'gerencial' : 'tecnico');
 
-  const [view, setView]         = useState<'cursos' | 'panorama' | 'rutas' | 'exam'>('cursos');
+  const [view, setView]         = useState<'cursos' | 'panorama' | 'rutas' | 'exam' | 'promocion'>('cursos');
   const [stats, setStats]       = useState<AcademiaStats | null>(null);
   const [statsLoaded, setStatsLoaded] = useState(false);
 
@@ -1267,10 +1388,11 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
   }
 
   const TABS: { id: typeof view; label: string }[] = [
-    { id: 'cursos',   label: '🎓 Cursos'   },
-    { id: 'panorama', label: '📊 Panorama' },
-    { id: 'rutas',    label: '🗺️ Rutas'    },
-    { id: 'exam',     label: '📝 Examen'   },
+    { id: 'cursos',    label: '🎓 Cursos'     },
+    { id: 'panorama',  label: '📊 Panorama'  },
+    { id: 'rutas',     label: '🗺️ Rutas'     },
+    { id: 'promocion', label: '⬆️ Promoción' },
+    { id: 'exam',      label: '📝 Examen'    },
   ];
 
   return (
@@ -1308,10 +1430,11 @@ export default function AcademiaSection({ theme, activeThemeId }: Props) {
       <div style={{ flex: 1, overflowY: 'auto', padding: 24, position: 'relative' }}>
         {activeThemeId === 'matrix' && <MatrixBackground />}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {view === 'cursos'   && <CursosView theme={theme} />}
-          {view === 'panorama' && <PanoramaView theme={theme} stats={stats} statsLoaded={statsLoaded} />}
-          {view === 'rutas'    && <RutasView theme={theme} />}
-          {view === 'exam'     && <ExamenView theme={theme} />}
+          {view === 'cursos'    && <CursosView theme={theme} />}
+          {view === 'panorama'  && <PanoramaView theme={theme} stats={stats} statsLoaded={statsLoaded} />}
+          {view === 'rutas'     && <RutasView theme={theme} />}
+          {view === 'promocion' && <PromocionView theme={theme} />}
+          {view === 'exam'      && <ExamenView theme={theme} />}
         </div>
       </div>
     </div>
