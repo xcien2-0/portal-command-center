@@ -1232,95 +1232,325 @@ const PROMOCIONES = [
   },
 ];
 
-function PromocionView({ theme }: { theme: ThemeConfig }) {
-  const [copied, setCopied] = useState<number | null>(null);
+// ── Tipos para trazabilidad ───────────────────────────────────────────────────
+interface Promocion {
+  id: string;
+  candidato: string;
+  partner_odoo_id: number | null;
+  user_input_odoo_id: number | null;
+  access_token: string | null;
+  puesto_anterior: string;
+  puesto_nuevo: string;
+  examen_id: number;
+  curso_odoo_id: number;
+  estado: 'pendiente' | 'en_progreso' | 'aprobado' | 'reprobado';
+  score: number | null;
+  fecha_inicio: string | null;
+  fecha_completado: string | null;
+  registrado_por: string;
+  notas: string;
+  certificado_generado: boolean;
+  link_examen?: string;
+}
 
-  const copyLink = (url: string, id: number) => {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(id);
-      setTimeout(() => setCopied(null), 2000);
-    });
+const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pendiente:    { label: 'Pendiente',    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  en_progreso:  { label: 'En progreso',  color: '#FFB703', bg: 'rgba(255,183,3,0.12)' },
+  aprobado:     { label: 'Aprobado',     color: '#00C896', bg: 'rgba(0,200,150,0.12)' },
+  reprobado:    { label: 'Reprobado',    color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+};
+
+function NuevaPromocionModal({ theme, onClose, onCreated }: { theme: ThemeConfig; onClose: () => void; onCreated: (p: Promocion, link: string) => void }) {
+  const [form, setForm] = useState({ candidato: '', puesto_anterior: 'Auxiliar', puesto_nuevo: 'Técnico de Operaciones', notas: '', registrado_por: 'RH' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const TRACKS = [
+    { desde: 'Auxiliar', hacia: 'Técnico de Operaciones' },
+    { desde: 'Técnico de Operaciones', hacia: 'Líder de Campo' },
+  ];
+
+  const submit = async () => {
+    if (!form.candidato.trim()) { setError('Nombre del candidato requerido'); return; }
+    setLoading(true); setError('');
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/promociones/iniciar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidato: form.candidato.trim(), puesto_anterior: form.puesto_anterior, puesto_nuevo: form.puesto_nuevo, notas: form.notas, registrado_por: form.registrado_por }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error al iniciar');
+      onCreated({ id: d.promocion_id, candidato: form.candidato.trim(), partner_odoo_id: d.partner_odoo_id, user_input_odoo_id: d.user_input_odoo_id, access_token: '', puesto_anterior: form.puesto_anterior, puesto_nuevo: form.puesto_nuevo, examen_id: 0, curso_odoo_id: 0, estado: 'pendiente', score: null, fecha_inicio: new Date().toISOString().slice(0, 10), fecha_completado: null, registrado_por: form.registrado_por, notas: form.notas, certificado_generado: false, link_examen: d.link }, d.link);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.accent, marginBottom: 8 }}>Certificaciones Internas</div>
-        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Ruta de Promoción XCIEN</div>
-        <div style={{ fontSize: 13, color: DIM, lineHeight: 1.6 }}>
-          Para aplicar un examen, abre el link de Odoo y compártelo con el candidato. El sistema registra automáticamente el resultado.
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: 32, width: 460, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 20 }}>Nueva Promoción</div>
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Nombre del candidato</label>
+        <input value={form.candidato} onChange={e => f('candidato', e.target.value)} placeholder="Nombre completo" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }} />
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Ruta de promoción</label>
+        <select value={`${form.puesto_anterior}|${form.puesto_nuevo}`} onChange={e => { const [d, h] = e.target.value.split('|'); f('puesto_anterior', d); f('puesto_nuevo', h); }} style={{ width: '100%', background: '#1a1d24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 13, marginBottom: 16, boxSizing: 'border-box' }}>
+          {TRACKS.map(t => <option key={t.desde} value={`${t.desde}|${t.hacia}`}>{t.desde} → {t.hacia}</option>)}
+        </select>
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Registrado por</label>
+        <input value={form.registrado_por} onChange={e => f('registrado_por', e.target.value)} placeholder="Nombre de quien registra" style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }} />
+
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Notas (opcional)</label>
+        <textarea value={form.notas} onChange={e => f('notas', e.target.value)} rows={2} placeholder="Contexto adicional..." style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 13, marginBottom: 20, boxSizing: 'border-box', resize: 'vertical' }} />
+
+        {error && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 8 }}>{error}</div>}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#666', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={submit} disabled={loading} style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: theme.accent, color: '#000', fontSize: 13, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'Creando en Odoo...' : 'Iniciar proceso →'}
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Escalera visual */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 36, padding: '16px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}>
-        {['Auxiliar', 'Técnico de Operaciones', 'Líder de Campo'].map((nivel, i) => (
-          <div key={nivel} style={{ display: 'flex', alignItems: 'center', flex: i === 1 ? 1 : 'none' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: i === 0 ? 20 : i === 1 ? 24 : 28, marginBottom: 4 }}>
-                {i === 0 ? '👤' : i === 1 ? '🔧' : '🏆'}
-              </div>
-              <div style={{ fontSize: i === 1 ? 12 : 11, fontWeight: i === 1 ? 700 : 600, color: i === 0 ? DIM : i === 1 ? '#00C896' : '#FFB703', whiteSpace: 'nowrap' }}>{nivel}</div>
-            </div>
-            {i < 2 && (
-              <div style={{ flex: 1, height: 2, background: `linear-gradient(90deg, ${i === 0 ? '#00C896' : '#FFB703'}40, ${i === 0 ? '#00C896' : '#FFB703'})`, margin: '0 16px', minWidth: 40 }} />
-            )}
+function LinkResult({ link, onClose }: { link: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: '#0f1117', border: '1px solid #00C89660', borderRadius: 20, padding: 32, width: 520, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 22, marginBottom: 8 }}>Proceso iniciado</div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>Comparte este link personal con el candidato. Solo ellos pueden usarlo.</div>
+        <div style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid #00C89640', borderRadius: 12, padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#00C896', wordBreak: 'break-all', marginBottom: 20 }}>{link}</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000); }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #00C89640', background: 'transparent', color: copied ? '#00C896' : '#888', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            {copied ? '✓ Copiado' : 'Copiar link'}
+          </button>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#00C896', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Listo</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PromocionView({ theme }: { theme: ThemeConfig }) {
+  const [tab, setTab] = useState<'examenes' | 'historial'>('historial');
+  const [copied, setCopied] = useState<number | null>(null);
+  const [promociones, setPromociones] = useState<Promocion[]>([]);
+  const [loadingProm, setLoadingProm] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [newLink, setNewLink] = useState('');
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const copyLink = (url: string, id: number) => {
+    navigator.clipboard.writeText(url).then(() => { setCopied(id); setTimeout(() => setCopied(null), 2000); });
+  };
+
+  const fetchPromociones = useCallback(async (sync = false) => {
+    setLoadingProm(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/promociones${sync ? '?sync=true' : ''}`);
+      const d = await r.json();
+      setPromociones((d.promociones || []).slice().reverse());
+    } catch (_) { /* silencioso */ } finally {
+      setLoadingProm(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPromociones(); }, [fetchPromociones]);
+
+  const syncOne = async (id: string) => {
+    setSyncing(id);
+    try {
+      await fetch(`${API_BASE}/api/academia/promociones/${id}/sync`);
+      fetchPromociones();
+    } finally { setSyncing(null); }
+  };
+
+  const downloadCert = async (prom: Promocion) => {
+    setDownloadingId(prom.id);
+    try {
+      const r = await fetch(`${API_BASE}/api/academia/promociones/${prom.id}/certificado`);
+      if (!r.ok) { alert('Certificado no disponible (examen sin registro formal en Odoo)'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `certificado_${prom.candidato.replace(/ /g,'_')}_${prom.id}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } finally { setDownloadingId(null); }
+  };
+
+  const handleCreated = (prom: Promocion, link: string) => {
+    setShowModal(false);
+    setNewLink(link);
+    fetchPromociones();
+  };
+
+  const aprobados = promociones.filter(p => p.estado === 'aprobado').length;
+  const pendientes = promociones.filter(p => p.estado === 'pendiente' || p.estado === 'en_progreso').length;
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {showModal && <NuevaPromocionModal theme={theme} onClose={() => setShowModal(false)} onCreated={handleCreated} />}
+      {newLink && <LinkResult link={newLink} onClose={() => setNewLink('')} />}
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.accent, marginBottom: 6 }}>Trazabilidad XCIEN</div>
+          <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Promociones y Certificaciones</div>
+          <div style={{ fontSize: 12, color: DIM }}>Registro completo de cada examen aplicado — Odoo + Portal sincronizados.</div>
+        </div>
+        <button onClick={() => setShowModal(true)} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: theme.accent, color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+          + Nueva promoción
+        </button>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+        {[
+          { label: 'Total registros', value: promociones.length, color: '#94a3b8' },
+          { label: 'Aprobados', value: aprobados, color: '#00C896' },
+          { label: 'Pendientes', value: pendientes, color: '#FFB703' },
+        ].map(kpi => (
+          <div key={kpi.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '16px 20px' }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color }}>{kpi.value}</div>
+            <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{kpi.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Cards de examen */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {PROMOCIONES.map(p => (
-          <div key={p.cursoId} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${p.color}30`, borderRadius: 16, overflow: 'hidden' }}>
-            {/* Top bar */}
-            <div style={{ padding: '14px 20px', background: `${p.color}10`, borderBottom: `1px solid ${p.color}20`, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 24 }}>{p.icono}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: p.color, marginBottom: 2 }}>{p.desde} →</div>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>{p.hacia}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => copyLink(p.odooUrl, p.cursoId)}
-                  style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${p.color}40`, background: 'transparent', color: copied === p.cursoId ? p.color : DIM, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                  {copied === p.cursoId ? '✓ Copiado' : '🔗 Copiar link'}
-                </button>
-                <a href={p.odooUrl} target="_blank" rel="noreferrer"
-                  style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: p.color, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Abrir en Odoo ↗
-                </a>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Preguntas</div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.preguntas}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Aprobatorio</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: p.color }}>{p.aprobatorio}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Tiempo límite</div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{p.tiempo}</div>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Contenido evaluado</div>
-                <div style={{ fontSize: 12, color: DIM, lineHeight: 1.6 }}>{p.descripcion}</div>
-              </div>
-            </div>
-          </div>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 4 }}>
+        {[{ id: 'historial', label: 'Historial RH' }, { id: 'examenes', label: 'Exámenes disponibles' }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id as 'examenes' | 'historial')} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: tab === t.id ? 'rgba(255,255,255,0.08)' : 'transparent', color: tab === t.id ? '#fff' : '#666', fontSize: 12, fontWeight: tab === t.id ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s' }}>
+            {t.label}
+          </button>
         ))}
       </div>
 
-      {/* Nota proceso */}
-      <div style={{ marginTop: 24, padding: '12px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, fontSize: 12, color: DIM, lineHeight: 1.7 }}>
-        <span style={{ color: '#fff', fontWeight: 600 }}>Proceso de promoción:</span> El candidato toma el examen teórico (Fase 1) → evaluación práctica en campo con auditor (Fase 2) → dictamen final por coordinación. Tiempo total: 2 semanas.
-      </div>
+      {/* Historial */}
+      {tab === 'historial' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={() => fetchPromociones(true)} disabled={loadingProm} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#666', fontSize: 11, cursor: 'pointer' }}>
+              {loadingProm ? 'Cargando...' : 'Sincronizar con Odoo'}
+            </button>
+          </div>
+          {loadingProm ? (
+            <div style={{ textAlign: 'center', padding: 60, color: '#555' }}>Cargando historial...</div>
+          ) : promociones.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60, color: '#555' }}>Sin registros aún. Inicia la primera promoción.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {promociones.map(p => {
+                const ec = ESTADO_CONFIG[p.estado] || ESTADO_CONFIG.pendiente;
+                const hasOdoo = !!p.user_input_odoo_id;
+                return (
+                  <div key={p.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '14px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                      {/* Nombre y ruta */}
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{p.candidato}</div>
+                        <div style={{ fontSize: 11, color: '#555' }}>{p.puesto_anterior} → <span style={{ color: '#fff' }}>{p.puesto_nuevo}</span></div>
+                      </div>
+                      {/* Estado */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: ec.color, background: ec.bg }}>{ec.label}</span>
+                        {p.score !== null && <span style={{ fontSize: 13, fontWeight: 700, color: p.score >= 80 ? '#00C896' : '#ef4444' }}>{p.score}%</span>}
+                      </div>
+                      {/* Fecha */}
+                      <div style={{ textAlign: 'right', fontSize: 11, color: '#555', minWidth: 80 }}>
+                        <div>{p.fecha_completado || p.fecha_inicio || '—'}</div>
+                        <div style={{ marginTop: 2 }}>{p.registrado_por}</div>
+                      </div>
+                      {/* Acciones */}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {hasOdoo && (
+                          <button onClick={() => syncOne(p.id)} disabled={syncing === p.id} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#666', fontSize: 11, cursor: 'pointer' }}>
+                            {syncing === p.id ? '...' : '↺'}
+                          </button>
+                        )}
+                        {p.link_examen && (
+                          <button onClick={() => navigator.clipboard.writeText(p.link_examen!)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#666', fontSize: 11, cursor: 'pointer' }}>
+                            🔗
+                          </button>
+                        )}
+                        {p.estado === 'aprobado' && hasOdoo && (
+                          <button onClick={() => downloadCert(p)} disabled={downloadingId === p.id} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #00C89640', background: 'rgba(0,200,150,0.06)', color: '#00C896', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                            {downloadingId === p.id ? '...' : 'Cert.'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {p.notas && <div style={{ marginTop: 8, fontSize: 11, color: '#555', fontStyle: 'italic' }}>{p.notas}</div>}
+                    {!hasOdoo && <div style={{ marginTop: 6, display: 'inline-block', fontSize: 10, padding: '2px 8px', borderRadius: 6, background: 'rgba(255,183,3,0.1)', color: '#FFB703' }}>Registro retroactivo — sin examen formal en Odoo</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Exámenes disponibles */}
+      {tab === 'examenes' && (
+        <div>
+          {/* Escalera visual */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 28, padding: '16px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}>
+            {['Auxiliar', 'Técnico de Operaciones', 'Líder de Campo'].map((nivel, i) => (
+              <div key={nivel} style={{ display: 'flex', alignItems: 'center', flex: i === 1 ? 1 : 'none' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: i === 0 ? 20 : i === 1 ? 24 : 28, marginBottom: 4 }}>{i === 0 ? '👤' : i === 1 ? '🔧' : '🏆'}</div>
+                  <div style={{ fontSize: i === 1 ? 12 : 11, fontWeight: i === 1 ? 700 : 600, color: i === 0 ? DIM : i === 1 ? '#00C896' : '#FFB703', whiteSpace: 'nowrap' }}>{nivel}</div>
+                </div>
+                {i < 2 && <div style={{ flex: 1, height: 2, background: `linear-gradient(90deg, ${i === 0 ? '#00C896' : '#FFB703'}40, ${i === 0 ? '#00C896' : '#FFB703'})`, margin: '0 16px', minWidth: 40 }} />}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {PROMOCIONES.map(p => (
+              <div key={p.cursoId} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${p.color}30`, borderRadius: 16, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', background: `${p.color}10`, borderBottom: `1px solid ${p.color}20`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 24 }}>{p.icono}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: p.color, marginBottom: 2 }}>{p.desde} →</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{p.hacia}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => copyLink(p.odooUrl, p.cursoId)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${p.color}40`, background: 'transparent', color: copied === p.cursoId ? p.color : DIM, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      {copied === p.cursoId ? '✓ Copiado' : '🔗 Copiar link'}
+                    </button>
+                    <a href={p.odooUrl} target="_blank" rel="noreferrer" style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: p.color, color: '#000', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Abrir en Odoo ↗
+                    </a>
+                  </div>
+                </div>
+                <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <div><div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Preguntas</div><div style={{ fontSize: 13, fontWeight: 600 }}>{p.preguntas}</div></div>
+                  <div><div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Aprobatorio</div><div style={{ fontSize: 13, fontWeight: 600, color: p.color }}>{p.aprobatorio}</div></div>
+                  <div><div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Tiempo límite</div><div style={{ fontSize: 13, fontWeight: 600 }}>{p.tiempo}</div></div>
+                  <div style={{ gridColumn: '1 / -1' }}><div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#444', marginBottom: 4 }}>Contenido evaluado</div><div style={{ fontSize: 12, color: DIM, lineHeight: 1.6 }}>{p.descripcion}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 24, padding: '12px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, fontSize: 12, color: DIM, lineHeight: 1.7 }}>
+            <span style={{ color: '#fff', fontWeight: 600 }}>Proceso de promoción:</span> El candidato toma el examen teórico (Fase 1) → evaluación práctica en campo con auditor (Fase 2) → dictamen final por coordinación. Tiempo total: 2 semanas.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

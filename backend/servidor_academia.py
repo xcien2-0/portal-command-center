@@ -10091,6 +10091,251 @@ def radiobases_update_sitio(
     updated = next((r for r in merged if r["name"] == site_name), None)
     return {"ok": True, "sitio": updated}
 
+# ─── Promociones / Trazabilidad ───────────────────────────────────────────────
+
+import uuid as _uuid
+from datetime import date as _date
+
+_PROMOCIONES_FILE = os.path.join(BASE_DIR, "data", "promociones.json")
+
+def _prom_load() -> list:
+    try:
+        with open(_PROMOCIONES_FILE) as f:
+            return json.load(f).get("promociones", [])
+    except Exception:
+        return []
+
+def _prom_save(rows: list):
+    os.makedirs(os.path.dirname(_PROMOCIONES_FILE), exist_ok=True)
+    with open(_PROMOCIONES_FILE, "w") as f:
+        json.dump({"promociones": rows}, f, ensure_ascii=False, indent=2)
+
+def _prom_odoo_sync(row: dict) -> dict:
+    """Consulta Odoo para actualizar score y estado del user_input vinculado."""
+    uid_odoo = row.get("user_input_odoo_id")
+    if not uid_odoo:
+        return row
+    try:
+        import xmlrpc.client as _xrc, signal as _sig
+        env = _load_env()
+        HOST = env.get("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB = "wispi19"; USER = env["ODOO_USER"]; PASS = env["ODOO_PASSWORD"]
+        common = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid = common.authenticate(DB, USER, PASS, {})
+        models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+        def _sr(model, domain, fields, limit=10):
+            _sig.alarm(20)
+            try:
+                return models.execute_kw(DB, uid, PASS, model, "search_read",
+                                         [domain], {"fields": fields, "limit": limit})
+            finally:
+                _sig.alarm(0)
+        _sig.signal(_sig.SIGALRM, lambda s,f: (_ for _ in ()).throw(TimeoutError()))
+        res = _sr("survey.user_input",
+                  [["id", "=", uid_odoo]],
+                  ["state", "scoring_percentage", "date_done"])
+        if res:
+            r = res[0]
+            if r.get("state") == "done":
+                row = {**row,
+                       "estado": "aprobado" if (r.get("scoring_percentage") or 0) >= 80 else "reprobado",
+                       "score": round(r.get("scoring_percentage") or 0, 1),
+                       "fecha_completado": (r.get("date_done") or "")[:10]}
+            elif r.get("state") == "new":
+                row = {**row, "estado": "pendiente"}
+    except Exception:
+        pass
+    return row
+
+def _load_env():
+    env = {}
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    try:
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    except Exception:
+        pass
+    return env
+
+@app.get("/api/academia/promociones")
+def api_prom_list(sync: bool = False):
+    """Lista todas las promociones/certificaciones con estado en tiempo real."""
+    rows = _prom_load()
+    if sync:
+        rows = [_prom_odoo_sync(r) for r in rows]
+        _prom_save(rows)
+    return {"total": len(rows), "promociones": rows}
+
+class NuevaPromocionRequest(BaseModel):
+    candidato: str
+    puesto_anterior: str
+    puesto_nuevo: str
+    registrado_por: str = "RH"
+    notas: str = ""
+
+@app.post("/api/academia/promociones/iniciar")
+def api_prom_iniciar(req: NuevaPromocionRequest):
+    """
+    Inicia un proceso de promoción: crea user_input en Odoo y registra en JSON local.
+    Devuelve el link personalizado del examen.
+    """
+    TRACK_MAP = {
+        ("Auxiliar", "Técnico de Operaciones"): {"examen_id": 14, "curso_odoo_id": 91, "survey_token": None},
+        ("Técnico de Operaciones", "Líder de Campo"): {"examen_id": 13, "curso_odoo_id": 92, "survey_token": None},
+    }
+    key = (req.puesto_anterior.strip(), req.puesto_nuevo.strip())
+    track = TRACK_MAP.get(key)
+    if not track:
+        raise HTTPException(400, f"Ruta de promoción no configurada: {req.puesto_anterior} → {req.puesto_nuevo}")
+
+    try:
+        import xmlrpc.client as _xrc, signal as _sig
+        env = _load_env()
+        HOST = env.get("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB = "wispi19"; USER = env["ODOO_USER"]; PASS = env["ODOO_PASSWORD"]
+        common = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid = common.authenticate(DB, USER, PASS, {})
+        models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+        def _sr(model, domain, fields, limit=5):
+            _sig.alarm(20)
+            try:
+                return models.execute_kw(DB, uid, PASS, model, "search_read",
+                                         [domain], {"fields": fields, "limit": limit})
+            finally:
+                _sig.alarm(0)
+        def _cr(model, vals):
+            _sig.alarm(20)
+            try:
+                return models.execute_kw(DB, uid, PASS, model, "create", [vals])
+            finally:
+                _sig.alarm(0)
+        _sig.signal(_sig.SIGALRM, lambda s,f: (_ for _ in ()).throw(TimeoutError()))
+
+        # Buscar o crear partner en Odoo
+        partners = _sr("res.partner", [["name", "ilike", req.candidato]], ["id", "name"])
+        if partners:
+            partner_id = partners[0]["id"]
+        else:
+            partner_id = _cr("res.partner", {"name": req.candidato, "is_company": False})
+
+        # Obtener token del survey
+        surveys = _sr("survey.survey", [["id", "=", track["examen_id"]]], ["id", "access_token"])
+        if not surveys:
+            raise HTTPException(500, "Survey no encontrado en Odoo")
+        survey_token = surveys[0]["access_token"]
+
+        # Crear user_input personalizado
+        input_id = _cr("survey.user_input", {
+            "survey_id": track["examen_id"],
+            "partner_id": partner_id,
+        })
+
+        # Obtener token del user_input para el link personal
+        inputs = _sr("survey.user_input", [["id", "=", input_id]], ["id", "access_token"])
+        answer_token = inputs[0]["access_token"] if inputs else ""
+
+        link = f"https://odoo.wispi.mx/survey/start/{survey_token}?answer_token={answer_token}"
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Error Odoo: {e}")
+
+    # Guardar en JSON local
+    prom_id = f"PROM-{_date.today().year}-{str(int(_uuid.uuid4().hex[:4], 16)).zfill(3)}"
+    nueva = {
+        "id": prom_id,
+        "candidato": req.candidato,
+        "partner_odoo_id": partner_id,
+        "user_input_odoo_id": input_id,
+        "access_token": answer_token,
+        "puesto_anterior": req.puesto_anterior,
+        "puesto_nuevo": req.puesto_nuevo,
+        "examen_id": track["examen_id"],
+        "curso_odoo_id": track["curso_odoo_id"],
+        "estado": "pendiente",
+        "score": None,
+        "fecha_inicio": str(_date.today()),
+        "fecha_completado": None,
+        "registrado_por": req.registrado_por,
+        "notas": req.notas,
+        "certificado_generado": False,
+        "link_examen": link,
+    }
+    rows = _prom_load()
+    rows.append(nueva)
+    _prom_save(rows)
+
+    return {"ok": True, "promocion_id": prom_id, "link": link, "partner_odoo_id": partner_id, "user_input_odoo_id": input_id}
+
+@app.get("/api/academia/promociones/{prom_id}/sync")
+def api_prom_sync_one(prom_id: str):
+    """Sincroniza una promoción específica con Odoo y actualiza el JSON local."""
+    rows = _prom_load()
+    idx = next((i for i, r in enumerate(rows) if r["id"] == prom_id), None)
+    if idx is None:
+        raise HTTPException(404, "Promoción no encontrada")
+    rows[idx] = _prom_odoo_sync(rows[idx])
+    _prom_save(rows)
+    return rows[idx]
+
+class PatchPromocionRequest(BaseModel):
+    estado: Optional[str] = None
+    notas: Optional[str] = None
+    score: Optional[float] = None
+    fecha_completado: Optional[str] = None
+    certificado_generado: Optional[bool] = None
+
+@app.patch("/api/academia/promociones/{prom_id}")
+def api_prom_patch(prom_id: str, req: PatchPromocionRequest):
+    """Actualiza campos de una promoción (para registros retroactivos o correcciones)."""
+    rows = _prom_load()
+    idx = next((i for i, r in enumerate(rows) if r["id"] == prom_id), None)
+    if idx is None:
+        raise HTTPException(404, "Promoción no encontrada")
+    patch = req.dict(exclude_none=True)
+    rows[idx] = {**rows[idx], **patch}
+    _prom_save(rows)
+    return rows[idx]
+
+@app.get("/api/academia/promociones/{prom_id}/certificado")
+def api_prom_certificado(prom_id: str):
+    """Descarga el certificado PDF oficial de Odoo para esta promoción."""
+    rows = _prom_load()
+    row = next((r for r in rows if r["id"] == prom_id), None)
+    if not row:
+        raise HTTPException(404, "Promoción no encontrada")
+    uid_odoo = row.get("user_input_odoo_id")
+    if not uid_odoo:
+        raise HTTPException(400, "Esta promoción no tiene user_input_odoo_id — fue registrada retroactivamente")
+    try:
+        import requests as _req
+        env = _load_env()
+        HOST = env.get("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        USER = env["ODOO_USER"]; PASS = env["ODOO_PASSWORD"]
+        session = _req.Session()
+        login = session.post(f"{HOST}/web/session/authenticate", json={
+            "jsonrpc": "2.0", "method": "call", "id": 1,
+            "params": {"db": "wispi19", "login": USER, "password": PASS}
+        }, timeout=20)
+        if login.json().get("result", {}).get("uid"):
+            pdf = session.get(f"{HOST}/report/pdf/survey.certification_report_view/{uid_odoo}", timeout=60)
+            if pdf.status_code == 200 and pdf.content[:4] == b"%PDF":
+                candidato_safe = row.get("candidato", "candidato").replace(" ", "_")
+                filename = f"certificado_{candidato_safe}_{prom_id}.pdf"
+                return Response(
+                    content=pdf.content,
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+                )
+    except Exception as e:
+        raise HTTPException(500, f"Error descargando certificado: {e}")
+    raise HTTPException(502, "No se pudo obtener el certificado de Odoo")
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
