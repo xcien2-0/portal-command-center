@@ -28,7 +28,7 @@ export const PDN_CONFIG: PlazaConfig = {
   tecnico_filter: '',
   ticket_terms: ['piedras', 'acuña', 'acuna', 'allende', 'nava', 'progreso', 'cd acuña'],
   noc_terms: ['piedras', 'acuña', 'acuna', 'pdn', 'acu'],
-  blocker: 'F3 CWDM bloqueado — Lancemex 21 cajas, 10% avance · Escalado a Francisco Alday',
+  blocker: 'F3 CWDM bloqueado — Lancermex 21 cajas, 10% avance · Escalado a Francisco Alday',
   equipo: [
     { nombre: 'Francisco Alday',        rol: 'Responsable de plaza',  emoji: '👔' },
     { nombre: 'Guillermo Hernandez F.', rol: 'Técnico campo',         emoji: '🔧', activo: true },

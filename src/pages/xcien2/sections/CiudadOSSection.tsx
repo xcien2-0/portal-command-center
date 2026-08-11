@@ -138,13 +138,20 @@ function saveNote(plazaId: string, note: MeetingNote): void {
   localStorage.setItem(`xcien-city-notes-${plazaId}`, JSON.stringify([note, ...existing].slice(0, 20)));
 }
 
-type OSTab = 'ops' | 'fibra' | 'mapa';
+type OSTab = string;
+
+export interface ExtraTab {
+  id: string;
+  icon: string;
+  label: string;
+  content: React.ReactNode;
+}
 
 // ── Mapa PDN — constantes ─────────────────────────────────────────────────────
 const PDN_CENTER: [number, number] = [28.703, -100.535];
 const PDN_BOUNDS = { latMin: 28.3, latMax: 29.2, lngMin: -101.5, lngMax: -100.0 };
 
-const PROSPECTOS_PDN = [
+export const PROSPECTOS_PDN = [
   { name: 'Asfaltos y Pegamentos',  lat: 28.67908, lng: -100.56878 },
   { name: 'Day Star Trim',          lat: 28.67957, lng: -100.57053 },
   { name: 'Elastomeros',            lat: 28.68705, lng: -100.55532 },
@@ -531,8 +538,8 @@ function MapaPDN({ C }: { C: C }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function CiudadOSSection({
-  config, theme,
-}: { config: PlazaConfig; theme: ThemeConfig }) {
+  config, theme, extraTabs = [],
+}: { config: PlazaConfig; theme: ThemeConfig; extraTabs?: ExtraTab[] }) {
   const C = mkC(theme);
 
   const [osTab, setOsTab]             = useState<OSTab>('ops');
@@ -944,7 +951,8 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
           { id: 'ops',   icon: '⚙', label: 'Operaciones' },
           { id: 'mapa',  icon: '◍', label: 'Mapa' },
           { id: 'fibra', icon: '◎', label: `Fibra X100 · ${config.id.toUpperCase()}` },
-        ] as { id: OSTab; icon: string; label: string }[]).map(t => (
+          ...extraTabs.map(t => ({ id: t.id, icon: t.icon, label: t.label })),
+        ] as { id: string; icon: string; label: string }[]).map(t => (
           <button
             key={t.id}
             className="tab-btn"
@@ -979,6 +987,13 @@ Generado por XCIEN CiudadOS — Portal XCIEN 2.0`;
           <FibraSection theme={theme} />
         </div>
       )}
+
+      {/* ── EXTRA TABS (PDN y otras plazas) ────────────────────────────────── */}
+      {extraTabs.map(t => osTab === t.id && (
+        <div key={t.id} style={{ flex: 1, overflowY: 'auto', background: C.bg }}>
+          {t.content}
+        </div>
+      ))}
 
       {/* ── OPS: cuerpo principal ───────────────────────────────────────────── */}
       {osTab === 'ops' && (
