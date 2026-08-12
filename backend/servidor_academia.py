@@ -110,11 +110,40 @@ async def startup_event():
     _start_kpi_scheduler()
 
 
+# Tickets ya alertados en esta sesión (evita spam por el mismo ticket)
+_sla_alerted: set = set()
+
+# SLA en segundos por nivel detectado en el nombre del ticket
+_SLA_SECONDS = {
+    "nvl:1": 2 * 3600,
+    "nivel 1": 2 * 3600,
+    "nvl:2": 4 * 3600,
+    "nivel 2": 4 * 3600,
+    "nvl:3": 8 * 3600,
+    "nivel 3": 8 * 3600,
+    "cae": 24 * 3600,
+    "visita": 24 * 3600,
+}
+_SLA_DEFAULT = 4 * 3600  # 4h para tickets sin nivel explícito
+
+def _sla_for_ticket(name: str) -> int:
+    name_low = name.lower()
+    for key, secs in _SLA_SECONDS.items():
+        if key in name_low:
+            return secs
+    return _SLA_DEFAULT
+
+def _sla_label(secs: int) -> str:
+    h = secs // 3600
+    return f"{h}h"
+
+
 def _start_kpi_scheduler():
-    """APScheduler para reportes KPI automáticos: diario, semanal, mensual."""
+    """APScheduler para reportes KPI automáticos: diario, semanal, mensual y alertas SLA."""
     try:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
 
         scheduler = AsyncIOScheduler(timezone="America/Hermosillo")
 
@@ -185,6 +214,135 @@ def _start_kpi_scheduler():
         scheduler.add_job(lambda: __import__("asyncio").get_event_loop().create_task(_auto_reporte("mensual")),
                           CronTrigger(day=1, hour=8, minute=0))
 
+        # ── Alertas de rezago SLA ─────────────────────────────────────────────
+        async def _check_sla_alerts():
+            """Revisa tickets CAST abiertos. Alerta en Telegram cuando superan su SLA."""
+            global _sla_alerted
+            try:
+                import xmlrpc.client as _xrc
+                from datetime import datetime, timezone as _tz
+                from concurrent.futures import ThreadPoolExecutor as _TPE
+
+                env_path = os.path.join(os.path.dirname(__file__), ".env")
+                _env: dict = {}
+                try:
+                    with open(env_path) as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith("#") and "=" in line:
+                                k, v = line.split("=", 1)
+                                _env[k.strip()] = v.strip()
+                except Exception:
+                    return
+
+                HOST = _env.get("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+                DB   = "wispi19"
+                USER = _env.get("ODOO_USER", "")
+                PASS = _env.get("ODOO_PASSWORD", "")
+
+                CAST_TEAMS    = [6, 39, 41, 44, 48, 60, 67]
+                RESOLVED_IDS  = {54, 101, 69, 100, 120, 121}
+
+                def _odoo_fetch():
+                    common = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+                    uid    = common.authenticate(DB, USER, PASS, {})
+                    if not uid:
+                        return []
+                    models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+                    tickets = models.execute_kw(DB, uid, PASS,
+                        "helpdesk.ticket", "search_read",
+                        [[["team_id", "in", CAST_TEAMS],
+                          ["stage_id", "not in", list(RESOLVED_IDS)]]],
+                        {"fields": ["id", "name", "create_date", "stage_id",
+                                    "user_ids", "partner_name"],
+                         "limit": 300})
+                    return tickets
+
+                loop = __import__("asyncio").get_event_loop()
+                with _TPE(max_workers=1) as pool:
+                    tickets = await loop.run_in_executor(pool, _odoo_fetch)
+
+                if not tickets:
+                    return
+
+                now_utc = datetime.now(_tz.utc)
+                nuevas_alertas: list[dict] = []
+
+                CHECK_WINDOW = 1800  # 30 min — igual al intervalo del cron
+
+                for t in tickets:
+                    tid = t["id"]
+                    if tid in _sla_alerted:
+                        continue
+                    raw_date = t.get("create_date", "")
+                    if not raw_date:
+                        continue
+                    try:
+                        created = datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=_tz.utc)
+                    except ValueError:
+                        continue
+
+                    elapsed  = (now_utc - created).total_seconds()
+                    sla_secs = _sla_for_ticket(t.get("name", ""))
+
+                    # Solo alertar si el ticket ACABA de cruzar el umbral en los últimos 30 min
+                    if sla_secs <= elapsed < sla_secs + CHECK_WINDOW:
+                        _sla_alerted.add(tid)
+                        nuevas_alertas.append({
+                            "id":      tid,
+                            "name":    t.get("name", f"Ticket #{tid}"),
+                            "partner": t.get("partner_name") or "—",
+                            "elapsed": elapsed,
+                            "sla":     sla_secs,
+                        })
+
+                if not nuevas_alertas:
+                    return
+
+                bot_token = _env.get("TELEGRAM_BOT_TOKEN", "")
+                chat_id   = _env.get("TELEGRAM_CHAT_ID_REPORTES", "") or _env.get("TELEGRAM_CHAT_ID", "")
+                if not (bot_token and chat_id):
+                    return
+
+                import requests as _req
+
+                # Enviar un digest único con todos los que acaban de vencer
+                lines = []
+                for a in nuevas_alertas[:10]:
+                    h = int(a["elapsed"] // 3600)
+                    m = int((a["elapsed"] % 3600) // 60)
+                    sla_label = _sla_label(a["sla"])
+                    lines.append(
+                        f"🎫 `#{a['id']}` {a['name'][:55]}\n"
+                        f"   👤 {a['partner']} · ⏱ {h}h {m}m · SLA {sla_label}"
+                    )
+                extra = f"\n…y {len(nuevas_alertas)-10} más" if len(nuevas_alertas) > 10 else ""
+                msg = (
+                    f"🔴 *Rezago SLA — CAST*\n"
+                    f"{len(nuevas_alertas)} ticket(s) superaron su SLA:\n\n"
+                    + "\n\n".join(lines)
+                    + extra
+                )
+                try:
+                    _req.post(
+                        f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                        json={"chat_id": chat_id, "text": msg,
+                              "parse_mode": "Markdown", "disable_web_page_preview": True},
+                        timeout=10,
+                    )
+                except Exception:
+                    pass
+
+                logger.info(f"[sla-alerts] {len(nuevas_alertas)} alerta(s) de rezago enviadas")
+
+            except Exception as e:
+                logger.error(f"[sla-alerts] Error: {e}", exc_info=True)
+
+        scheduler.add_job(
+            lambda: __import__("asyncio").get_event_loop().create_task(_check_sla_alerts()),
+            IntervalTrigger(minutes=30),
+        )
+
         scheduler.start()
         logger.info("[scheduler] APScheduler iniciado — reportes KPI automáticos programados")
     except Exception as e:
@@ -207,6 +365,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3001",
+        "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
@@ -10335,6 +10495,412 @@ def api_prom_certificado(prom_id: str):
     except Exception as e:
         raise HTTPException(500, f"Error descargando certificado: {e}")
     raise HTTPException(502, "No se pudo obtener el certificado de Odoo")
+
+# ─── NOC Dashboard — Tickets CAST desde Odoo ──────────────────────────────────
+
+CAST_TEAM_IDS = [6, 39, 41, 44, 48, 60, 67]
+
+# Stages abiertos / en progreso
+STAGES_OPEN = {
+    24: "CAST Nvl:1",
+    25: "CAST Nvl:2",
+    57: "COR Nvl:3",
+    60: "CAE-Visita",
+    129: "CAST Nivel:1",
+    130: "CAST Nivel:3",
+}
+# Stages resueltos
+STAGES_RESOLVED = {
+    54: "CAST Nvl:1-Resuelto",
+    101: "CAST Nvl:2-Resuelto",
+    69: "COR Resuelto",
+    100: "CAE-Resuelto",
+    120: "CAST Nvl:2 Resuelto",
+    121: "CAE-Resuelto",
+}
+
+import re as _re
+
+def _extract_sop(name: str) -> str:
+    m = _re.search(r"SOP-(\d+)", name, _re.IGNORECASE)
+    return f"SOP-{m.group(1)}" if m else ""
+
+def _priority_label(p) -> str:
+    return {"0": "Bajo", "1": "Bajo", "2": "Medio", "3": "Alto"}.get(str(p), str(p))
+
+@app.get("/api/noc/tickets")
+async def noc_tickets(horas: int = 48, user_id: Optional[int] = None):
+    """Tickets CAST de Odoo — filtrados por período y usuario opcional."""
+    import concurrent.futures, xmlrpc.client as xc
+
+    def _fetch():
+        url  = ODOO_URL or "https://odoo.wispi.mx"
+        db   = ODOO_DB  or "wispi19"
+        user = ODOO_USER
+        pwd  = ODOO_PASSWORD
+        common = xc.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
+        uid_o  = common.authenticate(db, user, pwd, {})
+        mdls   = xc.ServerProxy(f"{url}/xmlrpc/2/object", allow_none=True)
+
+        desde = (dt_datetime.utcnow() - datetime.timedelta(hours=horas)).strftime("%Y-%m-%d %H:%M:%S")
+        domain = [
+            ["team_id", "in", CAST_TEAM_IDS],
+            ["create_date", ">=", desde],
+        ]
+        if user_id:
+            domain.append(["user_id", "=", user_id])
+
+        tickets = mdls.execute_kw(db, uid_o, pwd, "helpdesk.ticket", "search_read",
+            [domain],
+            {"fields": ["id","name","stage_id","user_id","priority",
+                        "create_date","date_last_stage_update","partner_id","team_id"],
+             "limit": 200, "order": "create_date desc"})
+
+        return tickets, {}
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            fetch_result = await _asyncio.get_event_loop().run_in_executor(ex, _fetch)
+    except Exception as e:
+        raise HTTPException(502, f"Error Odoo: {e}")
+
+    raw, tracking_map = fetch_result if isinstance(fetch_result, tuple) else (fetch_result, {})
+
+    now_utc = dt_datetime.utcnow()
+
+    result = []
+    for t in raw:
+        stage_id    = t["stage_id"][0] if t.get("stage_id") else 0
+        stage_name  = t["stage_id"][1] if t.get("stage_id") else "Desconocido"
+        is_resolved = stage_id in STAGES_RESOLVED
+        sop         = _extract_sop(t["name"])
+
+        # Tiempo en etapa actual (seg)
+        last_upd = t.get("date_last_stage_update") or t.get("create_date","")
+        try:
+            dt_upd = dt_datetime.strptime(last_upd[:19], "%Y-%m-%d %H:%M:%S")
+            secs_in_stage = int((now_utc - dt_upd).total_seconds())
+        except Exception:
+            secs_in_stage = 0
+
+        # Tiempo total desde apertura (seg)
+        try:
+            dt_open  = dt_datetime.strptime(t["create_date"][:19], "%Y-%m-%d %H:%M:%S")
+            total_secs = int((now_utc - dt_open).total_seconds())
+        except Exception:
+            total_secs = 0
+
+        result.append({
+            "id":             t["id"],
+            "ref":            sop or f"#{t['id']}",
+            "title":          t["name"],
+            "stage_id":       stage_id,
+            "stage":          stage_name,
+            "resolved":       is_resolved,
+            "user_id":        t["user_id"][0] if t.get("user_id") else None,
+            "user":           t["user_id"][1] if t.get("user_id") else "Sin asignar",
+            "priority":       _priority_label(t.get("priority","0")),
+            "created_at":     t.get("create_date",""),
+            "updated_at":     last_upd,
+            "client":         t["partner_id"][1] if t.get("partner_id") else "",
+            "team_id":        t["team_id"][0] if t.get("team_id") else None,
+            "team":           t["team_id"][1] if t.get("team_id") else "",
+            "secs_in_stage":  secs_in_stage,
+            "total_secs":     total_secs,
+            "stage_history":  tracking_map.get(t["id"], []),
+        })
+
+    open_count     = sum(1 for t in result if not t["resolved"])
+    resolved_count = sum(1 for t in result if t["resolved"])
+
+    return {
+        "tickets": result,
+        "meta": {
+            "total": len(result),
+            "open": open_count,
+            "resolved": resolved_count,
+            "horas": horas,
+            "users": [
+                {"id": 944, "name": "JOSE MIGUEL MACIAS"},
+                {"id": 965, "name": "SAMARA VIANNEY PALACIOS SILVA"},
+            ],
+        },
+    }
+
+# ─── NOC Report ───────────────────────────────────────────────────────────────
+
+@app.post("/api/noc/report")
+async def noc_report(periodo: str = "diario"):
+    """Genera PDF de reporte NOC y lo envía a Telegram. periodo: diario|semanal|mensual"""
+    import concurrent.futures, xmlrpc.client as xc, re, math, io, requests as req_lib
+    from datetime import datetime, timezone, timedelta
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors as RL
+    from reportlab.lib.units import inch
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Table,
+                                    TableStyle, Spacer, HRFlowable, Flowable)
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.charts.piecharts import Pie
+
+    horas_map = {"diario": 24, "semanal": 168, "mensual": 720}
+    horas = horas_map.get(periodo, 24)
+
+    CAST_TEAMS = [6, 39, 41, 44, 48, 60, 67]
+    STAGES_RES = {54, 101, 69, 100, 120, 121}
+
+    def _fetch():
+        url  = ODOO_URL or "https://odoo.wispi.mx"
+        db   = ODOO_DB  or "wispi19"
+        user = ODOO_USER; pwd = ODOO_PASSWORD
+        c    = xc.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
+        uid  = c.authenticate(db, user, pwd, {})
+        m    = xc.ServerProxy(f"{url}/xmlrpc/2/object", allow_none=True)
+        now  = datetime.now(timezone.utc)
+        cut  = (now - timedelta(hours=horas)).strftime("%Y-%m-%d %H:%M:%S")
+        raw  = m.execute_kw(db, uid, pwd, "helpdesk.ticket", "search_read",
+            [[["team_id","in",CAST_TEAMS],["write_date",">=",cut]]],
+            {"fields":["id","name","stage_id","user_id","partner_id",
+                       "create_date","date_last_stage_update","priority"],
+             "limit":500})
+        return raw, now
+
+    try:
+        loop = _asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            raw, now = await loop.run_in_executor(pool, _fetch)
+    except Exception as e:
+        raise HTTPException(500, f"Odoo error: {e}")
+
+    # ── Procesar tickets ─────────────────────────────────────────
+    def sop(n): m=re.search(r"SOP-(\d+)",n or ""); return f"SOP-{m.group(1)}" if m else ""
+    def secs_ago(s):
+        if not s: return 0
+        dt=datetime.strptime(s[:19],"%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return int((now-dt).total_seconds())
+    def fmt(s):
+        if s<3600: return f"{s//60}min"
+        if s<86400: return f"{s//3600}h {(s%3600)//60}min"
+        return f"{s//86400}d {(s%86400)//3600}h"
+    def short(n):
+        p=[x for x in (n or "").split() if x]
+        return p[0]+" "+p[-1] if len(p)>1 else (p[0] if p else "—")
+
+    tickets=[]
+    for t in raw:
+        sid  = t["stage_id"][0] if t.get("stage_id") else 0
+        sname= t["stage_id"][1] if t.get("stage_id") else "Desconocida"
+        res  = sid in STAGES_RES
+        ref  = sop(t["name"]) or f"#{t['id']}"
+        tickets.append(dict(
+            id=t["id"], ref=ref, title=t["name"], stage=sname,
+            resolved=res,
+            user=short(t["user_id"][1] if t.get("user_id") else "Sin asignar"),
+            client=(t["partner_id"][1] if t.get("partner_id") else "—")[:22],
+            stage_secs=secs_ago(t.get("date_last_stage_update")),
+            total_secs=secs_ago(t.get("create_date")),
+        ))
+
+    open_t = [t for t in tickets if not t["resolved"]]
+    res_t  = [t for t in tickets if     t["resolved"]]
+    crit_t = [t for t in open_t  if t["stage_secs"] > 14400]
+
+    dist = {}
+    for t in open_t:
+        dist[t["stage"]] = dist.get(t["stage"], 0) + 1
+
+    # ── Colores ──────────────────────────────────────────────────
+    XCIEN  = RL.HexColor("#009B4E"); XCIEN2 = RL.HexColor("#007A3D")
+    DARK   = RL.HexColor("#0F172A"); GRAY   = RL.HexColor("#64748B")
+    LGRAY  = RL.HexColor("#F1F5F9"); BORDER = RL.HexColor("#E2E8F0")
+    RED    = RL.HexColor("#DC2626"); AMBER  = RL.HexColor("#D97706")
+    GREEN  = RL.HexColor("#059669"); WHITE  = RL.white
+    STAGE_COLS = {
+        "CAST Nvl:1":RL.HexColor("#2563EB"),"CAST Nvl:2":RL.HexColor("#7C3AED"),
+        "COR Nvl:3":RL.HexColor("#D97706"),"CAE-Visita":RL.HexColor("#EA580C"),
+        "TT VALIDADO SOL. MONITOREO":RL.HexColor("#4338CA"),
+        "Reincidentes":RL.HexColor("#DC2626"),
+        "COR Nivel 3 en Validación CAST":RL.HexColor("#B45309"),
+    }
+
+    S = lambda **kw: ParagraphStyle("x", **kw)
+    sBody  = S(fontSize=9, fontName="Helvetica",      textColor=DARK,  leading=12)
+    sSmall = S(fontSize=8, fontName="Helvetica",      textColor=GRAY,  leading=10)
+    sMono  = S(fontSize=8, fontName="Courier-Bold",   textColor=RL.HexColor("#2563EB"), leading=10)
+    sH2    = S(fontSize=11,fontName="Helvetica-Bold", textColor=DARK,  leading=15, spaceAfter=4)
+
+    # ── Construir PDF en memoria ──────────────────────────────────
+    buf = io.BytesIO()
+    PAGE_W = letter[0] - 1.3*inch
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        leftMargin=0.65*inch, rightMargin=0.65*inch,
+        topMargin=0.6*inch,   bottomMargin=0.65*inch)
+
+    story = []
+
+    # Header verde
+    class _Hdr(Flowable):
+        def __init__(self, w, h, periodo, now):
+            Flowable.__init__(self); self.w=w; self.h=h; self.periodo=periodo; self.now=now
+        def draw(self):
+            c=self.canv
+            c.setFillColor(RL.HexColor("#009B4E")); c.rect(0,0,self.w,self.h,fill=1,stroke=0)
+            c.setFillColor(RL.HexColor("#007A3D")); c.rect(0,0,4,self.h,fill=1,stroke=0)
+            c.setFillColor(RL.white); c.setFont("Helvetica-Bold",20)
+            c.drawString(18, self.h-34, "XCIEN Networks")
+            c.setFont("Helvetica",8); c.setFillColor(RL.HexColor("#DCFCE7"))
+            c.drawString(18, self.h-47, "Centro de Operaciones de Red · CAST")
+            periodo_label = {"diario":"Reporte Diario","semanal":"Reporte Semanal","mensual":"Reporte Mensual"}.get(self.periodo,"Reporte")
+            c.setFillColor(RL.white); c.setFont("Helvetica-Bold",15)
+            c.drawRightString(self.w-16, self.h-32, f"NOC — {periodo_label}")
+            c.setFont("Helvetica",8); c.setFillColor(RL.HexColor("#DCFCE7"))
+            c.drawRightString(self.w-16, self.h-46, f"Generado {self.now.strftime('%d %b %Y %H:%M')} UTC")
+
+    story.append(_Hdr(PAGE_W, 64, periodo, now))
+    story.append(Spacer(1, 16))
+
+    # Métricas
+    def _mc(label, value, color):
+        return Table([[Paragraph(label, S(fontSize=7,fontName="Helvetica-Bold",textColor=GRAY,
+                                          textTransform="uppercase",letterSpacing=0.5,leading=10))],
+                      [Paragraph(str(value), S(fontSize=24,fontName="Helvetica-Bold",
+                                               textColor=color,leading=28))]],
+            colWidths=[PAGE_W/4-8],
+            style=[("BOX",(0,0),(-1,-1),1,BORDER),("BACKGROUND",(0,0),(-1,-1),LGRAY),
+                   ("LEFTPADDING",(0,0),(-1,-1),12),("TOPPADDING",(0,0),(-1,-1),10),
+                   ("BOTTOMPADDING",(0,0),(-1,-1),10)])
+
+    story.append(Table(
+        [[_mc("ABIERTOS",len(open_t),DARK), _mc("CRÍTICOS >4H",len(crit_t),RED if crit_t else GREEN),
+          _mc("RESUELTOS",len(res_t),GREEN), _mc("TOTAL",len(tickets),GRAY)]],
+        colWidths=[PAGE_W/4]*4,
+        style=[("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4)]))
+    story.append(Spacer(1, 18))
+
+    # Gráfico pastel
+    pie_labels=[k for k,v in dist.items() if v>0]
+    pie_data  =[dist[k] for k in pie_labels]
+    pie_colors=[STAGE_COLS.get(k, RL.HexColor("#64748B")) for k in pie_labels]
+    if pie_data:
+        d=Drawing(210,170); pc=Pie()
+        pc.x=10; pc.y=5; pc.width=160; pc.height=160
+        pc.data=pie_data; pc.labels=[str(v) for v in pie_data]
+        pc.slices.strokeWidth=1.5; pc.slices.strokeColor=RL.white
+        pc.slices.fontName="Helvetica-Bold"; pc.slices.fontSize=8
+        pc.slices.labelRadius=0.65; pc.slices.fontColor=RL.white
+        for i,col in enumerate(pie_colors): pc.slices[i].fillColor=col
+        d.add(pc)
+        total_open = len(open_t) or 1
+        leg_rows=[["","ETAPA","TICKS","%"]]
+        for lab,cnt,col in zip(pie_labels,pie_data,pie_colors):
+            leg_rows.append(["●",lab[:26],str(cnt),f"{round(cnt/total_open*100)}%"])
+        leg_ts=TableStyle([
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),7),
+            ("TEXTCOLOR",(0,0),(-1,0),GRAY),("LINEBELOW",(0,0),(-1,0),0.5,BORDER),
+            ("FONTSIZE",(0,1),(-1,-1),8.5),("TOPPADDING",(0,0),(-1,-1),5),
+            ("BOTTOMPADDING",(0,0),(-1,-1),5),("LEFTPADDING",(0,0),(-1,-1),6),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[WHITE,LGRAY]),
+        ])
+        for i,(_,_,col) in enumerate(zip(pie_labels,pie_data,pie_colors),1):
+            leg_ts.add("TEXTCOLOR",(0,i),(0,i),col)
+            leg_ts.add("FONTNAME",(0,i),(0,i),"Helvetica-Bold")
+            leg_ts.add("FONTSIZE",(0,i),(0,i),12)
+        leg=Table(leg_rows,colWidths=[16,178,46,34],style=leg_ts)
+        story.append(Paragraph("Distribución por Etapa (abiertos)", sH2))
+        story.append(Table([[d,leg]],colWidths=[220,PAGE_W-220],
+            style=[("VALIGN",(0,0),(-1,-1),"MIDDLE"),("BOX",(0,0),(-1,-1),1,BORDER),
+                   ("LEFTPADDING",(0,0),(-1,-1),10),("TOPPADDING",(0,0),(-1,-1),10),
+                   ("BOTTOMPADDING",(0,0),(-1,-1),10)]))
+        story.append(Spacer(1, 18))
+
+    # Tabla abiertos
+    story.append(Paragraph("Tickets Abiertos — ordenados por tiempo en etapa", sH2))
+    def tc(s): return RED if s>14400 else (AMBER if s>7200 else GREEN)
+    col_w=[55,78,205,92,68,57]
+    rows=[["REF","ETAPA","TÍTULO","CLIENTE","ASIGNADO","EN ETAPA"]]
+    for t in sorted(open_t, key=lambda x: -x["stage_secs"])[:50]:
+        rows.append([Paragraph(t["ref"],sMono),Paragraph(t["stage"][:18],sSmall),
+            Paragraph(t["title"][:52]+(""if len(t["title"])<=52 else"…"),sBody),
+            Paragraph(t["client"],sSmall),Paragraph(t["user"],sSmall),
+            Paragraph(fmt(t["stage_secs"]),S(fontSize=8,fontName="Helvetica-Bold",
+                textColor=tc(t["stage_secs"]),leading=10))])
+    ts=TableStyle([
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),7),
+        ("TEXTCOLOR",(0,0),(-1,0),WHITE),("BACKGROUND",(0,0),(-1,0),DARK),
+        ("TOPPADDING",(0,0),(-1,0),8),("BOTTOMPADDING",(0,0),(-1,0),8),
+        ("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),
+        ("TOPPADDING",(0,1),(-1,-1),6),("BOTTOMPADDING",(0,1),(-1,-1),6),
+        ("FONTSIZE",(0,1),(-1,-1),8),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[WHITE,LGRAY]),
+        ("GRID",(0,0),(-1,-1),0.3,BORDER),("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ])
+    for i,t in enumerate(sorted(open_t,key=lambda x:-x["stage_secs"])[:50],1):
+        if t["stage_secs"]>14400: ts.add("BACKGROUND",(0,i),(-1,i),RL.HexColor("#FFF5F5"))
+    story.append(Table(rows,colWidths=col_w,repeatRows=1,style=ts))
+    story.append(Spacer(1,18))
+
+    # Tabla resueltos
+    story.append(Paragraph("Tickets Resueltos", sH2))
+    col_r=[55,78,232,90,60]
+    rows_r=[["REF","ETAPA","TÍTULO","CLIENTE","TIEMPO TOTAL"]]
+    for t in sorted(res_t,key=lambda x:x["total_secs"])[:30]:
+        rows_r.append([Paragraph(t["ref"],sMono),Paragraph(t["stage"][:18],sSmall),
+            Paragraph(t["title"][:58]+(""if len(t["title"])<=58 else"…"),sBody),
+            Paragraph(t["client"],sSmall),
+            Paragraph(fmt(t["total_secs"]),S(fontSize=8,fontName="Helvetica-Bold",textColor=GREEN,leading=10))])
+    ts_r=TableStyle([
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),7),
+        ("TEXTCOLOR",(0,0),(-1,0),WHITE),("BACKGROUND",(0,0),(-1,0),RL.HexColor("#059669")),
+        ("TOPPADDING",(0,0),(-1,0),8),("BOTTOMPADDING",(0,0),(-1,0),8),
+        ("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),
+        ("TOPPADDING",(0,1),(-1,-1),6),("BOTTOMPADDING",(0,1),(-1,-1),6),
+        ("FONTSIZE",(0,1),(-1,-1),8),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[WHITE,RL.HexColor("#F0FDF4")]),
+        ("GRID",(0,0),(-1,-1),0.3,BORDER),("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+    ])
+    story.append(Table(rows_r,colWidths=col_r,repeatRows=1,style=ts_r))
+    story.append(Spacer(1,14))
+
+    # Footer
+    story.append(HRFlowable(width="100%",thickness=0.5,color=BORDER))
+    story.append(Spacer(1,6))
+    periodo_label={"diario":"Diario (24h)","semanal":"Semanal (7 días)","mensual":"Mensual (30 días)"}.get(periodo,"")
+    story.append(Paragraph(
+        f"Reporte {periodo_label} · Odoo CAST wispi19 · {now.strftime('%d/%m/%Y %H:%M')} UTC · XCIEN Networks",
+        S(fontSize=7,fontName="Helvetica",textColor=GRAY,leading=10,alignment=TA_CENTER)))
+
+    doc.build(story)
+    pdf_bytes = buf.getvalue()
+
+    # ── Enviar a Telegram ────────────────────────────────────────
+    periodo_label = {"diario":"Diario","semanal":"Semanal","mensual":"Mensual"}.get(periodo,"")
+    emojis = {"diario":"📋","semanal":"📊","mensual":"📈"}
+    caption = (
+        f"{emojis.get(periodo,'📊')} *Reporte NOC XCIEN — {periodo_label}*\n"
+        f"📅 {now.strftime('%d/%m/%Y %H:%M')} UTC\n\n"
+        f"🔴 Abiertos: *{len(open_t)}*\n"
+        f"⚠️ Críticos (\\>4h): *{len(crit_t)}*\n"
+        f"✅ Resueltos: *{len(res_t)}*\n"
+        f"📦 Total: *{len(tickets)}*\n\n"
+        f"_Generado desde NOC Dashboard · XCIEN Networks_"
+    )
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id   = os.environ.get("TELEGRAM_CHAT_ID_REPORTES", "") or os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not bot_token or not chat_id:
+        raise HTTPException(500, "Credenciales Telegram no configuradas")
+    tg_url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+    r = req_lib.post(tg_url,
+        data={"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"},
+        files={"document": (f"NOC_{periodo_label}_{now.strftime('%Y%m%d')}.pdf", pdf_bytes, "application/pdf")},
+        timeout=30)
+
+    if r.status_code != 200:
+        raise HTTPException(500, f"Telegram error: {r.text[:200]}")
+
+    return {"ok": True, "periodo": periodo, "tickets": len(tickets),
+            "open": len(open_t), "resolved": len(res_t), "critical": len(crit_t)}
+
 
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
