@@ -26,23 +26,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = 'xcien_token';
 
-const DEV_USER: AuthUser = {
-  id: 'dev-admin',
-  nombre: 'José Miguel Macías',
-  email: 'miguel.macias@xcien.com',
-  rol: 'admin',
-  plaza: 'piedras-negras',
-  permisos: ['*'],
-  activo: true,
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(DEV_USER);
-  const [token, setToken] = useState<string | null>('dev-token');
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Auth desactivada temporalmente — acceso directo como admin
-  useEffect(() => {}, []);
+  useEffect(() => {
+    const stored = localStorage.getItem(TOKEN_KEY);
+    if (!stored) { setLoading(false); return; }
+    setToken(stored);
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${stored}` } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(u => setUser(u))
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {

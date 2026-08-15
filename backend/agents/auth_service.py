@@ -174,18 +174,18 @@ def decodificar_token(token: str) -> dict:
         )
 
 # ── Dependencias FastAPI ───────────────────────────────────────────────────────
-_DEV_USER = {
-    "id": "dev-admin", "nombre": "José Miguel Macías",
-    "email": "miguel.macias@xcien.com", "rol": "admin",
-    "plaza": "piedras-negras", "permisos": ["*"], "activo": True,
-}
-
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer)) -> dict:
     if not credentials:
-        return _DEV_USER  # red local sin token → acceso de lectura completo
-    if credentials.credentials == "dev-token":
-        return _DEV_USER
-    return decodificar_token(credentials.credentials)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autenticado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decodificar_token(credentials.credentials)
+    # Normalizar sub → id para compatibilidad con el frontend
+    if "sub" in payload and "id" not in payload:
+        payload["id"] = payload["sub"]
+    return payload
 
 def require_rol(*roles: str):
     """Dependencia: exige que el usuario tenga uno de los roles indicados."""
