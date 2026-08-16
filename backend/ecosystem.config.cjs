@@ -48,6 +48,17 @@ module.exports = {
     error_file: '/Users/mesquite/Proyectos/xcien-portal/logs/flotilla-err.log',
     out_file:   '/Users/mesquite/Proyectos/xcien-portal/logs/flotilla-out.log',
   }, {
+    name: 'tars-brain-sync',
+    script: 'tars_brain.py',
+    interpreter: '/Users/mesquite/Proyectos/xcien-portal/.venv/bin/python3',
+    cwd: '/Users/mesquite/Proyectos/xcien-portal/backend',
+    env_file: '/Users/mesquite/Proyectos/xcien-portal/backend/.env',
+    cron_restart: '0 2 * * *',   // cada día a las 02:00 AM — sync Odoo → Vault
+    autorestart: false,
+    watch: false,
+    error_file: '/Users/mesquite/Proyectos/xcien-portal/logs/tars-brain-err.log',
+    out_file:   '/Users/mesquite/Proyectos/xcien-portal/logs/tars-brain-out.log',
+  }, {
     name: 'iblack-bot',
     script: 'bot_iblack.py',
     interpreter: 'python3',

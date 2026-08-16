@@ -8528,12 +8528,46 @@ async def _call_claude(api_key: str, system: str, messages: list, temperature: f
             raise HTTPException(status_code=r.status_code, detail=r.text[:300])
         return r.json()["content"][0]["text"]
 
+# ── Vault Obsidian — contexto persistente ────────────────────────────────────
+
+_VAULT_PATH = _Path(os.environ.get(
+    "XCIEN_VAULT_PATH",
+    str(_Path.home() / "Documents" / "XCIEN-Vault")
+))
+_CEREBRO_DIR  = _VAULT_PATH / "00-Cerebro"
+_MASTER_FILE  = _CEREBRO_DIR / "contexto-maestro.md"
+
+# Cache en memoria — se recarga vía POST /api/cerebro/reload o al iniciar
+_vault_context_cache: str = ""
+
+def _load_vault_context() -> str:
+    """Lee contexto-maestro.md del vault. Devuelve string vacío si no existe."""
+    global _vault_context_cache
+    if _MASTER_FILE.exists():
+        try:
+            _vault_context_cache = _MASTER_FILE.read_text(encoding="utf-8")
+        except Exception:
+            pass
+    return _vault_context_cache
+
+# Cargar al iniciar el servidor
+_load_vault_context()
+
 async def _assemble_context(modules: List[str], request: Request) -> str:
     """Fetch summaries from requested context modules and build system context string."""
     parts: List[str] = [
         f"Fecha y hora: {dt_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         "Empresa: XCIEN Networks\n"
     ]
+
+    # ── Contexto base del vault Obsidian (siempre incluido) ─────────────────
+    vault_ctx = _vault_context_cache or _load_vault_context()
+    if vault_ctx:
+        # Limitar a ~8000 chars para no saturar el contexto
+        trimmed = vault_ctx[:8000] + ("\n...(contexto truncado)" if len(vault_ctx) > 8000 else "")
+        parts.append(f"[Contexto XCIEN — Vault Obsidian]\n{trimmed}")
+
+    # ── Módulos adicionales (NOC, WFM, etc.) si están activos ───────────────
     base = f"http://127.0.0.1:{int(os.environ.get('PORT', 8002))}"
     async with _httpx_obs.AsyncClient(timeout=5) as client:
         for mod in modules:
@@ -8542,15 +8576,12 @@ async def _assemble_context(modules: List[str], request: Request) -> str:
                 continue
             try:
                 if mod == "fibra":
-                    # Llamar al cargador interno de fibra directamente para evitar 401 de auth en localhost
                     data = _fibra_load()
                 else:
                     r = await client.get(f"{base}{cfg['endpoint']}")
                     if r.status_code != 200:
                         raise Exception(f"HTTP {r.status_code}")
                     data = r.json()
-                
-                # compact summary
                 summary = json.dumps(data, ensure_ascii=False)[:2000]
                 parts.append(f"[{cfg['label']}]\n{summary}")
             except Exception as e:
@@ -8610,6 +8641,64 @@ async def cerebro_route(q: str = ""):
     decision = _route_query(q)
     return {"query": q, "route": decision,
             "agent": "TARS" if decision == "tars" else ("CASE" if decision == "case" else "TARS+CASE")}
+
+@app.post("/api/cerebro/reload")
+async def cerebro_reload():
+    """Recarga contexto-maestro.md del vault Obsidian en memoria."""
+    _load_vault_context()
+    size = len(_vault_context_cache)
+    last_mod = ""
+    if _MASTER_FILE.exists():
+        import stat as _stat
+        mtime = _MASTER_FILE.stat().st_mtime
+        last_mod = dt_datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+    return {
+        "status": "ok",
+        "vault_loaded": size > 0,
+        "context_chars": size,
+        "last_modified": last_mod,
+        "master_file": str(_MASTER_FILE),
+    }
+
+@app.get("/api/cerebro/vault-status")
+async def cerebro_vault_status():
+    """Estado del vault Obsidian y el contexto cargado."""
+    snapshots = []
+    if _CEREBRO_DIR.exists():
+        for f in sorted(_CEREBRO_DIR.glob("*.md")):
+            mtime = f.stat().st_mtime
+            snapshots.append({
+                "file": f.name,
+                "size_kb": round(f.stat().st_size / 1024, 1),
+                "updated": dt_datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M"),
+            })
+    return {
+        "vault_path": str(_VAULT_PATH),
+        "master_file": str(_MASTER_FILE),
+        "master_exists": _MASTER_FILE.exists(),
+        "context_loaded": len(_vault_context_cache) > 0,
+        "context_chars": len(_vault_context_cache),
+        "snapshots": snapshots,
+    }
+
+@app.post("/api/cerebro/sync")
+async def cerebro_sync(background_tasks: BackgroundTasks):
+    """Dispara tars_brain.py en background para sincronizar Odoo → Vault."""
+    import subprocess, sys
+    brain_script = _Path(__file__).parent / "tars_brain.py"
+    if not brain_script.exists():
+        raise HTTPException(status_code=404, detail="tars_brain.py no encontrado")
+
+    def _run_brain():
+        try:
+            subprocess.run([sys.executable, str(brain_script)],
+                           capture_output=True, timeout=300)
+            _load_vault_context()  # recargar después del sync
+        except Exception:
+            pass
+
+    background_tasks.add_task(_run_brain)
+    return {"status": "sync_started", "script": str(brain_script)}
 
 # ─── XCIEN Snapshot — contexto para agentes externos (CASE/Eagle/MCP) ──────────
 
