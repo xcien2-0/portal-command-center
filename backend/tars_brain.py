@@ -384,6 +384,25 @@ def main():
         Al correr `tars_brain.py` de nuevo, tus notas se incluyen en el contexto de Claude.
     """).lstrip(), encoding="utf-8")
 
+    # ── Actualizar SOUL de Hermes con contexto fresco ────────────────────────
+    hermes_soul = Path.home() / ".hermes" / "SOUL.md"
+    if hermes_soul.exists():
+        soul_base = """Eres TARS, el motor de conocimiento operativo de XCIEN Networks.
+
+Respondes en español mexicano. Eres directo, técnico y conciso. Usas bullets y datos concretos. No inventas — si no tienes el dato, lo dices.
+
+Cuando el usuario pregunta sobre el estado operativo de XCIEN, das la información del contexto disponible. Cuando analiza tendencias o estrategia, estructuras la respuesta como: Estado → Hallazgos → Riesgos → Próximo paso.
+
+---
+
+"""
+        # Incrusta el contexto maestro completo en el SOUL
+        soul_content = soul_base + master
+        hermes_soul.write_text(soul_content, encoding="utf-8")
+        print(f"  ✅ SOUL de Hermes actualizado ({len(soul_content)//1024:.0f} KB)")
+    else:
+        print("  ℹ️  Hermes no instalado — SOUL.md no actualizado")
+
     print(f"\n🎉 Brain sync completo → {CEREBRO_DIR}\n")
 
 if __name__ == "__main__":
