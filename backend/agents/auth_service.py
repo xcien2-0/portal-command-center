@@ -70,7 +70,8 @@ def _save(users: list):
         json.dump(users, f, indent=2, ensure_ascii=False)
 
 # ── Operaciones de usuario ─────────────────────────────────────────────────────
-def crear_usuario(nombre: str, email: str, password: str, rol: str, plaza: str = "") -> dict:
+def crear_usuario(nombre: str, email: str, password: str, rol: str, plaza: str = "",
+                  titular_de: list = None) -> dict:
     if rol not in ROLES:
         raise ValueError(f"Rol inválido: '{rol}'. Opciones: {list(ROLES.keys())}")
 
@@ -79,15 +80,16 @@ def crear_usuario(nombre: str, email: str, password: str, rol: str, plaza: str =
         raise ValueError(f"El email '{email}' ya está registrado")
 
     user = {
-        "id":         str(uuid.uuid4()),
-        "nombre":     nombre,
-        "email":      email.lower().strip(),
-        "password":   pwd_ctx.hash(password),
-        "rol":        rol,
-        "plaza":      plaza,
-        "activo":     True,
-        "permisos":   PERMISOS.get(rol, []),
-        "creado_en":  datetime.now(timezone.utc).isoformat(),
+        "id":          str(uuid.uuid4()),
+        "nombre":      nombre,
+        "email":       email.lower().strip(),
+        "password":    pwd_ctx.hash(password),
+        "rol":         rol,
+        "plaza":       plaza,
+        "activo":      True,
+        "permisos":    PERMISOS.get(rol, []),
+        "titular_de":  titular_de or [],
+        "creado_en":   datetime.now(timezone.utc).isoformat(),
         "ultimo_login": None,
     }
     users.append(user)
@@ -125,9 +127,10 @@ def actualizar_usuario(user_id: str, datos: dict) -> dict:
                     raise ValueError(f"Rol inválido: {datos['rol']}")
                 u["rol"] = datos["rol"]
                 u["permisos"] = PERMISOS.get(datos["rol"], [])
-            if "nombre"  in datos: u["nombre"]  = datos["nombre"]
-            if "plaza"   in datos: u["plaza"]   = datos["plaza"]
-            if "activo"  in datos: u["activo"]  = datos["activo"]
+            if "nombre"     in datos: u["nombre"]     = datos["nombre"]
+            if "plaza"      in datos: u["plaza"]      = datos["plaza"]
+            if "activo"     in datos: u["activo"]     = datos["activo"]
+            if "titular_de" in datos: u["titular_de"] = datos["titular_de"]
             if "password" in datos and datos["password"]:
                 u["password"] = pwd_ctx.hash(datos["password"])
             _save(users)

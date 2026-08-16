@@ -6953,6 +6953,37 @@ def red_radiobases_odoo():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/noc/radiobases-harmonized")
+async def noc_radiobases_harmonized():
+    """
+    Radiobases armonizadas: Odoo (ubicación+clientes) + NOCBoard (estado)
+    + Helpdesk CAST (soporte abierto) + CAST campo (tareas activas).
+    Caché 60 s.
+    """
+    from agents.radiobase_harmonizer import harmonize, invalidate
+    cfg = {
+        "odoo_url":       os.environ.get("ODOO_URL",  "https://odoo.wispi.mx"),
+        "odoo_db":        os.environ.get("ODOO_DB",   "wispi19"),
+        "odoo_user":      os.environ.get("ODOO_USER", ""),
+        "odoo_pass":      os.environ.get("ODOO_PASSWORD", ""),
+        "nocboard_proxy": os.environ.get("NOCBOARD_PROXY", "http://localhost:9400"),
+        "nocboard_key":   os.environ.get("NOCBOARD_API_KEY", "87a08190b801416392e944ab79c7e3c9"),
+    }
+    try:
+        return await harmonize(cfg)
+    except Exception as e:
+        logger.error(f"[radiobases-harmonized] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/noc/radiobases-harmonized/refresh")
+async def noc_radiobases_refresh():
+    """Invalida la caché del armonizador para forzar recarga inmediata."""
+    from agents.radiobase_harmonizer import invalidate
+    invalidate()
+    return {"ok": True}
+
+
 @app.get("/api/red/odoo-servicios-geo")
 def red_odoo_servicios_geo(estado: str = "active"):
     """
@@ -9431,6 +9462,7 @@ class UserCreateRequest(BaseModel):
     password: str
     rol: str
     plaza: str = ""
+    titular_de: list[str] = []
 
 class UserUpdateRequest(BaseModel):
     nombre: Optional[str] = None
@@ -9438,6 +9470,7 @@ class UserUpdateRequest(BaseModel):
     plaza: Optional[str] = None
     activo: Optional[bool] = None
     password: Optional[str] = None
+    titular_de: Optional[list[str]] = None
 
 @app.get("/api/auth/usuarios")
 def listar_usuarios(user: dict = Depends(require_rol("admin", "director"))):
@@ -9447,7 +9480,7 @@ def listar_usuarios(user: dict = Depends(require_rol("admin", "director"))):
 def crear_usuario(req: UserCreateRequest, user: dict = Depends(require_rol("admin"))):
     try:
         nuevo = auth_service.crear_usuario(
-            req.nombre, req.email, req.password, req.rol, req.plaza
+            req.nombre, req.email, req.password, req.rol, req.plaza, req.titular_de
         )
         return {"status": "success", "usuario": nuevo}
     except ValueError as e:

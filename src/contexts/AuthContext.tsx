@@ -8,6 +8,7 @@ interface AuthUser {
   rol: string;
   plaza: string;
   permisos: string[];
+  titular_de: string[];
   activo: boolean;
 }
 
@@ -20,6 +21,8 @@ interface AuthContextValue {
   /** fetch() con Authorization: Bearer <token> inyectado automáticamente */
   authFetch: (url: string, options?: RequestInit) => Promise<Response>;
   hasPermiso: (permiso: string) => boolean;
+  /** true si el usuario es titular del módulo indicado (o es admin) */
+  isTitular: (moduloId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -81,8 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return p.includes('*') || p.includes(permiso);
   }, [user]);
 
+  const isTitular = useCallback((moduloId: string): boolean => {
+    if (!user) return false;
+    if (user.rol === 'admin') return true;
+    return (user.titular_de ?? []).includes(moduloId);
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, authFetch, hasPermiso }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, authFetch, hasPermiso, isTitular }}>
       {children}
     </AuthContext.Provider>
   );
