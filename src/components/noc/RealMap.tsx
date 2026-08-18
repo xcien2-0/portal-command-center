@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { NOCCity } from '@/types/noc';
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
@@ -67,24 +67,109 @@ export interface OdooServicio {
   rb?: string;
 }
 
+export interface RadiobaseHarmonized {
+  id: number;
+  nombre: string;
+  lat: number;
+  lng: number;
+  clientes: number;
+  estado_odoo: string;
+  status: 'up' | 'degraded' | 'down' | 'unknown';
+  alerts_count: number;
+  sources: {
+    odoo: any;
+    nocboard: any;
+    uisp: any;
+    cambium: any;
+    mimosa: any;
+  };
+  soporte: { total: number; tickets: any[] };
+  campo:   { total: number; tareas:  any[] };
+}
+
 interface Props {
   cities: NOCCity[];
   onSelectCity: (city: NOCCity) => void;
   selectedCityId: string | null;
   odooServices?: OdooServicio[];
+  radiobases?: RadiobaseHarmonized[];
+  showRadiobases?: boolean;
+  onSelectRadiobase?: (rb: RadiobaseHarmonized | null) => void;
+  selectedRbId?: number | null;
+  vendorLayers?: Partial<Record<VendorId, boolean>>;
+  onVendorToggle?: (id: VendorId) => void;
 }
 
+// ── Map tile providers ────────────────────────────────────────────────────────
+const MAP_TILES = [
+  {
+    id: 'dark',
+    label: 'Dark',
+    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
+    opts: { subdomains: 'abcd', maxZoom: 18 },
+    filter: 'brightness(0.9) saturate(1.1)',
+  },
+  {
+    id: 'satellite',
+    label: 'Satélite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts: { maxZoom: 18 },
+    filter: 'brightness(1.05) saturate(1.2)',
+  },
+  {
+    id: 'light',
+    label: 'Claro',
+    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png',
+    opts: { subdomains: 'abcd', maxZoom: 18 },
+    filter: 'brightness(0.95)',
+  },
+  {
+    id: 'osm',
+    label: 'OSM',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { subdomains: 'abc', maxZoom: 19 },
+    filter: 'brightness(0.92) saturate(0.9)',
+  },
+] as const;
+type MapTileId = typeof MAP_TILES[number]['id'];
+
+// ── Radiobase status colors ───────────────────────────────────────────────────
+const RB_COLOR: Record<string, string> = {
+  up:       '#00ff88',
+  degraded: '#ffcc00',
+  down:     '#ff3366',
+  unknown:  '#94a3b8',
+};
+
+// ── Vendor layers ─────────────────────────────────────────────────────────────
+const VENDOR_LAYERS = [
+  { id: 'uisp',    label: 'Ubiquiti', color: '#0891b2', icon: '◆' },
+  { id: 'cambium', label: 'Cambium',  color: '#d97706', icon: '▲' },
+  { id: 'mimosa',  label: 'Mimosa',   color: '#7c3aed', icon: '●' },
+] as const;
+type VendorId = typeof VENDOR_LAYERS[number]['id'];
+
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function RealMap({ cities, onSelectCity, selectedCityId, odooServices = [] }: Props) {
+export default function RealMap({
+  cities, onSelectCity, selectedCityId,
+  odooServices = [],
+  radiobases = [], showRadiobases = false,
+  onSelectRadiobase, selectedRbId = null,
+  vendorLayers = {}, onVendorToggle,
+}: Props) {
   const mapRef        = useRef<any>(null);
   const leafRef       = useRef<any>(null);
   const layerRef      = useRef<any>(null);
   const odooLayerRef  = useRef<any>(null);
+  const rbLayerRef    = useRef<any>(null);
+  const tileLayerRef  = useRef<any>(null);
+  const vendorLayerRefs = useRef<Partial<Record<VendorId, any>>>({});
   const svgRef        = useRef<SVGSVGElement | null>(null);
   const citiesRef     = useRef<NOCCity[]>(cities);
   const selectedRef   = useRef<string | null>(selectedCityId);
   const fittedRef     = useRef(false);
   const containerId   = 'noc-real-map';
+  const [mapType, setMapType] = useState<MapTileId>('dark');
 
   // Keep refs in sync with props
   citiesRef.current   = cities;
@@ -105,10 +190,8 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
         minZoom: 4,
       });
 
-      L.tileLayer(
-        'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
-        { subdomains: 'abcd', maxZoom: 18 }
-      ).addTo(map);
+      const initialTile = MAP_TILES[0];
+      tileLayerRef.current = L.tileLayer(initialTile.url, initialTile.opts).addTo(map);
 
       leafRef.current = L;
       mapRef.current  = map;
@@ -129,6 +212,19 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; fittedRef.current = false; }
     };
   }, []);
+
+  // ── Swap tile layer when mapType changes ─────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const L   = leafRef.current;
+    if (!map || !L) return;
+    const tile = MAP_TILES.find(t => t.id === mapType) ?? MAP_TILES[0];
+    if (tileLayerRef.current) { map.removeLayer(tileLayerRef.current); }
+    tileLayerRef.current = L.tileLayer(tile.url, tile.opts).addTo(map);
+    // Apply per-tile CSS filter
+    const pane = document.querySelector(`#${containerId} .leaflet-tile-pane`) as HTMLElement | null;
+    if (pane) pane.style.filter = tile.filter;
+  }, [mapType]);
 
   // ── Redraw markers + arcs when data changes ───────────────────────────────
   useEffect(() => {
@@ -235,9 +331,180 @@ export default function RealMap({ cities, onSelectCity, selectedCityId, odooServ
     });
   }, [odooServices]);
 
+  // ── Radiobase layer ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const L   = leafRef.current;
+    if (!map || !L) return;
+
+    if (rbLayerRef.current) { rbLayerRef.current.clearLayers(); }
+
+    if (!showRadiobases || !radiobases.length) return;
+
+    const maxClientes = Math.max(...radiobases.map(r => r.clientes), 1);
+    const group = rbLayerRef.current ?? L.layerGroup().addTo(map);
+    rbLayerRef.current = group;
+    group.clearLayers();
+
+    radiobases.forEach(rb => {
+      const c       = RB_COLOR[rb.status] ?? RB_COLOR.unknown;
+      const isSelected = rb.id === selectedRbId;
+      const size    = Math.max(10, Math.min(26, 10 + (rb.clientes / maxClientes) * 16));
+      const hasTix  = rb.soporte.total > 0;
+      const hasCampo= rb.campo.total > 0;
+
+      const badgeHtml = [
+        hasTix   ? `<span style="font-size:9px;background:#ff336644;border-radius:10px;padding:1px 5px;color:#ff6688;font-weight:700">⚠${rb.soporte.total}</span>` : '',
+        hasCampo ? `<span style="font-size:9px;background:#60a5fa22;border-radius:10px;padding:1px 5px;color:#60a5fa;font-weight:700">🔧${rb.campo.total}</span>` : '',
+      ].filter(Boolean).join('');
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+          <div style="
+            width:${size}px;height:${size}px;
+            background:${c}18;border:2px solid ${c};border-radius:4px;
+            box-shadow:0 0 ${isSelected ? 20 : 8}px ${c}66;
+            display:flex;align-items:center;justify-content:center;font-size:${size * 0.55}px;
+            ${isSelected ? `animation:noc-pulse 1.5s ease-in-out infinite;` : ''}
+          ">📡</div>
+          ${badgeHtml ? `<div style="display:flex;gap:2px;">${badgeHtml}</div>` : ''}
+        </div>`,
+        iconSize:   [size, size + (badgeHtml ? 14 : 0)],
+        iconAnchor: [size / 2, size / 2],
+      });
+
+      const statusLabel = { up:'✅ Operando', degraded:'⚠ Degradado', down:'🔴 Caído', unknown:'❔ Sin monitoreo' }[rb.status] ?? '';
+      const tipContent = `
+        <div style="font-family:monospace;font-size:11px;background:#000d07;border:1px solid ${c}40;border-radius:8px;padding:8px 12px;color:#fff;min-width:180px">
+          <div style="font-weight:800;color:${c};margin-bottom:4px">${rb.nombre.toUpperCase()}</div>
+          <div style="color:rgba(255,255,255,0.6);margin-bottom:5px">${statusLabel}</div>
+          <div>👥 ${rb.clientes} clientes</div>
+          ${rb.soporte.total ? `<div style="color:#ff6688">⚠ ${rb.soporte.total} ticket${rb.soporte.total>1?'s':''} abierto${rb.soporte.total>1?'s':''}</div>` : ''}
+          ${rb.campo.total   ? `<div style="color:#60a5fa">🔧 ${rb.campo.total} tarea${rb.campo.total>1?'s':''} en campo</div>` : ''}
+        </div>`;
+
+      L.marker([rb.lat, rb.lng], { icon })
+        .bindTooltip(tipContent, {
+          className: 'noc-tooltip', permanent: false, opacity: 1, direction: 'top',
+          offset: [0, -size / 2],
+        })
+        .on('click', () => onSelectRadiobase?.(rb))
+        .addTo(group);
+    });
+  }, [radiobases, showRadiobases, selectedRbId]);
+
+  // ── Vendor layers (UISP / Cambium / Mimosa) ───────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const L   = leafRef.current;
+    if (!map || !L) return;
+
+    VENDOR_LAYERS.forEach(v => {
+      const active = !!vendorLayers[v.id];
+      let grp = vendorLayerRefs.current[v.id];
+
+      if (!active) {
+        if (grp) { grp.clearLayers(); }
+        return;
+      }
+
+      if (!grp) {
+        grp = L.layerGroup().addTo(map);
+        vendorLayerRefs.current[v.id] = grp;
+      }
+      grp.clearLayers();
+
+      // Render markers for radiobases that have data from this vendor source
+      radiobases.forEach(rb => {
+        const src = rb.sources[v.id as keyof typeof rb.sources];
+        if (!src) return; // no data yet for this vendor
+
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="
+            width:14px;height:14px;
+            background:${v.color}22;border:2px solid ${v.color};
+            border-radius:3px;display:flex;align-items:center;justify-content:center;
+            font-size:8px;color:${v.color};box-shadow:0 0 8px ${v.color}66;
+          ">${v.icon}</div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        });
+        const tip = `<div style="font-family:monospace;font-size:11px;background:#0a0a1a;border:1px solid ${v.color}40;border-radius:6px;padding:6px 10px;color:#fff">
+          <div style="color:${v.color};font-weight:800">${v.label}</div>
+          <div style="opacity:0.7">${rb.nombre}</div>
+        </div>`;
+        L.marker([rb.lat, rb.lng], { icon })
+          .bindTooltip(tip, { className: 'noc-tooltip', permanent: false, opacity: 1, direction: 'top' })
+          .addTo(grp);
+      });
+    });
+  }, [vendorLayers, radiobases]);
+
   return (
     <>
-      <div id={containerId} style={{ width: '100%', height: '100%', borderRadius: 18, overflow: 'hidden' }} />
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div id={containerId} style={{ width: '100%', height: '100%', borderRadius: 18, overflow: 'hidden' }} />
+
+        {/* Bottom controls row */}
+        <div style={{
+          position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 1000,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+          pointerEvents: 'none',
+        }}>
+          {/* Map type switcher — left */}
+          <div style={{
+            display: 'flex', gap: 4, background: 'rgba(10,20,14,0.88)',
+            border: '1px solid #00ff8830', borderRadius: 8,
+            padding: '4px 6px', backdropFilter: 'blur(6px)',
+            pointerEvents: 'all',
+          }}>
+            <span style={{ fontSize: 9, color: '#00ff8855', fontFamily: 'monospace', alignSelf: 'center', marginRight: 2 }}>MAPA</span>
+            {MAP_TILES.map(t => (
+              <button key={t.id} onClick={() => setMapType(t.id)} style={{
+                padding: '3px 8px', borderRadius: 5, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontFamily: 'monospace',
+                fontWeight: mapType === t.id ? 700 : 400,
+                background: mapType === t.id ? '#00ff88' : 'transparent',
+                color: mapType === t.id ? '#0a1a10' : '#00ff8899',
+                transition: 'all 0.15s',
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          {/* Vendor layer toggles — right */}
+          <div style={{
+            display: 'flex', gap: 4, background: 'rgba(10,20,14,0.88)',
+            border: '1px solid #ffffff18', borderRadius: 8,
+            padding: '4px 6px', backdropFilter: 'blur(6px)',
+            pointerEvents: 'all',
+          }}>
+            <span style={{ fontSize: 9, color: '#ffffff40', fontFamily: 'monospace', alignSelf: 'center', marginRight: 2 }}>CAPAS</span>
+            {VENDOR_LAYERS.map(v => {
+              const active = !!vendorLayers[v.id];
+              const hasData = radiobases.some(rb => rb.sources[v.id as keyof typeof rb.sources] !== null);
+              return (
+                <button key={v.id} onClick={() => onVendorToggle?.(v.id)}
+                  title={hasData ? `${active ? 'Ocultar' : 'Mostrar'} ${v.label}` : `${v.label} — sin datos`}
+                  style={{
+                    padding: '3px 9px', borderRadius: 5, cursor: 'pointer',
+                    fontSize: 11, fontFamily: 'monospace', fontWeight: 700,
+                    border: `1px solid ${active ? v.color + '66' : '#ffffff15'}`,
+                    background: active ? v.color + '22' : 'transparent',
+                    color: active ? v.color : hasData ? '#ffffff55' : '#ffffff25',
+                    transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                  <span style={{ fontSize: 8 }}>{v.icon}</span>
+                  {v.label}
+                  {!hasData && <span style={{ fontSize: 8, opacity: 0.5 }}>–</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
       <style>{`
         #${containerId} .leaflet-tile-pane { filter: brightness(0.9) saturate(1.1); }
         #${containerId} .leaflet-control-zoom a {

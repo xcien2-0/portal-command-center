@@ -1096,6 +1096,18 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
       added.push(lyr);
     });
     kmzLayers.current[group.id] = added;
+
+    // Auto-zoom al área de la capa recién activada
+    if (added.length > 0) {
+      try {
+        const bounds = added.reduce((b: any, lyr: any) => {
+          try { return b ? b.extend(lyr.getBounds()) : lyr.getBounds(); } catch { return b; }
+        }, null);
+        if (bounds && bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
+        }
+      } catch {}
+    }
   }, [kmzActive]);
 
   // ── Renderizar radiobases Odoo ───────────────────────────────────────────────
@@ -1411,6 +1423,67 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
         {/* Mapa Leaflet */}
         <div id="red-section-map" style={{ width: '100%', height: '100%', display: mainView === 'map' ? 'block' : 'none' }} />
+
+        {/* Controles flotantes del mapa */}
+        {mainView === 'map' && (
+          <div style={{
+            position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center',
+            pointerEvents: 'none',
+          }}>
+            {/* Tipo de mapa */}
+            <div style={{
+              display: 'flex', gap: 3, background: 'rgba(5,15,10,0.92)',
+              border: '1px solid rgba(0,255,136,0.2)', borderRadius: 10,
+              padding: '5px 8px', backdropFilter: 'blur(8px)', pointerEvents: 'all',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 9, color: 'rgba(0,255,136,0.4)', fontFamily: 'monospace', marginRight: 3 }}>MAPA</span>
+              {([
+                { id: 'dark',      label: 'Dark'      },
+                { id: 'satellite', label: 'Satélite'  },
+                { id: 'topo',      label: 'Relieve'   },
+              ] as const).map(opt => (
+                <button key={opt.id} onClick={() => setMapLayer(opt.id)} style={{
+                  padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                  fontFamily: 'monospace', fontWeight: mapLayer === opt.id ? 700 : 400, border: 'none',
+                  background: mapLayer === opt.id ? '#00ff88' : 'transparent',
+                  color: mapLayer === opt.id ? '#001a0d' : 'rgba(0,255,136,0.5)',
+                  transition: 'all 0.15s',
+                }}>{opt.label}</button>
+              ))}
+            </div>
+
+            {/* Filtro por vendedor */}
+            <div style={{
+              display: 'flex', gap: 3, background: 'rgba(5,15,10,0.92)',
+              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+              padding: '5px 8px', backdropFilter: 'blur(8px)', pointerEvents: 'all',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', marginRight: 3 }}>CAPAS</span>
+              {(['Ubiquiti','Cambium','Mimosa'] as const).map(v => {
+                const count  = hosts.filter(h => h.vendor === v).length;
+                const active = vendorFilter.includes(v);
+                const vc     = VENDOR_COLORS[v];
+                return (
+                  <button key={v} onClick={() => toggleVendor(v)} style={{
+                    padding: '3px 9px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                    fontFamily: 'monospace', fontWeight: 700,
+                    border: `1px solid ${active ? vc + '66' : 'rgba(255,255,255,0.1)'}`,
+                    background: active ? vc + '22' : 'transparent',
+                    color: active ? vc : count ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
+                    transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span style={{ fontSize: 10 }}>{VENDOR_ICONS[v]}</span>
+                    {v}
+                    {count > 0 && <span style={{ fontSize: 9, opacity: 0.7, background: active ? vc + '33' : 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '0 4px' }}>{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Panel ciudad */}
         {selectedCity && !selectedHost && (

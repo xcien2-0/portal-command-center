@@ -94,10 +94,10 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 // ── Acceso por rol ────────────────────────────────────────────────────────────
 const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   admin:     '*',
-  director:  ['inicio','impacto','noc','red','incidentes','ventas','integridad','reportes-kpi',
+  director:  ['inicio','impacto','noc','cast','red','infra-energia','incidentes','ventas','integridad','reportes-kpi',
                'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases','estrategia2030',
-               'agentes','comite','docs','reportlab','analytics','auditoria-odoo'],
-  noc:       ['inicio','noc','cast','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs','radiobases'],
+               'agentes','comite','docs','reportlab','analytics','auditoria-odoo','blackstone','iblack'],
+  noc:       ['inicio','noc','cast','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone'],
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas','radiobases'],
   comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
   preventa:  ['inicio','ventas','reportes-kpi','proyectos','plan2026','docs','sala_juntas'],
@@ -124,6 +124,7 @@ const NAV: NavEntry[] = [
   // ── Monitoreo ──────────────────────────────────────────────────────────────
   { id: 'noc',           label: 'NOC Virtual',             icon: '📡', group: 'Monitoreo' },
   { id: 'cast',          label: 'CAST NOC',                icon: '🎫', group: 'Monitoreo' },
+  { id: 'helpdesk',      label: 'Mesa de Ayuda',           icon: '📈', group: 'Monitoreo' },
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
   { id: 'blackstone',    label: 'blackstoneOS · PDN',      icon: '🏙️', group: 'Monitoreo' },

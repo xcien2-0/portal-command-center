@@ -43,7 +43,8 @@ function elapsedLabel(s: number) {
   return `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h`;
 }
 
-function slaFor(level: string) {
+function slaFor(level: string | undefined | null) {
+  if (!level) return 4 * 3600;
   const l = level.toLowerCase();
   if (l.includes('nvl:1') || l.includes('nivel 1')) return 2 * 3600;
   if (l.includes('nvl:2') || l.includes('nivel 2')) return 4 * 3600;
@@ -53,9 +54,9 @@ function slaFor(level: string) {
 }
 
 function slaColor(elapsed: number, sla: number, resolved: boolean) {
-  if (resolved) return C.green;
-  if (elapsed > sla * 2) return C.red;
-  if (elapsed > sla)     return C.amber;
+  if (resolved)          return C.green;
+  if (elapsed > sla)     return C.red;
+  if (elapsed > sla / 2) return C.amber;
   return C.green;
 }
 
@@ -71,6 +72,7 @@ const SEGMENTS = [
 
 function classifyTicket(t: Ticket): string {
   if (t.resolved) return 'resueltos';
+  if (!t.level) return 'otros';
   const l = t.level.toLowerCase();
   if (l.includes('nvl:1') || l.includes('nivel 1')) return 'nvl1';
   if (l.includes('nvl:2') || l.includes('nivel 2')) return 'nvl2';
@@ -170,6 +172,31 @@ function Metric({ label, value, color, sub }: {
   );
 }
 
+// ── Analíticas helpers ────────────────────────────────────────────────────────
+function groupBy<T>(arr: T[], key: (t: T) => string): { nombre: string; total: number }[] {
+  const map: Record<string, number> = {};
+  arr.forEach(t => { const k = key(t) || 'Sin asignar'; map[k] = (map[k] || 0) + 1; });
+  return Object.entries(map).map(([nombre, total]) => ({ nombre, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function HBar({ nombre, total, max, color }: { nombre: string; total: number; max: number; color: string }) {
+  const pct = max > 0 ? (total / max) * 100 : 0;
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontSize: 11, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap', maxWidth: '75%' }} title={nombre}>{nombre}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{total}</span>
+      </div>
+      <div style={{ height: 5, background: C.border, borderRadius: 4 }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4,
+          transition: 'width .4s ease' }} />
+      </div>
+    </div>
+  );
+}
+
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function CastSection() {
   useTabTrack('cast');
@@ -184,6 +211,7 @@ export default function CastSection() {
   const [sending,    setSending]    = useState(false);
   const [sendMsg,    setSendMsg]    = useState('');
   const [showMenu,   setShowMenu]   = useState(false);
+  const [mainTab,    setMainTab]    = useState<'tablero' | 'analiticas'>('tablero');
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Reloj
@@ -208,7 +236,32 @@ export default function CastSection() {
     try {
       const r = await fetch(`/api/noc/tickets?horas=${horas}`);
       if (!r.ok) throw new Error(`${r.status}`);
-      setData(await r.json());
+      const raw = await r.json();
+      // Map API fields → Ticket interface
+      const tickets: Ticket[] = (raw.tickets ?? raw).map((t: any) => ({
+        id:         t.id,
+        ref:        t.ref || `#${t.id}`,
+        name:       t.title ?? t.name ?? '',
+        client:     t.client ?? '',
+        agent:      t.user   ?? t.agent ?? 'Sin asignar',
+        stage:      t.stage  ?? '',
+        level:      t.stage  ?? t.level ?? '',   // stage tiene "CAST Nvl:1" etc.
+        created_at: t.created_at ?? '',
+        elapsed_s:  t.total_secs ?? t.elapsed_s ?? 0,
+        resolved:   t.resolved ?? false,
+      }));
+      const meta = raw.meta ?? {};
+      const open     = tickets.filter(t => !t.resolved).length;
+      const resolved = tickets.filter(t =>  t.resolved).length;
+      const critical = tickets.filter(t => !t.resolved && t.elapsed_s > slaFor(t.level)).length;
+      setData({
+        tickets,
+        total:        meta.total          ?? tickets.length,
+        open:         meta.open           ?? open,
+        resolved:     meta.resolved       ?? resolved,
+        critical:     meta.critical       ?? critical,
+        avg_response_h: meta.avg_response_h ?? 0,
+      });
       setError('');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error de conexión');
@@ -362,6 +415,21 @@ export default function CastSection() {
         </div>
       </div>
 
+      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {([['tablero', '📋 Tablero'], ['analiticas', '📊 Analíticas']] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setMainTab(id)}
+            style={{ padding: '6px 16px', fontSize: 12, borderRadius: 8, cursor: 'pointer',
+              border: `1px solid ${mainTab === id ? C.green : C.border}`,
+              background: mainTab === id ? C.greenDim : C.surf,
+              color: mainTab === id ? C.green : C.sub, fontWeight: mainTab === id ? 700 : 400 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mainTab === 'tablero' && (<>
+
       {/* ── SLA leyenda ─────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
@@ -381,11 +449,11 @@ export default function CastSection() {
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.green  }} />
-          <span style={{ fontSize: 10, color: C.sub }}>OK</span>
+          <span style={{ fontSize: 10, color: C.sub }}>En SLA (&lt;50%)</span>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.amber  }} />
-          <span style={{ fontSize: 10, color: C.sub }}>SLA vencido</span>
+          <span style={{ fontSize: 10, color: C.sub }}>Por vencer (&gt;50%)</span>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.red    }} />
-          <span style={{ fontSize: 10, color: C.sub }}>Crítico ×2</span>
+          <span style={{ fontSize: 10, color: C.sub }}>Fuera de SLA</span>
         </div>
       </div>
 
@@ -448,11 +516,12 @@ export default function CastSection() {
                   <>
                     <tr key={t.id}
                       onClick={() => setExpanded(isExp ? null : t.id)}
+                      className={!t.resolved && t.elapsed_s > sla && !isExp ? 'critical-row' : ''}
                       style={{ borderBottom: `1px solid ${C.border}`,
                         background: isExp ? C.surf2 : i % 2 === 0 ? C.surf : C.dim,
                         cursor: 'pointer', transition: 'background .1s' }}
-                      onMouseEnter={e => { if (!isExp) (e.currentTarget as HTMLElement).style.background = C.surf2; }}
-                      onMouseLeave={e => { if (!isExp) (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? C.surf : C.dim; }}>
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.animation = 'none'; (e.currentTarget as HTMLElement).style.background = C.surf2; }}
+                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = i % 2 === 0 ? C.surf : C.dim; if (!t.resolved && t.elapsed_s > sla && !isExp) el.style.animation = ''; }}>
 
                       {/* Ref */}
                       <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: C.green,
@@ -496,14 +565,14 @@ export default function CastSection() {
                       {/* SLA indicator */}
                       <td style={{ padding: '10px 14px' }}>
                         {t.resolved ? (
-                          <span style={{ fontSize: 10, color: C.green }}>✓</span>
-                        ) : t.elapsed_s > sla * 2 ? (
-                          <span style={{ fontSize: 10, color: C.red, fontWeight: 700 }}>
-                            🔴 ×{(t.elapsed_s / sla).toFixed(1)}
-                          </span>
+                          <span style={{ fontSize: 10, color: C.green }}>✓ resuelto</span>
                         ) : t.elapsed_s > sla ? (
+                          <span style={{ fontSize: 10, color: C.red, fontWeight: 700 }}>
+                            🔴 fuera de SLA
+                          </span>
+                        ) : t.elapsed_s > sla / 2 ? (
                           <span style={{ fontSize: 10, color: C.amber, fontWeight: 700 }}>
-                            🟡 vencido
+                            🟡 {elapsedLabel(sla - t.elapsed_s)} restante
                           </span>
                         ) : (
                           <span style={{ fontSize: 10, color: C.green }}>
@@ -557,7 +626,128 @@ export default function CastSection() {
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </>)}
+
+      {/* ── ANALÍTICAS ───────────────────────────────────────────────────── */}
+      {mainTab === 'analiticas' && (() => {
+        const open     = tickets.filter(t => !t.resolved);
+        const resolved = tickets.filter(t =>  t.resolved);
+        const fuera    = open.filter(t => t.elapsed_s > slaFor(t.level));
+        const porVencer = open.filter(t => t.elapsed_s > slaFor(t.level) / 2 && t.elapsed_s <= slaFor(t.level));
+        const enSla    = open.filter(t => t.elapsed_s <= slaFor(t.level) / 2);
+        const tasaRes  = tickets.length > 0 ? Math.round((resolved.length / tickets.length) * 100) : 0;
+
+        const porAgente = groupBy(open, t => t.agent.split(' ').slice(0, 2).join(' '));
+        const porNivel  = groupBy(tickets, t => classifyTicket(t));
+        const porEtapa  = groupBy(open, t => t.stage);
+
+        const maxAgente = Math.max(...porAgente.map(x => x.total), 1);
+        const maxNivel  = Math.max(...porNivel.map(x => x.total),  1);
+        const maxEtapa  = Math.max(...porEtapa.map(x => x.total),  1);
+
+        return (
+          <div>
+            {/* KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10, marginBottom: 20 }}>
+              {[
+                { label: 'Total período',   value: tickets.length, color: C.text  },
+                { label: 'Abiertos',        value: open.length,    color: C.amber },
+                { label: 'Resueltos',       value: resolved.length,color: C.green },
+                { label: 'Fuera de SLA',    value: fuera.length,   color: C.red   },
+                { label: 'Por vencer',      value: porVencer.length,color: C.amber },
+                { label: 'En SLA (<50%)',   value: enSla.length,   color: C.green },
+                { label: 'Tasa resolución', value: `${tasaRes}%`,  color: tasaRes >= 80 ? C.green : tasaRes >= 50 ? C.amber : C.red },
+              ].map(k => (
+                <div key={k.label} style={{ background: C.surf, border: `1px solid ${C.border}`,
+                  borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: k.color,
+                    fontVariantNumeric: 'tabular-nums' }}>{k.value}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{k.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Estado SLA visual */}
+            <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10,
+              padding: 16, marginBottom: 16 }}>
+              <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, color: C.text }}>
+                Estado SLA — tickets abiertos ({open.length})
+              </p>
+              <div style={{ display: 'flex', gap: 0, height: 20, borderRadius: 6, overflow: 'hidden', marginBottom: 10 }}>
+                {[
+                  { pct: open.length > 0 ? (fuera.length / open.length) * 100 : 0, color: C.red   },
+                  { pct: open.length > 0 ? (porVencer.length / open.length) * 100 : 0, color: C.amber },
+                  { pct: open.length > 0 ? (enSla.length / open.length) * 100 : 0, color: C.green },
+                ].map((seg, i) => seg.pct > 0 && (
+                  <div key={i} style={{ width: `${seg.pct}%`, background: seg.color, transition: 'width .4s' }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {[
+                  { label: '🔴 Fuera de SLA', count: fuera.length,    color: C.red   },
+                  { label: '🟡 Por vencer',   count: porVencer.length, color: C.amber },
+                  { label: '🟢 En SLA',       count: enSla.length,     color: C.green },
+                ].map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: C.sub }}>{s.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: s.color,
+                      fontVariantNumeric: 'tabular-nums' }}>{s.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grilla de breakdowns */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              {/* Por agente */}
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                <p style={{ margin: '0 0 14px', fontSize: 11, fontWeight: 700, color: C.text }}>
+                  👤 Tickets abiertos por agente
+                </p>
+                {porAgente.slice(0, 10).map(item => (
+                  <HBar key={item.nombre} nombre={item.nombre} total={item.total} max={maxAgente} color={C.blue} />
+                ))}
+                {porAgente.length === 0 && <p style={{ color: C.muted, fontSize: 11 }}>Sin datos</p>}
+              </div>
+
+              {/* Por nivel */}
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                <p style={{ margin: '0 0 14px', fontSize: 11, fontWeight: 700, color: C.text }}>
+                  📊 Por nivel / tipo
+                </p>
+                {porNivel.map(item => {
+                  const seg = SEGMENTS.find(s => s.key === item.nombre);
+                  return (
+                    <HBar key={item.nombre} nombre={seg?.label ?? item.nombre}
+                      total={item.total} max={maxNivel} color={seg?.color ?? C.purple} />
+                  );
+                })}
+                {porNivel.length === 0 && <p style={{ color: C.muted, fontSize: 11 }}>Sin datos</p>}
+              </div>
+
+              {/* Por etapa */}
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+                <p style={{ margin: '0 0 14px', fontSize: 11, fontWeight: 700, color: C.text }}>
+                  🏷️ Por etapa (abiertos)
+                </p>
+                {porEtapa.slice(0, 10).map(item => (
+                  <HBar key={item.nombre} nombre={item.nombre} total={item.total} max={maxEtapa} color={C.amber} />
+                ))}
+                {porEtapa.length === 0 && <p style={{ color: C.muted, fontSize: 11 }}>Sin datos</p>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-red {
+          0%, 100% { background: rgba(239,68,68,0.08); }
+          50%       { background: rgba(239,68,68,0.22); }
+        }
+        tr.critical-row { animation: pulse-red 1.6s ease-in-out infinite; }
+      `}</style>
     </div>
   );
 }

@@ -1522,6 +1522,7 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
   const [selectedTask, setSelected]   = useState<number | null>(null);
+  const [busqueda, setBusqueda]       = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -1601,10 +1602,47 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
       {loading && tab === 'cuadrillas' && <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Conectando a Odoo Field Service...</div>}
       {error   && tab === 'cuadrillas' && <div style={{ padding: 16, borderRadius: 8, background: '#FF475710', color: '#FF4757', fontSize: 12 }}>Error: {error}</div>}
 
+      {/* Buscador de técnicos */}
+      {tab === 'cuadrillas' && !loading && !error && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: theme.dim, pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar técnico por nombre, alias o rol..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '8px 12px 8px 36px', borderRadius: 10,
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${busqueda ? theme.accent + '70' : theme.border}`,
+                color: theme.text, fontSize: 13, fontFamily: 'inherit',
+                outline: 'none', transition: 'border-color 0.15s',
+              }}
+            />
+            {busqueda && (
+              <button
+                onClick={() => setBusqueda('')}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: theme.dim, cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 }}
+              >✕</button>
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: theme.dim, flexShrink: 0 }}>
+            {busqueda
+              ? <span><b style={{ color: theme.text }}>{tecnicos.filter(t => [t.alias, t.nombre, t.rol].some(f => f.toLowerCase().includes(busqueda.toLowerCase()))).length}</b> de {tecnicos.length}</span>
+              : <span><b style={{ color: theme.text }}>{tecnicos.length}</b> técnicos</span>
+            }
+          </div>
+        </div>
+      )}
+
       {/* Tarjetas de técnicos */}
       {tab === 'cuadrillas' && !loading && !error && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 20 }}>
-          {tecnicos.map(t => (
+          {tecnicos.filter(t =>
+            !busqueda || [t.alias, t.nombre, t.rol].some(f => f.toLowerCase().includes(busqueda.toLowerCase()))
+          ).map(t => (
             <div key={t.id} style={{
               background: theme.card, border: `1px solid ${theme.border}`,
               borderRadius: 16, padding: 24, position: 'relative', overflow: 'hidden',
@@ -1694,6 +1732,17 @@ export default function BidrillasSection({ theme }: { theme: ThemeConfig }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Empty search result */}
+      {tab === 'cuadrillas' && !loading && !error && busqueda && tecnicos.filter(t =>
+        [t.alias, t.nombre, t.rol].some(f => f.toLowerCase().includes(busqueda.toLowerCase()))
+      ).length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: theme.dim }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
+          <div style={{ fontSize: 13 }}>Sin resultados para "<b style={{ color: theme.text }}>{busqueda}</b>"</div>
+          <button onClick={() => setBusqueda('')} style={{ marginTop: 10, padding: '5px 14px', borderRadius: 8, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.dim, fontSize: 11, cursor: 'pointer' }}>Limpiar búsqueda</button>
         </div>
       )}
 

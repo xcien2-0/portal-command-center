@@ -5,7 +5,7 @@ import { NOCCity, NOCAlert, NOCHost } from '@/types/noc';
 import { CASA_TENANTS } from '@/types/tenant';
 import { Activity, Terminal, Network, AlertTriangle, CheckCircle, Server, Wifi, WifiOff, Map, LayoutGrid, Route, X, ChevronDown, ChevronRight, Loader, Layers, Zap, Database, Radio, Eye, Signal, Triangle } from 'lucide-react';
 import { API_BASE } from '../../../config';
-import RealMap from '@/components/noc/RealMap';
+import RealMap, { RadiobaseHarmonized } from '@/components/noc/RealMap';
 import 'leaflet/dist/leaflet.css';
 import { useTabTrack } from '../../../hooks/useTabTrack';
 import { useVisibleInterval } from '../../../hooks/useVisibleInterval';
@@ -1412,6 +1412,114 @@ function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAler
   );
 }
 
+// ── Panel de detalle de radiobase ─────────────────────────────────────────────
+function RadiobasePanel({ rb, onClose }: { rb: RadiobaseHarmonized; onClose: () => void }) {
+  const c      = { up: G, degraded: Y, down: R, unknown: 'rgba(255,255,255,0.35)' }[rb.status] ?? DIM;
+  const label  = { up: 'OPERANDO', degraded: 'DEGRADADO', down: 'CAÍDO', unknown: 'SIN MONITOREO' }[rb.status] ?? '';
+  const noc    = rb.sources?.nocboard;
+
+  return (
+    <div style={{
+      width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10,
+      background: 'rgba(0,8,4,0.85)', border: `1px solid ${c}22`,
+      borderRadius: 18, padding: '16px 18px', overflowY: 'auto',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 9, color: c, fontFamily: 'monospace', letterSpacing: 2, fontWeight: 700 }}>
+            📡 RADIOBASE
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginTop: 2, lineHeight: 1.2 }}>
+            {rb.nombre}
+          </div>
+          <div style={{ fontSize: 10, color: c, fontFamily: 'monospace', marginTop: 3 }}>{label}</div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: DIM, cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[
+          { label: 'Clientes', value: rb.clientes, color: '#60a5fa' },
+          { label: 'Soporte',  value: rb.soporte.total, color: rb.soporte.total > 0 ? R : G },
+          { label: 'Campo',    value: rb.campo.total,   color: rb.campo.total > 0 ? '#60a5fa' : G },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color, fontFamily: 'Oswald' }}>{value}</div>
+            <div style={{ fontSize: 8, color: DIM, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* NOCBoard */}
+      {noc && (
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
+          <div style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>NOCBoard</div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <span style={{ fontSize: 11, color: G }}>▲ {noc.online ? 'Online' : '—'}</span>
+            <span style={{ fontSize: 11, color: DIM }}>Score: <b style={{ color: c }}>{noc.score ?? '—'}</b></span>
+            {noc.alerts > 0 && <span style={{ fontSize: 11, color: Y }}>⚠ {noc.alerts}</span>}
+          </div>
+          {noc.hostname && <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', marginTop: 4 }}>{noc.hostname}</div>}
+        </div>
+      )}
+
+      {/* Tickets de soporte */}
+      {rb.soporte.total > 0 && (
+        <div>
+          <div style={{ fontSize: 9, color: R, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+            ⚠ Soporte abierto ({rb.soporte.total})
+          </div>
+          {rb.soporte.tickets.map(t => (
+            <div key={t.id} style={{ background: 'rgba(255,51,102,0.07)', border: '1px solid rgba(255,51,102,0.15)', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, marginBottom: 2 }}>{t.nombre}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>{t.prioridad?.toUpperCase()}</span>
+                <span style={{ fontSize: 9, color: DIM }}>{t.etapa}</span>
+                {t.tecnico && <span style={{ fontSize: 9, color: DIM }}>👤 {t.tecnico.split(' ')[0]}</span>}
+                <span style={{ fontSize: 9, color: DIM }}>{t.fecha}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tareas de campo */}
+      {rb.campo.total > 0 && (
+        <div>
+          <div style={{ fontSize: 9, color: '#60a5fa', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+            🔧 Campo activo ({rb.campo.total})
+          </div>
+          {rb.campo.tareas.map(t => (
+            <div key={t.id} style={{ background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, marginBottom: 2 }}>{t.nombre}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 9, color: '#60a5fa' }}>{t.etapa}</span>
+                {t.tecnicos?.length > 0 && <span style={{ fontSize: 9, color: DIM }}>👤 {t.tecnicos[0].split(' ')[0]}</span>}
+                <span style={{ fontSize: 9, color: DIM }}>{t.fecha}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {rb.soporte.total === 0 && rb.campo.total === 0 && (
+        <div style={{ textAlign: 'center', color: DIM, fontSize: 11, padding: '12px 0' }}>
+          Sin tickets ni tareas activas
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Priority order: Energía → Datos → WL (wireless last)
+const NOCBOARD_PRIORITY = [
+  { name: 'Energía', port: 9404, key: 'f4f5ef40c4c54aeca1d6a66109e4555d' },
+  { name: 'Datos',   port: 9403, key: 'e48b0da1798145199ad24639cc70c66b' },
+  { name: 'WL',      port: 9401, key: '87a08190b801416392e944ab79c7e3c9' },
+];
+
 export default function NocSection({
   theme,
   cities = [],
@@ -1423,17 +1531,32 @@ export default function NocSection({
   const [selectedCity, setSelectedCity] = useState<NOCCity | null>(null);
   const [view, setView] = useState<'map' | 'grid' | 'reportes' | 'capas'>('map');
   const trackTab = useTabTrack('noc');
+
+  // ── Radiobases armonizadas ─────────────────────────────────────────────────
+  const [radiobases, setRadiobases]         = useState<RadiobaseHarmonized[]>([]);
+  const [showRadiobases, setShowRadiobases] = useState(true);
+  const [vendorLayers, setVendorLayers] = useState<Partial<Record<'uisp'|'cambium'|'mimosa', boolean>>>({});
+  const [selectedRb, setSelectedRb]         = useState<RadiobaseHarmonized | null>(null);
+  const [rbLoading, setRbLoading]           = useState(false);
+
+  const fetchRadiobases = useCallback(async () => {
+    const controller = new AbortController();
+    setRbLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/noc/radiobases-harmonized`, { signal: controller.signal });
+      if (r.ok) setRadiobases(await r.json());
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name !== 'AbortError') console.warn('fetchRadiobases:', e.message);
+    } finally { setRbLoading(false); }
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => { fetchRadiobases(); }, [fetchRadiobases]);
+  useVisibleInterval(fetchRadiobases, 60_000);
   const [boards, setBoards] = useState<Record<string, { online: number; offline: number; alerts: number; hosts: number; avail: number }>>({});
 
-  // Priority order: Energía → Datos → WL (wireless last)
-  const NOCBOARD_PRIORITY = [
-    { name: 'Energía',    port: 9404, key: 'f4f5ef40c4c54aeca1d6a66109e4555d' },
-    { name: 'Datos',      port: 9403, key: 'e48b0da1798145199ad24639cc70c66b' },
-    { name: 'WL',         port: 9401, key: '87a08190b801416392e944ab79c7e3c9' },
-  ];
-
   const fetchNocBoards = useCallback(async () => {
-    for (const { name, port, key } of NOCBOARD_PRIORITY) {
+    await Promise.all(NOCBOARD_PRIORITY.map(async ({ name, port, key }) => {
       try {
         const r = await fetch(`${API_BASE}/api/noc/board-status?port=${port}&key=${key}`);
         if (r.ok) {
@@ -1441,7 +1564,7 @@ export default function NocSection({
           setBoards(prev => ({ ...prev, [name]: d }));
         }
       } catch {}
-    }
+    }));
   }, []);
 
   useEffect(() => { fetchNocBoards(); }, [fetchNocBoards]);
@@ -1545,7 +1668,21 @@ export default function NocSection({
           })}
         </div>
 
-        {/* View toggle — píldoras */}
+        {/* Capa radiobases + View toggle */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Toggle capa radiobases */}
+          {view === 'map' && (
+            <button onClick={() => setShowRadiobases(v => !v)} style={{
+              padding: '5px 12px', fontSize: 10, fontWeight: 700, borderRadius: 20,
+              border: `1px solid ${showRadiobases ? '#60a5fa44' : 'rgba(255,255,255,0.06)'}`,
+              background: showRadiobases ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.03)',
+              color: showRadiobases ? '#60a5fa' : 'rgba(255,255,255,0.35)',
+              cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'monospace',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              📡 {rbLoading ? '…' : `${radiobases.length} RBs`}
+            </button>
+          )}
         <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', padding: 3, borderRadius: 12, gap: 2 }}>
           {([['map', 'Mapa', Map], ['grid', 'Rejilla', LayoutGrid], ['capas', 'NOCBoard', Layers], ['reportes', 'Reporte', Activity]] as const).map(([id, label, Icon]) => {
             const active = view === id;
@@ -1563,6 +1700,7 @@ export default function NocSection({
             );
           })}
         </div>
+        </div>
       </div>
 
       {/* Main content */}
@@ -1575,16 +1713,29 @@ export default function NocSection({
             {/* Map + alerts side by side */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, overflow: 'hidden' }}>
               <div style={{ flex: '0 0 auto', height: 520, position: 'relative', borderRadius: 18, overflow: 'hidden', border: `1px solid ${G}20` }}>
-                <RealMap cities={cities} onSelectCity={handleSelectCity} selectedCityId={selectedCity?.id || null} />
+                <RealMap
+                  cities={cities}
+                  onSelectCity={handleSelectCity}
+                  selectedCityId={selectedCity?.id || null}
+                  radiobases={radiobases}
+                  showRadiobases={showRadiobases}
+                  onSelectRadiobase={rb => { setSelectedRb(rb); setSelectedCity(null); }}
+                  selectedRbId={selectedRb?.id ?? null}
+                  vendorLayers={vendorLayers}
+                  onVendorToggle={id => setVendorLayers(prev => ({ ...prev, [id]: !prev[id] }))}
+                />
               </div>
               <div style={{ flex: 1, minHeight: 180, overflow: 'hidden' }}>
                 <AlertStream alerts={alerts} />
               </div>
             </div>
 
-            {/* Side panel */}
-            {selectedCity && (
+            {/* Side panel — ciudad o radiobase */}
+            {selectedCity && !selectedRb && (
               <SiteInspector city={selectedCity} onClose={() => setSelectedCity(null)} />
+            )}
+            {selectedRb && (
+              <RadiobasePanel rb={selectedRb} onClose={() => setSelectedRb(null)} />
             )}
           </>
         ) : view === 'grid' ? (
