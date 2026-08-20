@@ -4249,6 +4249,238 @@ def get_gps_vehiculos():
             raise HTTPException(500, f"Error GPS: {e}")
 
 
+# ─── GPS Rutas diarias con persistencia ──────────────────────────────────────
+_RUTAS_DIR = os.path.join(BASE_DIR, "data", "flotilla_rutas")
+os.makedirs(_RUTAS_DIR, exist_ok=True)
+
+# Vehículos a excluir (dados de baja o stock)
+_EXCLUIR_NOMBRES = {"baja", "stock"}
+
+def _es_baja(nombre: str) -> bool:
+    n = nombre.lower()
+    return any(x in n for x in _EXCLUIR_NOMBRES)
+
+def _rutas_fecha_path(fecha_str: str) -> str:
+    return os.path.join(_RUTAS_DIR, f"{fecha_str}.json")
+
+def _rutas_load_cache(fecha_str: str):
+    path = _rutas_fecha_path(fecha_str)
+    try:
+        if os.path.exists(path):
+            with open(path) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return None
+
+def _rutas_save(fecha_str: str, data: dict):
+    path = _rutas_fecha_path(fecha_str)
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning(f"No se pudo guardar rutas {fecha_str}: {e}")
+
+def _rutas_fetch_odoo_tickets(fecha_str: str) -> list:
+    """Tickets Odoo (Field Service) del día con coordenadas del partner."""
+    import xmlrpc.client as _xr
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB", "wispi19")
+    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_pass = os.environ.get("ODOO_PASSWORD", "")
+    try:
+        uid = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common").authenticate(odoo_db, odoo_user, odoo_pass, {})
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+        raw = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
+            [[["create_date", ">=", f"{fecha_str} 00:00:00"],
+              ["create_date", "<=", f"{fecha_str} 23:59:59"]]],
+            {"fields": ["id","name","user_ids","partner_id","stage_id","description"], "limit": 100})
+        tickets = []
+        for r in raw:
+            partner_id = r.get("partner_id")
+            lat, lng = None, None
+            if partner_id:
+                try:
+                    p = models.execute_kw(odoo_db, uid, odoo_pass, "res.partner", "read",
+                        [[partner_id[0]]], {"fields": ["partner_latitude","partner_longitude","street","city"]})[0]
+                    lat = p.get("partner_latitude") or None
+                    lng = p.get("partner_longitude") or None
+                    addr = f"{p.get('street','')}, {p.get('city','')}".strip(", ")
+                except Exception:
+                    addr = partner_id[1] if partner_id else "—"
+            else:
+                addr = "—"
+            tickets.append({
+                "id": r["id"],
+                "nombre": r["name"],
+                "cliente": partner_id[1] if partner_id else "—",
+                "direccion": addr,
+                "lat": lat,
+                "lng": lng,
+                "etapa": r["stage_id"][1] if r.get("stage_id") else "—",
+                "tecnicos": [u[1] for u in (r.get("user_ids") or [])],
+            })
+        return tickets
+    except Exception as e:
+        logger.warning(f"Odoo tickets rutas: {e}")
+        return []
+
+def _rutas_fetch_trips(tn360_id: int, from_dt: str, to_dt: str, token: str) -> list:
+    hdr  = {"Authorization": f"Bearer {token}"}
+    API  = "https://api-latam.telematics.com/v1"
+    try:
+        r = _requests.get(f"{API}/trips?vehicleId={tn360_id}&from={from_dt}&to={to_dt}&limit=200",
+                          headers=hdr, timeout=20)
+        trips_raw = r.json() if r.ok else []
+        if not isinstance(trips_raw, list): trips_raw = []
+    except Exception as e:
+        logger.warning(f"TN360 trips {tn360_id}: {e}")
+        return []
+
+    trips = []
+    for t in trips_raw:
+        ign_on  = t.get("IgnOnGPS") or {}
+        ign_off = t.get("IgnOffGPS") or {}
+        km = round(max(0, (t.get("gpsOdoEnd") or 0) - (t.get("gpsOdoStart") or 0)), 2)
+        ts_on  = t.get("ignitionOn")  or 0
+        ts_off = t.get("ignitionOff") or 0
+        try:
+            dt_on  = datetime.datetime.utcfromtimestamp(ts_on/1000).strftime("%H:%M") if ts_on else None
+            dt_off = datetime.datetime.utcfromtimestamp(ts_off/1000).strftime("%H:%M") if ts_off else None
+        except Exception:
+            dt_on = dt_off = None
+
+        trips.append({
+            "trip_id":      t.get("tripId") or t.get("id"),
+            "desde":        dt_on,
+            "hasta":        dt_off,
+            "ts_on":        ts_on,
+            "ts_off":       ts_off,
+            "km":           km,
+            "start_lat":    ign_on.get("Lat"),
+            "start_lng":    ign_on.get("Lng"),
+            "end_lat":      ign_off.get("Lat"),
+            "end_lng":      ign_off.get("Lng"),
+            "start_loc":    t.get("startLocation"),
+            "end_loc":      t.get("endLocation"),
+            "horario":      _classify_trip_time(ts_on),
+            "conductor":    (t.get("user") or {}).get("name", ""),
+        })
+    return sorted(trips, key=lambda x: x["ts_on"] or 0)
+
+@app.get("/api/gps/rutas")
+def get_gps_rutas(fecha: str = None, forzar: bool = False, prefijo: str = ""):
+    """
+    Rutas del día — flota completa TN360 LATAM.
+    fecha:   YYYY-MM-DD (default: hoy CST).
+    forzar:  True = ignora caché y vuelve a consultar TN360.
+    prefijo: filtrar por nombre de vehículo, ej. 'LW', 'SD', 'SE'.
+    Persiste en data/flotilla_rutas/{fecha}.json.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    now_cst = datetime.datetime.utcnow() - datetime.timedelta(hours=6)
+    fecha   = fecha or now_cst.strftime("%Y-%m-%d")
+    es_hoy  = (fecha == now_cst.strftime("%Y-%m-%d"))
+
+    # Caché en disco para días pasados
+    if not forzar and not es_hoy:
+        cached = _rutas_load_cache(fecha)
+        if cached:
+            # Aplicar filtro de prefijo sobre caché
+            if prefijo:
+                cached = dict(cached)
+                cached["vehiculos"] = [v for v in cached["vehiculos"]
+                                       if v["nombre"].upper().startswith(prefijo.upper())]
+            cached["from_cache"] = True
+            return cached
+
+    # Rango UTC
+    dt_start = datetime.datetime.strptime(fecha, "%Y-%m-%d") + datetime.timedelta(hours=6)
+    dt_end   = dt_start + datetime.timedelta(hours=24)
+    from_dt  = dt_start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_dt    = dt_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    try:
+        token = _tn360_token()
+    except Exception as e:
+        raise HTTPException(503, f"Error auth TN360: {e}")
+
+    hdr = {"Authorization": f"Bearer {token}"}
+
+    # 1. Obtener catálogo de vehículos
+    try:
+        r_vehs = _requests.get(f"{TN360_API}/vehicles?limit=200", headers=hdr, timeout=15)
+        vehs_raw = r_vehs.json() if r_vehs.ok else []
+    except Exception as e:
+        raise HTTPException(503, f"Error listando vehículos TN360: {e}")
+
+    # Filtrar dados de baja / STOCK
+    vehs_activos = [
+        v for v in vehs_raw
+        if v.get("id") and v.get("name") and not _es_baja(v.get("name", ""))
+    ]
+
+    # 2. Trips en paralelo (max 10 workers)
+    def fetch_one(v):
+        tn_id    = v["id"]
+        nombre   = v.get("name", str(tn_id))
+        placa    = v.get("licensePlate") or ""
+        driver   = (v.get("defaultDriver") or {})
+        conductor = driver.get("name", "") if isinstance(driver, dict) else ""
+        trips = _rutas_fetch_trips(tn_id, from_dt, to_dt, token)
+        return {
+            "tn360_id":  tn_id,
+            "nombre":    nombre,
+            "placa":     placa,
+            "conductor": conductor,
+            "trips":     trips,
+            "km_total":  round(sum(t["km"] for t in trips), 2),
+            "n_viajes":  len(trips),
+        }
+
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        vehiculos_out = list(ex.map(fetch_one, vehs_activos))
+
+    # Ordenar: primero los que tienen viajes, luego por nombre
+    vehiculos_out.sort(key=lambda v: (-v["n_viajes"], v["nombre"]))
+
+    # Tickets Odoo del día
+    tickets_odoo = _rutas_fetch_odoo_tickets(fecha)
+
+    result = {
+        "fecha":        fecha,
+        "generado_en":  datetime.datetime.utcnow().isoformat() + "Z",
+        "total_vehs":   len(vehiculos_out),
+        "vehiculos":    vehiculos_out,
+        "tickets_odoo": tickets_odoo,
+        "from_cache":   False,
+    }
+
+    # Persistir siempre (para historial)
+    _rutas_save(fecha, result)
+
+    # Aplicar filtro de prefijo antes de retornar
+    if prefijo:
+        result = dict(result)
+        result["vehiculos"] = [v for v in result["vehiculos"]
+                               if v["nombre"].upper().startswith(prefijo.upper())]
+    return result
+
+@app.get("/api/gps/rutas/fechas")
+def get_gps_rutas_fechas():
+    """Lista de fechas con rutas guardadas (historial)."""
+    try:
+        files = sorted([
+            f.replace(".json", "")
+            for f in os.listdir(_RUTAS_DIR)
+            if f.endswith(".json") and len(f) == 15  # YYYY-MM-DD.json
+        ], reverse=True)
+        return {"fechas": files[:60]}
+    except Exception:
+        return {"fechas": []}
+
+
 # ─── GPS × Tickets — Cruce Semanal V2 ────────────────────────────────────────
 # Metodología: defaultDriver TN360 → email → Odoo, % fuera de horario real
 

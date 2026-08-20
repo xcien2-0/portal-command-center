@@ -131,6 +131,9 @@ const NAV: NavEntry[] = [
   { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
   { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
 
+  // ── Flotilla ───────────────────────────────────────────────────────────────
+  { id: 'flotilla',      label: 'Flotilla GPS',        icon: '🚗', group: 'Flotilla' },
+
   // ── Campo & Inventario ─────────────────────────────────────────────────────
   { id: 'wfm',           label: 'Control Operativo',    icon: '⚙️', group: 'Campo & Inventario' },
   { id: 'bidrillas',     label: 'Equipos de Campo',     icon: '🚛', group: 'Campo & Inventario' },
@@ -139,7 +142,6 @@ const NAV: NavEntry[] = [
   { id: 'inv-transfers', label: 'Transferencias',       icon: '🏷️', group: 'Campo & Inventario' },
   { id: 'auditoria-odoo', label: 'Auditoría Odoo',     icon: '🔎', group: 'Campo & Inventario' },
   { id: 'odoo-docs',      label: 'Guías Odoo',          icon: '📖', group: 'Campo & Inventario' },
-  { id: 'flotilla',      label: 'Expediente Flotilla', icon: '🚗', group: 'Campo & Inventario' },
 
   // ── Comercial ──────────────────────────────────────────────────────────────
   { id: 'ventas',             label: 'Resumen Ventas',       icon: '📈', group: 'Comercial' },

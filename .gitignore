@@ -77,3 +77,4 @@ backend/.env
 *.sln
 *.sw?
 .vercel
+backend/data/flotilla_rutas/

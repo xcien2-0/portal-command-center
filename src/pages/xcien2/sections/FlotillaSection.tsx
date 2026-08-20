@@ -1,8 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import 'leaflet/dist/leaflet.css';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Nivel  = 'critico' | 'urgente' | 'menor';
 type Estado = 'pendiente' | 'en_proceso' | 'resuelto';
+type Tab    = 'expediente' | 'gps';
+
+interface VehiculoGPS {
+  id: number;
+  nombre: string;
+  placa: string;
+  lat: number | null;
+  lng: number | null;
+  velocidad: number;
+  conductor: string;
+  km_hoy: number;
+  viajes_hoy: number;
+  activo: boolean;
+  ultima_vez: string | null;
+  ubicacion: string | null;
+}
+
+interface GPSResponse {
+  vehiculos: VehiculoGPS[];
+  total: number;
+  cached: boolean;
+}
+
+interface TripGPS {
+  trip_id: number;
+  desde: string | null;
+  hasta: string | null;
+  km: number;
+  start_lat: number | null;
+  start_lng: number | null;
+  end_lat: number | null;
+  end_lng: number | null;
+  start_loc: string | null;
+  end_loc: string | null;
+  horario: 'laboral' | 'nocturno' | 'madrugada' | 'finde';
+  conductor: string;
+}
+
+interface VehiculoRuta {
+  tn360_id: number;
+  nombre: string;
+  placa: string;
+  conductor: string;
+  trips: TripGPS[];
+  km_total: number;
+  n_viajes: number;
+}
+
+interface TicketOdoo {
+  id: number;
+  nombre: string;
+  cliente: string;
+  direccion: string;
+  lat: number | null;
+  lng: number | null;
+  etapa: string;
+  tecnicos: string[];
+}
+
+interface RutasResponse {
+  fecha: string;
+  total_vehs: number;
+  vehiculos: VehiculoRuta[];
+  tickets_odoo: TicketOdoo[];
+  from_cache: boolean;
+}
 
 interface Hallazgo {
   id: string;
@@ -238,12 +305,369 @@ function NuevoHallazgoForm({
   );
 }
 
+// ─── Tab GPS + Rutas ─────────────────────────────────────────────────────────
+const GPS_POLL_MS = 90_000;
+
+const VEH_COLORS: Record<number, string> = { 3330: '#22c55e', 3314: '#3b82f6' };
+const HORARIO_COLOR: Record<string, string> = {
+  laboral: '#22c55e', nocturno: '#f59e0b', madrugada: '#ef4444', finde: '#a855f7',
+};
+
+function statusOf(v: VehiculoGPS): { label: string; dot: string; text: string } {
+  if (!v.activo)        return { label: 'OFFLINE',   dot: 'bg-gray-400',  text: 'text-gray-500' };
+  if (v.velocidad > 0)  return { label: 'EN CAMINO', dot: 'bg-green-500', text: 'text-green-600' };
+  return                       { label: 'DETENIDO',  dot: 'bg-amber-400', text: 'text-amber-600' };
+}
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Mapa Leaflet (imperativo para evitar re-renders)
+function RutasMapa({ rutas, gps }: { rutas: RutasResponse | null; gps: GPSResponse | null }) {
+  const mapRef  = useRef<HTMLDivElement>(null);
+  const leafRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    let L: any;
+    import('leaflet').then(mod => {
+      L = mod.default ?? mod;
+      if (leafRef.current) { leafRef.current.remove(); leafRef.current = null; }
+
+      const map = L.map(mapRef.current!, { zoomControl: true, attributionControl: false });
+      leafRef.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18, attribution: '© OSM',
+      }).addTo(map);
+
+      const bounds: [number,number][] = [];
+
+      // ── Rutas del día (trips start→end) ──────────────────────────────────
+      rutas?.vehiculos.forEach(veh => {
+        const color = VEH_COLORS[veh.tn360_id] ?? '#94a3b8';
+        veh.trips.forEach(trip => {
+          const pts: [number,number][] = [];
+          if (trip.start_lat && trip.start_lng) {
+            pts.push([trip.start_lat, trip.start_lng]);
+            bounds.push([trip.start_lat, trip.start_lng]);
+          }
+          if (trip.end_lat && trip.end_lng) {
+            pts.push([trip.end_lat, trip.end_lng]);
+            bounds.push([trip.end_lat, trip.end_lng]);
+          }
+          if (pts.length === 2) {
+            const horColor = HORARIO_COLOR[trip.horario] ?? color;
+            L.polyline(pts, { color: horColor, weight: 4, opacity: 0.8 }).addTo(map)
+              .bindPopup(`<b>${veh.nombre}</b><br>${trip.desde ?? '?'} – ${trip.hasta ?? '?'}<br>${trip.km.toFixed(1)} km<br>${trip.horario}<br><small>${trip.start_loc ?? ''}</small>`);
+            // Marcador de inicio
+            L.circleMarker(pts[0], { radius: 5, color, fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(map)
+              .bindPopup(`▶ ${veh.nombre} ${trip.desde ?? ''}<br>${trip.start_loc ?? ''}`);
+            // Marcador de fin
+            L.circleMarker(pts[1], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 2 }).addTo(map)
+              .bindPopup(`■ ${veh.nombre} ${trip.hasta ?? ''}<br>${trip.end_loc ?? ''}`);
+          }
+        });
+      });
+
+      // ── Posición actual (live GPS) ────────────────────────────────────────
+      gps?.vehiculos.filter(v => v.lat && v.lng).forEach(v => {
+        const color = VEH_COLORS[v.id] ?? '#94a3b8';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="background:${color};border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 6px ${color}"></div>`,
+          iconSize: [14,14], iconAnchor: [7,7],
+        });
+        L.marker([v.lat!, v.lng!], { icon }).addTo(map)
+          .bindPopup(`<b>${v.nombre ?? v.id}</b><br>${v.velocidad} km/h · ${v.conductor}<br>${v.ubicacion ?? ''}`);
+        bounds.push([v.lat!, v.lng!]);
+      });
+
+      // ── Tickets Odoo con coordenadas ──────────────────────────────────────
+      rutas?.tickets_odoo.filter(t => t.lat && t.lng).forEach(t => {
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="background:#f59e0b;border:2px solid #fff;border-radius:3px;width:12px;height:12px;transform:rotate(45deg)"></div>`,
+          iconSize: [12,12], iconAnchor: [6,6],
+        });
+        L.marker([t.lat!, t.lng!], { icon }).addTo(map)
+          .bindPopup(`<b>🎫 ${t.nombre}</b><br>${t.cliente}<br>${t.etapa}<br><small>${t.direccion}</small>`);
+        bounds.push([t.lat!, t.lng!]);
+      });
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+      } else {
+        // Default: Piedras Negras
+        map.setView([28.7006, -100.5232], 12);
+      }
+    });
+
+    return () => { if (leafRef.current) { leafRef.current.remove(); leafRef.current = null; } };
+  }, [rutas, gps]);
+
+  return <div ref={mapRef} style={{ height: 420, borderRadius: 8, zIndex: 0 }} />;
+}
+
+function GPSTab({ vehiculosExpediente }: { vehiculosExpediente: Vehiculo[] }) {
+  const todayStr = todayISO();
+  const [fecha, setFecha]           = useState(todayStr);
+  const [prefijo, setPrefijo]       = useState('');
+  const [fechas, setFechas]         = useState<string[]>([]);
+  const [rutas, setRutas]           = useState<RutasResponse | null>(null);
+  const [gps, setGps]               = useState<GPSResponse | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [loadingGps, setLoadingGps] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [selectedVeh, setSelVeh]    = useState<number | null>(null);
+  const pollRef                     = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cargar historial de fechas disponibles
+  useEffect(() => {
+    fetch('/api/gps/rutas/fechas').then(r => r.json()).then(d => setFechas(d.fechas ?? [])).catch(() => {});
+  }, []);
+
+  // Posición live (polling 90s)
+  const fetchLive = useCallback(async () => {
+    setLoadingGps(true);
+    try {
+      const r = await fetch('/api/gps/vehiculos');
+      if (r.ok) setGps(await r.json());
+    } finally { setLoadingGps(false); }
+  }, []);
+
+  useEffect(() => {
+    fetchLive();
+    pollRef.current = setInterval(fetchLive, GPS_POLL_MS);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchLive]);
+
+  // Rutas del día seleccionado
+  const fetchRutas = useCallback(async (f: string, forzar = false, pref = prefijo) => {
+    setLoading(true); setError(null);
+    try {
+      const url = `/api/gps/rutas?fecha=${f}${forzar ? '&forzar=true' : ''}${pref ? `&prefijo=${pref}` : ''}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data: RutasResponse = await r.json();
+      setRutas(data);
+      // Actualizar lista de fechas
+      fetch('/api/gps/rutas/fechas').then(r2 => r2.json()).then(d => setFechas(d.fechas ?? [])).catch(() => {});
+    } catch (e: any) {
+      setError(e.message ?? 'Error');
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchRutas(fecha, false, prefijo); }, [fecha, prefijo, fetchRutas]);
+
+  const esHoy = fecha === todayStr;
+  const vehActivo = rutas?.vehiculos.find(v => v.tn360_id === selectedVeh);
+
+  return (
+    <div className="space-y-3">
+      {/* ── Controles ───────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-4">
+        {/* Selector de fecha */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500">Fecha:</label>
+          <input type="date" value={fecha}
+            max={todayStr}
+            onChange={e => setFecha(e.target.value)}
+            className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+        </div>
+        {/* Historial rápido */}
+        {fechas.slice(0,5).filter(f => f !== fecha).map(f => (
+          <button key={f} onClick={() => setFecha(f)}
+            className="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+            {f}
+          </button>
+        ))}
+        {/* Filtro por tipo */}
+        <div className="flex gap-1 flex-wrap">
+          {[
+            { v: '',   l: 'Toda la flota' },
+            { v: 'LW', l: 'LW — PDN' },
+            { v: 'SD', l: 'SD — Sedanes' },
+            { v: 'SE', l: 'SE — Noreste' },
+            { v: 'HV', l: 'HV — Van' },
+          ].map(opt => (
+            <button key={opt.v} onClick={() => setPrefijo(opt.v)}
+              className={`text-xs px-2 py-1 rounded border transition-colors ${
+                prefijo === opt.v
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+              }`}>
+              {opt.l}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={() => fetchRutas(fecha, esHoy, prefijo)} disabled={loading}
+          className="ml-auto text-xs px-3 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40">
+          {loading ? '⟳ Cargando…' : esHoy ? '↻ Actualizar' : '↻ Recargar'}
+        </button>
+      </div>
+
+      {/* ── Estado ──────────────────────────────────────────────────────── */}
+      <div className="px-4 flex items-center gap-2 flex-wrap text-xs text-gray-500 dark:text-gray-400">
+        <span className={`w-2 h-2 rounded-full ${error ? 'bg-red-500' : rutas ? 'bg-green-500' : 'bg-gray-300'}`} />
+        {error && <span className="text-red-500">{error}</span>}
+        {rutas && !error && (
+          <>
+            <span>{rutas.fecha} · {rutas.from_cache ? '📁 caché' : '🔴 en vivo'} · {rutas.vehiculos.filter(v => v.n_viajes > 0).length}/{rutas.total_vehs ?? rutas.vehiculos.length} vehículos activos</span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span className="font-medium text-gray-600 dark:text-gray-300">
+              {rutas.vehiculos.reduce((s, v) => s + v.km_total, 0).toFixed(0)} km flota
+            </span>
+            {rutas.vehiculos.filter(v => v.n_viajes > 0).map(v => (
+              <span key={v.tn360_id} className="font-medium" style={{ color: VEH_COLORS[v.tn360_id] ?? '#94a3b8' }}>
+                {v.nombre}: {v.n_viajes}v · {v.km_total.toFixed(0)} km
+              </span>
+            ))}
+            {rutas.tickets_odoo.length > 0 && (
+              <span className="text-amber-500">🎫 {rutas.tickets_odoo.length} tickets Odoo</span>
+            )}
+          </>
+        )}
+        {loadingGps && <span>📡 GPS live…</span>}
+      </div>
+
+      {/* ── Mapa ─────────────────────────────────────────────────────────── */}
+      <div className="px-4">
+        <RutasMapa rutas={rutas} gps={gps} />
+        {/* Leyenda */}
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-green-500 inline-block" /> Horario laboral</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500 inline-block" /> Nocturno</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-500 inline-block" /> Madrugada</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-purple-500 inline-block" /> Fin de semana</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rotate-45 bg-amber-500 border border-white" /> Ticket Odoo</span>
+        </div>
+      </div>
+
+      {/* ── Selector de vehículo / Detalle de viajes ─────────────────────── */}
+      <div className="px-4 pb-4 space-y-3">
+        <div className="flex gap-2">
+          <button onClick={() => setSelVeh(null)}
+            className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+              selectedVeh === null ? 'bg-gray-900 text-white border-gray-900' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+            }`}>
+            Todos los viajes
+          </button>
+          {rutas?.vehiculos.filter(v => v.n_viajes > 0).map(v => (
+            <button key={v.tn360_id} onClick={() => setSelVeh(v.tn360_id)}
+              className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+                selectedVeh === v.tn360_id ? 'text-white border-transparent' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+              }`}
+              style={selectedVeh === v.tn360_id ? { background: VEH_COLORS[v.tn360_id], borderColor: VEH_COLORS[v.tn360_id] } : {}}>
+              {v.nombre} ({v.n_viajes})
+            </button>
+          ))}
+        </div>
+
+        {/* Tabla de viajes */}
+        {(selectedVeh !== null ? [vehActivo!].filter(Boolean) : (rutas?.vehiculos ?? []).filter(v => v.n_viajes > 0)).map(veh => (
+          <div key={veh.tn360_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700"
+              style={{ borderLeftWidth: 4, borderLeftColor: VEH_COLORS[veh.tn360_id] }}>
+              <span className="font-bold text-sm text-gray-900 dark:text-white">{veh.nombre}</span>
+              <span className="text-xs text-gray-400 font-mono">{veh.placa}</span>
+              <span className="ml-auto text-xs text-gray-500">{veh.n_viajes} viajes · {veh.km_total.toFixed(1)} km totales</span>
+            </div>
+            {veh.trips.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-gray-400">Sin viajes registrados este día.</p>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {veh.trips.map((trip, i) => (
+                  <div key={trip.trip_id ?? i} className="px-4 py-2.5 flex items-start gap-3">
+                    <div className="w-1 self-stretch rounded-full shrink-0 mt-0.5"
+                      style={{ background: HORARIO_COLOR[trip.horario] }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                          {trip.desde ?? '?'} – {trip.hasta ?? '?'}
+                        </span>
+                        <span className="text-xs font-bold text-gray-500">{trip.km.toFixed(1)} km</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded"
+                          style={{ background: HORARIO_COLOR[trip.horario] + '22', color: HORARIO_COLOR[trip.horario] }}>
+                          {trip.horario}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <span>▶ {trip.start_loc ?? '—'}</span>
+                        {trip.end_loc && trip.end_loc !== trip.start_loc && (
+                          <span> → {trip.end_loc}</span>
+                        )}
+                      </div>
+                    </div>
+                    {trip.start_lat && trip.start_lng && (
+                      <a href={`https://maps.google.com/?q=${trip.start_lat},${trip.start_lng}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-blue-500 hover:underline shrink-0">
+                        Mapa ↗
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Tickets Odoo del día */}
+        {rutas && rutas.tickets_odoo.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2"
+              style={{ borderLeftWidth: 4, borderLeftColor: '#f59e0b' }}>
+              <span className="font-bold text-sm text-gray-900 dark:text-white">🎫 Tickets Odoo — {rutas.fecha}</span>
+              <span className="ml-auto text-xs text-gray-500">{rutas.tickets_odoo.length} asignaciones</span>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {rutas.tickets_odoo.map(t => (
+                <div key={t.id} className="px-4 py-2.5 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{t.nombre}</span>
+                      <span className="text-xs text-gray-400">{t.etapa}</span>
+                      {t.lat && t.lng ? (
+                        <span className="text-xs text-green-600">📍 Con coords</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Sin coords</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {t.cliente} · {t.direccion}
+                    </div>
+                    {t.tecnicos.length > 0 && (
+                      <div className="text-xs text-blue-500 mt-0.5">{t.tecnicos.join(', ')}</div>
+                    )}
+                  </div>
+                  {t.lat && t.lng && (
+                    <a href={`https://maps.google.com/?q=${t.lat},${t.lng}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:underline shrink-0">
+                      Mapa ↗
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function FlotillaSection({ theme }: { theme?: any }) {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>(loadData);
   const [selected, setSelected] = useState<string>('lw204');
   const [showForm, setShowForm] = useState(false);
   const [filterEstado, setFilterEstado] = useState<string>('todos');
+  const [activeTab, setActiveTab] = useState<Tab>('expediente');
 
   useEffect(() => { saveData(vehiculos); }, [vehiculos]);
 
@@ -290,16 +714,38 @@ export default function FlotillaSection({ theme }: { theme?: any }) {
     <div className="p-4 space-y-4 max-w-5xl mx-auto">
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Expediente Vehicular — Plaza PDN
+            Flotilla — Plaza PDN
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Supervisión: José Miguel Macías Contreras · Folio base: XCIEN-PDN-VEH-2026-001
           </p>
         </div>
+        {/* Nav de tabs */}
+        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm">
+          {([
+            { id: 'expediente', label: '📋 Expediente' },
+            { id: 'gps',        label: '📡 GPS en Vivo' },
+          ] as const).map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`px-4 py-1.5 font-medium transition-colors ${
+                activeTab === t.id
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Tab GPS */}
+      {activeTab === 'gps' && <GPSTab vehiculosExpediente={vehiculos} />}
+
+      {/* Tab Expediente */}
+      {activeTab === 'expediente' && <>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -498,6 +944,8 @@ export default function FlotillaSection({ theme }: { theme?: any }) {
         El reporte semanal de flotilla (viernes 08:00 AM) cruza automáticamente los viajes TN360 con tickets Odoo Field Service.
         Los hallazgos se guardan localmente en este navegador.
       </p>
+
+      </> /* fin tab expediente */}
     </div>
   );
 }
