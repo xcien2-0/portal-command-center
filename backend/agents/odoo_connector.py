@@ -1,9 +1,21 @@
 import xmlrpc.client
 import os
+import socket
 import logging
 from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger("ODOO-CONNECTOR")
+
+
+class _TimeoutTransport(xmlrpc.client.SafeTransport):
+    def __init__(self, timeout=20, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._timeout = timeout
+
+    def make_connection(self, host):
+        conn = super().make_connection(host)
+        conn.timeout = self._timeout
+        return conn
 
 class OdooConnector:
     """
@@ -26,10 +38,13 @@ class OdooConnector:
                 logger.warning("Faltan credenciales de Odoo en el entorno.")
                 return False
             
-            common = xmlrpc.client.ServerProxy(f'{self.url}/xmlrpc/2/common')
+            import socket
+            common = xmlrpc.client.ServerProxy(f'{self.url}/xmlrpc/2/common',
+                                               transport=_TimeoutTransport(timeout=20))
             self.uid = common.authenticate(self.db, self.user, self.password, {})
             if self.uid:
-                self.models = xmlrpc.client.ServerProxy(f'{self.url}/xmlrpc/2/object')
+                self.models = xmlrpc.client.ServerProxy(f'{self.url}/xmlrpc/2/object',
+                                                        transport=_TimeoutTransport(timeout=20))
                 logger.info(f"Conexión exitosa a Odoo DB: {self.db} (UID: {self.uid})")
                 return True
             return False

@@ -782,11 +782,12 @@ def api_odoo_execute(req: OdooActionRequest):
 def api_rrhh_empleados():
     """Lista completa de empleados desde Odoo."""
     fields = [
-        'name', 'job_title', 'job_id', 'department_id', 'company_id',
+        'name', 'job_id', 'department_id', 'company_id',
         'work_email', 'mobile_phone', 'work_phone',
         'parent_id', 'active',
         'work_location_id', 'resource_calendar_id',
     ]
+    # job_title excluido: en Odoo 19 accede implícitamente a version_id (requiere HR Officer)
     # Usamos execute directamente para pasar fields/limit como kwargs (el conector tiene un bug con search_read)
     raw = odoo_conn.execute('hr.employee', 'search_read', [['active', '=', True]], fields=fields, limit=500)
     if raw is None:
@@ -797,7 +798,7 @@ def api_rrhh_empleados():
         employees.append({
             "id": e.get("id"),
             "name": e.get("name", ""),
-            "job_title": e.get("job_title") or (e["job_id"][1] if e.get("job_id") else ""),
+            "job_title": e["job_id"][1] if e.get("job_id") else "",
             "department": e["department_id"][1] if e.get("department_id") else "Sin departamento",
             "department_id": e["department_id"][0] if e.get("department_id") else None,
             "company": e["company_id"][1] if e.get("company_id") else "",
@@ -926,7 +927,7 @@ def api_rrhh_diagnostico():
 def api_rrhh_empleado_detalle(emp_id: int):
     """Detalle de un empleado."""
     fields = [
-        'name', 'job_title', 'job_id', 'department_id', 'company_id',
+        'name', 'job_id', 'department_id', 'company_id',
         'work_email', 'mobile_phone', 'work_phone', 'parent_id',
         'child_ids', 'work_location_id', 'resource_calendar_id',
     ]
@@ -939,7 +940,7 @@ def api_rrhh_empleado_detalle(emp_id: int):
     return {
         "id": e.get("id"),
         "name": e.get("name", ""),
-        "job_title": e.get("job_title") or (e["job_id"][1] if e.get("job_id") else ""),
+        "job_title": e["job_id"][1] if e.get("job_id") else "",
         "department": e["department_id"][1] if e.get("department_id") else "",
         "company": e["company_id"][1] if e.get("company_id") else "",
         "email": e.get("work_email") or "",

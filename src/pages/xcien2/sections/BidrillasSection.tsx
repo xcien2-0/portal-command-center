@@ -1,5 +1,5 @@
 import { ThemeConfig } from '../types';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { API_BASE } from '../../../config';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -470,7 +470,9 @@ function MapFitter({ vehiculos }: { vehiculos: Vehiculo[] }) {
   const map = useMap();
   useEffect(() => {
     if (vehiculos.length === 0) return;
-    const bounds = L.latLngBounds(vehiculos.map(v => [v.lat, v.lng]));
+    const valid = vehiculos.filter(v => v.lat && v.lng);
+    if (valid.length === 0) return;
+    const bounds = L.latLngBounds(valid.map(v => [v.lat, v.lng]));
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
   }, [vehiculos.length]);
   return null;
@@ -876,7 +878,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
     }
   };
 
-  const rows = data?.cruce ?? [];
+  const rows = (data?.cruce ?? []).map(r => ({ ...r, viajes_fuera_detalle: r.viajes_fuera_detalle ?? [] }));
   const filteredRows = filterAlerta === 'todos' ? rows : rows.filter(r => r.alerta === filterAlerta);
 
   return (
@@ -1016,8 +1018,8 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                   {filteredRows.map((r, i) => {
                     const cfg = ALERTA_CFG[r.alerta];
                     const pctColor = r.pct_fuera >= 60 ? '#FF4757' : r.pct_fuera >= 30 ? '#FFB703' : '#00C896';
-                    return (<>
-                      <tr key={r.vehiculo_id}
+                    return (<Fragment key={r.vehiculo_id}>
+                      <tr
                         onClick={() => setExpanded(expanded === r.vehiculo_id ? null : r.vehiculo_id)}
                         style={{
                           borderBottom: expanded === r.vehiculo_id ? 'none' : `1px solid ${theme.border}`,
@@ -1114,7 +1116,7 @@ function CruceGPSTab({ theme }: { theme: ThemeConfig }) {
                           </td>
                         </tr>
                       )}
-                    </>);
+                    </Fragment>);
                   })}
                 </tbody>
               </table>

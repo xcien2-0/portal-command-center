@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { API_BASE } from '../../config';
 import brand from '../../brand';
-import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme } from './types';
+import { ThemeConfig, DEFAULT_THEME, SectionId, PresetTheme, PRESET_THEMES } from './types';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRealCities, getRealAlerts, invalidateNOCCache } from '@/services/nocboard';
 import { NOCCity, NOCAlert } from '@/types/noc';
@@ -282,12 +282,25 @@ interface SidebarProps {
   isMobile?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  activeThemeId: string;
+  onApplyPreset: (p: PresetTheme) => void;
 }
 
 const COLLAPSED_BY_DEFAULT = new Set(['Sistema']);
 
-function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse, nav, isMobile, mobileOpen, onMobileClose }: SidebarProps) {
+function Sidebar({ active, onSelect, theme, backendStatus, collapsed, onToggleCollapse, nav, isMobile, mobileOpen, onMobileClose, activeThemeId, onApplyPreset }: SidebarProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(COLLAPSED_BY_DEFAULT);
+  // Alias que reemplaza a U hardcodeado — responde al tema activo
+  const SB = {
+    sidebar: theme.sidebar,
+    border:  theme.border,
+    text:    theme.text,
+    dim:     theme.dim,
+    accent:  theme.accent,
+    muted:   theme.dim,
+    active:  `${theme.accent}14`,
+    card:    theme.card,
+  };
 
   const toggleGroup = (label: string) => {
     setCollapsedGroups(prev => {
@@ -339,8 +352,8 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
     <div style={{
       width: isMobile ? 250 : (collapsed ? 56 : 220),
       flexShrink: 0,
-      background: U.sidebar,
-      borderRight: `1px solid ${U.border}`,
+      background: SB.sidebar,
+      borderRight: `1px solid ${SB.border}`,
       display: 'flex',
       flexDirection: 'column',
       transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
@@ -357,7 +370,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
         justifyContent: 'space-between',
         gap: 10,
         padding: '0 16px',
-        borderBottom: `1px solid ${U.border}`,
+        borderBottom: `1px solid ${SB.border}`,
         flexShrink: 0,
         overflow: 'hidden',
       }}>
@@ -365,9 +378,9 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
         <img src={brand.logo} alt={brand.name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
         {(!collapsed || isMobile) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: U.text, letterSpacing: -0.3 }}>{brand.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: SB.text, letterSpacing: -0.3 }}>{brand.name}</span>
             <span style={{
-              color: U.accent, fontSize: 9, fontWeight: 700,
+              color: SB.accent, fontSize: 9, fontWeight: 700,
               background: 'rgba(0,175,240,0.12)',
               padding: '2px 5px', borderRadius: 3, letterSpacing: 0.5,
             }}>{brand.version}</span>
@@ -380,7 +393,7 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40, flexShrink: 0,
-              background: 'transparent', border: 'none', color: U.dim, cursor: 'pointer',
+              background: 'transparent', border: 'none', color: SB.dim, cursor: 'pointer',
             }}
             title="Cerrar menú"
           >
@@ -410,11 +423,11 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
                     <span style={{
                       fontSize: 9, fontWeight: 700,
                       letterSpacing: 1.5,
-                      color: U.dim,
+                      color: SB.dim,
                       textTransform: 'uppercase',
                       whiteSpace: 'nowrap',
                     }}>{label}</span>
-                    <span style={{ color: U.dim, fontSize: 10, marginTop: 1 }}>
+                    <span style={{ color: SB.dim, fontSize: 10, marginTop: 1 }}>
                       {isGroupCollapsed ? '▸' : '▾'}
                     </span>
                   </button>
@@ -435,12 +448,12 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
                     gap: 10,
                     width: '100%',
                     padding: effCollapsed ? '10px 0' : (isMobile ? '12px 14px' : '8px 14px'),
-                    background: isActive ? U.active : 'transparent',
+                    background: isActive ? SB.active : 'transparent',
                     borderTop: 'none',
                     borderRight: 'none',
                     borderBottom: 'none',
-                    borderLeft: isActive ? `2px solid ${U.accent}` : '2px solid transparent',
-                    color: isActive ? U.accent : U.muted,
+                    borderLeft: isActive ? `2px solid ${SB.accent}` : '2px solid transparent',
+                    color: isActive ? SB.accent : SB.muted,
                     fontSize: 12,
                     fontWeight: isActive ? 600 : 400,
                     cursor: 'pointer',
@@ -472,34 +485,74 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
       </nav>
 
       {/* Footer */}
-      <div style={{ borderTop: `1px solid ${U.border}`, flexShrink: 0 }}>
+      <div style={{ borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
         {/* User */}
         {!effCollapsed && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '10px 14px',
-            borderBottom: `1px solid ${U.border}`,
+            borderBottom: `1px solid ${SB.border}`,
           }}>
             <div style={{
               width: 28, height: 28, borderRadius: '50%',
-              background: U.accent,
+              background: SB.accent,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 700, fontSize: 10, color: '#0d1117', flexShrink: 0,
             }}>JM</div>
             <div style={{ overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: U.text, whiteSpace: 'nowrap' }}>{brand.adminLabel}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: SB.text, whiteSpace: 'nowrap' }}>{brand.adminLabel}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <div style={{
                   width: 5, height: 5, borderRadius: '50%',
                   background: backendStatus === 'online' ? '#22c55e' : '#ef4444',
                 }} />
-                <span style={{ fontSize: 9, color: U.dim }}>
+                <span style={{ fontSize: 9, color: SB.dim }}>
                   {backendStatus === 'online' ? 'Conectado' : 'Sin conexión'}
                 </span>
               </div>
             </div>
           </div>
         )}
+
+        {/* Theme picker */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: effCollapsed ? 'center' : 'space-between',
+          padding: effCollapsed ? '8px 0' : '8px 14px',
+          borderBottom: `1px solid ${SB.border}`,
+        }}>
+          {!effCollapsed && (
+            <span style={{ fontSize: 9, fontWeight: 700, color: SB.dim, letterSpacing: 1, textTransform: 'uppercase' }}>
+              Tema
+            </span>
+          )}
+          <div style={{ display: 'flex', gap: 5, flexWrap: effCollapsed ? 'nowrap' : 'nowrap', justifyContent: effCollapsed ? 'center' : 'flex-end' }}>
+            {PRESET_THEMES.map(p => (
+              <button
+                key={p.id}
+                title={p.name}
+                onClick={() => onApplyPreset(p)}
+                style={{
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: p.preview.accent,
+                  border: activeThemeId === p.id
+                    ? `2px solid ${p.preview.text}`
+                    : '2px solid transparent',
+                  cursor: 'pointer',
+                  padding: 0,
+                  flexShrink: 0,
+                  outline: activeThemeId === p.id ? `1px solid ${p.preview.accent}` : 'none',
+                  outlineOffset: 1,
+                  transition: 'transform 0.12s',
+                  transform: activeThemeId === p.id ? 'scale(1.25)' : 'scale(1)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = activeThemeId === p.id ? 'scale(1.25)' : 'scale(1)'; }}
+              />
+            ))}
+          </div>
+        </div>
 
         {/* Collapse toggle — no aplica en móvil, ahí se cierra con el backdrop o la X */}
         {!isMobile && (
@@ -516,12 +569,12 @@ function Sidebar({ active, onSelect, backendStatus, collapsed, onToggleCollapse,
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: U.dim,
+              color: SB.dim,
               fontSize: 11,
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = U.text}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = U.dim}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = SB.text}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = SB.dim}
           >
             {collapsed
               ? <ChevronRight size={15} />
@@ -913,6 +966,8 @@ export default function Xcien2Page() {
           isMobile={isMobile}
           mobileOpen={mobileNavOpen}
           onMobileClose={() => setMobileNavOpen(false)}
+          activeThemeId={activeThemeId}
+          onApplyPreset={applyPreset}
         />
       )}
 
