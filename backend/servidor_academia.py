@@ -7217,6 +7217,187 @@ async def noc_radiobases_refresh():
     return {"ok": True}
 
 
+class RadiobaseReporteRequest(BaseModel):
+    nombre: str
+
+@app.post("/api/noc/radiobase/reporte")
+async def noc_radiobase_reporte(req: RadiobaseReporteRequest):
+    """Genera PDF con tickets y tareas abiertas de una radiobase → Telegram."""
+    import asyncio as _asyncio
+    from agents.radiobase_harmonizer import harmonize
+
+    cfg = {
+        "odoo_url":  ODOO_URL,
+        "odoo_db":   ODOO_DB,
+        "odoo_user": ODOO_USER,
+        "odoo_pass": ODOO_PASSWORD,
+        "nocboard_proxy": NOCBOARD_API_BASE,
+        "nocboard_key":   "87a08190b801416392e944ab79c7e3c9",
+    }
+    radiobases = await harmonize(cfg)
+    rb = next((r for r in radiobases if r["nombre"] == req.nombre), None)
+    if rb is None:
+        return JSONResponse({"ok": False, "error": "Radiobase no encontrada"}, status_code=404)
+
+    tickets = rb["soporte"]["tickets"]
+    tareas  = rb["campo"]["tareas"]
+
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, HRFlowable, Spacer
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import inch
+        import datetime, requests as _req
+
+        VERDE = colors.HexColor("#009B4E")
+        ROJO  = colors.HexColor("#DC2626")
+        AZUL  = colors.HexColor("#3B82F6")
+        DARK  = colors.HexColor("#0D1B2A")
+        GRIS  = colors.HexColor("#64748B")
+        GRIS_L = colors.HexColor("#F1F5F9")
+        BORDE = colors.HexColor("#E2E8F0")
+
+        PIPELINE = ["NOC", "Dispatch", "Almacén", "Operaciones", "Cierre"]
+        PRIORIDAD_COLOR = {"normal": GRIS, "alta": colors.HexColor("#D97706"),
+                           "urgente": colors.HexColor("#EA580C"), "crítica": ROJO}
+
+        fname = f"/tmp/reporte_rb_{req.nombre.replace(' ','_')}.pdf"
+        doc = SimpleDocTemplate(fname, pagesize=letter,
+            leftMargin=0.65*inch, rightMargin=0.65*inch,
+            topMargin=0.65*inch, bottomMargin=0.65*inch)
+
+        def ps(name, **kw):
+            defaults = {"fontName": "Helvetica", "fontSize": 9, "textColor": DARK, "leading": 12}
+            defaults.update(kw)
+            return ParagraphStyle(name, **defaults)
+
+        story = []
+        story.append(Paragraph("XCIEN Networks", ps("logo", fontName="Helvetica-Bold", fontSize=11, textColor=VERDE, spaceAfter=2)))
+        story.append(Paragraph(f"Reporte de Radiobase — {rb['nombre']}", ps("titulo", fontName="Helvetica-Bold", fontSize=16, spaceAfter=4)))
+        story.append(Paragraph(
+            f"Generado: {datetime.datetime.now().strftime('%d %b %Y %H:%M')} CST · "
+            f"Estado: {rb.get('status','—').upper()} · "
+            f"Clientes: {rb.get('clientes',0)} · "
+            f"Tickets abiertos: {rb['soporte']['total']} · Tareas campo: {rb['campo']['total']}",
+            ps("sub", textColor=GRIS, spaceAfter=2)))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=VERDE, spaceAfter=10))
+
+        # KPI boxes
+        kpis = [[
+            Paragraph(f"<b>{rb['soporte']['total']}</b>", ps("kv", fontName="Helvetica-Bold", fontSize=22, textColor=ROJO if rb['soporte']['total']>0 else VERDE, alignment=1)),
+            Paragraph(f"<b>{rb['campo']['total']}</b>", ps("kv2", fontName="Helvetica-Bold", fontSize=22, textColor=AZUL if rb['campo']['total']>0 else VERDE, alignment=1)),
+            Paragraph(f"<b>{rb.get('clientes',0)}</b>", ps("kv3", fontName="Helvetica-Bold", fontSize=22, textColor=DARK, alignment=1)),
+        ],[
+            Paragraph("Tickets\nabiertos", ps("kl", fontSize=7.5, textColor=GRIS, alignment=1)),
+            Paragraph("Tareas\nen campo", ps("kl2", fontSize=7.5, textColor=GRIS, alignment=1)),
+            Paragraph("Clientes\nactivos", ps("kl3", fontSize=7.5, textColor=GRIS, alignment=1)),
+        ]]
+        t_kpi = Table(kpis, colWidths=[2.3*inch]*3)
+        t_kpi.setStyle(TableStyle([
+            ("INNERGRID",(0,0),(-1,-1),0.5,BORDE),
+            ("BOX",(0,0),(-1,-1),0.5,BORDE),
+            ("TOPPADDING",(0,0),(-1,-1),8), ("BOTTOMPADDING",(0,0),(-1,-1),8),
+            ("ALIGN",(0,0),(-1,-1),"CENTER"),
+        ]))
+        story.append(t_kpi)
+        story.append(Spacer(1, 14))
+
+        # Tickets soporte
+        if tickets:
+            story.append(Paragraph("Tickets de Soporte Abiertos", ps("h2", fontName="Helvetica-Bold", fontSize=11, spaceBefore=4, spaceAfter=6)))
+            hdr = ["#", "Ticket", "Etapa", "Prioridad", "Técnico", "Fecha"]
+            rows = [hdr]
+            for t in tickets:
+                etapa_idx = t.get("etapa_idx", 0)
+                pipeline_str = " → ".join(
+                    f"[{s}]" if i == etapa_idx else s
+                    for i, s in enumerate(PIPELINE)
+                )
+                rows.append([
+                    str(t["id"]),
+                    Paragraph(t["nombre"], ps("tn", fontSize=7.5)),
+                    t.get("etapa","—"),
+                    (t.get("prioridad","normal") or "normal").upper(),
+                    (t.get("tecnico","—") or "—").split(" ")[0],
+                    t.get("fecha","—"),
+                ])
+            col_w = [0.45*inch, 2.8*inch, 1.0*inch, 0.7*inch, 0.9*inch, 0.7*inch]
+            t_tix = Table(rows, colWidths=col_w, repeatRows=1)
+            t_tix.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(-1,0),DARK), ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+                ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"), ("FONTSIZE",(0,0),(-1,0),7.5),
+                ("FONTNAME",(0,1),(-1,-1),"Helvetica"), ("FONTSIZE",(0,1),(-1,-1),7.5),
+                ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white, GRIS_L]),
+                ("GRID",(0,0),(-1,-1),0.3,BORDE),
+                ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ]))
+            story.append(t_tix)
+            story.append(Spacer(1, 12))
+
+        # Tareas campo
+        if tareas:
+            story.append(Paragraph("Tareas de Campo Activas", ps("h2", fontName="Helvetica-Bold", fontSize=11, spaceBefore=4, spaceAfter=6)))
+            hdr2 = ["#", "Tarea", "Etapa", "Técnico(s)", "Fecha"]
+            rows2 = [hdr2]
+            for t in tareas:
+                tecnicos = ", ".join(t.get("tecnicos",[])[:2]) or "—"
+                rows2.append([
+                    str(t["id"]),
+                    Paragraph(t["nombre"], ps("tn2", fontSize=7.5)),
+                    t.get("etapa","—"),
+                    tecnicos[:30],
+                    t.get("fecha","—"),
+                ])
+            col_w2 = [0.45*inch, 3.1*inch, 1.1*inch, 1.3*inch, 0.6*inch]
+            t_tar = Table(rows2, colWidths=col_w2, repeatRows=1)
+            t_tar.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(-1,0),DARK), ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+                ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"), ("FONTSIZE",(0,0),(-1,0),7.5),
+                ("FONTNAME",(0,1),(-1,-1),"Helvetica"), ("FONTSIZE",(0,1),(-1,-1),7.5),
+                ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white, GRIS_L]),
+                ("GRID",(0,0),(-1,-1),0.3,BORDE),
+                ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ]))
+            story.append(t_tar)
+            story.append(Spacer(1, 12))
+
+        if not tickets and not tareas:
+            story.append(Paragraph("✓ Sin tickets ni tareas activas para esta radiobase.", ps("ok", textColor=VERDE)))
+
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDE))
+        story.append(Paragraph(
+            f"XCIEN Networks · NOC Virtual · Radiobase: {rb['nombre']} · {datetime.datetime.now().strftime('%d %b %Y')}",
+            ps("footer", fontSize=6.5, textColor=GRIS, spaceBefore=4)))
+
+        doc.build(story)
+
+        # Enviar a Telegram
+        tg_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        tg_chat  = os.environ.get("TELEGRAM_CHAT_ID_REPORTES", "") or os.environ.get("TELEGRAM_CHAT_ID", "")
+        tot = rb["soporte"]["total"] + rb["campo"]["total"]
+        caption = (
+            f"📡 *Radiobase: {rb['nombre']}*\n"
+            f"Estado: {rb.get('status','—').upper()}\n\n"
+            f"• 🎫 {rb['soporte']['total']} ticket(s) soporte abierto(s)\n"
+            f"• 🔧 {rb['campo']['total']} tarea(s) en campo\n"
+            f"• 👥 {rb.get('clientes',0)} clientes activos\n"
+            + (f"\n⚠️ Requiere atención" if tot > 0 else "\n✅ Sin pendientes")
+        )
+        with open(fname, "rb") as f:
+            _req.post(
+                f"https://api.telegram.org/bot{tg_token}/sendDocument",
+                data={"chat_id": tg_chat, "caption": caption, "parse_mode": "Markdown"},
+                files={"document": (f"reporte_{rb['nombre'].replace(' ','_')}.pdf", f, "application/pdf")},
+                timeout=15,
+            )
+        return {"ok": True, "tickets": len(tickets), "tareas": len(tareas)}
+
+    except Exception as e:
+        logger.error(f"[radiobase_reporte] {e}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 @app.get("/api/red/odoo-servicios-geo")
 def red_odoo_servicios_geo(estado: str = "active"):
     """

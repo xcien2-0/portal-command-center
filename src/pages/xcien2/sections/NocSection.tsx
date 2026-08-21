@@ -1412,103 +1412,277 @@ function ReporteSemanal({ cities, alerts }: { cities: NOCCity[]; alerts: NOCAler
   );
 }
 
+// ── Pipeline de etapas ────────────────────────────────────────────────────────
+const PIPELINE_STEPS = ['NOC', 'Dispatch', 'Almacén', 'Operaciones', 'Cierre'];
+const PRIORIDAD_COLOR: Record<string, string> = {
+  normal: DIM, alta: Y, urgente: O, crítica: R,
+};
+
+function TicketPipeline({ etapaIdx, color }: { etapaIdx: number; color: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2, margin: '6px 0 8px' }}>
+      {PIPELINE_STEPS.map((step, i) => {
+        const active  = i === etapaIdx;
+        const done    = i < etapaIdx;
+        const stepCol = active ? color : done ? `${color}60` : 'rgba(255,255,255,0.12)';
+        return (
+          <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 2, flex: i < PIPELINE_STEPS.length - 1 ? '1' : 'none' }}>
+            <div style={{
+              fontSize: 7.5, fontWeight: active ? 900 : 600,
+              color: active ? '#000' : done ? color : DIM,
+              background: active ? color : done ? `${color}18` : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${stepCol}`,
+              borderRadius: 5, padding: '2px 5px', whiteSpace: 'nowrap', letterSpacing: 0.3,
+              boxShadow: active ? `0 0 8px ${color}60` : 'none',
+            }}>
+              {step}
+            </div>
+            {i < PIPELINE_STEPS.length - 1 && (
+              <div style={{ fontSize: 8, color: done ? `${color}80` : 'rgba(255,255,255,0.12)', flex: 1, textAlign: 'center' }}>›</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Panel de detalle de radiobase ─────────────────────────────────────────────
 function RadiobasePanel({ rb, onClose }: { rb: RadiobaseHarmonized; onClose: () => void }) {
+  const [tab, setTab]           = useState<'status' | 'tickets' | 'tareas'>('status');
+  const [reporting, setReporting] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
   const c      = { up: G, degraded: Y, down: R, unknown: 'rgba(255,255,255,0.35)' }[rb.status] ?? DIM;
   const label  = { up: 'OPERANDO', degraded: 'DEGRADADO', down: 'CAÍDO', unknown: 'SIN MONITOREO' }[rb.status] ?? '';
   const noc    = rb.sources?.nocboard;
+  const ODOO   = 'https://odoo.wispi.mx';
+
+  const handleReporte = async () => {
+    setReporting('loading');
+    try {
+      const r = await fetch(`${API_BASE}/api/noc/radiobase/reporte`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: rb.nombre }),
+      });
+      setReporting(r.ok ? 'ok' : 'err');
+    } catch { setReporting('err'); }
+    setTimeout(() => setReporting('idle'), 4000);
+  };
+
+  const tabs = [
+    { id: 'status',  label: '📡 Estado' },
+    { id: 'tickets', label: `🎫 Soporte${rb.soporte.total > 0 ? ` (${rb.soporte.total})` : ''}` },
+    { id: 'tareas',  label: `🔧 Campo${rb.campo.total > 0 ? ` (${rb.campo.total})` : ''}` },
+  ];
 
   return (
     <div style={{
-      width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10,
-      background: 'rgba(0,8,4,0.85)', border: `1px solid ${c}22`,
-      borderRadius: 18, padding: '16px 18px', overflowY: 'auto',
+      width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
+      background: 'rgba(0,8,4,0.92)', border: `1px solid ${c}22`,
+      borderRadius: 18, overflow: 'hidden',
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: 9, color: c, fontFamily: 'monospace', letterSpacing: 2, fontWeight: 700 }}>
-            📡 RADIOBASE
+      <div style={{ padding: '14px 16px 10px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 8, color: c, fontFamily: 'monospace', letterSpacing: 2, fontWeight: 700 }}>📡 RADIOBASE</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginTop: 2, lineHeight: 1.2 }}>{rb.nombre}</div>
+            <div style={{ fontSize: 9, color: c, fontFamily: 'monospace', marginTop: 2 }}>{label}</div>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginTop: 2, lineHeight: 1.2 }}>
-            {rb.nombre}
-          </div>
-          <div style={{ fontSize: 10, color: c, fontFamily: 'monospace', marginTop: 3 }}>{label}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: DIM, cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: DIM, cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
+
+        {/* KPIs */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+          {[
+            { label: 'Clientes', value: rb.clientes, color: '#60a5fa' },
+            { label: 'Soporte',  value: rb.soporte.total, color: rb.soporte.total > 0 ? R : G },
+            { label: 'Campo',    value: rb.campo.total,   color: rb.campo.total > 0 ? '#60a5fa' : G },
+          ].map(({ label: lbl, value, color }) => (
+            <div key={lbl} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color, fontFamily: 'Oswald' }}>{value}</div>
+              <div style={{ fontSize: 7.5, color: DIM, textTransform: 'uppercase', letterSpacing: 1 }}>{lbl}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[
-          { label: 'Clientes', value: rb.clientes, color: '#60a5fa' },
-          { label: 'Soporte',  value: rb.soporte.total, color: rb.soporte.total > 0 ? R : G },
-          { label: 'Campo',    value: rb.campo.total,   color: rb.campo.total > 0 ? '#60a5fa' : G },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color, fontFamily: 'Oswald' }}>{value}</div>
-            <div style={{ fontSize: 8, color: DIM, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-          </div>
+      {/* Tab nav */}
+      <div style={{ display: 'flex', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id as any)} style={{
+            flex: 1, padding: '8px 4px', background: 'none', border: 'none',
+            borderBottom: tab === t.id ? `2px solid ${c}` : '2px solid transparent',
+            color: tab === t.id ? c : DIM, fontSize: 9, fontWeight: 700,
+            cursor: 'pointer', letterSpacing: 0.5, transition: 'color .15s',
+          }}>
+            {t.label}
+          </button>
         ))}
       </div>
 
-      {/* NOCBoard */}
-      {noc && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
-          <div style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>NOCBoard</div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <span style={{ fontSize: 11, color: G }}>▲ {noc.online ? 'Online' : '—'}</span>
-            <span style={{ fontSize: 11, color: DIM }}>Score: <b style={{ color: c }}>{noc.score ?? '—'}</b></span>
-            {noc.alerts > 0 && <span style={{ fontSize: 11, color: Y }}>⚠ {noc.alerts}</span>}
-          </div>
-          {noc.hostname && <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', marginTop: 4 }}>{noc.hostname}</div>}
-        </div>
-      )}
+      {/* Tab content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-      {/* Tickets de soporte */}
-      {rb.soporte.total > 0 && (
-        <div>
-          <div style={{ fontSize: 9, color: R, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-            ⚠ Soporte abierto ({rb.soporte.total})
-          </div>
-          {rb.soporte.tickets.map(t => (
-            <div key={t.id} style={{ background: 'rgba(255,51,102,0.07)', border: '1px solid rgba(255,51,102,0.15)', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, marginBottom: 2 }}>{t.nombre}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 9, color: R, fontFamily: 'monospace' }}>{t.prioridad?.toUpperCase()}</span>
-                <span style={{ fontSize: 9, color: DIM }}>{t.etapa}</span>
-                {t.tecnico && <span style={{ fontSize: 9, color: DIM }}>👤 {t.tecnico.split(' ')[0]}</span>}
-                <span style={{ fontSize: 9, color: DIM }}>{t.fecha}</span>
+        {/* ── Estado ─────────────────────────────────────────────────────────── */}
+        {tab === 'status' && (
+          <>
+            {noc ? (
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
+                <div style={{ fontSize: 9, color: DIM, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>NOCBoard</div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <span style={{ fontSize: 11, color: G }}>▲ {noc.online ? 'Online' : '—'}</span>
+                  <span style={{ fontSize: 11, color: DIM }}>Score: <b style={{ color: c }}>{noc.score ?? '—'}</b></span>
+                  {noc.alerts > 0 && <span style={{ fontSize: 11, color: Y }}>⚠ {noc.alerts} alertas</span>}
+                </div>
+                {noc.hostname && <div style={{ fontSize: 9, color: DIM, fontFamily: 'monospace', marginTop: 4 }}>{noc.hostname}</div>}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Tareas de campo */}
-      {rb.campo.total > 0 && (
-        <div>
-          <div style={{ fontSize: 9, color: '#60a5fa', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-            🔧 Campo activo ({rb.campo.total})
-          </div>
-          {rb.campo.tareas.map(t => (
-            <div key={t.id} style={{ background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, marginBottom: 2 }}>{t.nombre}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 9, color: '#60a5fa' }}>{t.etapa}</span>
-                {t.tecnicos?.length > 0 && <span style={{ fontSize: 9, color: DIM }}>👤 {t.tecnicos[0].split(' ')[0]}</span>}
-                <span style={{ fontSize: 9, color: DIM }}>{t.fecha}</span>
+            ) : (
+              <div style={{ textAlign: 'center', color: DIM, fontSize: 11, padding: '14px 0' }}>Sin datos NOCBoard</div>
+            )}
+            {rb.soporte.total === 0 && rb.campo.total === 0 && (
+              <div style={{ textAlign: 'center', color: G, fontSize: 11, padding: '8px 0' }}>✓ Sin tickets ni tareas activas</div>
+            )}
+            {rb.soporte.total > 0 && (
+              <div style={{ background: 'rgba(255,51,102,0.06)', border: '1px solid rgba(255,51,102,0.18)', borderRadius: 10, padding: '8px 12px' }}>
+                <span style={{ fontSize: 9, color: R, fontWeight: 700 }}>⚠ {rb.soporte.total} ticket{rb.soporte.total > 1 ? 's' : ''} abierto{rb.soporte.total > 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 9, color: DIM, marginLeft: 6 }}>→ ver pestaña Soporte</span>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+            {rb.campo.total > 0 && (
+              <div style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.18)', borderRadius: 10, padding: '8px 12px' }}>
+                <span style={{ fontSize: 9, color: '#60a5fa', fontWeight: 700 }}>🔧 {rb.campo.total} tarea{rb.campo.total > 1 ? 's' : ''} en campo</span>
+                <span style={{ fontSize: 9, color: DIM, marginLeft: 6 }}>→ ver pestaña Campo</span>
+              </div>
+            )}
+          </>
+        )}
 
-      {rb.soporte.total === 0 && rb.campo.total === 0 && (
-        <div style={{ textAlign: 'center', color: DIM, fontSize: 11, padding: '12px 0' }}>
-          Sin tickets ni tareas activas
-        </div>
-      )}
+        {/* ── Tickets soporte ────────────────────────────────────────────────── */}
+        {tab === 'tickets' && (
+          rb.soporte.tickets.length === 0 ? (
+            <div style={{ textAlign: 'center', color: G, fontSize: 11, padding: '24px 0' }}>✓ Sin tickets abiertos</div>
+          ) : (
+            rb.soporte.tickets.map((t: any) => {
+              const pc = PRIORIDAD_COLOR[t.prioridad] ?? DIM;
+              const etapaIdx = typeof t.etapa_idx === 'number' ? t.etapa_idx : 0;
+              return (
+                <div key={t.id} style={{
+                  background: 'rgba(255,51,102,0.05)', border: '1px solid rgba(255,51,102,0.15)',
+                  borderRadius: 10, padding: '10px 12px',
+                }}>
+                  {/* Pipeline */}
+                  <TicketPipeline etapaIdx={etapaIdx} color={R} />
+
+                  {/* Nombre */}
+                  <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, lineHeight: 1.3, marginBottom: 6 }}>{t.nombre}</div>
+
+                  {/* Meta */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span style={{ fontSize: 8.5, color: pc, fontFamily: 'monospace', fontWeight: 700 }}>
+                      {(t.prioridad ?? 'normal').toUpperCase()}
+                    </span>
+                    {t.tecnico && <span style={{ fontSize: 8.5, color: DIM }}>👤 {t.tecnico.split(' ')[0]}</span>}
+                    {t.tipo && <span style={{ fontSize: 8.5, color: DIM }}>{t.tipo}</span>}
+                    <span style={{ fontSize: 8.5, color: DIM }}>{t.fecha}</span>
+                  </div>
+
+                  {/* Link Odoo */}
+                  <a
+                    href={`${ODOO}/odoo/helpdesk/${t.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      fontSize: 9, color: R, fontWeight: 700, textDecoration: 'none',
+                      background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.25)',
+                      borderRadius: 6, padding: '3px 8px',
+                    }}
+                  >
+                    Abrir ticket #{t.id} en Odoo ↗
+                  </a>
+                </div>
+              );
+            })
+          )
+        )}
+
+        {/* ── Tareas campo ───────────────────────────────────────────────────── */}
+        {tab === 'tareas' && (
+          rb.campo.tareas.length === 0 ? (
+            <div style={{ textAlign: 'center', color: G, fontSize: 11, padding: '24px 0' }}>✓ Sin tareas activas en campo</div>
+          ) : (
+            rb.campo.tareas.map((t: any) => (
+              <div key={t.id} style={{
+                background: 'rgba(96,165,250,0.05)', border: '1px solid rgba(96,165,250,0.15)',
+                borderRadius: 10, padding: '10px 12px',
+              }}>
+                {/* Etapa badge */}
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{
+                    fontSize: 7.5, color: '#60a5fa', fontWeight: 700,
+                    background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)',
+                    borderRadius: 5, padding: '2px 7px', letterSpacing: 0.5,
+                  }}>
+                    {t.etapa || 'En progreso'}
+                  </span>
+                </div>
+
+                {/* Nombre */}
+                <div style={{ fontSize: 11, color: '#fff', fontWeight: 700, lineHeight: 1.3, marginBottom: 6 }}>{t.nombre}</div>
+
+                {/* Meta */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {t.tecnicos?.length > 0 && (
+                    <span style={{ fontSize: 8.5, color: DIM }}>👤 {t.tecnicos.join(', ').substring(0, 40)}</span>
+                  )}
+                  {t.cliente && <span style={{ fontSize: 8.5, color: DIM }}>{t.cliente}</span>}
+                  {t.fecha && <span style={{ fontSize: 8.5, color: DIM }}>{t.fecha}</span>}
+                </div>
+
+                {/* Link Odoo */}
+                <a
+                  href={`${ODOO}/odoo/project/task/${t.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: 9, color: '#60a5fa', fontWeight: 700, textDecoration: 'none',
+                    background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)',
+                    borderRadius: 6, padding: '3px 8px',
+                  }}
+                >
+                  Abrir tarea #{t.id} en Odoo ↗
+                </a>
+              </div>
+            ))
+          )
+        )}
+      </div>
+
+      {/* Footer — Reporte */}
+      <div style={{ padding: '10px 14px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+        <button
+          onClick={handleReporte}
+          disabled={reporting === 'loading'}
+          style={{
+            width: '100%', padding: '8px 0', borderRadius: 10, border: 'none',
+            background: reporting === 'ok'  ? `${G}22` :
+                        reporting === 'err' ? `${R}22` :
+                        'rgba(255,255,255,0.06)',
+            color: reporting === 'ok'  ? G :
+                   reporting === 'err' ? R :
+                   reporting === 'loading' ? DIM : '#c8d6e5',
+            fontSize: 10, fontWeight: 700, cursor: reporting === 'loading' ? 'wait' : 'pointer',
+            letterSpacing: 0.5, transition: 'all .2s',
+          }}
+        >
+          {reporting === 'loading' ? '⏳ Generando reporte...' :
+           reporting === 'ok'      ? '✓ PDF enviado a Telegram' :
+           reporting === 'err'     ? '✗ Error al generar — intenta de nuevo' :
+           '📄 Generar reporte PDF → Telegram'}
+        </button>
+      </div>
     </div>
   );
 }
