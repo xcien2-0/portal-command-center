@@ -10073,6 +10073,178 @@ def hd_responder(ticket_id: int, req: HdResponderReq):
                         "subtype_xmlid": "mail.mt_comment"})
     return {"ok": True, "ticket_id": ticket_id}
 
+# ── Helpdesk: reporte PDF → Telegram ─────────────────────────────────────────
+@app.post("/api/helpdesk/reporte-pdf")
+def helpdesk_reporte_pdf(
+    dias:    int = 30,
+    agrup:   str = "dia",
+    equipo:  str = "",
+    team_id: int = None,
+):
+    import xmlrpc.client as _xrc4
+    import datetime, requests as _req
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors as _colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, HRFlowable, Spacer
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import inch
+
+    _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
+    _db   = os.environ.get("ODOO_DB",       "wispi19")
+    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
+    _pw   = os.environ.get("ODOO_PASSWORD", "")
+    common = _xrc4.ServerProxy(f"{_url}/xmlrpc/2/common", allow_none=True)
+    uid    = common.authenticate(_db, _user, _pw, {})
+    models = _xrc4.ServerProxy(f"{_url}/xmlrpc/2/object", allow_none=True)
+
+    desde = (datetime.datetime.utcnow() - datetime.timedelta(days=dias)).strftime("%Y-%m-%d 00:00:00")
+    domain = [["create_date", ">=", desde]]
+    if team_id:
+        domain.append(["team_id", "=", team_id])
+
+    fields = ["id", "name", "stage_id", "priority", "partner_id",
+              "user_id", "create_date", "team_id", "ticket_type_id"]
+    try:
+        tickets = models.execute_kw(_db, uid, _pw, "helpdesk.ticket", "search_read",
+                                    [domain], {"fields": fields, "limit": 500, "order": "id desc"})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    total      = len(tickets)
+    resueltos  = sum(1 for t in tickets if t.get("stage_id") and
+                     t["stage_id"][1].lower() in ("resuelto","cerrado","solved","done"))
+    abiertos   = total - resueltos
+
+    # Agrupación por agente
+    por_agente: dict = {}
+    for t in tickets:
+        agente = t["user_id"][1] if t.get("user_id") else "Sin asignar"
+        por_agente.setdefault(agente, {"total": 0, "resueltos": 0})
+        por_agente[agente]["total"] += 1
+        if t.get("stage_id") and t["stage_id"][1].lower() in ("resuelto","cerrado","solved","done"):
+            por_agente[agente]["resueltos"] += 1
+
+    # ── PDF ───────────────────────────────────────────────────────────────────
+    VERDE = _colors.HexColor("#009B4E")
+    DARK  = _colors.HexColor("#0D1B2A")
+    GRIS  = _colors.HexColor("#64748B")
+    GRIS_L= _colors.HexColor("#F1F5F9")
+    ROJO  = _colors.HexColor("#DC2626")
+    AZUL  = _colors.HexColor("#3B82F6")
+    BORDE = _colors.HexColor("#E2E8F0")
+
+    def ps(name, **kw):
+        d = {"fontName":"Helvetica","fontSize":9,"textColor":DARK,"leading":12}
+        d.update(kw); return ParagraphStyle(name, **d)
+
+    fname = f"/tmp/helpdesk_reporte_{dias}d.pdf"
+    doc = SimpleDocTemplate(fname, pagesize=letter,
+        leftMargin=0.65*inch, rightMargin=0.65*inch,
+        topMargin=0.65*inch, bottomMargin=0.65*inch)
+    story = []
+
+    titulo_equipo = equipo or "Todos los equipos"
+    story.append(Paragraph("XCIEN Networks", ps("logo", fontName="Helvetica-Bold", fontSize=11, textColor=VERDE, spaceAfter=2)))
+    story.append(Paragraph(f"Mesa de Ayuda — {titulo_equipo}", ps("t", fontName="Helvetica-Bold", fontSize=16, spaceAfter=4)))
+    story.append(Paragraph(
+        f"Período: últimos {dias} días · Generado: {datetime.datetime.now().strftime('%d %b %Y %H:%M')} CST",
+        ps("s", textColor=GRIS, spaceAfter=2)))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=VERDE, spaceAfter=12))
+
+    # KPIs
+    kpis = [[
+        Paragraph(f"<b>{total}</b>",     ps("kv",  fontName="Helvetica-Bold", fontSize=22, textColor=AZUL,  alignment=1)),
+        Paragraph(f"<b>{abiertos}</b>",  ps("kv2", fontName="Helvetica-Bold", fontSize=22, textColor=ROJO,  alignment=1)),
+        Paragraph(f"<b>{resueltos}</b>", ps("kv3", fontName="Helvetica-Bold", fontSize=22, textColor=VERDE, alignment=1)),
+        Paragraph(f"<b>{len(por_agente)}</b>", ps("kv4", fontName="Helvetica-Bold", fontSize=22, textColor=DARK,  alignment=1)),
+    ],[
+        Paragraph("Total\ntickets",   ps("kl",  fontSize=7.5, textColor=GRIS, alignment=1)),
+        Paragraph("Abiertos",         ps("kl2", fontSize=7.5, textColor=GRIS, alignment=1)),
+        Paragraph("Resueltos",        ps("kl3", fontSize=7.5, textColor=GRIS, alignment=1)),
+        Paragraph("Agentes",          ps("kl4", fontSize=7.5, textColor=GRIS, alignment=1)),
+    ]]
+    t_kpi = Table(kpis, colWidths=[1.6*inch]*4)
+    t_kpi.setStyle(TableStyle([
+        ("INNERGRID",(0,0),(-1,-1),0.5,BORDE),("BOX",(0,0),(-1,-1),0.5,BORDE),
+        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+    ]))
+    story.append(t_kpi)
+    story.append(Spacer(1, 14))
+
+    # Por agente
+    story.append(Paragraph("Tickets por agente", ps("h2", fontName="Helvetica-Bold", fontSize=11, spaceBefore=4, spaceAfter=6)))
+    rows = [["Agente", "Total", "Resueltos", "Abiertos", "% Cierre"]]
+    for agente, d in sorted(por_agente.items(), key=lambda x: -x[1]["total"])[:20]:
+        pct = f"{round(d['resueltos']/d['total']*100)}%" if d["total"] else "—"
+        rows.append([agente[:36], d["total"], d["resueltos"], d["total"]-d["resueltos"], pct])
+    t_ag = Table(rows, colWidths=[3.0*inch, 0.7*inch, 0.9*inch, 0.8*inch, 0.9*inch], repeatRows=1)
+    t_ag.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),DARK),("TEXTCOLOR",(0,0),(-1,0),_colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),7.5),
+        ("FONTNAME",(0,1),(-1,-1),"Helvetica"),("FONTSIZE",(0,1),(-1,-1),7.5),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[_colors.white, GRIS_L]),
+        ("GRID",(0,0),(-1,-1),0.3,BORDE),
+        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+        ("ALIGN",(1,0),(-1,-1),"CENTER"),
+    ]))
+    story.append(t_ag)
+    story.append(Spacer(1, 12))
+
+    # Últimos 10 tickets abiertos
+    abiertos_list = [t for t in tickets if t.get("stage_id") and
+                     t["stage_id"][1].lower() not in ("resuelto","cerrado","solved","done")][:10]
+    if abiertos_list:
+        story.append(Paragraph("Últimos tickets abiertos", ps("h2b", fontName="Helvetica-Bold", fontSize=11, spaceBefore=4, spaceAfter=6)))
+        rows2 = [["#", "Ticket", "Etapa", "Agente", "Fecha"]]
+        for t in abiertos_list:
+            rows2.append([
+                str(t["id"]),
+                Paragraph((t["name"] or "—")[:60], ps("tn", fontSize=7)),
+                (t["stage_id"][1] if t.get("stage_id") else "—")[:20],
+                ((t["user_id"][1] if t.get("user_id") else "—") or "—").split()[0],
+                (t.get("create_date") or "")[:10],
+            ])
+        t2 = Table(rows2, colWidths=[0.4*inch, 2.9*inch, 1.1*inch, 1.0*inch, 0.85*inch], repeatRows=1)
+        t2.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),DARK),("TEXTCOLOR",(0,0),(-1,0),_colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),7.5),
+            ("FONTNAME",(0,1),(-1,-1),"Helvetica"),("FONTSIZE",(0,1),(-1,-1),7.5),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[_colors.white, GRIS_L]),
+            ("GRID",(0,0),(-1,-1),0.3,BORDE),
+            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+        ]))
+        story.append(t2)
+
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDE))
+    story.append(Paragraph(
+        f"XCIEN Networks · Mesa de Ayuda · Período: {dias}d · {datetime.datetime.now().strftime('%d %b %Y')}",
+        ps("footer", fontSize=6.5, textColor=GRIS, spaceBefore=4)))
+
+    doc.build(story)
+
+    # Enviar a Telegram
+    tg_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    tg_chat  = os.environ.get("TELEGRAM_CHAT_ID_REPORTES", "") or os.environ.get("TELEGRAM_CHAT_ID", "")
+    caption = (
+        f"📈 *Mesa de Ayuda — {titulo_equipo}*\n"
+        f"Período: últimos {dias} días\n\n"
+        f"• Total: {total} tickets\n"
+        f"• Abiertos: {abiertos}\n"
+        f"• Resueltos: {resueltos}\n"
+        f"• Agentes: {len(por_agente)}"
+    )
+    with open(fname, "rb") as f:
+        _req.post(
+            f"https://api.telegram.org/bot{tg_token}/sendDocument",
+            data={"chat_id": tg_chat, "caption": caption, "parse_mode": "Markdown"},
+            files={"document": (f"helpdesk_{dias}d.pdf", f, "application/pdf")},
+            timeout=15,
+        )
+    return {"ok": True, "total": total, "abiertos": abiertos, "resueltos": resueltos}
+
+
 # ─── Syscom API ───────────────────────────────────────────────────────────────
 
 SYSCOM_CLIENT_ID     = os.environ.get("SYSCOM_CLIENT_ID", "")
