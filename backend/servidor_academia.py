@@ -11610,6 +11610,304 @@ async def noc_report(periodo: str = "diario"):
             "open": len(open_t), "resolved": len(res_t), "critical": len(crit_t)}
 
 
+# ─── BlackstoneOS — Reporte PDN ───────────────────────────────────────────────
+
+class BlackstoneReportePDNReq(BaseModel):
+    lancermex_cajas: int = 0
+
+@app.post("/api/blackstone/reporte-pdn")
+def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
+    """Genera PDF de hallazgos y quiebres PDN (Pueblo Nuevo) y lo envía a Telegram."""
+    import xmlrpc.client as _xrc5, requests as _req5
+    from datetime import datetime, timedelta, date
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors as _C
+    from reportlab.lib.units import inch
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, HRFlowable, Spacer
+
+    VERDE  = _C.HexColor("#009B4E")
+    DARK   = _C.HexColor("#0D1B2A")
+    ROJO   = _C.HexColor("#DC2626")
+    AMBAR  = _C.HexColor("#D97706")
+    AZUL   = _C.HexColor("#1D4ED8")
+    GRIS   = _C.HexColor("#4A5568")
+    LIGHT  = _C.HexColor("#F8FAFC")
+    AMBER2 = _C.HexColor("#FEF3C7")
+
+    hoy = datetime.now()
+    hace30 = (hoy - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    # ── Odoo: tickets CAST PDN ──────────────────────────────────────────────
+    odoo_url = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db  = os.environ.get("ODOO_DB",  "wispi19")
+    odoo_usr = os.environ.get("ODOO_USER", "")
+    odoo_pw  = os.environ.get("ODOO_PASSWORD", "")
+
+    tickets = []
+    tareas  = []
+    try:
+        import signal as _sig5
+        def _th5(s,f): raise TimeoutError()
+        _sig5.signal(_sig5.SIGALRM, _th5)
+        _sig5.alarm(20)
+        _c5 = _xrc5.ServerProxy(f"{odoo_url}/xmlrpc/2/common", allow_none=True)
+        _uid5 = _c5.authenticate(odoo_db, odoo_usr, odoo_pw, {})
+        _m5   = _xrc5.ServerProxy(f"{odoo_url}/xmlrpc/2/object", allow_none=True)
+        tickets = _m5.execute_kw(odoo_db, _uid5, odoo_pw, "helpdesk.ticket", "search_read",
+            [[["description","ilike","PDN"], ["create_date",">=",f"{hace30} 00:00:00"]]],
+            {"fields":["id","name","stage_id","priority","description","create_date","user_id","partner_id"],"limit":100})
+        tareas = _m5.execute_kw(odoo_db, _uid5, odoo_pw, "project.task", "search_read",
+            [[["name","ilike","PDN"],["write_date",">=",f"{hace30} 00:00:00"]]],
+            {"fields":["id","name","stage_id","user_ids","priority","description","write_date"],"limit":100})
+        _sig5.alarm(0)
+    except Exception:
+        pass
+
+    # ── NOC alerts PDN (usa endpoint interno) ──────────────────────────────
+    alertas_pdn = []
+    try:
+        _ar = _req5.get("http://localhost:8002/api/noc/alerts?active_only=true&limit=500", timeout=8)
+        if _ar.ok:
+            _all_a = _ar.json().get("alertas", []) or _ar.json().get("alerts", [])
+            alertas_pdn = [a for a in _all_a if "pdn" in str(a.get("entity_name","")).lower()
+                           or "pueblo" in str(a.get("entity_name","")).lower()]
+    except Exception:
+        pass
+
+    # ── SIDF PDN ──────────────────────────────────────────────────────────
+    sidf_pdn = []
+    try:
+        _sr = _req5.get("http://localhost:8002/api/red/clientes-sidf", timeout=8)
+        if _sr.ok:
+            _all_s = _sr.json().get("clientes", [])
+            sidf_pdn = [c for c in _all_s if "pdn" in str(c.get("plaza","")).lower()
+                        or "pueblo" in str(c.get("plaza","")).lower()]
+    except Exception:
+        pass
+
+    # ── Clasificar tickets por categoría ──────────────────────────────────
+    malas_practicas = []
+    horarios        = []
+    riesgos_legales = []
+    otros_hallazgos = []
+    KEYWORDS_MP     = ["mala práctica","mal procedimiento","procedimiento incorrecto","protocolo","sin herramienta",
+                       "incidente","daño","accidente","error técnico","trabajo indebido"]
+    KEYWORDS_HOR    = ["fuera de horario","horario","nocturn","sin autorización","llegó tarde","no se presentó",
+                       "incumplimiento","tardanza","ausencia"]
+    KEYWORDS_LEG    = ["legal","demanda","cfe","cfdi","contrato","robo","fraude","denuncia","riesgo",
+                       "sin permiso","normativa","nom-","regulación"]
+
+    for t in tickets:
+        txt = (str(t.get("name","")) + " " + str(t.get("description","") or "")).lower()
+        if any(k in txt for k in KEYWORDS_MP):
+            malas_practicas.append(t)
+        elif any(k in txt for k in KEYWORDS_HOR):
+            horarios.append(t)
+        elif any(k in txt for k in KEYWORDS_LEG):
+            riesgos_legales.append(t)
+        else:
+            otros_hallazgos.append(t)
+
+    # ── Resumen urgentes ───────────────────────────────────────────────────
+    urgentes = [t for t in tickets if t.get("priority") in ("2","3","urgent","high")]
+
+    # ── Construir PDF ─────────────────────────────────────────────────────
+    out_path = "/private/tmp/reporte_hallazgos_pdn.pdf"
+    doc = SimpleDocTemplate(out_path, pagesize=letter,
+        leftMargin=0.7*inch, rightMargin=0.7*inch,
+        topMargin=0.7*inch, bottomMargin=0.7*inch)
+
+    H1  = ParagraphStyle("H1",  fontSize=18, textColor=DARK,   spaceAfter=4,  fontName="Helvetica-Bold")
+    H2  = ParagraphStyle("H2",  fontSize=12, textColor=VERDE,  spaceAfter=6,  fontName="Helvetica-Bold", spaceBefore=14)
+    H3  = ParagraphStyle("H3",  fontSize=10, textColor=DARK,   spaceAfter=4,  fontName="Helvetica-Bold")
+    BD  = ParagraphStyle("BD",  fontSize=9,  textColor=GRIS,   spaceAfter=3,  fontName="Helvetica")
+    SM  = ParagraphStyle("SM",  fontSize=8,  textColor=GRIS,   spaceAfter=2,  fontName="Helvetica")
+    CTR = ParagraphStyle("CTR", fontSize=8,  textColor=_C.white, fontName="Helvetica-Bold", alignment=TA_CENTER)
+
+    def tbl_style(header_color=DARK):
+        return TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), header_color),
+            ("TEXTCOLOR",  (0,0), (-1,0), _C.white),
+            ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",   (0,0), (-1,0), 8),
+            ("FONTNAME",   (0,1), (-1,-1), "Helvetica"),
+            ("FONTSIZE",   (0,1), (-1,-1), 7.5),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[_C.white, LIGHT]),
+            ("GRID",       (0,0), (-1,-1), 0.3, _C.HexColor("#CBD5E0")),
+            ("VALIGN",     (0,0), (-1,-1), "MIDDLE"),
+            ("TOPPADDING", (0,0), (-1,-1), 4),
+            ("BOTTOMPADDING",(0,0),(-1,-1),4),
+        ])
+
+    def ticket_table(t_list, max_rows=10):
+        rows = [["#", "Ticket", "Etapa", "Fecha"]]
+        for t in t_list[:max_rows]:
+            etapa = t["stage_id"][1] if isinstance(t.get("stage_id"), list) else str(t.get("stage_id",""))
+            fecha = str(t.get("create_date",""))[:10]
+            rows.append([str(t["id"]), Paragraph(str(t.get("name",""))[:80], SM), etapa, fecha])
+        tbl = Table(rows, colWidths=[0.6*inch, 3.6*inch, 1.4*inch, 1.0*inch], repeatRows=1)
+        tbl.setStyle(tbl_style(DARK))
+        return tbl
+
+    story = []
+
+    # Encabezado
+    story.append(Paragraph("XCIEN Networks — Reporte de Hallazgos", H1))
+    story.append(Paragraph(f"Plaza Pueblo Nuevo (PDN) | {hoy.strftime('%d/%m/%Y')}", BD))
+    story.append(HRFlowable(width="100%", thickness=2, color=VERDE, spaceAfter=12))
+
+    # Resumen ejecutivo
+    story.append(Paragraph("Resumen Ejecutivo", H2))
+    resumen_data = [
+        ["Indicador", "Valor"],
+        ["Tickets CAST PDN (30 días)", str(len(tickets))],
+        ["Urgentes/Críticos", str(len(urgentes))],
+        ["Malas Prácticas detectadas", str(len(malas_practicas))],
+        ["Incumplimiento de Horarios", str(len(horarios))],
+        ["Riesgos Legales identificados", str(len(riesgos_legales))],
+        ["Alertas NOC activas PDN", str(len(alertas_pdn))],
+        ["Clientes SIDF PDN", str(len(sidf_pdn))],
+        ["Cajas Lancermex auditadas", str(req.lancermex_cajas)],
+    ]
+    res_tbl = Table(resumen_data, colWidths=[3.5*inch, 3.1*inch], repeatRows=1)
+    res_tbl.setStyle(tbl_style(VERDE))
+    story.append(res_tbl)
+    story.append(Spacer(1, 12))
+
+    # Malas prácticas
+    story.append(HRFlowable(width="100%", thickness=1, color=ROJO, spaceAfter=6))
+    story.append(Paragraph(f"🔴 Malas Prácticas ({len(malas_practicas)} casos)", H2))
+    story.append(Paragraph(
+        "Tickets donde se detectó procedimiento incorrecto, trabajo sin herramienta adecuada, "
+        "incidente de campo o error técnico documentado.", BD))
+    if malas_practicas:
+        story.append(ticket_table(malas_practicas))
+    else:
+        story.append(Paragraph("Sin tickets categorizados en este periodo.", SM))
+    story.append(Spacer(1, 8))
+
+    # Incumplimiento de horarios
+    story.append(HRFlowable(width="100%", thickness=1, color=AMBAR, spaceAfter=6))
+    story.append(Paragraph(f"🟡 Falta de Cumplimiento de Horarios ({len(horarios)} casos)", H2))
+    story.append(Paragraph(
+        "Tickets relacionados con llegadas tarde, ausencias, trabajo fuera de horario autorizado "
+        "o no presentación en sitio.", BD))
+    if horarios:
+        story.append(ticket_table(horarios))
+    else:
+        story.append(Paragraph("Sin tickets categorizados en este periodo.", SM))
+    story.append(Spacer(1, 8))
+
+    # Riesgos legales
+    story.append(HRFlowable(width="100%", thickness=1, color=AZUL, spaceAfter=6))
+    story.append(Paragraph(f"⚖️ Riesgos Legales ({len(riesgos_legales)} casos)", H2))
+    story.append(Paragraph(
+        "Situaciones con exposición legal: trabajo sin permisos CFE, incumplimiento NOM, "
+        "contratos en riesgo, denuncias potenciales o regulación no cumplida.", BD))
+    if riesgos_legales:
+        story.append(ticket_table(riesgos_legales))
+    else:
+        story.append(Paragraph("Sin tickets categorizados en este periodo.", SM))
+    story.append(Spacer(1, 8))
+
+    # Otros hallazgos
+    if otros_hallazgos:
+        story.append(HRFlowable(width="100%", thickness=1, color=GRIS, spaceAfter=6))
+        story.append(Paragraph(f"📋 Otros Hallazgos ({len(otros_hallazgos)} tickets)", H2))
+        story.append(ticket_table(otros_hallazgos, max_rows=15))
+        story.append(Spacer(1, 8))
+
+    # Alertas NOC PDN
+    story.append(HRFlowable(width="100%", thickness=1, color=ROJO, spaceAfter=6))
+    story.append(Paragraph(f"📡 Alertas NOC Activas PDN ({len(alertas_pdn)})", H2))
+    if alertas_pdn:
+        al_rows = [["Entidad", "Descripción", "Severidad"]]
+        for a in alertas_pdn[:12]:
+            al_rows.append([
+                str(a.get("entity_name",""))[:35],
+                str(a.get("message","") or a.get("description",""))[:55],
+                str(a.get("severity","") or a.get("priority",""))
+            ])
+        al_tbl = Table(al_rows, colWidths=[2.0*inch, 3.4*inch, 1.2*inch], repeatRows=1)
+        al_tbl.setStyle(tbl_style(ROJO))
+        story.append(al_tbl)
+    else:
+        story.append(Paragraph("Sin alertas NOC activas en PDN.", SM))
+    story.append(Spacer(1, 8))
+
+    # Tareas campo
+    if tareas:
+        story.append(HRFlowable(width="100%", thickness=1, color=VERDE, spaceAfter=6))
+        story.append(Paragraph(f"🔧 Tareas de Campo PDN ({len(tareas)})", H2))
+        ta_rows = [["#", "Tarea", "Etapa", "Actualizado"]]
+        for t in tareas[:10]:
+            etapa = t["stage_id"][1] if isinstance(t.get("stage_id"), list) else str(t.get("stage_id",""))
+            fecha = str(t.get("write_date",""))[:10]
+            ta_rows.append([str(t["id"]), Paragraph(str(t.get("name",""))[:75], SM), etapa, fecha])
+        ta_tbl = Table(ta_rows, colWidths=[0.6*inch, 3.6*inch, 1.4*inch, 1.0*inch], repeatRows=1)
+        ta_tbl.setStyle(tbl_style(VERDE))
+        story.append(ta_tbl)
+        story.append(Spacer(1, 8))
+
+    # Lancermex / CWDM
+    story.append(HRFlowable(width="100%", thickness=1, color=AMBAR, spaceAfter=6))
+    story.append(Paragraph("🏗️ Estado CWDM — Auditoría Lancermex", H2))
+    cwdm_data = [
+        ["Ítem", "Estado"],
+        ["Cajas auditadas Lancermex", str(req.lancermex_cajas)],
+        ["CWDM F3 (bloqueado)", "Bloqueado — pendiente autorización CFE"],
+        ["Fusionadora disponible", "Verificar en sitio"],
+        ["OTDR última prueba", "Pendiente actualización"],
+    ]
+    cwdm_tbl = Table(cwdm_data, colWidths=[3.5*inch, 3.1*inch], repeatRows=1)
+    cwdm_tbl.setStyle(tbl_style(AMBAR))
+    story.append(cwdm_tbl)
+
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=1, color=VERDE))
+    story.append(Paragraph(
+        f"Generado automáticamente por XCIEN 2.0 | {hoy.strftime('%d/%m/%Y %H:%M')} | Plaza PDN",
+        SM))
+
+    doc.build(story)
+
+    # ── Enviar a Telegram ──────────────────────────────────────────────────
+    tg_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    tg_chat  = os.environ.get("TELEGRAM_CHAT_ID_REPORTES", "") or os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not tg_token or not tg_chat:
+        return {"ok": False, "error": "Telegram no configurado"}
+
+    caption = (f"📋 Reporte Hallazgos PDN — {hoy.strftime('%d/%m/%Y')}\n"
+               f"🔴 Malas prácticas: {len(malas_practicas)} | "
+               f"🕐 Horarios: {len(horarios)} | "
+               f"⚖️ Riesgo legal: {len(riesgos_legales)}\n"
+               f"📡 Alertas NOC: {len(alertas_pdn)} | 🏗️ Cajas Lancermex: {req.lancermex_cajas}")
+
+    with open(out_path, "rb") as _f:
+        _r5 = _req5.post(
+            f"https://api.telegram.org/bot{tg_token}/sendDocument",
+            data={"chat_id": tg_chat, "caption": caption},
+            files={"document": ("reporte_hallazgos_pdn.pdf", _f, "application/pdf")},
+            timeout=30,
+        )
+
+    if not _r5.ok:
+        raise HTTPException(500, f"Telegram error: {_r5.text[:200]}")
+
+    return {
+        "ok": True,
+        "tickets": len(tickets),
+        "urgentes": len(urgentes),
+        "malas_practicas": len(malas_practicas),
+        "horarios": len(horarios),
+        "riesgos_legales": len(riesgos_legales),
+        "alertas_noc": len(alertas_pdn),
+        "cajas_lancermex": req.lancermex_cajas,
+    }
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")

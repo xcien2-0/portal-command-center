@@ -512,6 +512,26 @@ function KPIsPDN() {
   const [alertas, setAlertas] = useState<any[]>([]);
   const [sidf, setSidf] = useState<SidfCliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reporting, setReporting] = useState<'idle'|'loading'|'ok'|'err'>('idle');
+
+  const generateReport = async () => {
+    setReporting('loading');
+    // Leer cajas Lancermex desde localStorage para incluir en el reporte
+    let lancermexCajas = 0;
+    try {
+      const raw = localStorage.getItem('lancermex_entries');
+      if (raw) { const entries = JSON.parse(raw); lancermexCajas = entries[0]?.cajas ?? 0; }
+    } catch {}
+    try {
+      const r = await fetch(`${API_BASE}/api/blackstone/reporte-pdn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lancermex_cajas: lancermexCajas }),
+      });
+      setReporting(r.ok ? 'ok' : 'err');
+    } catch { setReporting('err'); }
+    setTimeout(() => setReporting('idle'), 4000);
+  };
 
   useEffect(() => {
     const pdnTerms = ['piedras', 'acuña', 'acuna', 'pdn', 'acu'];
@@ -635,6 +655,26 @@ function KPIsPDN() {
           Gestiona el pipeline completo en el tab <span style={{ color: G, fontWeight: 600 }}>🏭 AMISTAD</span>.
         </div>
       </SectionCard>
+
+      {/* Botón reporte */}
+      <button
+        onClick={generateReport}
+        disabled={reporting === 'loading' || loading}
+        style={{
+          width: '100%', padding: '14px 0', borderRadius: 12, border: `1.5px solid`,
+          borderColor: reporting === 'ok' ? G : reporting === 'err' ? RD : GB,
+          background: reporting === 'ok' ? `${G}10` : reporting === 'err' ? `${RD}08` : SF,
+          color: reporting === 'ok' ? G : reporting === 'err' ? RD : GD,
+          fontSize: 13, fontWeight: 700, cursor: reporting === 'loading' ? 'wait' : 'pointer',
+          boxShadow: SH, transition: 'all .2s', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 8,
+        }}
+      >
+        {reporting === 'loading' ? '⏳ Generando reporte...' :
+         reporting === 'ok'      ? '✓ PDF enviado a Telegram' :
+         reporting === 'err'     ? '✗ Error — intenta de nuevo' :
+         '📄 Generar reporte de hallazgos → Telegram'}
+      </button>
     </div>
   );
 }
