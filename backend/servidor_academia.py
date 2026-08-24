@@ -11953,6 +11953,77 @@ def _normalize_rb_name(name: str) -> str:
     return n.strip()
 
 
+@app.get("/api/infra/sitios/sync-status")
+async def infra_sitios_sync_status():
+    """
+    Dashboard de sincronización: cobertura de las 3 fuentes de datos por sitio.
+    No llama al harmonizer (respuesta rápida).
+    """
+    # Load drive data
+    drive_by_key = {}
+    try:
+        with open(_RADIOBASES_DRIVE_FILE, encoding="utf-8") as f:
+            for rb in json.load(f):
+                drive_by_key[_normalize_rb_name(rb.get("name", ""))] = rb
+    except Exception:
+        pass
+
+    # Load inventario
+    inv_by_key = {}
+    for rec in _load_inventario_sitios():
+        key = rec.get("nombre_normalizado") or _normalize_rb_name(rec.get("nombre", ""))
+        inv_by_key[key] = rec
+
+    # All keys union
+    all_keys = set(drive_by_key.keys()) | set(inv_by_key.keys())
+
+    fuentes = []
+    for key in sorted(all_keys):
+        drive = drive_by_key.get(key, {})
+        inv   = inv_by_key.get(key, {})
+        nombre = (drive.get("name") or inv.get("nombre") or key).title()
+        fuentes.append({
+            "key":      key,
+            "nombre":   nombre,
+            "drive":    bool(drive),
+            "inv":      bool(inv),
+            "lat":      drive.get("lat"),
+            "lng":      drive.get("lng"),
+            "vigencia": drive.get("vigencia"),
+            "renta":    drive.get("renta"),
+            "city":     drive.get("city"),
+            "ip_router": inv.get("ip_router_core"),
+            "sop":       inv.get("sop"),
+            "plaza":     inv.get("plaza"),
+            "suma_ok":   inv.get("suma_ok", 0),
+        })
+
+    total = len(fuentes)
+    solo_drive = sum(1 for f in fuentes if f["drive"] and not f["inv"])
+    solo_inv   = sum(1 for f in fuentes if f["inv"] and not f["drive"])
+    ambas      = sum(1 for f in fuentes if f["drive"] and f["inv"])
+    con_coords = sum(1 for f in fuentes if f["lat"] and f["lng"])
+    con_ip     = sum(1 for f in fuentes if f["ip_router"])
+
+    return JSONResponse({
+        "ok": True,
+        "resumen": {
+            "total_fuentes_locales": total,
+            "drive_total": len(drive_by_key),
+            "inventario_total": len(inv_by_key),
+            "en_ambas": ambas,
+            "solo_drive": solo_drive,
+            "solo_inventario": solo_inv,
+            "con_coordenadas": con_coords,
+            "con_ip_router": con_ip,
+            "pct_drive":     round(100 * len(drive_by_key) / max(total, 1)),
+            "pct_inventario": round(100 * len(inv_by_key) / max(total, 1)),
+            "pct_cruzados":  round(100 * ambas / max(total, 1)),
+        },
+        "sitios": fuentes,
+    })
+
+
 @app.get("/api/infra/sitios")
 async def infra_sitios_unificados():
     """
