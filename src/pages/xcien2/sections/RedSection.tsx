@@ -485,11 +485,11 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
       .catch(() => {});
   }, []);
 
-  // ── Cargar radiobases Odoo ───────────────────────────────────────────────────
+  // ── Cargar sitios unificados (Odoo + Drive + Inventario) ────────────────────
   useEffect(() => {
-    fetch(`${API_BASE}/api/red/radiobases-odoo`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setRbOdooData(Array.isArray(data) ? data : []))
+    fetch(`${API_BASE}/api/infra/sitios`)
+      .then(r => r.ok ? r.json() : { sitios: [] })
+      .then(data => setRbOdooData(Array.isArray(data) ? data : (data?.sitios ?? [])))
       .catch(() => {});
   }, []);
 
@@ -1119,7 +1119,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     if (!activeLayers.has('rb-odoo') || rbOdooData.length === 0) return;
 
     rbOdooData.forEach((rb: any) => {
-      const enInfra  = rb.en_infra;
+      const enInfra  = !!(rb.vigencia || rb.estatus_contrato || rb.ip_router_core);
       const color    = enInfra ? '#00ffcc' : '#ffaa00';
       const clients  = rb.clientes || 0;
       const th = 20;   // altura fija pequeña
@@ -1189,9 +1189,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
                  ? `<span style="background:#00ffcc22;color:#00ffcc;padding:2px 8px;border-radius:8px">✓ En Infra</span>`
                  : `<span style="background:#ffaa0022;color:#ffaa00;padding:2px 8px;border-radius:8px">Solo Odoo</span>`}
              </div>
-             ${rb.infra_estatus ? `<div style="color:#475569;font-size:10px"><b>Contrato:</b> ${rb.infra_estatus}</div>` : ''}
-             ${rb.infra_vigencia ? `<div style="color:#475569;font-size:10px"><b>Vigencia:</b> ${rb.infra_vigencia}</div>` : ''}
-             ${rb.infra_renta ? `<div style="color:#475569;font-size:10px"><b>Renta:</b> ${rb.infra_renta}</div>` : ''}
+             ${rb.estatus_contrato ? `<div style="color:#475569;font-size:10px"><b>Contrato:</b> ${rb.estatus_contrato}</div>` : ''}
+             ${rb.vigencia ? `<div style="color:#475569;font-size:10px"><b>Vigencia:</b> ${rb.vigencia}</div>` : ''}
+             ${rb.renta ? `<div style="color:#475569;font-size:10px"><b>Renta:</b> ${rb.renta}</div>` : ''}
+             ${rb.ip_router_core ? `<div style="color:#475569;font-size:10px"><b>Router:</b> ${rb.ip_router_core}</div>` : ''}
+             ${rb.noc_estado ? `<div style="color:#475569;font-size:10px"><b>NOC:</b> ${rb.noc_estado}</div>` : ''}
+             <div style="font-size:10px;color:#475569;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
+               ${rb.sensor_cfe ? `<span>⚡CFE</span>` : ''}${rb.planta_emergencia ? `<span>🔋Planta</span>` : ''}${rb.camara ? `<span>📷Cámara</span>` : ''}${rb.temperatura ? `<span>🌡Temp</span>` : ''}
+             </div>
              <a href="https://odoo.wispi.mx/web#id=${rb.id}&model=running.services&view_type=form&cids=25" target="_blank" rel="noopener noreferrer"
                 style="display:block;text-align:center;padding:6px 12px;background:${color};color:#000;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;margin-top:8px">
                Abrir Radiobase en Odoo →
@@ -1603,11 +1608,11 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
             boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           }}>
             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 7 }}>
-              Radiobases Odoo
+              Sitios XCIEN (unificado)
             </div>
             {[
-              { color: '#00ffcc', label: 'En ambas fuentes', detail: `${rbOdooData.filter(r => r.en_infra).length} RBs` },
-              { color: '#ffaa00', label: 'Solo en Odoo',     detail: `${rbOdooData.filter(r => !r.en_infra).length} RBs` },
+              { color: '#00ffcc', label: 'Con datos infra',  detail: `${rbOdooData.filter((r: any) => r.vigencia || r.ip_router_core).length} RBs` },
+              { color: '#ffaa00', label: 'Solo operacional',  detail: `${rbOdooData.filter((r: any) => !r.vigencia && !r.ip_router_core).length} RBs` },
             ].map(({ color, label, detail }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                 <svg width="10" height="16" viewBox="0 0 24 48" fill="none">

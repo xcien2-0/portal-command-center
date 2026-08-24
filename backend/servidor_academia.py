@@ -11923,6 +11923,202 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
     }
 
 
+# ─── Inventario Unificado de Sitios ───────────────────────────────────────────
+
+_INVENTARIO_SITIOS_FILE = os.path.join(BASE_DIR, "data", "inventario_sitios.json")
+_inventario_sitios_cache = None
+_inventario_sitios_ts: float = 0.0
+_INVENTARIO_SITIOS_TTL = 300.0  # 5 min
+
+def _load_inventario_sitios() -> list:
+    global _inventario_sitios_cache, _inventario_sitios_ts
+    now = time.time()
+    if _inventario_sitios_cache is not None and (now - _inventario_sitios_ts) < _INVENTARIO_SITIOS_TTL:
+        return _inventario_sitios_cache
+    try:
+        with open(_INVENTARIO_SITIOS_FILE, encoding="utf-8") as f:
+            _inventario_sitios_cache = json.load(f)
+        _inventario_sitios_ts = now
+    except Exception:
+        _inventario_sitios_cache = []
+    return _inventario_sitios_cache
+
+def _normalize_rb_name(name: str) -> str:
+    import unicodedata as _ud, re as _re
+    n = _ud.normalize("NFD", name)
+    n = "".join(c for c in n if _ud.category(c) != "Mn")
+    n = n.lower().strip()
+    n = _re.sub(r"^\[sop-\d+\]\s*", "", n)
+    n = _re.sub(r"^rb\s+", "", n)
+    return n.strip()
+
+
+@app.get("/api/infra/sitios")
+async def infra_sitios_unificados():
+    """
+    Endpoint unificado de sitios XCIEN.
+    Fusiona 3 fuentes por nombre normalizado de radiobase:
+      1. radiobases-harmonized (Odoo+NOC+CAST) — base operacional
+      2. radiobases_drive.json — vigencia, renta, dirección, lat/lng
+      3. inventario_sitios.json — IPs equipos, monitoreo energía/red
+    """
+    from agents.radiobase_harmonizer import harmonize as _harmonize
+
+    cfg = {
+        "odoo_url":       os.environ.get("ODOO_URL",  "https://odoo.wispi.mx"),
+        "odoo_db":        os.environ.get("ODOO_DB",   "wispi19"),
+        "odoo_user":      os.environ.get("ODOO_USER", ""),
+        "odoo_pass":      os.environ.get("ODOO_PASSWORD", ""),
+        "nocboard_proxy": os.environ.get("NOCBOARD_PROXY", "http://localhost:9400"),
+        "nocboard_key":   os.environ.get("NOCBOARD_API_KEY", "87a08190b801416392e944ab79c7e3c9"),
+    }
+
+    try:
+        harmonized = await _harmonize(cfg)
+    except Exception as e:
+        logger.warning(f"[infra/sitios] harmonizer error: {e}")
+        harmonized = []
+
+    # Index drive data by normalized name
+    drive_data = {}
+    try:
+        with open(_RADIOBASES_DRIVE_FILE, encoding="utf-8") as f:
+            for rb in json.load(f):
+                key = _normalize_rb_name(rb.get("name", ""))
+                drive_data[key] = rb
+    except Exception:
+        pass
+
+    # Index inventario_sitios by normalized name
+    inv_data = {}
+    for rec in _load_inventario_sitios():
+        key = rec.get("nombre_normalizado") or _normalize_rb_name(rec.get("nombre", ""))
+        inv_data[key] = rec
+
+    # Build unified records
+    result = []
+    for rb in harmonized:
+        nombre = rb.get("nombre", "")
+        key = _normalize_rb_name(nombre)
+
+        drive = drive_data.get(key, {})
+        inv   = inv_data.get(key, {})
+
+        # Try partial match on drive if no exact hit
+        if not drive:
+            for dk, dv in drive_data.items():
+                if key in dk or dk in key:
+                    drive = dv
+                    break
+
+        unified = {
+            # --- Base (harmonized) ---
+            "nombre":    nombre,
+            "nombre_key": key,
+            "id":        rb.get("id"),
+            "lat":       rb.get("lat") or drive.get("lat"),
+            "lng":       rb.get("lng") or drive.get("lng"),
+            "ciudad":    rb.get("ciudad") or drive.get("city"),
+            "estado":    rb.get("estado") or drive.get("state"),
+            "clientes":  rb.get("clientes", 0),
+            "activo":    rb.get("activo", True),
+            "noc_estado": rb.get("noc_estado"),
+            "soporte":   rb.get("soporte", {}),
+            "campo":     rb.get("campo", {}),
+            # --- Drive ---
+            "estatus_contrato": drive.get("estatus"),
+            "vigencia":         drive.get("vigencia"),
+            "direccion":        drive.get("direccion"),
+            "renta":            drive.get("renta"),
+            # --- Inventario energía ---
+            "sop":              inv.get("sop"),
+            "plaza":            inv.get("plaza"),
+            "is_alpha":         inv.get("is_alpha", False),
+            "suma_ok":          inv.get("suma_ok", 0),
+            "sensor_cfe":       inv.get("sensor_cfe", False),
+            "ip_sensor_cfe":    inv.get("ip_sensor_cfe"),
+            "watchdog":         inv.get("watchdog", False),
+            "ip_watchdog":      inv.get("ip_watchdog"),
+            "sensor_baterias":  inv.get("sensor_baterias", False),
+            "planta_emergencia": inv.get("planta_emergencia", False),
+            "site_monitor":     inv.get("site_monitor", False),
+            "ip_site_monitor":  inv.get("ip_site_monitor"),
+            "samlex":           inv.get("samlex", False),
+            "ip_samlex":        inv.get("ip_samlex"),
+            "eltek":            inv.get("eltek", False),
+            "ip_eltek":         inv.get("ip_eltek"),
+            "growatt":          inv.get("growatt", False),
+            "ip_growatt":       inv.get("ip_growatt"),
+            # --- Inventario red ---
+            "ip_router_core":   inv.get("ip_router_core"),
+            "ip_switch1":       inv.get("ip_switch1"),
+            "ip_switch2":       inv.get("ip_switch2"),
+            "ip_um_fo":         inv.get("ip_um_fo"),
+            "um_mo_radio":      inv.get("um_mo_radio", False),
+            "um_fo_raisecom":   inv.get("um_fo_raisecom", False),
+            # --- Seguridad física ---
+            "camara":           inv.get("camara", False),
+            "tipo_camara":      inv.get("tipo_camara"),
+            "candado":          inv.get("candado", False),
+            "temperatura":      inv.get("temperatura", False),
+        }
+        result.append(unified)
+
+    # Append drive-only RBs not in harmonized (extra coverage)
+    harmonized_keys = {_normalize_rb_name(rb.get("nombre", "")) for rb in harmonized}
+    for key, drive in drive_data.items():
+        if key not in harmonized_keys:
+            inv = inv_data.get(key, {})
+            result.append({
+                "nombre":    drive.get("name", key),
+                "nombre_key": key,
+                "id":        None,
+                "lat":       drive.get("lat"),
+                "lng":       drive.get("lng"),
+                "ciudad":    drive.get("city"),
+                "estado":    drive.get("state"),
+                "clientes":  inv.get("clientes", 0),
+                "activo":    True,
+                "noc_estado": None,
+                "soporte":   {},
+                "campo":     {},
+                "estatus_contrato": drive.get("estatus"),
+                "vigencia":         drive.get("vigencia"),
+                "direccion":        drive.get("direccion"),
+                "renta":            drive.get("renta"),
+                "sop":              inv.get("sop"),
+                "plaza":            inv.get("plaza"),
+                "is_alpha":         inv.get("is_alpha", False),
+                "suma_ok":          inv.get("suma_ok", 0),
+                "sensor_cfe":       inv.get("sensor_cfe", False),
+                "ip_sensor_cfe":    inv.get("ip_sensor_cfe"),
+                "watchdog":         inv.get("watchdog", False),
+                "ip_watchdog":      inv.get("ip_watchdog"),
+                "sensor_baterias":  inv.get("sensor_baterias", False),
+                "planta_emergencia": inv.get("planta_emergencia", False),
+                "site_monitor":     inv.get("site_monitor", False),
+                "ip_site_monitor":  inv.get("ip_site_monitor"),
+                "samlex":           inv.get("samlex", False),
+                "ip_samlex":        inv.get("ip_samlex"),
+                "eltek":            inv.get("eltek", False),
+                "ip_eltek":         inv.get("ip_eltek"),
+                "growatt":          inv.get("growatt", False),
+                "ip_growatt":       inv.get("ip_growatt"),
+                "ip_router_core":   inv.get("ip_router_core"),
+                "ip_switch1":       inv.get("ip_switch1"),
+                "ip_switch2":       inv.get("ip_switch2"),
+                "ip_um_fo":         inv.get("ip_um_fo"),
+                "um_mo_radio":      inv.get("um_mo_radio", False),
+                "um_fo_raisecom":   inv.get("um_fo_raisecom", False),
+                "camara":           inv.get("camara", False),
+                "tipo_camara":      inv.get("tipo_camara"),
+                "candado":          inv.get("candado", False),
+                "temperatura":      inv.get("temperatura", False),
+            })
+
+    return JSONResponse({"ok": True, "total": len(result), "sitios": result})
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
