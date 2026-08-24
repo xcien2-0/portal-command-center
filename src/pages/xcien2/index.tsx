@@ -36,6 +36,7 @@ const CastSection        = lazy(() => import('./sections/CastSection'));
 const InfraEnergiaSection = lazy(() => import('./sections/InfraEnergiaSection'));
 const ProyectosSection    = lazy(() => import('./sections/ProyectosSection'));
 const RedSection         = lazy(() => import('./sections/RedSection'));
+const SyncSection        = lazy(() => import('./sections/SyncSection'));
 const BidrillasSection   = lazy(() => import('./sections/BidrillasSection'));
 const AcademiaSection    = lazy(() => import('./sections/AcademiaSection'));
 const AcademiaHoloSection= lazy(() => import('./sections/AcademiaHoloSection'));
@@ -127,6 +128,7 @@ const NAV: NavEntry[] = [
   { id: 'helpdesk',      label: 'Mesa de Ayuda',           icon: '📈', group: 'Monitoreo' },
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
+  { id: 'sync',          label: 'Sincronización Datos',    icon: '🔄', group: 'Monitoreo' },
   { id: 'blackstone',    label: 'blackstoneOS · PDN',      icon: '🏙️', group: 'Monitoreo' },
   { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
   { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
@@ -246,6 +248,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   radiobases: 'Radio Bases XCIEN',
   iblack:     'iBlack · Zona de Cliente + Cuadrillas',
   'infra-energia': 'Infraestructura Energía',
+  sync: 'Sincronización de Fuentes',
   cerebro: 'Infraestructura IA',
   'inv-transfers': 'Transferencias de Inventario',
   merkle: 'Merkle Feed',
@@ -685,6 +688,7 @@ function Content({
       {section === 'cast'         && <CastSection />}
       {section === 'infra-energia' && <InfraEnergiaSection theme={theme} />}
       {section === 'red'      && <RedSection      theme={theme} />}
+      {section === 'sync'     && <SyncSection />}
       {section === 'academia' && <AcademiaSection theme={theme} activeThemeId={activeThemeId} />}
       {section === 'wfm'      && <WFMSection      theme={theme} activeThemeId={activeThemeId} />}
       {section === 'bidrillas' && <BidrillasSection theme={theme} />}
