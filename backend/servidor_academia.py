@@ -11617,7 +11617,8 @@ class BlackstoneReportePDNReq(BaseModel):
 
 @app.post("/api/blackstone/reporte-pdn")
 def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
-    """Genera PDF de hallazgos y quiebres PDN (Pueblo Nuevo) y lo envía a Telegram."""
+    """Genera PDF de hallazgos y quiebres plaza PDN/Acuña y lo envía a Telegram."""
+    PLAZA_KEYWORDS = ["pdn", "pueblo nuevo", "acuña", "acuna"]
     import xmlrpc.client as _xrc5, requests as _req5
     from datetime import datetime, timedelta, date
     from reportlab.lib.pagesizes import letter
@@ -11655,11 +11656,25 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
         _c5 = _xrc5.ServerProxy(f"{odoo_url}/xmlrpc/2/common", allow_none=True)
         _uid5 = _c5.authenticate(odoo_db, odoo_usr, odoo_pw, {})
         _m5   = _xrc5.ServerProxy(f"{odoo_url}/xmlrpc/2/object", allow_none=True)
+        _plaza_domain_t = ["|"] * (len(PLAZA_KEYWORDS) - 1) + \
+            [["description","ilike",k] for k in PLAZA_KEYWORDS]
+        _plaza_domain_t = ["&", ["create_date",">=",f"{hace30} 00:00:00"]] + \
+            (["&"] * (len(PLAZA_KEYWORDS) - 2) if len(PLAZA_KEYWORDS) > 2 else []) + \
+            [item for k in PLAZA_KEYWORDS for item in [["description","ilike",k]]]
+        # Simplificado: OR de keywords en descripción OR nombre
+        _t_domain = [["create_date",">=",f"{hace30} 00:00:00"],
+                     "|", "|", "|",
+                     ["description","ilike","PDN"], ["description","ilike","Pueblo Nuevo"],
+                     ["description","ilike","Acuña"], ["name","ilike","Acuña"]]
         tickets = _m5.execute_kw(odoo_db, _uid5, odoo_pw, "helpdesk.ticket", "search_read",
-            [[["description","ilike","PDN"], ["create_date",">=",f"{hace30} 00:00:00"]]],
+            [_t_domain],
             {"fields":["id","name","stage_id","priority","description","create_date","user_id","partner_id"],"limit":100})
+        _ta_domain = [["write_date",">=",f"{hace30} 00:00:00"],
+                      "|", "|",
+                      ["name","ilike","PDN"], ["name","ilike","Pueblo Nuevo"],
+                      ["name","ilike","Acuña"]]
         tareas = _m5.execute_kw(odoo_db, _uid5, odoo_pw, "project.task", "search_read",
-            [[["name","ilike","PDN"],["write_date",">=",f"{hace30} 00:00:00"]]],
+            [_ta_domain],
             {"fields":["id","name","stage_id","user_ids","priority","description","write_date"],"limit":100})
         _sig5.alarm(0)
     except Exception:
@@ -11671,8 +11686,8 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
         _ar = _req5.get("http://localhost:8002/api/noc/alerts?active_only=true&limit=500", timeout=8)
         if _ar.ok:
             _all_a = _ar.json().get("alertas", []) or _ar.json().get("alerts", [])
-            alertas_pdn = [a for a in _all_a if "pdn" in str(a.get("entity_name","")).lower()
-                           or "pueblo" in str(a.get("entity_name","")).lower()]
+            alertas_pdn = [a for a in _all_a if any(
+                k in str(a.get("entity_name","")).lower() for k in PLAZA_KEYWORDS)]
     except Exception:
         pass
 
@@ -11682,8 +11697,8 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
         _sr = _req5.get("http://localhost:8002/api/red/clientes-sidf", timeout=8)
         if _sr.ok:
             _all_s = _sr.json().get("clientes", [])
-            sidf_pdn = [c for c in _all_s if "pdn" in str(c.get("plaza","")).lower()
-                        or "pueblo" in str(c.get("plaza","")).lower()]
+            sidf_pdn = [c for c in _all_s if any(
+                k in str(c.get("plaza","")).lower() for k in PLAZA_KEYWORDS)]
     except Exception:
         pass
 
@@ -11755,7 +11770,7 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
 
     # Encabezado
     story.append(Paragraph("XCIEN Networks — Reporte de Hallazgos", H1))
-    story.append(Paragraph(f"Plaza Pueblo Nuevo (PDN) | {hoy.strftime('%d/%m/%Y')}", BD))
+    story.append(Paragraph(f"Plaza PDN / Acuña (Pueblo Nuevo + Acuña, Coahuila) | {hoy.strftime('%d/%m/%Y')}", BD))
     story.append(HRFlowable(width="100%", thickness=2, color=VERDE, spaceAfter=12))
 
     # Resumen ejecutivo
@@ -11879,7 +11894,7 @@ def blackstone_reporte_pdn(req: BlackstoneReportePDNReq):
     if not tg_token or not tg_chat:
         return {"ok": False, "error": "Telegram no configurado"}
 
-    caption = (f"📋 Reporte Hallazgos PDN — {hoy.strftime('%d/%m/%Y')}\n"
+    caption = (f"📋 Reporte Hallazgos PDN/Acuña — {hoy.strftime('%d/%m/%Y')}\n"
                f"🔴 Malas prácticas: {len(malas_practicas)} | "
                f"🕐 Horarios: {len(horarios)} | "
                f"⚖️ Riesgo legal: {len(riesgos_legales)}\n"
