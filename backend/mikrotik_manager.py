@@ -328,6 +328,8 @@ UI = """<!DOCTYPE html>
   .dot.warn{ background:var(--amber); box-shadow:0 0 4px var(--amber); }
 
   /* REFRESH */
+  .webfig-link { background:transparent; border:1px solid var(--green); border-radius:6px; padding:4px 10px; color:var(--green-l); font-size:10px; text-decoration:none; white-space:nowrap; }
+  .webfig-link:hover { background:rgba(0,154,90,.15); }
   .refresh-btn { background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 10px; color:var(--text-m); font-size:10px; cursor:pointer; margin-left:auto; }
   .refresh-btn:hover { border-color:var(--green); color:var(--green-l); }
   .last-update { font-size:10px; color:var(--text-d); margin-left:8px; }
@@ -351,6 +353,7 @@ UI = """<!DOCTYPE html>
     <button class="rtab" onclick="selectRouter('acuna-switch',this)">CRS328 Switch</button>
   </div>
   <span class="mode-badge demo" id="mode-badge">DEMO</span>
+  <a class="webfig-link" id="webfig-link" href="#" target="_blank" rel="noopener">Abrir WebFig ↗</a>
   <button class="refresh-btn" onclick="loadAll()">↻ Actualizar</button>
   <span class="last-update" id="last-update">—</span>
 </nav>
@@ -534,6 +537,8 @@ async function loadStatus() {
 
     document.getElementById('dot-icmp').className  = 'dot ' + (icmpOk ? 'on' : 'off');
     document.getElementById('status-icmp').textContent = `ICMP: ${icmpOk ? '✓ alcanzable (21ms)' : '✗ sin respuesta'} → ${router.host}`;
+    const wfLink = document.getElementById('webfig-link');
+    if (wfLink && router.host) { wfLink.href = `http://${router.host}`; }
     document.getElementById('dot-api').className   = 'dot ' + (apiOk ? 'on' : 'off');
     document.getElementById('status-api').textContent  = `API :${router.port}: ${apiOk ? '✓ CONECTADO' : '✗ bloqueado (firewall)'}`;
 

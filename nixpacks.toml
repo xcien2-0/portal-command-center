@@ -14,4 +14,4 @@ cmds = [
 ]
 
 [start]
-cmd = "python backend/servidor_academia.py"
+cmd = "bash start.sh"

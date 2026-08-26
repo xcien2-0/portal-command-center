@@ -37,6 +37,7 @@ backend/odoo_adapter.py
 *.md
 !README.md
 *.sh
+!start.sh
 deploy.sh
 
 # ── Backups y temporales que rompen Vite/TS ───────────────────────────────────

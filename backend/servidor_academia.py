@@ -1405,7 +1405,8 @@ def post_token_operativo(req: Dict[str, Any]):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-TELEGRAM_CONFIG_FILE = "db/telegram_config.json"
+_DATA_DIR = os.environ.get("DATA_DIR")
+TELEGRAM_CONFIG_FILE = os.path.join(_DATA_DIR, "db", "telegram_config.json") if _DATA_DIR else "db/telegram_config.json"
 
 def _load_telegram_config():
     try:
@@ -1655,6 +1656,9 @@ else:
     NOCBOARD_API_BASE = "http://localhost:9400/api"
 NOCBOARD_API_KEY  = os.environ.get("NOCBOARD_API_KEY", "87a08190b801416392e944ab79c7e3c9")
 
+# Rastrea cuándo fue la última vez que el proxy NOCBoard respondió con éxito
+_noc_last_live: dict = {"ts": 0.0}  # epoch seconds
+
 import requests
 import threading
 import subprocess as _sp
@@ -1680,10 +1684,12 @@ def _nocboard_watchdog():
 
 def _load_noc_data(endpoint: str, fallback_file: str):
     """Intenta cargar datos desde la API de NOCBoard (9401) o cae a archivos locales."""
+    import time
     try:
         url = f"{NOCBOARD_API_BASE}/{endpoint}"
         r = requests.get(url, headers={"X-API-Key": NOCBOARD_API_KEY}, timeout=10)
         if r.status_code == 200:
+            _noc_last_live["ts"] = time.time()
             data = r.json()
             if endpoint in data and isinstance(data[endpoint], list):
                 return data[endpoint]
@@ -2061,7 +2067,27 @@ def get_noc_alerts(active_only: bool = True, limit: int = 200):
     result.sort(key=lambda x: 0 if x["severity"] == "critical" else 1)
     # 1. board priority: Energía(1) < Datos(2) < WL(3)
     result.sort(key=lambda x: x["boardPriority"])
-    return result[:limit]
+
+    # Calcular frescura de los datos
+    import time
+    now = time.time()
+    last_live = _noc_last_live.get("ts", 0.0)
+    if last_live > 0 and (now - last_live) < 90:
+        data_source     = "live"
+        data_age_minutes = 0
+    else:
+        try:
+            mtime = os.path.getmtime(NOCBOARD_ALERTS_FILE)
+            data_age_minutes = int((now - mtime) / 60)
+        except OSError:
+            data_age_minutes = -1
+        data_source = "cache"
+
+    return {
+        "alerts":           result[:limit],
+        "data_source":      data_source,
+        "data_age_minutes": data_age_minutes,
+    }
 
 @app.get("/api/noc/summary")
 def get_noc_summary():
@@ -8558,7 +8584,7 @@ async def notificaciones_stream(request: Request, token: Optional[str] = None):
 
 
 # ─── Incidentes de Red ────────────────────────────────────────────────────────
-INCIDENTES_DB = "db/incidentes.json"
+INCIDENTES_DB = os.path.join(_DATA_DIR, "db", "incidentes.json") if _DATA_DIR else "db/incidentes.json"
 
 def _load_incidentes() -> list:
     try:
