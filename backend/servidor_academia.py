@@ -8287,14 +8287,39 @@ async def generar_reporte_kpi(req: ReporteKPIRequest, _user: dict = Depends(get_
 
 RUTAS_FILE = os.path.join(BASE_DIR, "db", "rutas_aprendizaje.json")
 
+_RUTAS_DEFAULT = {
+    "TI": {"area": "TI", "nombre": "Técnico de Infraestructura", "descripcion": "Instalación, mantenimiento y operación de infraestructura de red XCIEN.", "color": "#00C896", "icono": "🔧",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 18, "curso_name": "Reemplazo de Servicios en Operación", "orden": 2, "obligatorio": True}, {"curso_id": 35, "curso_name": "Verificación de Voltaje", "orden": 3, "obligatorio": True}, {"curso_id": 42, "curso_name": "Seguridad en Campo y Manejo de Baterías", "orden": 4, "obligatorio": True}, {"curso_id": 39, "curso_name": "Topología de Red y Diagnóstico XCIEN", "orden": 5, "obligatorio": True}, {"curso_id": 87, "curso_name": "Capacitación Raisecom — Técnico de Campo", "orden": 6, "obligatorio": False}, {"curso_id": 88, "curso_name": "CAST — Certificación Técnica XCIEN", "orden": 7, "obligatorio": False}]},
+    "N1": {"area": "N1", "nombre": "NOC Nivel 1", "descripcion": "Monitoreo de red, atención de alertas y escalamiento.", "color": "#3B82F6", "icono": "📡",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 38, "curso_name": "Monitoreo SNMP y NOCBoards XCIEN", "orden": 2, "obligatorio": True}, {"curso_id": 39, "curso_name": "Topología de Red y Diagnóstico XCIEN", "orden": 3, "obligatorio": True}, {"curso_id": 86, "curso_name": "Programa NOC XCIEN", "orden": 4, "obligatorio": True}, {"curso_id": 43, "curso_name": "Protocolos de Emergencia XCIEN", "orden": 5, "obligatorio": True}]},
+    "N2": {"area": "N2", "nombre": "NOC Nivel 2", "descripcion": "Diagnóstico avanzado, configuración de equipos y resolución de incidencias.", "color": "#6366F1", "icono": "🖥️",
+           "cursos": [{"curso_id": 38, "curso_name": "Monitoreo SNMP y NOCBoards XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 86, "curso_name": "Programa NOC XCIEN", "orden": 2, "obligatorio": True}, {"curso_id": 46, "curso_name": "Laboratorio QC — Radios Mimosa", "orden": 3, "obligatorio": True}, {"curso_id": 88, "curso_name": "CAST — Certificación Técnica XCIEN", "orden": 4, "obligatorio": True}]},
+    "TC": {"area": "TC", "nombre": "Técnico Ops / Almacén", "descripcion": "Field service, inventario y transferencias en Odoo.", "color": "#F59E0B", "icono": "📦",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 40, "curso_name": "Field Service en Odoo — Guía Técnicos", "orden": 2, "obligatorio": True}, {"curso_id": 41, "curso_name": "Inventario y Transferencias en Odoo", "orden": 3, "obligatorio": True}, {"curso_id": 42, "curso_name": "Seguridad en Campo y Manejo de Baterías", "orden": 4, "obligatorio": True}, {"curso_id": 35, "curso_name": "Verificación de Voltaje", "orden": 5, "obligatorio": True}]},
+    "PM": {"area": "PM", "nombre": "Project Managers", "descripcion": "Gestión de proyectos, bidrillas y coordinación de equipos.", "color": "#EC4899", "icono": "📋",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 37, "curso_name": "Gestión de Proyectos", "orden": 2, "obligatorio": True}, {"curso_id": 45, "curso_name": "Capacitación Operaciones XCIEN", "orden": 3, "obligatorio": True}, {"curso_id": 43, "curso_name": "Protocolos de Emergencia XCIEN", "orden": 4, "obligatorio": False}]},
+    "CO": {"area": "CO", "nombre": "Comercial", "descripcion": "Ventas B2B, prospección y cierre de cuentas corporativas.", "color": "#10B981", "icono": "💼",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 44, "curso_name": "Capacitación Comercial XCIEN", "orden": 2, "obligatorio": True}, {"curso_id": 15, "curso_name": "CFDi 4.0", "orden": 3, "obligatorio": True}]},
+    "SP": {"area": "SP", "nombre": "Servicios y Preventa", "descripcion": "Factibilidad técnica, cotizaciones y acompañamiento al cliente.", "color": "#8B5CF6", "icono": "🔍",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 44, "curso_name": "Capacitación Comercial XCIEN", "orden": 2, "obligatorio": True}, {"curso_id": 39, "curso_name": "Topología de Red y Diagnóstico XCIEN", "orden": 3, "obligatorio": True}]},
+    "RH": {"area": "RH", "nombre": "Recursos Humanos", "descripcion": "Administración de personal, nómina y bienestar organizacional.", "color": "#F472B6", "icono": "👥",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 15, "curso_name": "CFDi 4.0", "orden": 2, "obligatorio": True}]},
+    "LC": {"area": "LC", "nombre": "Líderes de Campo", "descripcion": "Supervisión de técnicos, calidad en campo y reporteo.", "color": "#EF4444", "icono": "🏗️",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 37, "curso_name": "Gestión de Proyectos", "orden": 2, "obligatorio": True}, {"curso_id": 42, "curso_name": "Seguridad en Campo y Manejo de Baterías", "orden": 3, "obligatorio": True}, {"curso_id": 43, "curso_name": "Protocolos de Emergencia XCIEN", "orden": 4, "obligatorio": True}, {"curso_id": 45, "curso_name": "Capacitación Operaciones XCIEN", "orden": 5, "obligatorio": True}]},
+    "ID": {"area": "ID", "nombre": "Ingeniería de Datos", "descripcion": "Análisis, visualización y automatización de datos operativos.", "color": "#06B6D4", "icono": "📊",
+           "cursos": [{"curso_id": 84, "curso_name": "Inducción XCIEN", "orden": 1, "obligatorio": True}, {"curso_id": 38, "curso_name": "Monitoreo SNMP y NOCBoards XCIEN", "orden": 2, "obligatorio": False}]},
+}
+
 def _load_rutas() -> dict:
     try:
         if os.path.exists(RUTAS_FILE):
             with open(RUTAS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if data:
+                    return data
     except Exception:
         pass
-    return {}
+    return _RUTAS_DEFAULT
 
 def _save_rutas(data: dict):
     os.makedirs(os.path.dirname(RUTAS_FILE), exist_ok=True)
