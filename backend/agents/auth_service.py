@@ -115,6 +115,13 @@ def autenticar(email: str, password: str) -> Optional[dict]:
     _save(users)
     return _safe(user)
 
+def verificar_password(user_id: str, password: str) -> bool:
+    users = _load()
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        return False
+    return pwd_ctx.verify(password, user["password"])
+
 def listar_usuarios() -> list:
     return [_safe(u) for u in _load()]
 

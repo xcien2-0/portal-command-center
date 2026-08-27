@@ -10001,6 +10001,10 @@ class UserUpdateRequest(BaseModel):
     password: Optional[str] = None
     titular_de: Optional[list[str]] = None
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 @app.get("/api/auth/usuarios")
 def listar_usuarios(user: dict = Depends(require_rol("admin", "director"))):
     return auth_service.listar_usuarios()
@@ -10034,6 +10038,25 @@ def eliminar_usuario(user_id: str, user: dict = Depends(require_rol("admin"))):
 @app.get("/api/auth/roles")
 def listar_roles(user: dict = Depends(get_current_user)):
     return auth_service.ROLES
+
+@app.post("/api/auth/change-password")
+def cambiar_contrasena_propia(req: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """Cualquier usuario puede cambiar su propia contraseña verificando la actual."""
+    if not auth_service.verificar_password(user["sub"], req.current_password):
+        raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 8 caracteres")
+    auth_service.actualizar_usuario(user["sub"], {"password": req.new_password})
+    return {"status": "success", "message": "Contraseña actualizada correctamente"}
+
+@app.post("/api/auth/usuarios/{user_id}/reset-password")
+def resetear_contrasena(user_id: str, req: dict, admin: dict = Depends(require_rol("admin"))):
+    """Admin resetea la contraseña de cualquier usuario."""
+    nueva = req.get("password", "")
+    if len(nueva) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
+    auth_service.actualizar_usuario(user_id, {"password": nueva})
+    return {"status": "success", "message": "Contraseña reseteada"}
 
 # ─── Helpdesk extras — mensajes y responder (helpdesk_service.py cubre el resto) ─
 
