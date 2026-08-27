@@ -1,11 +1,8 @@
 #!/bin/bash
-# Script de arranque para Railway / producción
-# Configura DATA_DIR si existe volumen montado
 set -e
 
 cd backend
 
-# Crear directorios de datos persistentes
 if [ -n "$DATA_DIR" ]; then
   mkdir -p "$DATA_DIR/db"
   mkdir -p "$DATA_DIR/agents_db"
@@ -13,6 +10,12 @@ if [ -n "$DATA_DIR" ]; then
 fi
 
 mkdir -p db static agents/db
+
+# Agente Odoo (polling background)
+python3 ../agente_odoo.py &
+
+# Telegram bot (polling background)
+python3 agents/telegram_agent_bot.py &
 
 exec uvicorn servidor_academia:app \
   --host 0.0.0.0 \

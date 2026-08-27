@@ -19,7 +19,7 @@ module.exports = {
       env: {
         PYTHONUNBUFFERED: '1',
         PORT: 8002,
-        TOKEN_SECRET: '99cce401f9cb7f94dc283ebd8ded2f3795400eb1f3dcac90e94fc979f3b4afb4',
+        TOKEN_SECRET: process.env.TOKEN_SECRET,
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file: 'logs/err.log',
