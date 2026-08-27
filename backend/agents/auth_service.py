@@ -16,7 +16,11 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # ── Configuración ──────────────────────────────────────────────────────────────
-SECRET_KEY   = os.environ.get("TOKEN_SECRET", "change-me-in-production")
+SECRET_KEY   = os.environ.get("TOKEN_SECRET")
+if not SECRET_KEY:
+    import sys
+    print("CRITICAL: TOKEN_SECRET env var is not set. Refusing to start.", file=sys.stderr)
+    sys.exit(1)
 ALGORITHM    = "HS256"
 TOKEN_EXPIRE = int(os.environ.get("TOKEN_EXPIRE_HOURS", "8"))  # horas
 

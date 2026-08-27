@@ -764,13 +764,12 @@ def api_odoo_audit():
 
 
 @app.post("/api/odoo/execute")
-def api_odoo_execute(req: OdooActionRequest):
-    """Permite realizar acciones de escritura (create, write) en Odoo"""
-    # Seguridad básica: solo permitir ciertos métodos en producción
+def api_odoo_execute(req: OdooActionRequest, _user: dict = Depends(require_rol("admin"))):
+    """Permite realizar acciones de escritura (create, write) en Odoo — solo admin"""
     allowed_methods = ['create', 'write', 'search_read', 'unlink']
     if req.method not in allowed_methods:
         raise HTTPException(status_code=400, detail=f"Método {req.method} no permitido")
-    
+
     result = odoo_conn.execute(req.model, req.method, *req.args, **req.kwargs)
     if result is None:
         raise HTTPException(status_code=500, detail="Error en la ejecución de Odoo")
@@ -3527,8 +3526,8 @@ def get_field_tickets(limit: int = 150, tipo: str = None, estado_op: int = None)
 
     odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     odoo_db   = os.environ.get("ODOO_DB", "wispi17")
-    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    odoo_user = os.environ.get("ODOO_USER")
+    odoo_pass = os.environ.get("ODOO_PASSWORD")
 
     try:
         common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
@@ -3634,8 +3633,8 @@ def get_field_ticket_detalle(ticket_id: int):
 
     _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB", "wispi17")
-    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    _user = os.environ.get("ODOO_USER")
+    _pw   = os.environ.get("ODOO_PASSWORD")
 
     try:
         common = _xr.ServerProxy(f"{_url}/xmlrpc/2/common")
@@ -3720,8 +3719,8 @@ def post_field_ticket_comentario(ticket_id: int, req: TicketComentarioReq):
     import xmlrpc.client as _xr
     _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB", "wispi17")
-    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    _user = os.environ.get("ODOO_USER")
+    _pw   = os.environ.get("ODOO_PASSWORD")
     common = _xr.ServerProxy(f"{_url}/xmlrpc/2/common")
     uid    = common.authenticate(_db, _user, _pw, {})
     models = _xr.ServerProxy(f"{_url}/xmlrpc/2/object")
@@ -3734,8 +3733,8 @@ def put_field_ticket_etapa(ticket_id: int, req: dict):
     import xmlrpc.client as _xr
     _url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB", "wispi17")
-    _user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    _user = os.environ.get("ODOO_USER")
+    _pw   = os.environ.get("ODOO_PASSWORD")
     stage_id = req.get("stage_id")
     if not stage_id:
         raise HTTPException(400, "stage_id requerido")
@@ -3756,8 +3755,8 @@ def get_bidrillas():
 
     odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     odoo_db   = os.environ.get("ODOO_DB", "wispi17")
-    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    odoo_user = os.environ.get("ODOO_USER")
+    odoo_pass = os.environ.get("ODOO_PASSWORD")
 
     CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed"}
 
@@ -3846,8 +3845,8 @@ def get_desempeno():
 
     odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     odoo_db   = os.environ.get("ODOO_DB", "wispi17")
-    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    odoo_user = os.environ.get("ODOO_USER")
+    odoo_pass = os.environ.get("ODOO_PASSWORD")
 
     CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed"}
 
@@ -3969,8 +3968,8 @@ def _odoo_connect():
     import xmlrpc.client as _xr
     odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     odoo_db   = os.environ.get("ODOO_DB", "wispi17")
-    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-    odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    odoo_user = os.environ.get("ODOO_USER")
+    odoo_pass = os.environ.get("ODOO_PASSWORD")
     common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
     uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
     if not uid:
@@ -4312,7 +4311,7 @@ def _rutas_fetch_odoo_tickets(fecha_str: str) -> list:
     import xmlrpc.client as _xr
     odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
     odoo_db   = os.environ.get("ODOO_DB", "wispi19")
-    odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
+    odoo_user = os.environ.get("ODOO_USER")
     odoo_pass = os.environ.get("ODOO_PASSWORD", "")
     try:
         uid = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common").authenticate(odoo_db, odoo_user, odoo_pass, {})
@@ -4710,8 +4709,8 @@ def get_cruce_semanal(periodo: str = "semanal", plaza: str = ""):
     try:
         odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
         odoo_db   = os.environ.get("ODOO_DB", "wispi17")
-        odoo_user = os.environ.get("ODOO_USER", "miguel.macias@xcien.com")
-        odoo_pass = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+        odoo_user = os.environ.get("ODOO_USER")
+        odoo_pass = os.environ.get("ODOO_PASSWORD")
         common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
         uid    = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
         models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
@@ -5383,14 +5382,14 @@ def download_doc(path: str):
 USUARIOS_DB = os.path.join(BASE_DIR, "db", "usuarios.json")
 
 @app.get("/api/users")
-def get_users():
+def get_users(_user: dict = Depends(require_rol("admin", "director"))):
     if not os.path.exists(USUARIOS_DB):
         return []
     with open(USUARIOS_DB, "r") as f:
         return json.load(f)
 
 @app.post("/api/users")
-def create_user(user: Dict[str, Any]):
+def create_user(user: Dict[str, Any], _user: dict = Depends(require_rol("admin"))):
     users = get_users()
     user["id"] = str(len(users) + 1)
     user["status"] = "pending"
@@ -5418,7 +5417,7 @@ def create_user(user: Dict[str, Any]):
     return user
 
 @app.post("/api/users/activate/{user_id}")
-def activate_user(user_id: str):
+def activate_user(user_id: str, _user: dict = Depends(require_rol("admin"))):
     users = get_users()
     for u in users:
       if u["id"] == user_id:
@@ -5914,53 +5913,6 @@ def download_doc(path: str):
 
 
 USUARIOS_DB = os.path.join(BASE_DIR, "db", "usuarios.json")
-
-@app.get("/api/users")
-def get_users():
-    if not os.path.exists(USUARIOS_DB):
-        return []
-    with open(USUARIOS_DB, "r") as f:
-        return json.load(f)
-
-@app.post("/api/users")
-def create_user(user: Dict[str, Any]):
-    users = get_users()
-    user["id"] = str(len(users) + 1)
-    user["status"] = "pending"
-    user["invited_at"] = str(date.today())
-    users.append(user)
-    with open(USUARIOS_DB, "w") as f:
-        json.dump(users, f, indent=2)
-    
-    # Intento de envío de notificación real (Telegram)
-    try:
-        config = _load_telegram_config()
-        if config.get("enabled") and config.get("token"):
-            bot = TelegramBot(token=config["token"], chat_id=config["chat_id"])
-            msg = (
-                f"👤 *NUEVA INVITACIÓN XCIEN 2.0*\n\n"
-                f"Se ha invitado a *{user['name']}* a la plataforma.\n"
-                f"🏢 *Depto:* {user['department']}\n"
-                f"🔑 *Rol:* {user['role']}\n\n"
-                f"Acceso pendiente de activación."
-            )
-            bot.send_message(msg)
-    except Exception as e:
-        logger.error(f"Error enviando notificación de invitación: {e}")
-
-    return user
-
-@app.post("/api/users/activate/{user_id}")
-def activate_user(user_id: str):
-    users = get_users()
-    for u in users:
-      if u["id"] == user_id:
-        u["status"] = "active"
-        u["lastSeen"] = str(date.today())
-        with open(USUARIOS_DB, "w") as f:
-            json.dump(users, f, indent=2)
-        return {"status": "success", "user": u}
-    raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
 # ── Academia / Odoo eLearning ─────────────────────────────────────────────────
 _academia_cache: dict = {"data": None, "ts": 0}
@@ -10066,8 +10018,8 @@ def hd_get_mensajes(ticket_id: int):
     import xmlrpc.client as _xrc2
     _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB",       "wispi17")
-    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
-    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    _user = os.environ.get("ODOO_USER")
+    _pw   = os.environ.get("ODOO_PASSWORD")
     common = _xrc2.ServerProxy(f"{_url}/xmlrpc/2/common")
     uid    = common.authenticate(_db, _user, _pw, {})
     models = _xrc2.ServerProxy(f"{_url}/xmlrpc/2/object")
@@ -10111,8 +10063,8 @@ def hd_responder(ticket_id: int, req: HdResponderReq):
     import xmlrpc.client as _xrc3
     _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB",       "wispi17")
-    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
-    _pw   = os.environ.get("ODOO_PASSWORD", "Malpa501@")
+    _user = os.environ.get("ODOO_USER")
+    _pw   = os.environ.get("ODOO_PASSWORD")
     common = _xrc3.ServerProxy(f"{_url}/xmlrpc/2/common")
     uid    = common.authenticate(_db, _user, _pw, {})
     models = _xrc3.ServerProxy(f"{_url}/xmlrpc/2/object")
@@ -10140,7 +10092,7 @@ def helpdesk_reporte_pdf(
 
     _url  = os.environ.get("ODOO_URL",      "https://odoo.wispi.mx")
     _db   = os.environ.get("ODOO_DB",       "wispi19")
-    _user = os.environ.get("ODOO_USER",     "miguel.macias@xcien.com")
+    _user = os.environ.get("ODOO_USER")
     _pw   = os.environ.get("ODOO_PASSWORD", "")
     common = _xrc4.ServerProxy(f"{_url}/xmlrpc/2/common", allow_none=True)
     uid    = common.authenticate(_db, _user, _pw, {})
