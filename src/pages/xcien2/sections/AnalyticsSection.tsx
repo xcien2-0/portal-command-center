@@ -43,13 +43,13 @@ export default function AnalyticsSection() {
     setLoading(true);
     try {
       const map: Record<Tab, string> = {
-        resumen:   `${API_BASE}/api/analytics/summary?days=${d}`,
-        secciones: `${API_BASE}/api/analytics/sections?days=${d}`,
-        pestanas:  `${API_BASE}/api/analytics/tabs?days=${d}`,
-        usuarios:  `${API_BASE}/api/analytics/users?days=${d}`,
-        flujos:    `${API_BASE}/api/analytics/flows?days=${d}`,
-        sesiones:  `${API_BASE}/api/analytics/sessions?days=${Math.min(d, 7)}`,
-        feedback:  `${API_BASE}/api/analytics/feedback?days=${d}`,
+        resumen:   `${API_BASE}/api/analytics/resumen?dias=${d}`,
+        secciones: `${API_BASE}/api/analytics/secciones?dias=${d}`,
+        pestanas:  `${API_BASE}/api/analytics/tabs?dias=${d}`,
+        usuarios:  `${API_BASE}/api/analytics/users?dias=${d}`,
+        flujos:    `${API_BASE}/api/analytics/flows?dias=${d}`,
+        sesiones:  `${API_BASE}/api/analytics/sessions?dias=${Math.min(d, 7)}`,
+        feedback:  `${API_BASE}/api/analytics/feedback?dias=${d}`,
       };
       const r = await fetch(map[t]);
       if (r.ok) { const json = await r.json(); setData(prev => ({ ...prev, [t]: json })); }

@@ -9637,13 +9637,86 @@ async def track_section(event: TrackEvent, request: Request,
     return {"ok": True}
 
 
+# ─── Analytics — receptor de eventos desde el frontend ─────────────────────────
+@app.post("/api/analytics/events")
+async def analytics_events(payload: dict, request: Request):
+    """Recibe batch de eventos de AnalyticsContext. No requiere auth para no romper loaders."""
+    events = payload.get("events", [])
+    if not events:
+        return {"ok": True, "received": 0}
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return {"ok": True, "received": len(events)}
+    try:
+        from db_migrate import log_evento
+        for ev in events:
+            event_name = ev.get("event", "")
+            section    = ev.get("section", "") or ""
+            uid        = ev.get("user_id")
+            dur_ms     = ev.get("properties", {}).get("duration_ms")
+            dur_s      = int(dur_ms / 1000) if dur_ms else None
+            if event_name in ("section_view", "section_leave") and section and section != "app":
+                log_evento(uid, section, event_name, dur_s)
+    except Exception:
+        pass
+    return {"ok": True, "received": len(events)}
+
+
 # ─── Analytics ─────────────────────────────────────────────────────────────────
 @app.get("/api/analytics/resumen")
 def analytics_resumen(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
-    """Resumen de uso del portal para el admin panel."""
+    """Resumen de uso del portal — formato compatible con AnalyticsSection."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return {}
     try:
-        from db_migrate import get_analytics_resumen
-        return get_analytics_resumen(dias)
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+
+        # Totales de sesiones
+        cur.execute("SELECT COUNT(*), COUNT(DISTINCT usuario_id) FROM sesiones WHERE creado_en > NOW() - INTERVAL %s", (f"{dias} days",))
+        total_logins, usuarios_unicos = cur.fetchone()
+
+        # Eventos del portal
+        cur.execute("SELECT COUNT(*), COUNT(DISTINCT usuario_id) FROM eventos_portal WHERE creado_en > NOW() - INTERVAL %s", (f"{dias} days",))
+        total_eventos, _ = cur.fetchone()
+
+        # Errores
+        cur.execute("SELECT COUNT(*) FROM audit_log WHERE accion='login_fallido' AND creado_en > NOW() - INTERVAL %s", (f"{dias} days",))
+        errores = cur.fetchone()[0]
+
+        # Sección top
+        cur.execute("SELECT seccion FROM eventos_portal WHERE creado_en > NOW() - INTERVAL %s GROUP BY seccion ORDER BY COUNT(*) DESC LIMIT 1", (f"{dias} days",))
+        r = cur.fetchone(); seccion_top = r[0] if r else None
+
+        # Rol top (por sesiones)
+        cur.execute("SELECT u.rol FROM sesiones s JOIN usuarios u ON u.id=s.usuario_id WHERE s.creado_en > NOW() - INTERVAL %s GROUP BY u.rol ORDER BY COUNT(*) DESC LIMIT 1", (f"{dias} days",))
+        r = cur.fetchone(); rol_top = r[0] if r else None
+
+        # Hora pico (por logins)
+        cur.execute("SELECT EXTRACT(HOUR FROM creado_en)::int as h FROM sesiones WHERE creado_en > NOW() - INTERVAL %s GROUP BY h ORDER BY COUNT(*) DESC LIMIT 1", (f"{dias} days",))
+        r = cur.fetchone(); hora_pico = r[0] if r else None
+
+        # Actividad diaria (logins por fecha)
+        cur.execute("SELECT DATE(creado_en)::text, COUNT(*) FROM sesiones WHERE creado_en > NOW() - INTERVAL %s GROUP BY DATE(creado_en) ORDER BY 1", (f"{dias} days",))
+        actividad_diaria = {r[0]: r[1] for r in cur.fetchall()}
+
+        # Actividad por hora (logins)
+        cur.execute("SELECT EXTRACT(HOUR FROM creado_en)::int, COUNT(*) FROM sesiones WHERE creado_en > NOW() - INTERVAL %s GROUP BY 1 ORDER BY 1", (f"{dias} days",))
+        actividad_por_hora = {str(r[0]): r[1] for r in cur.fetchall()}
+
+        cur.close(); conn.close()
+        return {
+            "total_eventos": total_eventos or 0,
+            "usuarios_unicos": usuarios_unicos or 0,
+            "sesiones": total_logins or 0,
+            "errores": errores or 0,
+            "seccion_top": seccion_top,
+            "rol_top": rol_top,
+            "hora_pico": hora_pico,
+            "actividad_diaria": actividad_diaria,
+            "actividad_por_hora": actividad_por_hora,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -9670,25 +9743,116 @@ def analytics_accesos(limit: int = 100, _user: dict = Depends(require_rol("admin
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/analytics/secciones")
-def analytics_secciones(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
-    """Vistas por sección en los últimos N días."""
+@app.get("/api/analytics/sessions")
+def analytics_sessions(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Sesiones recientes en formato para AnalyticsSection."""
     db_url = os.environ.get("DATABASE_URL", "")
     if not db_url:
-        return {"secciones": []}
+        return []
     try:
         from db_migrate import get_conn
         conn = get_conn(); cur = conn.cursor()
         cur.execute("""
-            SELECT seccion, COUNT(*) as vistas, COUNT(DISTINCT usuario_id) as usuarios_unicos
-            FROM eventos_portal
-            WHERE creado_en > NOW() - INTERVAL '%s days'
-            GROUP BY seccion ORDER BY vistas DESC
-        """, (dias,))
+            SELECT s.email, u.rol, s.creado_en, u.nombre
+            FROM sesiones s LEFT JOIN usuarios u ON u.id=s.usuario_id
+            WHERE s.creado_en > NOW() - INTERVAL %s
+            ORDER BY s.creado_en DESC LIMIT 200
+        """, (f"{dias} days",))
         rows = cur.fetchall(); cur.close(); conn.close()
-        return {"secciones": [{"seccion": r[0], "vistas": r[1], "usuarios": r[2]} for r in rows]}
+        return [{"user_email": r[0], "rol": r[1],
+                 "inicio": r[2].strftime("%m-%d %H:%M") if r[2] else None,
+                 "duracion_min": 0, "eventos": 0, "secciones": []} for r in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/users")
+def analytics_users(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Actividad por usuario para AnalyticsSection tab Usuarios."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT u.email, u.nombre, u.rol,
+                   COUNT(DISTINCT s.id) as sesiones,
+                   COUNT(e.id) as eventos,
+                   MAX(s.creado_en) as ultimo_acceso
+            FROM usuarios u
+            LEFT JOIN sesiones s ON s.usuario_id=u.id AND s.creado_en > NOW() - INTERVAL %s
+            LEFT JOIN eventos_portal e ON e.usuario_id=u.id AND e.creado_en > NOW() - INTERVAL %s
+            WHERE u.activo=true
+            GROUP BY u.email, u.nombre, u.rol
+            ORDER BY eventos DESC, sesiones DESC
+        """, (f"{dias} days", f"{dias} days"))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return [{"email": r[0], "nombre": r[1], "rol": r[2],
+                 "sesiones": r[3] or 0, "eventos": r[4] or 0,
+                 "ultimo_acceso": r[5].strftime("%m-%d %H:%M") if r[5] else None,
+                 "secciones_usadas": []} for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/secciones")
+def analytics_secciones(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Vistas por sección — formato array para AnalyticsSection."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT e.seccion, COUNT(*) as vistas, COUNT(DISTINCT e.usuario_id) as usuarios_unicos,
+                   json_object_agg(COALESCE(u.rol,'?'), cnt) as roles
+            FROM eventos_portal e
+            LEFT JOIN usuarios u ON u.id=e.usuario_id
+            CROSS JOIN LATERAL (
+                SELECT COUNT(*) as cnt FROM eventos_portal e2 JOIN usuarios u2 ON u2.id=e2.usuario_id
+                WHERE e2.seccion=e.seccion AND u2.rol=u.rol AND e2.creado_en > NOW() - INTERVAL %s
+            ) rc
+            WHERE e.creado_en > NOW() - INTERVAL %s
+            GROUP BY e.seccion ORDER BY vistas DESC
+        """, (f"{dias} days", f"{dias} days"))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return [{"seccion": r[0], "visitas": r[1], "usuarios_unicos": r[2],
+                 "roles": r[3] or {}, "duracion_prom_s": 0} for r in rows]
+    except Exception as e:
+        # Fallback más simple si el CROSS JOIN LATERAL falla
+        try:
+            from db_migrate import get_conn
+            conn = get_conn(); cur = conn.cursor()
+            cur.execute("""
+                SELECT seccion, COUNT(*) as vistas, COUNT(DISTINCT usuario_id) as usuarios_unicos
+                FROM eventos_portal WHERE creado_en > NOW() - INTERVAL %s
+                GROUP BY seccion ORDER BY vistas DESC
+            """, (f"{dias} days",))
+            rows = cur.fetchall(); cur.close(); conn.close()
+            return [{"seccion": r[0], "visitas": r[1], "usuarios_unicos": r[2],
+                     "roles": {}, "duracion_prom_s": 0} for r in rows]
+        except Exception as e2:
+            raise HTTPException(status_code=500, detail=str(e2))
+
+
+@app.get("/api/analytics/tabs")
+def analytics_tabs(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Clicks por pestaña dentro de cada sección. Retorna vacío hasta implementar tracking."""
+    return []
+
+
+@app.get("/api/analytics/flows")
+def analytics_flows(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Flujos de navegación entre secciones. Retorna vacío hasta implementar tracking."""
+    return []
+
+
+@app.get("/api/analytics/feedback")
+def analytics_feedback(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Sugerencias de usuarios. Retorna vacío hasta implementar tabla de feedback."""
+    return []
 
 
 # ─── Minutas ───────────────────────────────────────────────────────────────────
