@@ -103,7 +103,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
   preventa:  ['inicio','ventas','reportes-kpi','proyectos','plan2026','docs','sala_juntas'],
   almacen:   ['inicio','scan','inv-transfers','docs'],
-  rrhh:      ['inicio','rrhh','academia','docs','sala_juntas'],
+  rrhh:      ['inicio','rrhh'],
   academico: ['inicio','academia','docs'],
   tecnico:   ['inicio','academia','docs'],
   readonly:  ['inicio'],
