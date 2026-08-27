@@ -63,7 +63,7 @@ export default function Login() {
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#00C896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1 style={{ color: '#f0f4f8', fontSize: 20, fontWeight: 700, margin: 0 }}>{brand.name} Command Center</h1>
+          <h1 style={{ color: '#f0f4f8', fontSize: 20, fontWeight: 700, margin: 0 }}>{brand.name}</h1>
           <p style={{ color: '#5a6a7a', fontSize: 13, marginTop: 6 }}>Inicia sesión para continuar</p>
         </div>
 

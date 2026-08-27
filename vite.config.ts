@@ -31,9 +31,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
-        name: "Portal de Operaciones XCIEN",
+        name: "XCIEN",
         short_name: "XCIEN",
-        description: "Command Center de operaciones, NOC y campo XCIEN",
+        description: "Portal de operaciones XCIEN",
         theme_color: "#1a4a2e",
         background_color: "#1a4a2e",
         display: "standalone",
