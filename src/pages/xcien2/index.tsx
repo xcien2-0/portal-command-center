@@ -77,6 +77,7 @@ const RadioBasesSection       = lazy(() => import('./sections/RadioBasesSection'
 const FlotillaSection         = lazy(() => import('./sections/FlotillaSection'));
 const OdooDocsSection         = lazy(() => import('./sections/OdooDocsSection'));
 const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSection'));
+const UsuariosAdminSection    = lazy(() => import('./sections/UsuariosAdminSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -120,8 +121,8 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   // ── Comercial — gestión de clientes y pipeline, SIN datos financieros internos
   comercial: ['inicio','sala_juntas','proyectos','docs'],
 
-  // ── Preventa — propuestas y proyectos, SIN cifras de negocio ─────────────
-  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs'],
+  // ── Preventa — propuestas, proyectos, fibra y PDN ────────────────────────
+  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs','fibra','blackstone'],
 
   // ── Almacén — inventario físico únicamente ───────────────────────────────
   almacen:   ['inicio','scan','inv-transfers','docs'],
@@ -132,6 +133,9 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   // ── Academia — cursos y materiales ───────────────────────────────────────
   academico: ['inicio','academia','docs'],
   tecnico:   ['inicio','academia','docs'],
+
+  // ── NOC Viewer — solo monitoreo básico (Armando y similares) ─────────────
+  'noc-viewer': ['inicio', 'noc', 'cast', 'infra-energia'],
 
   // ── Solo lectura ──────────────────────────────────────────────────────────
   readonly:  ['inicio'],
@@ -206,7 +210,8 @@ const NAV: NavEntry[] = [
   { id: 'reportlab',  label: 'PDF Generator',    icon: '📄', group: 'Sistema' },
   { id: 'backup',     label: 'Migración',        icon: '💾', group: 'Sistema' },
   { id: 'editor',     label: 'Configuración',    icon: '🎨', group: 'Sistema' },
-  { id: 'superadmin', label: 'Super Admin',      icon: '🔐', group: 'Sistema' },
+  { id: 'superadmin',     label: 'Super Admin',       icon: '🔐', group: 'Sistema' },
+  { id: 'usuarios-admin', label: 'Gestión de Usuarios', icon: '👥', group: 'Sistema' },
 ];
 
 // ── Lucide icon map ───────────────────────────────────────────────────────────
@@ -286,7 +291,8 @@ const SECTION_TITLE: Record<SectionId, string> = {
   integridad: 'Integridad Comercial',
   analytics:  'Analytics de Uso',
   helpdesk:   'Mesa de Ayuda',
-  net2phone:  'Net2Phone Call Center',
+  net2phone:     'Net2Phone Call Center',
+  'usuarios-admin': 'Gestión de Usuarios',
 };
 
 // ── UISP color constants ──────────────────────────────────────────────────────
@@ -751,8 +757,9 @@ function Content({
       {section === 'reportes-kpi' && <ReportesKPISection theme={theme} />}
       {section === 'reports' && <ReportesGobierno />}
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
-      {section === 'superadmin' && <SuperAdminSection theme={theme} />}
-      {section === 'cerebro'    && <CerebroSection    theme={theme} />}
+      {section === 'superadmin'     && <SuperAdminSection    theme={theme} />}
+      {section === 'cerebro'        && <CerebroSection       theme={theme} />}
+      {section === 'usuarios-admin' && <UsuariosAdminSection />}
 
       {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>

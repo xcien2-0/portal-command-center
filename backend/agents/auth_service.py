@@ -53,6 +53,7 @@ ROLES = {
     "rrhh":      "Capital Humano — directorio de personal",
     "academico": "Academia — cursos y certificaciones",
     "tecnico":   "Técnico de campo — academia y documentos técnicos",
+    "noc-viewer": "NOC Viewer — solo monitoreo: NOC, CAST e Infraestructura Energía",
     "readonly":  "Solo lectura — hub principal únicamente",
 }
 
@@ -71,8 +72,9 @@ PERMISOS = {
     "almacen":   ["inventario_read", "inventario_write", "transferencias", "documentos"],
     "rrhh":      ["rrhh_read", "rrhh_write", "documentos"],
     "academico": ["academia", "manuales", "examenes", "documentos"],
-    "tecnico":   ["academia", "documentos"],
-    "readonly":  ["dashboard"],
+    "tecnico":    ["academia", "documentos"],
+    "noc-viewer": ["noc_read", "infra_energia"],
+    "readonly":   ["dashboard"],
 }
 
 _COLS = "id, nombre, email, password, rol, plaza, activo, permisos, titular_de, creado_en, ultimo_login"

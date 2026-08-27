@@ -388,6 +388,7 @@ app.add_middleware(
         "http://127.0.0.1:8002",
         "https://portal-command-center.vercel.app",
         "https://xcien-portal.vercel.app",
+        "https://xcien.up.railway.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -10434,6 +10435,31 @@ def login(req: LoginRequest, request: Request):
     forwarded = request.headers.get("x-forwarded-for", "")
     ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
     ua = request.headers.get("user-agent", "")[:200]
+
+    # ── Rate limiting: bloquear IP tras 5 intentos fallidos en 15 min ──────────
+    _db_url = os.environ.get("DATABASE_URL", "")
+    if _db_url and ip:
+        try:
+            import psycopg2 as _pg
+            _conn = _pg.connect(_db_url)
+            _cur = _conn.cursor()
+            _cur.execute(
+                "SELECT COUNT(*) FROM audit_log WHERE accion='login_fallido' "
+                "AND ip_origen=%s AND creado_en > NOW() - INTERVAL '15 minutes'",
+                (ip,)
+            )
+            (_intentos,) = _cur.fetchone()
+            _cur.close(); _conn.close()
+            if _intentos >= 5:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Demasiados intentos fallidos. Intenta de nuevo en 15 minutos."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Si la DB no está disponible, no bloqueamos
+
     user = auth_service.autenticar(req.email, req.password, ip=ip, user_agent=ua)
     if not user:
         # Audit de intento fallido

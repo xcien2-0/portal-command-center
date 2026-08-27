@@ -72,10 +72,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const authFetch = useCallback((url: string, options: RequestInit = {}): Promise<Response> => {
+  const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(options.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    return fetch(url, { ...options, headers });
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      // Token expirado o inválido — limpiar sesión y redirigir al login
+      localStorage.removeItem(TOKEN_KEY);
+      setToken(null);
+      setUser(null);
+      window.location.href = '/login';
+    }
+    return res;
   }, [token]);
 
   const hasPermiso = useCallback((permiso: string): boolean => {
