@@ -8318,6 +8318,18 @@ _RUTAS_DEFAULT = {
 }
 
 def _load_rutas() -> dict:
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url:
+        try:
+            from db_migrate import get_conn
+            conn = get_conn(); cur = conn.cursor()
+            cur.execute("SELECT area, nombre, descripcion, color, icono, cursos FROM rutas_aprendizaje")
+            rows = cur.fetchall(); cur.close(); conn.close()
+            if rows:
+                return {r[0]: {"area": r[0], "nombre": r[1], "descripcion": r[2],
+                               "color": r[3], "icono": r[4], "cursos": r[5]} for r in rows}
+        except Exception:
+            pass
     try:
         if os.path.exists(RUTAS_FILE):
             with open(RUTAS_FILE, "r", encoding="utf-8") as f:
@@ -8329,6 +8341,27 @@ def _load_rutas() -> dict:
     return _RUTAS_DEFAULT
 
 def _save_rutas(data: dict):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url:
+        try:
+            from db_migrate import get_conn
+            conn = get_conn(); cur = conn.cursor()
+            for area, ruta in data.items():
+                cur.execute("""
+                    INSERT INTO rutas_aprendizaje (area, nombre, descripcion, color, icono, cursos, actualizado_en)
+                    VALUES (%s,%s,%s,%s,%s,%s,NOW())
+                    ON CONFLICT (area) DO UPDATE
+                    SET nombre=%s, descripcion=%s, color=%s, icono=%s, cursos=%s, actualizado_en=NOW()
+                """, (area, ruta.get("nombre",""), ruta.get("descripcion",""),
+                      ruta.get("color","#00C896"), ruta.get("icono","🎓"),
+                      json.dumps(ruta.get("cursos",[])),
+                      ruta.get("nombre",""), ruta.get("descripcion",""),
+                      ruta.get("color","#00C896"), ruta.get("icono","🎓"),
+                      json.dumps(ruta.get("cursos",[]))))
+            conn.commit(); cur.close(); conn.close()
+            return
+        except Exception as e:
+            logger.error(f"[DB] _save_rutas: {e}")
     os.makedirs(os.path.dirname(RUTAS_FILE), exist_ok=True)
     with open(RUTAS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
