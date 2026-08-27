@@ -1,14 +1,15 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs_20", "nodePackages.npm"]
+nixPkgs = ["python311", "nodejs_20", "nodePackages.npm", "openssl", "gcc", "libffi"]
 
 [phases.install]
 cmds = [
   "npm install",
-  "pip install -r backend/requirements.txt"
+  "pip install --no-cache-dir -r backend/requirements.txt"
 ]
 
 [phases.build]
 cmds = [
   "npm run build",
+  "test -d dist || (echo 'BUILD FAILED: dist/ not found' && exit 1)",
   "cp -r dist backend/dist_frontend"
 ]
