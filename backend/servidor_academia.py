@@ -10217,10 +10217,13 @@ def _notificar_login(user: dict, ip: str):
         if not tok or not chat:
             return
         ahora = _dt.now(_tz.utc).strftime("%Y-%m-%d %H:%M UTC")
+        plaza = user.get('plaza', '') or ''
         texto = (
-            f"🔐 *Login XCIEN Portal*\n"
-            f"👤 {user.get('nombre','')} (`{user.get('email','')}`)\n"
-            f"🏷️ Rol: `{user.get('rol','')}`\n"
+            f"🔐 *Nuevo acceso — XCIEN Portal*\n"
+            f"👤 *{user.get('nombre','')}*\n"
+            f"📧 `{user.get('email','')}`\n"
+            f"🏷 Rol: `{user.get('rol','')}`"
+            + (f"  •  Plaza: `{plaza}`" if plaza else "") + "\n"
             f"🌐 IP: `{ip or 'desconocida'}`\n"
             f"🕐 {ahora}"
         )
@@ -10235,7 +10238,9 @@ def _notificar_login(user: dict, ip: str):
 
 @app.post("/api/auth/login")
 def login(req: LoginRequest, request: Request):
-    ip = request.client.host if request.client else None
+    # X-Forwarded-For contiene la IP real del cliente detrás del proxy de Railway
+    forwarded = request.headers.get("x-forwarded-for", "")
+    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
     ua = request.headers.get("user-agent", "")[:200]
     user = auth_service.autenticar(req.email, req.password, ip=ip, user_agent=ua)
     if not user:
