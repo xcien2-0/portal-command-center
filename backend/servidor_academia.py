@@ -10207,13 +10207,55 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+def _notificar_login(user: dict, ip: str):
+    """Manda alerta Telegram cuando alguien entra al portal. No bloquea si falla."""
+    try:
+        import requests as _req
+        tok  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        chat = os.environ.get("TELEGRAM_CHAT_ID", "")
+        if not tok or not chat:
+            return
+        ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        texto = (
+            f"🔐 *Login XCIEN Portal*\n"
+            f"👤 {user.get('nombre','')} (`{user.get('email','')}`)\n"
+            f"🏷️ Rol: `{user.get('rol','')}`\n"
+            f"🌐 IP: `{ip or 'desconocida'}`\n"
+            f"🕐 {ahora}"
+        )
+        _req.post(
+            f"https://api.telegram.org/bot{tok}/sendMessage",
+            json={"chat_id": chat, "text": texto, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
 @app.post("/api/auth/login")
 def login(req: LoginRequest, request: Request):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent", "")[:200]
     user = auth_service.autenticar(req.email, req.password, ip=ip, user_agent=ua)
     if not user:
+        # Audit de intento fallido
+        try:
+            from db_migrate import log_audit
+            log_audit(None, req.email, "login_fallido", "auth",
+                      {"ip": ip, "ua": ua[:80]}, ip)
+        except Exception:
+            pass
         raise HTTPException(status_code=401, detail="Credenciales incorrectas o usuario inactivo")
+    # Audit de login exitoso
+    try:
+        from db_migrate import log_audit
+        log_audit(user.get("id"), user["email"], "login", "auth",
+                  {"rol": user["rol"], "ip": ip, "ua": ua[:80]}, ip)
+    except Exception:
+        pass
+    # Alerta Telegram en background
+    import threading
+    threading.Thread(target=_notificar_login, args=(user, ip), daemon=True).start()
     return auth_service.crear_token(user)
 
 @app.get("/api/auth/me")
