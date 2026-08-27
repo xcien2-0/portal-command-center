@@ -10211,11 +10211,12 @@ def _notificar_login(user: dict, ip: str):
     """Manda alerta Telegram cuando alguien entra al portal. No bloquea si falla."""
     try:
         import requests as _req
+        from datetime import datetime as _dt, timezone as _tz
         tok  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
         chat = os.environ.get("TELEGRAM_CHAT_ID", "")
         if not tok or not chat:
             return
-        ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        ahora = _dt.now(_tz.utc).strftime("%Y-%m-%d %H:%M UTC")
         texto = (
             f"🔐 *Login XCIEN Portal*\n"
             f"👤 {user.get('nombre','')} (`{user.get('email','')}`)\n"
