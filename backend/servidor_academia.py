@@ -2190,9 +2190,13 @@ def get_board_status(port: int, key: str):
 
 # ─── Energía — UPS / Rectifiers / Inverters (SNMP metrics via NOCBoard) ──────
 
-NOCBOARD_ENERGIA_HOSTS_PATH = os.path.expanduser(
-    "~/Library/Application Support/NOCBoardEnergia/hosts.json"
+_DATA_DIR_ENERGIA = os.environ.get("DATA_DIR", "")
+NOCBOARD_ENERGIA_HOSTS_PATH = (
+    os.path.join(_DATA_DIR_ENERGIA, "energia_hosts.json")
+    if _DATA_DIR_ENERGIA
+    else os.path.expanduser("~/Library/Application Support/NOCBoardEnergia/hosts.json")
 )
+NOCBOARD_ENERGIA_API_URL = os.environ.get("NOCBOARD_ENERGIA_URL", "http://localhost:9404")
 NOCBOARD_ENERGIA_API_KEY = "f4f5ef40c4c54aeca1d6a66109e4555d"
 
 def _read_energia_hosts() -> list:
@@ -2207,7 +2211,7 @@ def _fetch_energia_api_hosts() -> list:
     """Fetch hosts from NOCBoard Energia API, then enrich each with /api/host/:id metrics."""
     headers = {"X-API-Key": NOCBOARD_ENERGIA_API_KEY}
     try:
-        r = requests.get("http://localhost:9404/api/hosts", headers=headers, timeout=5)
+        r = requests.get(f"{NOCBOARD_ENERGIA_API_URL}/api/hosts", headers=headers, timeout=5)
         if not r.ok:
             return []
         data = r.json()
@@ -2221,7 +2225,7 @@ def _fetch_energia_api_hosts() -> list:
         metrics = {}
         if host_id:
             try:
-                rd = requests.get(f"http://localhost:9404/api/host/{host_id}", headers=headers, timeout=3)
+                rd = requests.get(f"{NOCBOARD_ENERGIA_API_URL}/api/host/{host_id}", headers=headers, timeout=3)
                 if rd.ok:
                     detail = rd.json()
                     metrics = detail.get("metrics", {})
@@ -2230,6 +2234,23 @@ def _fetch_energia_api_hosts() -> list:
         h["_api_metrics"] = metrics
         enriched.append(h)
     return enriched
+
+
+@app.post("/api/noc/energia/sync")
+def sync_energia_hosts(payload: dict, request: Request):
+    """El Mac empuja los hosts de NOCBoard Energía al volumen de Railway.
+    Protegido con la misma API key de NOCBoard Energía."""
+    key = request.headers.get("X-API-Key", "")
+    if key != NOCBOARD_ENERGIA_API_KEY:
+        raise HTTPException(status_code=403, detail="API key inválida")
+    hosts = payload.get("hosts", [])
+    if not hosts:
+        raise HTTPException(status_code=400, detail="Sin hosts en el payload")
+    os.makedirs(os.path.dirname(NOCBOARD_ENERGIA_HOSTS_PATH), exist_ok=True)
+    with open(NOCBOARD_ENERGIA_HOSTS_PATH, "w") as f:
+        json.dump(hosts, f)
+    logger.info(f"[Energía] Sync recibido: {len(hosts)} hosts → {NOCBOARD_ENERGIA_HOSTS_PATH}")
+    return {"status": "ok", "hosts": len(hosts)}
 
 
 @app.get("/api/noc/energia/power")
