@@ -29,12 +29,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Código del backend
 COPY backend/ .
 
+# agente_odoo está en el root del repo
+COPY agente_odoo.py .
+
 # Frontend compilado → sirve el backend como archivos estáticos
 COPY --from=frontend-builder /app/dist ./dist_frontend
 
-# Carpeta de base de datos persistente y static (evita crash si no viene del repo)
-RUN mkdir -p db logs static
+# Carpeta de base de datos persistente y static
+RUN mkdir -p db logs static agents/db
 
-# Entrypoint — workers=1 obligatorio: SSE y estado en memoria no son compatibles con multi-worker
+# Entrypoint
 EXPOSE 8000
-CMD ["sh", "-c", "uvicorn servidor_academia:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
+CMD ["bash", "-c", "if [ -n \"$DATA_DIR\" ]; then mkdir -p $DATA_DIR/db $DATA_DIR/agents_db $DATA_DIR/static; fi && python3 agente_odoo.py & python3 agents/telegram_agent_bot.py & exec uvicorn servidor_academia:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --log-level info"]
