@@ -51,6 +51,14 @@
     --sidebar-accent-foreground: 0 0% 92%;
     --sidebar-border: 160 18% 13%;
     --sidebar-ring: 150 62% 35%;
+
+    /* App-level variables — usadas por Index.tsx, NOC.tsx y otras páginas fuera del portal */
+    --app-bg:     #0A0A0A;
+    --app-card:   #151515;
+    --app-border: rgba(255,255,255,0.06);
+    --app-text:   #F0F0F0;
+    --app-dim:    #6b7280;
+    --app-accent: #00C896;
   }
 }
 
