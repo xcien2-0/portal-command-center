@@ -4,6 +4,7 @@
 *.mp4
 *.mov
 *.html
+!index.html
 *.mmd
 backups/
 docs/
