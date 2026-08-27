@@ -9598,16 +9598,238 @@ class TrackEvent(BaseModel):
     user_agent: Optional[str] = None
 
 @app.post("/api/admin/track")
-async def track_section(event: TrackEvent, request: Request):
-    entry = {
-        "ts": datetime.now().isoformat(),
-        "section": event.section,
-        "ip": request.client.host if request.client else "unknown",
-        "ua": (event.user_agent or "")[:120],
-    }
-    with open(ADMIN_LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
+async def track_section(event: TrackEvent, request: Request,
+                        current: dict = Depends(get_current_user)):
+    ip = request.client.host if request.client else "unknown"
+    entry = {"ts": datetime.now().isoformat(), "section": event.section,
+             "ip": ip, "ua": (event.user_agent or "")[:120]}
+    try:
+        with open(ADMIN_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
+    try:
+        from db_migrate import log_evento
+        log_evento(current.get("sub") or current.get("id"), event.section)
+    except Exception:
+        pass
     return {"ok": True}
+
+
+# ─── Analytics ─────────────────────────────────────────────────────────────────
+@app.get("/api/analytics/resumen")
+def analytics_resumen(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Resumen de uso del portal para el admin panel."""
+    try:
+        from db_migrate import get_analytics_resumen
+        return get_analytics_resumen(dias)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/accesos")
+def analytics_accesos(limit: int = 100, _user: dict = Depends(require_rol("admin", "director"))):
+    """Últimos N logins al portal."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return {"sesiones": []}
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT s.email, s.ip, s.creado_en, u.nombre, u.rol
+            FROM sesiones s LEFT JOIN usuarios u ON u.id=s.usuario_id
+            ORDER BY s.creado_en DESC LIMIT %s
+        """, (limit,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return {"sesiones": [{"email": r[0], "ip": r[1],
+                              "fecha": r[2].isoformat() if r[2] else None,
+                              "nombre": r[3], "rol": r[4]} for r in rows]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analytics/secciones")
+def analytics_secciones(dias: int = 7, _user: dict = Depends(require_rol("admin", "director"))):
+    """Vistas por sección en los últimos N días."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return {"secciones": []}
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT seccion, COUNT(*) as vistas, COUNT(DISTINCT usuario_id) as usuarios_unicos
+            FROM eventos_portal
+            WHERE creado_en > NOW() - INTERVAL '%s days'
+            GROUP BY seccion ORDER BY vistas DESC
+        """, (dias,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return {"secciones": [{"seccion": r[0], "vistas": r[1], "usuarios": r[2]} for r in rows]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Minutas ───────────────────────────────────────────────────────────────────
+class MinutaCreate(BaseModel):
+    titulo: str
+    ciudad: Optional[str] = None
+    fecha: str
+    tipo: str = "operativa"
+    participantes: list = []
+
+class CompromisoCreate(BaseModel):
+    descripcion: str
+    responsable: Optional[str] = None
+    fecha_limite: Optional[str] = None
+    estado: str = "pendiente"
+
+
+@app.get("/api/minutas")
+def listar_minutas(ciudad: Optional[str] = None, limit: int = 50,
+                   _user: dict = Depends(get_current_user)):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        if ciudad:
+            cur.execute("SELECT id,titulo,ciudad,fecha,tipo,participantes,creado_por,creado_en FROM minutas WHERE ciudad=%s ORDER BY fecha DESC LIMIT %s", (ciudad, limit))
+        else:
+            cur.execute("SELECT id,titulo,ciudad,fecha,tipo,participantes,creado_por,creado_en FROM minutas ORDER BY fecha DESC LIMIT %s", (limit,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return [{"id": r[0], "titulo": r[1], "ciudad": r[2],
+                 "fecha": str(r[3]), "tipo": r[4],
+                 "participantes": r[5], "creado_por": r[6],
+                 "creado_en": r[7].isoformat() if r[7] else None} for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/minutas")
+def crear_minuta(payload: MinutaCreate, user: dict = Depends(require_rol("admin", "director", "wfm", "noc"))):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        raise HTTPException(status_code=503, detail="Base de datos no configurada")
+    try:
+        from db_migrate import get_conn
+        uid = user.get("sub") or user.get("id")
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO minutas (titulo, ciudad, fecha, tipo, participantes, creado_por)
+            VALUES (%s,%s,%s,%s,%s,%s) RETURNING id
+        """, (payload.titulo, payload.ciudad, payload.fecha, payload.tipo,
+              json.dumps(payload.participantes), uid))
+        new_id = cur.fetchone()[0]
+        conn.commit(); cur.close(); conn.close()
+        return {"status": "created", "id": new_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/minutas/{minuta_id}/compromisos")
+def listar_compromisos(minuta_id: int, _user: dict = Depends(get_current_user)):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT id,descripcion,responsable,fecha_limite,estado,evidencia,creado_en
+            FROM compromisos WHERE minuta_id=%s ORDER BY id
+        """, (minuta_id,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return [{"id": r[0], "descripcion": r[1], "responsable": r[2],
+                 "fecha_limite": str(r[3]) if r[3] else None, "estado": r[4],
+                 "evidencia": r[5], "creado_en": r[6].isoformat() if r[6] else None} for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/minutas/{minuta_id}/compromisos")
+def agregar_compromiso(minuta_id: int, payload: CompromisoCreate,
+                       _user: dict = Depends(require_rol("admin", "director", "wfm", "noc"))):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        raise HTTPException(status_code=503, detail="Base de datos no configurada")
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO compromisos (minuta_id,descripcion,responsable,fecha_limite,estado)
+            VALUES (%s,%s,%s,%s,%s) RETURNING id
+        """, (minuta_id, payload.descripcion, payload.responsable,
+              payload.fecha_limite, payload.estado))
+        new_id = cur.fetchone()[0]
+        conn.commit(); cur.close(); conn.close()
+        return {"status": "created", "id": new_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/compromisos/{comp_id}")
+def actualizar_compromiso(comp_id: int, datos: dict,
+                          _user: dict = Depends(get_current_user)):
+    """Actualiza estado/evidencia de un compromiso."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        raise HTTPException(status_code=503, detail="Base de datos no configurada")
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        sets, vals = [], []
+        for campo in ("estado", "responsable", "fecha_limite", "evidencia"):
+            if campo in datos:
+                sets.append(f"{campo}=%s"); vals.append(datos[campo])
+        if not sets:
+            return {"status": "noop"}
+        sets.append("actualizado_en=NOW()"); vals.append(comp_id)
+        cur.execute(f"UPDATE compromisos SET {','.join(sets)} WHERE id=%s", vals)
+        conn.commit(); cur.close(); conn.close()
+        return {"status": "updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Notificaciones ────────────────────────────────────────────────────────────
+@app.get("/api/notificaciones")
+def mis_notificaciones(user: dict = Depends(get_current_user)):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    uid = user.get("sub") or user.get("id")
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("""
+            SELECT id,tipo,titulo,cuerpo,leida,accion_url,creado_en
+            FROM notificaciones WHERE usuario_id=%s ORDER BY creado_en DESC LIMIT 50
+        """, (uid,))
+        rows = cur.fetchall(); cur.close(); conn.close()
+        return [{"id": r[0], "tipo": r[1], "titulo": r[2], "cuerpo": r[3],
+                 "leida": r[4], "accion_url": r[5],
+                 "creado_en": r[6].isoformat() if r[6] else None} for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/notificaciones/{notif_id}/leer")
+def marcar_leida(notif_id: int, user: dict = Depends(get_current_user)):
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return {"status": "noop"}
+    uid = user.get("sub") or user.get("id")
+    try:
+        from db_migrate import get_conn
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("UPDATE notificaciones SET leida=TRUE WHERE id=%s AND usuario_id=%s",
+                    (notif_id, uid))
+        conn.commit(); cur.close(); conn.close()
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/admin/stats")
 def admin_stats(pin: str = ""):
@@ -9986,8 +10208,10 @@ class LoginRequest(BaseModel):
     password: str
 
 @app.post("/api/auth/login")
-def login(req: LoginRequest):
-    user = auth_service.autenticar(req.email, req.password)
+def login(req: LoginRequest, request: Request):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent", "")[:200]
+    user = auth_service.autenticar(req.email, req.password, ip=ip, user_agent=ua)
     if not user:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas o usuario inactivo")
     return auth_service.crear_token(user)
