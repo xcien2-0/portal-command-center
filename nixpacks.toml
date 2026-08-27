@@ -11,5 +11,6 @@ cmds = [
 cmds = [
   "npm run build",
   "test -d dist || (echo 'BUILD FAILED: dist/ not found' && exit 1)",
-  "cp -r dist backend/dist_frontend"
+  "cp -r dist backend/dist_frontend",
+  "cp agente_odoo.py backend/agente_odoo.py"
 ]

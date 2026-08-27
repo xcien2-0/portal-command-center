@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "bash start.sh"
+startCommand = "bash -c 'if [ -n \"$DATA_DIR\" ]; then mkdir -p $DATA_DIR/db $DATA_DIR/agents_db $DATA_DIR/static; fi && mkdir -p db static && python3 agente_odoo.py & python3 agents/telegram_agent_bot.py & exec uvicorn servidor_academia:app --host 0.0.0.0 --port ${PORT:-8002} --workers 1 --log-level info'"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
