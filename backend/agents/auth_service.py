@@ -42,32 +42,37 @@ bearer  = HTTPBearer(auto_error=False)
 
 # ── Roles del sistema ──────────────────────────────────────────────────────────
 ROLES = {
-    "admin":     "Administrador — acceso total",
-    "director":  "Director General — dashboards ejecutivos + chat IA",
+    "admin":     "Administrador — acceso total al sistema",
+    "director":  "Director General — operaciones, finanzas y estrategia",
+    "finanzas":  "Finanzas — datos financieros, auditoría y KPIs (información confidencial)",
     "noc":       "Analista NOC — red, alertas, monitoreo",
     "wfm":       "Coordinador WFM — tickets, técnicos, órdenes de campo",
-    "comercial": "Comercial — ventas, integridad, KPI",
-    "preventa":  "Preventa — cotizaciones, factibilidad, proyectos",
+    "comercial": "Comercial — gestión de clientes y pipeline (sin datos financieros internos)",
+    "preventa":  "Preventa — propuestas y proyectos (sin cifras de negocio)",
     "almacen":   "Almacén — inventario, transferencias, materiales",
-    "rrhh":      "Recursos Humanos — directorio, nómina, academia",
-    "academico": "Academia / Entregas — capacitación, manuales",
-    "tecnico":   "Técnico de campo — solo lectura de sus tickets",
-    "readonly":  "Solo lectura — consulta sin modificar",
+    "rrhh":      "Capital Humano — directorio de personal",
+    "academico": "Academia — cursos y certificaciones",
+    "tecnico":   "Técnico de campo — academia y documentos técnicos",
+    "readonly":  "Solo lectura — hub principal únicamente",
 }
 
+# Permisos granulares por rol (para endpoints del backend)
+# ventas/finanzas → solo admin, director, finanzas
 PERMISOS = {
     "admin":     ["*"],
     "director":  ["dashboard", "chat_ia", "wfm_read", "noc_read", "reportes",
-                  "tokens_read", "ventas", "integridad", "rrhh_read", "proyectos"],
+                  "ventas", "integridad", "auditoria", "kpi", "rrhh_read", "proyectos"],
+    "finanzas":  ["ventas", "integridad", "auditoria", "kpi", "rrhh_read",
+                  "documentos", "reportes", "analytics"],
     "noc":       ["noc_read", "noc_write", "alertas", "wfm_read", "infra_energia"],
     "wfm":       ["wfm_read", "wfm_write", "tecnicos", "tickets", "inventario_read"],
-    "comercial": ["ventas", "integridad", "kpi", "documentos"],
-    "preventa":  ["ventas_read", "kpi", "proyectos", "documentos", "factibilidad"],
+    "comercial": ["proyectos", "documentos", "sala_juntas"],
+    "preventa":  ["proyectos", "plan", "documentos", "sala_juntas", "factibilidad"],
     "almacen":   ["inventario_read", "inventario_write", "transferencias", "documentos"],
-    "rrhh":      ["rrhh_read", "rrhh_write", "academia", "documentos"],
+    "rrhh":      ["rrhh_read", "rrhh_write", "documentos"],
     "academico": ["academia", "manuales", "examenes", "documentos"],
-    "tecnico":   ["mis_tickets", "checklist", "evidencias", "academia"],
-    "readonly":  ["dashboard", "wfm_read", "noc_read"],
+    "tecnico":   ["academia", "documentos"],
+    "readonly":  ["dashboard"],
 }
 
 _COLS = "id, nombre, email, password, rol, plaza, activo, permisos, titular_de, creado_en, ultimo_login"

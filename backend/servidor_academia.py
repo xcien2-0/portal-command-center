@@ -1426,7 +1426,7 @@ def _save_telegram_config(config):
         json.dump(config, f, indent=2)
 
 @app.post("/api/config/telegram")
-def config_telegram(req: Dict[str, Any]):
+def config_telegram(req: Dict[str, Any], _user: dict = Depends(require_rol("admin"))):
     config = _load_telegram_config()
     config.update({
         "enabled": req.get("enabled", config["enabled"]),
@@ -1438,11 +1438,11 @@ def config_telegram(req: Dict[str, Any]):
     return {"status": "success", "config": config}
 
 @app.get("/api/config/telegram")
-def get_telegram_config():
+def get_telegram_config(_user: dict = Depends(require_rol("admin"))):
     return _load_telegram_config()
 
 @app.post("/api/test/telegram")
-def test_telegram(req: Dict[str, Any]):
+def test_telegram(req: Dict[str, Any], _user: dict = Depends(require_rol("admin"))):
     token = req.get("token") or _load_telegram_config().get("token")
     chat_id = req.get("chat_id") or _load_telegram_config().get("chat_id")
     bot = TelegramBot(token=token, chat_id=chat_id)
@@ -1450,7 +1450,7 @@ def test_telegram(req: Dict[str, Any]):
     return res
 
 @app.post("/api/save_skill_result")
-def save_skill_result(result: SkillResult):
+def save_skill_result(result: SkillResult, _user: dict = Depends(get_current_user)):
     os.makedirs("db", exist_ok=True)
     data = {}
     if os.path.exists(SKILLS_DB):
@@ -2440,7 +2440,7 @@ def _load_ventas():
 _MES_ORDER = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]
 
 @app.get("/api/ventas/resumen")
-def get_ventas_resumen():
+def get_ventas_resumen(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -2459,7 +2459,7 @@ def get_ventas_resumen():
     }
 
 @app.get("/api/ventas/por-mes")
-def get_ventas_por_mes():
+def get_ventas_por_mes(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -2478,7 +2478,7 @@ def get_ventas_por_mes():
     return result
 
 @app.get("/api/ventas/top-vendedores")
-def get_ventas_top_vendedores():
+def get_ventas_top_vendedores(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -2490,7 +2490,8 @@ def get_ventas_top_vendedores():
     return grp.rename(columns={"VENDEDOR COMERCIAL/EAC": "vendedor"}).to_dict(orient="records")
 
 @app.get("/api/ventas/ordenes")
-def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: int = 200):
+def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: int = 200,
+                       _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     df = _load_ventas()
     if df is None:
         raise HTTPException(status_code=503, detail="CSV de ventas no disponible")
@@ -2506,7 +2507,8 @@ def get_ventas_ordenes(mes: str = "", empresa: str = "", tipo: str = "", limit: 
 
 
 @app.get("/api/ventas/efectividad")
-def get_ventas_efectividad(dias: int = 90, empresa: str = "", vendedor: str = "", canal: str = ""):
+def get_ventas_efectividad(dias: int = 90, empresa: str = "", vendedor: str = "", canal: str = "",
+                           _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     """
     Efectividad de ventas agrupada por marca (EMPRESA), vendedor y canal.
     Fuente: CSV Archivo Maestro + Odoo sale.order para equipos y líderes.
@@ -2627,7 +2629,7 @@ def get_ventas_efectividad(dias: int = 90, empresa: str = "", vendedor: str = ""
 
 
 @app.post("/api/ventas/sync-sheets")
-def sync_ventas_from_sheets(_user: dict = Depends(require_rol('comercial', 'admin'))):
+def sync_ventas_from_sheets(_user: dict = Depends(require_rol('finanzas', 'admin', 'director'))):
     """Descarga el Archivo Maestro de Google Sheets y actualiza el CSV local."""
     try:
         export_url = f"https://docs.google.com/spreadsheets/d/{_VENTAS_SHEET_ID}/export?format=csv&gid=1669547739"
@@ -2746,7 +2748,8 @@ async def get_gerencia_dashboard():
 # ─── Transacciones Intragrupo ─────────────────────────────────────────────────
 
 @app.post("/api/transacciones")
-def registrar_transaccion(req: TransaccionRequest):
+def registrar_transaccion(req: TransaccionRequest,
+                          _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     try:
         tx = transacciones_service.registrar(**req.dict())
         _hook_transaccion(tx)
@@ -2755,37 +2758,41 @@ def registrar_transaccion(req: TransaccionRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/transacciones")
-def listar_transacciones(empresa_origen: str = None, empresa_destino: str = None, area: str = None):
+def listar_transacciones(empresa_origen: str = None, empresa_destino: str = None, area: str = None,
+                         _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     return transacciones_service.listar(empresa_origen=empresa_origen, empresa_destino=empresa_destino, area=area)
 
 @app.get("/api/transacciones/resumen")
-def resumen_transacciones():
+def resumen_transacciones(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     return transacciones_service.resumen()
 
 @app.put("/api/transacciones/{tx_id}")
-def actualizar_transaccion(tx_id: str, req: TransaccionUpdateRequest):
+def actualizar_transaccion(tx_id: str, req: TransaccionUpdateRequest,
+                           _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     tx = transacciones_service.actualizar(tx_id, req.dict(exclude_none=True))
     if not tx:
         raise HTTPException(status_code=404, detail="Transacción no encontrada")
     return tx
 
 @app.delete("/api/transacciones/{tx_id}")
-def eliminar_transaccion(tx_id: str):
+def eliminar_transaccion(tx_id: str,
+                         _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     ok = transacciones_service.eliminar(tx_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Transacción no encontrada")
     return {"ok": True}
 
 @app.get("/api/transacciones/catalogos")
-def catalogos_transacciones():
+def catalogos_transacciones(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     return {"empresas": transacciones_service.EMPRESAS, "areas": transacciones_service.AREAS}
 
 @app.get("/api/transacciones/tokens")
-def tokens_areas():
+def tokens_areas(_user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     return token_service.saldos_areas()
 
 @app.get("/api/transacciones/tokens/{token_id}/verificar")
-def verificar_token_area(token_id: str):
+def verificar_token_area(token_id: str,
+                         _user: dict = Depends(require_rol("admin", "director", "finanzas"))):
     return token_service.verificar_tx_token(token_id)
 
 # ─── Etiquetas & Comprobantes ─────────────────────────────────────────────────

@@ -93,19 +93,47 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
 }
 
 // ── Acceso por rol ────────────────────────────────────────────────────────────
+// Secciones financieras sensibles: ventas, integridad, reportes-kpi, auditoria-odoo
+// Solo admin, director y finanzas pueden verlas. Aplicar principio de mínimo privilegio.
 const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
+  // ── Acceso total ──────────────────────────────────────────────────────────
   admin:     '*',
-  director:  ['inicio','impacto','noc','cast','red','infra-energia','incidentes','ventas','integridad','reportes-kpi',
-               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases','estrategia2030',
-               'agentes','comite','docs','reportlab','analytics','auditoria-odoo','blackstone','iblack'],
-  noc:       ['inicio','noc','cast','red','infra-energia','incidentes','telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone'],
+
+  // ── Dirección — operaciones + finanzas + estrategia ───────────────────────
+  director:  ['inicio','impacto','noc','cast','red','infra-energia','incidentes',
+               'ventas','integridad','reportes-kpi','auditoria-odoo',          // financiero
+               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
+               'estrategia2030','agentes','comite','docs','reportlab','analytics',
+               'blackstone','iblack'],
+
+  // ── Finanzas — datos financieros, auditoría, KPIs ────────────────────────
+  finanzas:  ['inicio','ventas','integridad','reportes-kpi','auditoria-odoo',
+               'rrhh','sala_juntas','docs','analytics'],
+
+  // ── NOC — operaciones de red, campo, alertas ──────────────────────────────
+  noc:       ['inicio','noc','cast','red','infra-energia','incidentes',
+               'telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone'],
+
+  // ── WFM / Campo — trabajo en campo, inventario ───────────────────────────
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas','radiobases'],
-  comercial: ['inicio','ventas','integridad','reportes-kpi','docs','sala_juntas'],
-  preventa:  ['inicio','ventas','reportes-kpi','proyectos','plan2026','docs','sala_juntas'],
+
+  // ── Comercial — gestión de clientes y pipeline, SIN datos financieros internos
+  comercial: ['inicio','sala_juntas','proyectos','docs'],
+
+  // ── Preventa — propuestas y proyectos, SIN cifras de negocio ─────────────
+  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs'],
+
+  // ── Almacén — inventario físico únicamente ───────────────────────────────
   almacen:   ['inicio','scan','inv-transfers','docs'],
+
+  // ── Capital Humano — directorio RRHH ─────────────────────────────────────
   rrhh:      ['inicio','rrhh'],
+
+  // ── Academia — cursos y materiales ───────────────────────────────────────
   academico: ['inicio','academia','docs'],
   tecnico:   ['inicio','academia','docs'],
+
+  // ── Solo lectura ──────────────────────────────────────────────────────────
   readonly:  ['inicio'],
 };
 
