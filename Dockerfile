@@ -6,6 +6,7 @@ COPY package*.json bun.lock* ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
+RUN ls -la /app | head -20 && echo "index.html check:" && (test -f /app/index.html && echo "EXISTS" || echo "MISSING")
 RUN npm run build
 
 # ── Etapa 2: Backend Python ────────────────────────────────────────────────────
