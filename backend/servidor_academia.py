@@ -56,6 +56,13 @@ wfm_service = WFMWorkflowService()
 # Crear admin inicial si no hay usuarios
 auth_service.init_admin()
 
+# Migrar a Postgres si DATABASE_URL está configurado
+try:
+    from db_migrate import run_migration
+    run_migration()
+except Exception as _db_err:
+    print(f"[DB] Migración omitida: {_db_err}")
+
 print("🚀 [XCIEN-BACKEND] Servidor cargado/recargado correctamente.")
 
 # ─── Cliente Claude ───────────────────────────────────────────────────────────
