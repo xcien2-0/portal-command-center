@@ -896,7 +896,6 @@ export default function Xcien2Page() {
   const [observiumStatus, setObserviumStatus] = useState<'conectado' | 'desconectado'>('desconectado');
   const rol = user?.rol ?? 'readonly';
   const navFiltrado = useMemo(() => NAV.filter(e => canAccess(rol, e.id)), [rol]);
-  const presenceOthers = usePresence(section);
   const { trackSection, track } = useAnalytics();
 
   const [section, setSection] = useState<SectionId>(() => {
@@ -904,6 +903,7 @@ export default function Xcien2Page() {
     const s = params.get('section') as SectionId;
     return (s && SECTION_TITLE[s]) ? s : 'inicio';
   });
+  const presenceOthers = usePresence(section);
 
   const checkBackend = useCallback(async () => {
     try {
