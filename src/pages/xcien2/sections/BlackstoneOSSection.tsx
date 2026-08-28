@@ -381,15 +381,23 @@ function CampoPDN() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('xcien_token');
     Promise.all([
       fetch(`${API_BASE}/api/gps/vehiculos`).then(r => r.ok ? r.json() : { vehiculos: [] }),
       fetch(`${API_BASE}/api/wfm/field-tickets?limit=200`).then(r => r.ok ? r.json() : { tickets: [] }),
-    ]).then(([g, w]) => {
+      fetch(`${API_BASE}/api/blackstone/tickets`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : { tickets: [] }),
+    ]).then(([g, w, b]) => {
       const v = (g.vehiculos ?? []).find((v: GPSVeh) =>
         (v.conductor ?? v.nombre ?? '').toLowerCase().includes('guillermo'));
       setGps(v ?? null);
-      setTickets((w.tickets ?? []).filter((t: TicketG) =>
-        !t.cerrado && (t.tecnico ?? '').toLowerCase().includes('guillermo')));
+      const wts = (w.tickets ?? []).filter((t: TicketG) =>
+        !t.cerrado && (t.tecnico ?? '').toLowerCase().includes('guillermo'));
+      const bts = (b.tickets ?? []).filter((t: TicketG) => !t.cerrado);
+      const merged = [...wts];
+      for (const bt of bts) {
+        if (!merged.find(m => m.odoo_id === bt.odoo_id)) merged.push(bt);
+      }
+      setTickets(merged);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -1070,17 +1078,24 @@ function KPIsPDN() {
 
   const load = React.useCallback(() => {
     const pdnTerms = ['piedras', 'acuña', 'acuna', 'pdn', 'acu'];
+    const token = localStorage.getItem('xcien_token');
     setLoading(true);
     Promise.all([
       fetch(`${API_BASE}/api/wfm/field-tickets?limit=200`).then(r => r.ok ? r.json() : { tickets: [] }),
       fetch(`${API_BASE}/api/noc/alerts?active_only=true&limit=500`).then(r => r.ok ? r.json() : {}),
       fetch(`${API_BASE}/api/red/clientes-sidf`).then(r => r.ok ? r.json() : { clientes: [] }),
-    ]).then(([w, n, s]) => {
+      fetch(`${API_BASE}/api/blackstone/tickets`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : { tickets: [] }),
+    ]).then(([w, n, s, b]) => {
       const ts = (w.tickets ?? []).filter((t: TicketG) => {
         const hay = t.nombre.toLowerCase();
         return !t.cerrado && pdnTerms.some(term => hay.includes(term));
       });
-      setTickets(ts);
+      const bts = (b.tickets ?? []).filter((t: TicketG) => !t.cerrado);
+      const merged = [...ts];
+      for (const bt of bts) {
+        if (!merged.find(m => m.odoo_id === bt.odoo_id)) merged.push(bt);
+      }
+      setTickets(merged);
 
       const alerts = Array.isArray(n) ? n : (n.alerts ?? []);
       setAlertas(alerts.filter((a: any) => {

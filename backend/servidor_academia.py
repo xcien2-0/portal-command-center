@@ -12914,6 +12914,64 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
         raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
 
 
+@app.get("/api/blackstone/tickets")
+async def get_blackstone_tickets(_user: dict = Depends(get_current_user)):
+    """Lista tareas project.task del proyecto PDN 240 en formato TicketG."""
+    import asyncio as _aio, xmlrpc.client as _xrc
+
+    CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved",
+                 "closed", "listo", "entregado", "done"}
+
+    def _fetch():
+        HOST = os.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB   = os.getenv("ODOO_DB", "wispi19")
+        U    = os.getenv("ODOO_USER", "")
+        P    = os.getenv("ODOO_PASSWORD", "")
+
+        common = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid_o  = common.authenticate(DB, U, P, {})
+        models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+
+        raw = models.execute_kw(DB, uid_o, P, "project.task", "search_read",
+            [[["project_id", "=", 240]]],
+            {"fields": ["id", "name", "stage_id", "user_ids", "partner_id",
+                        "date_deadline", "create_date", "priority"],
+             "limit": 200, "order": "id desc"})
+
+        all_uids = list({u for t in raw for u in t.get("user_ids", [])})
+        user_names: dict = {}
+        if all_uids:
+            users = models.execute_kw(DB, uid_o, P, "res.users", "read",
+                [all_uids], {"fields": ["id", "name"]})
+            user_names = {u["id"]: u["name"] for u in users}
+
+        tickets = []
+        for t in raw:
+            stage = t["stage_id"][1] if t.get("stage_id") else ""
+            closed = any(kw in stage.lower() for kw in CLOSED_KW)
+            asignados = [user_names.get(u, f"U{u}") for u in t.get("user_ids", [])]
+            tickets.append({
+                "id":             f"PDN-{t['id']}",
+                "odoo_id":        t["id"],
+                "nombre":         t["name"],
+                "cliente":        t["partner_id"][1] if t.get("partner_id") else "",
+                "tecnico":        asignados[0] if asignados else None,
+                "tipo":           "pdn",
+                "etapa_op":       stage,
+                "fecha_creacion": (t.get("create_date") or "")[:19],
+                "prioridad":      "urgent" if t.get("priority") == "1" else "normal",
+                "cerrado":        closed,
+            })
+
+        return {"tickets": tickets, "total": len(tickets)}
+
+    try:
+        result = await _aio.get_event_loop().run_in_executor(None, _fetch)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
+
+
 # ─── Fibra Óptica XCIEN — Memoria Técnica ─────────────────────────────────────
 
 FIBRA_MEMORIA_PATH = os.path.join(BASE_DIR, "data", "blackstone_memoria.json")
