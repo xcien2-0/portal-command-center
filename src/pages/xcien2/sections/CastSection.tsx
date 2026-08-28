@@ -624,7 +624,7 @@ export default function CastSection() {
                                 {sla / 3600}h · transcurrido {elapsedLabel(t.elapsed_s)}
                               </div>
                             </div>
-                            <a href={`https://odoo.wispi.mx/web#id=${t.id}&model=helpdesk.ticket`}
+                            <a href={`https://odoo.wispi.mx/odoo/helpdesk/${t.id}`}
                               target="_blank" rel="noreferrer"
                               onClick={e => e.stopPropagation()}
                               style={{ display: 'flex', alignItems: 'center', gap: 6,
