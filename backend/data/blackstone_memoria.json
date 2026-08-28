@@ -1,0 +1,316 @@
+{
+  "proyecto": "Fibra Óptica XCIEN · MTY / SLT / PDN",
+  "creado": "2026-08-28",
+  "version": 1,
+  "reuniones": [
+    {
+      "id": "fo_20260707_a1b2c3d4",
+      "fecha": "2026-07-07",
+      "titulo": "Definición de alcance técnico FO XCIEN",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Se definió el alcance técnico del proyecto de fibra óptica para las tres plazas. Se eligió tecnología WDM sobre GPON y se estableció como requisito que el anteproyecto esté firmado por el cliente antes de iniciar cualquier instalación.",
+        "participantes": [
+          "José Miguel Macías", "Alejandro Guzmán", "Cecilia Nuñez", "Gustavo Cavazos",
+          "Pedro Botello", "Pablo Capetillo", "Rodrigo Flores", "Samara Palacios",
+          "Alejandra Mora", "Anel Alcaraz", "Edwin Garza", "Mayra Tamez",
+          "Elizabeth Marines", "Claudia Nieto", "Francisco Alday", "Nancy Fuentes", "Iván Martínez"
+        ],
+        "temas": ["Alcance técnico", "Selección de tecnología WDM vs GPON", "Proceso de anteproyecto"],
+        "decisiones": [
+          "Tecnología seleccionada: WDM (no GPON) para las 3 plazas",
+          "Anteproyecto firmado por cliente es requisito obligatorio antes de instalación"
+        ],
+        "action_items": [],
+        "hallazgos_tecnicos": [
+          "WDM seleccionada sobre GPON — justificación: mayor capacidad y escalabilidad para el modelo de negocio XCIEN"
+        ],
+        "riesgos": [],
+        "estado_proyecto": "avanzando"
+      }
+    },
+    {
+      "id": "fo_20260715_b2c3d4e5",
+      "fecha": "2026-07-15",
+      "titulo": "Riesgo crítico PDN — electrónica y topología de red",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Sesión enfocada en Piedras Negras. Se identificó riesgo crítico en la electrónica de la red y se revisó la topología completa con mapeo de red. Punto de atención urgente para la plaza PDN.",
+        "participantes": [
+          "José Miguel Macías", "Francisco Alday", "Guillermo Hernandez F.",
+          "Alejandro Guzmán", "Pedro Botello", "Edwin Garza"
+        ],
+        "temas": ["Riesgo eléctrico PDN", "Topología de red", "Mapeo de infraestructura"],
+        "decisiones": [
+          "Escalar riesgo de electrónica PDN a dirección técnica"
+        ],
+        "action_items": [
+          {
+            "tarea": "Revisar y documentar estado de electrónica en PDN",
+            "responsable": "Francisco Alday",
+            "fecha_limite": null
+          }
+        ],
+        "hallazgos_tecnicos": [
+          "Riesgo crítico identificado en electrónica de red en Piedras Negras — requiere revisión urgente",
+          "Topología de red revisada y mapeada para PDN"
+        ],
+        "riesgos": [
+          "Electrónica de red en PDN en estado de riesgo crítico — puede bloquear activaciones"
+        ],
+        "estado_proyecto": "bloqueado"
+      }
+    },
+    {
+      "id": "fo_20260728_c3d4e5f6",
+      "fecha": "2026-07-28",
+      "titulo": "Coordinación operativa — cronogramas y software para ventas",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Sesión de coordinación operativa para alinear cronogramas entre plazas y definir requerimientos de software necesarios para habilitar el proceso de ventas y entregas del servicio de fibra.",
+        "participantes": [
+          "José Miguel Macías", "Alejandro Guzmán", "Pablo Capetillo", "Gustavo Cavazos",
+          "Oswaldo Lozano", "Samara Palacios", "Anel Alcaraz", "Edwin Garza", "Mayra Tamez"
+        ],
+        "temas": ["Cronogramas por plaza", "Requerimientos de software", "Habilitación de ventas", "Proceso de entregas"],
+        "decisiones": [
+          "Definir cronograma unificado por plaza antes de siguiente reunión",
+          "Levantar requerimientos de software para ventas y activaciones"
+        ],
+        "action_items": [
+          {
+            "tarea": "Definir cronograma de despliegue por plaza",
+            "responsable": "Alejandro Guzmán",
+            "fecha_limite": null
+          },
+          {
+            "tarea": "Documentar requerimientos de software para proceso de ventas y entregas",
+            "responsable": "Pablo Capetillo",
+            "fecha_limite": null
+          }
+        ],
+        "hallazgos_tecnicos": [],
+        "riesgos": [
+          "Sin software habilitado no se puede vender ni entregar el servicio"
+        ],
+        "estado_proyecto": "en_revision"
+      }
+    },
+    {
+      "id": "fo_20260811_d4e5f6g7",
+      "fecha": "2026-08-11",
+      "titulo": "Gobernanza de información — KMZ como fuente oficial",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Se trabajó en la gobernanza de información entre las áreas de preventa, comercial, ingeniería y TI. Decisión clave: los archivos KMZ son la fuente oficial de datos de red. Se alineó el flujo de información entre áreas.",
+        "participantes": [
+          "José Miguel Macías", "Alejandro Guzmán", "Cecilia Nuñez", "Pedro Botello",
+          "Raul Zapata", "Jesús Marroquín", "Carlos Belloc", "Samara Palacios",
+          "Alejandra Mora", "Anel Alcaraz", "Elizabeth Marines"
+        ],
+        "temas": ["Gobernanza de información", "KMZ como fuente oficial", "Flujo preventa-comercial-ingeniería-TI"],
+        "decisiones": [
+          "KMZ es la fuente oficial de mapas de red — centralizar en Drive compartido",
+          "Definir flujo formal de gobernanza de información entre preventa, comercial, ingeniería y TI"
+        ],
+        "action_items": [
+          {
+            "tarea": "Centralizar todos los KMZ en Drive compartido del proyecto",
+            "responsable": "José Miguel Macías",
+            "fecha_limite": null
+          },
+          {
+            "tarea": "Documentar flujo de gobernanza de información entre áreas",
+            "responsable": "Samara Palacios",
+            "fecha_limite": null
+          }
+        ],
+        "hallazgos_tecnicos": [
+          "KMZ elegido como fuente de verdad para mapas y topología de red"
+        ],
+        "riesgos": [
+          "Sin gobernanza clara de información, áreas trabajan con datos desactualizados"
+        ],
+        "estado_proyecto": "en_revision"
+      }
+    },
+    {
+      "id": "fo_20260818_e5f6g7h8",
+      "fecha": "2026-08-18",
+      "titulo": "Implementación de producto, procesos comerciales y capacitación",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Revisión integral de la implementación del producto fibra óptica: procesos comerciales, logística de equipos y capacitación interna. José Miguel recibe instrucción de adecuar el módulo de capacitación comercial para fibra.",
+        "participantes": [
+          "José Miguel Macías", "Alejandro Guzmán", "Cecilia Nuñez", "Pablo Capetillo",
+          "Gustavo Cavazos", "Rodrigo Flores", "Samara Palacios", "Mayra Tamez",
+          "Elizabeth Marines", "Claudia Nieto"
+        ],
+        "temas": ["Implementación del producto", "Proceso comercial", "Logística de equipos", "Capacitación"],
+        "decisiones": [
+          "José Miguel debe adecuar módulo de capacitación comercial para fibra óptica",
+          "Revisar condiciones comerciales actuales para adecuar a fibra"
+        ],
+        "action_items": [
+          {
+            "tarea": "Adecuar módulo de capacitación comercial para fibra óptica",
+            "responsable": "José Miguel Macías",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Modificar cotización y condiciones comerciales para fibra óptica",
+            "responsable": "Pablo Capetillo",
+            "fecha_limite": "2026-08-31"
+          }
+        ],
+        "hallazgos_tecnicos": [],
+        "riesgos": [
+          "Sin capacitación comercial actualizada, el equipo de ventas no puede ofrecer fibra correctamente"
+        ],
+        "estado_proyecto": "avanzando"
+      }
+    },
+    {
+      "id": "fo_20260825_f6g7h8i9",
+      "fecha": "2026-08-25",
+      "titulo": "Sesión de seguimiento — asignación de actividades y compromisos al 31 agosto",
+      "fuente": "manual",
+      "autor": "José Miguel Macías",
+      "procesado": "2026-08-28T00:00:00",
+      "parsed": {
+        "resumen": "Sesión de seguimiento general. Se asignaron actividades concretas con fecha límite 31 de agosto a todos los responsables. Compromisos distribuidos entre aprovisionamiento, comercial, infraestructura y procesos.",
+        "participantes": [
+          "José Miguel Macías", "Alejandro Guzmán", "Cecilia Nuñez", "Gustavo Cavazos",
+          "César Mancilla", "Pablo Capetillo", "Rodrigo Flores", "Samara Palacios",
+          "Alejandra Mora", "Anel Alcaraz", "Edwin Garza", "Mayra Tamez",
+          "Elizabeth Marines", "Claudia Nieto", "Francisco Alday", "Nancy Fuentes", "Iván Martínez"
+        ],
+        "temas": ["Seguimiento de compromisos", "Fecha límite 31 agosto", "Asignación de actividades"],
+        "decisiones": [
+          "Todos los compromisos deben cerrarse antes del 31 de agosto de 2026",
+          "Drive compartido debe centralizar anteproyectos y reportes de campo"
+        ],
+        "action_items": [
+          {
+            "tarea": "Definir información requerida para Empalme, etiquetas y estándares",
+            "responsable": "Aprovisionamiento",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Modificar cotización y condiciones comerciales para fibra óptica",
+            "responsable": "Pablo Capetillo",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Adecuar módulo de capacitación comercial para fibra óptica",
+            "responsable": "José Miguel Macías",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Actualizar plantilla de factibilidad para preventa",
+            "responsable": "Preventa / Alejandro Guzmán",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Definir matriz y modelo de costos para última milla",
+            "responsable": "Ingeniería",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Dar de alta en almacén equipos de Empalme, etiquetas y estándares",
+            "responsable": "César Mancilla",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Proporcionar cantidad de equipos a comprar",
+            "responsable": "Alejandro Guzmán",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Crear anteproyecto para cada levantamiento y definir criterios de visitas a campo",
+            "responsable": "Cecilia Nuñez",
+            "fecha_limite": "2026-08-31"
+          },
+          {
+            "tarea": "Compartir reportes de levantamiento físico en Drive compartido",
+            "responsable": "José Miguel Macías",
+            "fecha_limite": "2026-08-31"
+          }
+        ],
+        "hallazgos_tecnicos": [],
+        "riesgos": [
+          "Múltiples compromisos con fecha límite 31 agosto — riesgo de incumplimiento por carga simultánea",
+          "Drive compartido aún no centraliza todos los documentos del proyecto"
+        ],
+        "estado_proyecto": "en_revision"
+      }
+    }
+  ],
+  "hitos": [
+    {
+      "fecha": "2026-07-07",
+      "descripcion": "Tecnología WDM seleccionada para las 3 plazas (MTY/SLT/PDN) — descartada GPON",
+      "tipo": "decision_tecnica",
+      "autor": "Mesa de trabajo"
+    },
+    {
+      "fecha": "2026-07-07",
+      "descripcion": "Anteproyecto firmado por cliente establecido como requisito obligatorio pre-instalación",
+      "tipo": "proceso",
+      "autor": "Mesa de trabajo"
+    },
+    {
+      "fecha": "2026-07-15",
+      "descripcion": "Riesgo crítico detectado en electrónica PDN — escalado a dirección técnica",
+      "tipo": "riesgo_critico",
+      "autor": "Mesa de trabajo"
+    },
+    {
+      "fecha": "2026-08-11",
+      "descripcion": "KMZ definido como fuente oficial de mapas de red — centralizar en Drive",
+      "tipo": "decision_gobernanza",
+      "autor": "Mesa de trabajo"
+    },
+    {
+      "fecha": "2026-08-25",
+      "descripcion": "José Miguel asume liderazgo del proyecto FO XCIEN — 9 compromisos al 31 agosto",
+      "tipo": "organizacional",
+      "autor": "Mesa de trabajo"
+    }
+  ],
+  "estado_actual": {
+    "resumen": "Proyecto en etapa de estandarización operativa. 6 reuniones de mesa de trabajo completadas entre julio y agosto 2026. PDN es la plaza más avanzada (construida, CWDM bloqueado por Lancermex). MTY en piloto con red rentada Neutra. SLT en etapa de planificación. Hay 9 compromisos activos con fecha límite 31 de agosto asignados a distintos responsables.",
+    "avance_pct": 35,
+    "pendientes_criticos": [
+      "Definir información para Empalme, etiquetas y estándares — Aprovisionamiento (31 ago)",
+      "Modificar cotización y condiciones comerciales fibra — Pablo Capetillo (31 ago)",
+      "Crear anteproyecto y criterios de visitas a campo — Cecilia Nuñez (31 ago)",
+      "Dar de alta equipos en almacén — César Mancilla (31 ago)",
+      "Definir matriz de costos última milla — Ingeniería (31 ago)"
+    ],
+    "logros_recientes": [
+      "Tecnología WDM seleccionada y documentada",
+      "KMZ establecido como fuente oficial de mapas",
+      "Mesa de trabajo multi-empresa consolidada (XCIEN + WISPI + LUMINET)",
+      "Riesgo eléctrico PDN identificado y escalado"
+    ],
+    "proximos_pasos": [
+      "Validar cumplimiento de compromisos al 31 agosto con todos los responsables",
+      "Centralizar anteproyectos y reportes de campo en Drive compartido",
+      "Sesión de presentación formal de José Miguel como líder del proyecto",
+      "Resolver bloqueo CWDM F3 en PDN (Lancermex 21 cajas)"
+    ],
+    "semaforo": "amarillo",
+    "generado": "2026-08-28T00:00:00"
+  }
+}
