@@ -96,54 +96,83 @@ function themeReducer(state: ThemeConfig, action: ThemeAction): ThemeConfig {
   }
 }
 
-// ── Acceso por rol ────────────────────────────────────────────────────────────
-// Secciones financieras sensibles: ventas, integridad, reportes-kpi, auditoria-odoo
-// Solo admin, director y finanzas pueden verlas. Aplicar principio de mínimo privilegio.
+// ── Acceso por rol — alineado al PAC 2026 (17 áreas) ────────────────────────
+// Mapa y secciones financieras: solo admin y director.
+// Los roles se asignan en Railway por área según el PAC 2026.
 const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
-  // ── Acceso total ──────────────────────────────────────────────────────────
-  admin:     '*',
 
-  // ── Dirección — operaciones + finanzas + estrategia ───────────────────────
-  director:  ['inicio','impacto','noc','cast','red','infra-energia','incidentes',
-               'ventas','integridad','reportes-kpi','auditoria-odoo',          // financiero
-               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
-               'estrategia2030','agentes','comite','docs','reportlab','analytics',
-               'blackstone','fibra_xcien','iblack'],
+  // ══ NIVEL DIRECCIÓN ══════════════════════════════════════════════════════
+  admin:    '*',
 
-  // ── Finanzas — acceso operativo básico (financiero solo admin/director) ──────
-  finanzas:  ['inicio','rrhh','sala_juntas','docs'],
+  director: ['inicio','impacto','noc','cast','red','infra-energia','incidentes',
+              'ventas','integridad','reportes-kpi','auditoria-odoo',
+              'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
+              'estrategia2030','agentes','comite','docs','reportlab','analytics',
+              'blackstone','fibra_xcien','iblack','flotilla','wfm','bidrillas'],
 
-  // ── NOC — operaciones de red, campo, alertas (mapa restringido a admin/director) ──
-  noc:       ['inicio','noc','cast','infra-energia','incidentes',
-               'telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone','fibra_xcien'],
+  // ══ PAC ÁREA 1 — OPERACIONES ════════════════════════════════════════════
+  operaciones: ['inicio','wfm','bidrillas','scan','inv-transfers',
+                'docs','sala_juntas','radiobases','blackstone','cast'],
+  wfm:         ['inicio','wfm','bidrillas','scan','inv-transfers',  // alias legacy
+                'docs','sala_juntas','radiobases','blackstone','cast'],
 
-  // ── WFM / Campo — trabajo en campo, inventario ───────────────────────────
-  wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas','radiobases'],
+  // ══ PAC ÁREA 2 — NOC ════════════════════════════════════════════════════
+  noc:        ['inicio','noc','cast','infra-energia','incidentes',
+               'telegram','wfm','bidrillas','helpdesk','docs','radiobases',
+               'blackstone','fibra_xcien'],
+  'noc-viewer': ['inicio','noc','cast','infra-energia'],           // solo lectura NOC
 
-  // ── Comercial — gestión de clientes y pipeline, SIN datos financieros internos
-  comercial: ['inicio','sala_juntas','proyectos','docs'],
+  // ══ PAC ÁREA 3 — INFRAESTRUCTURA ════════════════════════════════════════
+  infraestructura: ['inicio','noc','cast','infra-energia','incidentes',
+                    'radiobases','fibra_xcien','academia','docs','blackstone'],
+  tecnico:         ['inicio','academia','docs'],                   // alias legacy (básico)
 
-  // ── Preventa — propuestas, proyectos, fibra y PDN ────────────────────────
-  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs','fibra','fibra_xcien','blackstone'],
+  // ══ PAC ÁREA 4 — INGENIERÍA ═════════════════════════════════════════════
+  ingenieria: ['inicio','proyectos','plan2026','fibra','fibra_xcien',
+               'radiobases','blackstone','docs','sala_juntas','noc','infra-energia'],
 
-  // ── Almacén — inventario físico únicamente ───────────────────────────────
-  almacen:   ['inicio','scan','inv-transfers','docs'],
+  // ══ PAC ÁREA 5 — LEGAL ══════════════════════════════════════════════════
+  legal: ['inicio','docs','sala_juntas'],
 
-  // ── Capital Humano — directorio RRHH ─────────────────────────────────────
-  rrhh:      ['inicio','rrhh'],
+  // ══ PAC ÁREA 6 — RECURSOS HUMANOS ═══════════════════════════════════════
+  rrhh:     ['inicio','rrhh','sala_juntas','academia','docs'],
 
-  // ── Academia — cursos y materiales ───────────────────────────────────────
+  // ══ PAC ÁREA 7 — FACTURACIÓN Y COBRANZA ═════════════════════════════════
+  facturacion: ['inicio','docs','sala_juntas'],
+
+  // ══ PAC ÁREA 8 — FINANZAS Y CONTABILIDAD ════════════════════════════════
+  // Datos financieros solo admin/director — rol finanzas acceso operativo
+  finanzas: ['inicio','docs','sala_juntas','rrhh'],
+
+  // ══ PAC ÁREA 9 — ATENCIÓN A CLIENTES ════════════════════════════════════
+  atc:  ['inicio','noc','cast','helpdesk','call','docs'],
+
+  // ══ PAC ÁREA 10-13 — COMERCIAL (XCIEN / HUUS / LUMINET / GOBIERNO) ══════
+  comercial:          ['inicio','sala_juntas','proyectos','docs','iblack'],
+  'comercial-huus':   ['inicio','sala_juntas','proyectos','docs'],
+  'comercial-luminet':['inicio','sala_juntas','proyectos','docs'],
+  'comercial-gobierno':['inicio','sala_juntas','proyectos','docs'],
+
+  // ══ PAC ÁREA 14 — MARKETING ═════════════════════════════════════════════
+  marketing: ['inicio','sala_juntas','proyectos','docs'],
+
+  // ══ PAC ÁREA 15 — PRE-VENTA ═════════════════════════════════════════════
+  preventa: ['inicio','proyectos','plan2026','fibra','fibra_xcien',
+             'blackstone','docs','sala_juntas','iblack','radiobases'],
+
+  // ══ PAC ÁREA 16 — CADENA DE SUMINISTROS ═════════════════════════════════
+  'cadena-suministros': ['inicio','scan','inv-transfers','docs'],
+  almacen:              ['inicio','scan','inv-transfers','docs'],  // alias legacy
+
+  // ══ PAC ÁREA 17 — T.I. ══════════════════════════════════════════════════
+  ti: ['inicio','noc','cast','infra-energia','incidentes','radiobases',
+       'agentes','cerebro','docs','academia','sync','blackstone','fibra_xcien'],
+
+  // ══ ACADEMIA / CAPACITACIÓN — transversal al PAC ════════════════════════
   academico: ['inicio','academia','docs','blackstone','fibra_xcien','fibra'],
-  tecnico:   ['inicio','academia','docs'],
 
-  // ── NOC Viewer — solo monitoreo básico (Armando y similares) ─────────────
-  'noc-viewer': ['inicio', 'noc', 'cast', 'infra-energia'],
-
-  // ── ATC — Atención al Cliente: CAST, NOC y Mesa de Ayuda (Yuliana) ───────
-  atc: ['inicio', 'noc', 'cast', 'helpdesk'],
-
-  // ── Solo lectura ──────────────────────────────────────────────────────────
-  readonly:  ['inicio'],
+  // ══ SOLO LECTURA ════════════════════════════════════════════════════════
+  readonly: ['inicio'],
 };
 
 function canAccess(rol: string | undefined, id: SectionId): boolean {
