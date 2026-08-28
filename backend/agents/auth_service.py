@@ -54,6 +54,7 @@ ROLES = {
     "academico": "Academia — cursos y certificaciones",
     "tecnico":   "Técnico de campo — academia y documentos técnicos",
     "noc-viewer": "NOC Viewer — solo monitoreo: NOC, CAST e Infraestructura Energía",
+    "atc":       "Atención al Cliente — CAST, NOC y Mesa de Ayuda",
     "readonly":  "Solo lectura — hub principal únicamente",
 }
 
@@ -74,6 +75,7 @@ PERMISOS = {
     "academico": ["academia", "manuales", "examenes", "documentos"],
     "tecnico":    ["academia", "documentos"],
     "noc-viewer": ["noc_read", "infra_energia"],
+    "atc":        ["noc_read", "helpdesk"],
     "readonly":   ["dashboard"],
 }
 

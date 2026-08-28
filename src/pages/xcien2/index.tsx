@@ -137,6 +137,9 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   // ── NOC Viewer — solo monitoreo básico (Armando y similares) ─────────────
   'noc-viewer': ['inicio', 'noc', 'cast', 'infra-energia'],
 
+  // ── ATC — Atención al Cliente: CAST, NOC y Mesa de Ayuda (Yuliana) ───────
+  atc: ['inicio', 'noc', 'cast', 'helpdesk'],
+
   // ── Solo lectura ──────────────────────────────────────────────────────────
   readonly:  ['inicio'],
 };
