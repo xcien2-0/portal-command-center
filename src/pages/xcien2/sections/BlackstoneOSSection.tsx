@@ -679,14 +679,199 @@ function KPIsPDN() {
   );
 }
 
+// ── LevantamientoTab — vista supervisión de levantamientos ───────────────────
+
+const CUADRILLAS_API = 'http://localhost:8020';
+
+const TIPO_ICONS: Record<string, string> = {
+  caja: '📦', radiobase: '📡', tramo_fibra: '〰️', acceso_cliente: '🏠',
+};
+const COND_COLOR: Record<string, string> = {
+  buena: G, regular: AM, mantenimiento: BL, critica: RD,
+};
+const ZONA_OPTS = ['PDN', 'AGS', 'QRO', 'SLT', 'MTY'];
+const TIPO_OPTS = ['caja', 'radiobase', 'tramo_fibra', 'acceso_cliente'];
+
+function LevantamientoTab() {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [stats, setStats] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [zona, setZona] = React.useState('PDN');
+  const [tipo, setTipo] = React.useState('');
+  const [selected, setSelected] = React.useState<any>(null);
+  const adminKey = localStorage.getItem('admin_apikey') || '';
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (zona) params.set('zona', zona);
+      if (tipo) params.set('tipo', tipo);
+      const [rList, rStats] = await Promise.all([
+        fetch(`${CUADRILLAS_API}/api/levantamiento/listar?${params}`, { headers: { 'X-API-Key': adminKey } }),
+        fetch(`${CUADRILLAS_API}/api/levantamiento/stats?zona=${zona}`,  { headers: { 'X-API-Key': adminKey } }),
+      ]);
+      if (rList.ok)  setItems((await rList.json()).levantamientos || []);
+      if (rStats.ok) setStats(await rStats.json());
+    } finally { setLoading(false); }
+  }, [zona, tipo, adminKey]);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const fmt = (ts: string) => ts ? new Date(ts.replace(' ','T')+'Z').toLocaleString('es-MX',
+    { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+
+  return (
+    <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13, color: TX }}>
+
+      {/* Stats */}
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 18 }}>
+          {[
+            { lbl: 'Total',   val: stats.total,    color: TX },
+            { lbl: 'Hoy',     val: stats.hoy,      color: G  },
+            { lbl: 'Críticos',val: stats.criticos, color: RD },
+          ].map(s => (
+            <SectionCard key={s.lbl} style={{ padding: '12px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.val}</div>
+              <div style={{ fontSize: 10, color: DM, fontWeight: 700, marginTop: 2 }}>{s.lbl}</div>
+            </SectionCard>
+          ))}
+        </div>
+      )}
+
+      {/* Filtros */}
+      <SectionCard style={{ padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: DM, fontWeight: 700 }}>ZONA</span>
+        {ZONA_OPTS.map(z => (
+          <button key={z} onClick={() => setZona(z)}
+            style={{ padding: '4px 12px', borderRadius: 20, border: `1.5px solid ${zona===z ? G : GB}`,
+              background: zona===z ? `${G}15` : 'transparent', color: zona===z ? G : DM,
+              fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>{z}</button>
+        ))}
+        <span style={{ fontSize: 10, color: DM, fontWeight: 700, marginLeft: 8 }}>TIPO</span>
+        <button onClick={() => setTipo('')}
+          style={{ padding: '4px 12px', borderRadius: 20, border: `1.5px solid ${tipo==='' ? G : GB}`,
+            background: tipo==='' ? `${G}15` : 'transparent', color: tipo==='' ? G : DM,
+            fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Todos</button>
+        {TIPO_OPTS.map(t => (
+          <button key={t} onClick={() => setTipo(t)}
+            style={{ padding: '4px 12px', borderRadius: 20, border: `1.5px solid ${tipo===t ? G : GB}`,
+              background: tipo===t ? `${G}15` : 'transparent', color: tipo===t ? G : DM,
+              fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>{TIPO_ICONS[t]} {t.replace('_',' ')}</button>
+        ))}
+        <button onClick={load} style={{ marginLeft: 'auto', background: 'none', border: 'none',
+          color: G, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>↻</button>
+      </SectionCard>
+
+      {/* Lista */}
+      <SectionCard>
+        {loading ? (
+          <div style={{ padding: 32, textAlign: 'center', color: DM }}>Cargando…</div>
+        ) : items.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: DM }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+            <div style={{ fontWeight: 700 }}>Sin levantamientos en {zona}</div>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Elemento','Condición','Técnico','GPS','Observaciones','Fecha'].map(h => (
+                  <th key={h} style={{ fontSize: 9, fontWeight: 800, color: DM, textTransform: 'uppercase',
+                    letterSpacing: 1, padding: '8px 12px', textAlign: 'left',
+                    borderBottom: `1px solid ${GB}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(item => (
+                <tr key={item.id}
+                  onClick={() => setSelected(selected?.id === item.id ? null : item)}
+                  style={{ cursor: 'pointer', background: selected?.id === item.id ? `${G}08` : 'transparent' }}>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}` }}>
+                    <span style={{ fontSize: 16, marginRight: 6 }}>{TIPO_ICONS[item.tipo_elemento] || '📋'}</span>
+                    <span style={{ fontWeight: 700 }}>{item.tipo_elemento.replace('_',' ')}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}` }}>
+                    <span style={{ padding: '2px 10px', borderRadius: 20,
+                      background: `${COND_COLOR[item.condicion]}18`,
+                      color: COND_COLOR[item.condicion] || DM,
+                      border: `1px solid ${COND_COLOR[item.condicion]}40`,
+                      fontSize: 11, fontWeight: 700 }}>{item.condicion}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}`, color: DM }}>
+                    {item.tecnico_nombre || '—'}
+                  </td>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}`,
+                    fontFamily: 'monospace', fontSize: 11, color: item.lat ? G : DM }}>
+                    {item.lat ? `${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}` : 'Sin GPS'}
+                  </td>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}`,
+                    maxWidth: 200, color: DM, fontSize: 12 }}>
+                    {item.observaciones ? item.observaciones.slice(0, 60) + (item.observaciones.length > 60 ? '…' : '') : '—'}
+                  </td>
+                  <td style={{ padding: '10px 12px', borderBottom: `1px solid ${GB}`,
+                    color: DM, fontSize: 11, whiteSpace: 'nowrap' }}>
+                    {fmt(item.created_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </SectionCard>
+
+      {/* Detalle expandible */}
+      {selected && (
+        <SectionCard style={{ marginTop: 12, padding: 16 }}>
+          <SectionHeader icon="📋" title={`Detalle — ${selected.tipo_elemento.replace('_',' ')}`} />
+          <div style={{ padding: '12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><div style={{ fontSize: 9, color: DM, fontWeight: 700, marginBottom: 3 }}>CONDICIÓN</div>
+              <span style={{ color: COND_COLOR[selected.condicion] || DM, fontWeight: 700 }}>{selected.condicion}</span></div>
+            <div><div style={{ fontSize: 9, color: DM, fontWeight: 700, marginBottom: 3 }}>ZONA</div>
+              <span style={{ fontWeight: 700 }}>{selected.zona}</span></div>
+            {selected.lat && <div style={{ gridColumn: '1/-1' }}>
+              <div style={{ fontSize: 9, color: DM, fontWeight: 700, marginBottom: 3 }}>GPS</div>
+              <a href={`https://maps.google.com/?q=${selected.lat},${selected.lng}`} target="_blank"
+                rel="noreferrer" style={{ color: BL, fontFamily: 'monospace', fontSize: 12 }}>
+                {selected.lat.toFixed(6)}, {selected.lng.toFixed(6)} ↗
+              </a>
+            </div>}
+            {selected.observaciones && <div style={{ gridColumn: '1/-1' }}>
+              <div style={{ fontSize: 9, color: DM, fontWeight: 700, marginBottom: 3 }}>OBSERVACIONES</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>{selected.observaciones}</div>
+            </div>}
+            {selected.fotos && selected.fotos.length > 0 && (
+              <div style={{ gridColumn: '1/-1' }}>
+                <div style={{ fontSize: 9, color: DM, fontWeight: 700, marginBottom: 8 }}>FOTOS ({selected.fotos.length})</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {selected.fotos.map((f: string) => (
+                    <a key={f} href={`${CUADRILLAS_API}/api/levantamiento/foto/${f}`} target="_blank" rel="noreferrer">
+                      <img src={`${CUADRILLAS_API}/api/levantamiento/foto/${f}`} alt="evidencia"
+                        style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8,
+                          border: `1px solid ${GB}` }} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
 // ── BlackstoneOSSection — componente principal ────────────────────────────────
 
 export default function BlackstoneOSSection({ theme: _theme }: { theme: ThemeConfig }) {
   const extraTabs: ExtraTab[] = [
-    { id: 'lancemex', icon: '🔌', label: 'Lancermex', content: <LancermexTracker /> },
-    { id: 'amistad',  icon: '🏭', label: 'Amistad',  content: <AmistadPipeline /> },
-    { id: 'campo',    icon: '🔧', label: 'Guillermo', content: <CampoPDN /> },
-    { id: 'kpis',     icon: '📊', label: 'KPIs PDN', content: <KPIsPDN /> },
+    { id: 'lancemex',     icon: '🔌', label: 'Lancermex',     content: <LancermexTracker /> },
+    { id: 'amistad',      icon: '🏭', label: 'Amistad',      content: <AmistadPipeline /> },
+    { id: 'campo',        icon: '🔧', label: 'Guillermo',    content: <CampoPDN /> },
+    { id: 'kpis',         icon: '📊', label: 'KPIs PDN',    content: <KPIsPDN /> },
+    { id: 'levantamiento',icon: '📍', label: 'Levantamientos', content: <LevantamientoTab /> },
   ];
 
   return (
