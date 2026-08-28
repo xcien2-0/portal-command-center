@@ -110,12 +110,11 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
                'estrategia2030','agentes','comite','docs','reportlab','analytics',
                'blackstone','fibra_xcien','iblack'],
 
-  // ── Finanzas — datos financieros, auditoría, KPIs ────────────────────────
-  finanzas:  ['inicio','ventas','integridad','reportes-kpi','auditoria-odoo',
-               'rrhh','sala_juntas','docs','analytics'],
+  // ── Finanzas — acceso operativo básico (financiero solo admin/director) ──────
+  finanzas:  ['inicio','rrhh','sala_juntas','docs'],
 
-  // ── NOC — operaciones de red, campo, alertas ──────────────────────────────
-  noc:       ['inicio','noc','cast','red','infra-energia','incidentes',
+  // ── NOC — operaciones de red, campo, alertas (mapa restringido a admin/director) ──
+  noc:       ['inicio','noc','cast','infra-energia','incidentes',
                'telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone','fibra_xcien'],
 
   // ── WFM / Campo — trabajo en campo, inventario ───────────────────────────
