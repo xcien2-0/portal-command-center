@@ -159,7 +159,7 @@ const NAV: NavEntry[] = [
 
   // ── Monitoreo ──────────────────────────────────────────────────────────────
   { id: 'noc',           label: 'NOC Virtual',             icon: '📡', group: 'Monitoreo' },
-  { id: 'cast',          label: 'CAST NOC',                icon: '🎫', group: 'Monitoreo' },
+  { id: 'cast',          label: 'ATC NOC',                 icon: '🎫', group: 'Monitoreo' },
   { id: 'helpdesk',      label: 'Mesa de Ayuda',           icon: '📈', group: 'Monitoreo' },
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
@@ -293,6 +293,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   holo: 'Academia Holográfica',
   integridad: 'Integridad Comercial',
   analytics:  'Analytics de Uso',
+  cast:       'ATC NOC',
   helpdesk:   'Mesa de Ayuda',
   net2phone:     'Net2Phone Call Center',
   'usuarios-admin': 'Gestión de Usuarios',

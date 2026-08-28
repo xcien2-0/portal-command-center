@@ -314,10 +314,10 @@ export default function CastSection() {
         marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text, letterSpacing: -0.5 }}>
-            CAST <span style={{ color: C.green }}>NOC</span>
+            ATC <span style={{ color: C.green }}>NOC</span>
           </h1>
           <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
-            Centro de Soporte Técnico · datos en tiempo real · Odoo wispi19
+            Atención al Cliente · datos en tiempo real · Odoo wispi19
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -562,23 +562,43 @@ export default function CastSection() {
                         {elapsedLabel(t.elapsed_s)}
                       </td>
 
-                      {/* SLA indicator */}
-                      <td style={{ padding: '10px 14px' }}>
+                      {/* SLA — barra de progreso animada */}
+                      <td style={{ padding: '8px 14px', minWidth: 130 }}>
                         {t.resolved ? (
                           <span style={{ fontSize: 10, color: C.green }}>✓ resuelto</span>
-                        ) : t.elapsed_s > sla ? (
-                          <span style={{ fontSize: 10, color: C.red, fontWeight: 700 }}>
-                            🔴 fuera de SLA
-                          </span>
-                        ) : t.elapsed_s > sla / 2 ? (
-                          <span style={{ fontSize: 10, color: C.amber, fontWeight: 700 }}>
-                            🟡 {elapsedLabel(sla - t.elapsed_s)} restante
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 10, color: C.green }}>
-                            🟢 {elapsedLabel(sla - t.elapsed_s)} restante
-                          </span>
-                        )}
+                        ) : (() => {
+                          const pct     = Math.min((t.elapsed_s / sla) * 100, 100);
+                          const over    = t.elapsed_s > sla;
+                          const warning = !over && t.elapsed_s > sla / 2;
+                          const barCol  = over ? C.red : warning ? C.amber : C.green;
+                          const remaining = sla - t.elapsed_s;
+                          return (
+                            <div>
+                              {/* track */}
+                              <div style={{ width: '100%', height: 6, borderRadius: 3,
+                                background: 'rgba(255,255,255,.08)', overflow: 'hidden', marginBottom: 4 }}>
+                                <div style={{
+                                  height: '100%',
+                                  width: `${pct}%`,
+                                  borderRadius: 3,
+                                  background: barCol,
+                                  transition: 'width 1s linear',
+                                  boxShadow: over ? `0 0 6px ${C.red}` : undefined,
+                                }} />
+                              </div>
+                              {/* label */}
+                              <div style={{ fontSize: 10, color: barCol, fontWeight: 600,
+                                fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                {over
+                                  ? `+${elapsedLabel(t.elapsed_s - sla)} excedido`
+                                  : `${elapsedLabel(remaining)} restante`}
+                              </div>
+                              <div style={{ fontSize: 9, color: C.muted, marginTop: 1 }}>
+                                {pct.toFixed(0)}% de {sla / 3600}h SLA
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
 
