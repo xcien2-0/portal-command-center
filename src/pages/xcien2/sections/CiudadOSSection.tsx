@@ -575,7 +575,9 @@ export default function CiudadOSSection({
       : false;
     const byTerms = config.ticket_terms?.length
       ? (() => {
-          const hay = `${t.nombre} ${t.cliente || ''}`.toLowerCase();
+          // Solo buscar en el título del ticket, no en el nombre del cliente
+          // — evita falsos positivos por apellidos (e.g. "NAVA" como apellido vs municipio)
+          const hay = t.nombre.toLowerCase();
           return config.ticket_terms!.some(term => hay.includes(term));
         })()
       : false;

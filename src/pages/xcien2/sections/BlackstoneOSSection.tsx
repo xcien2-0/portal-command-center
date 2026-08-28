@@ -543,7 +543,7 @@ function KPIsPDN() {
       fetch(`${API_BASE}/api/red/clientes-sidf`).then(r => r.ok ? r.json() : { clientes: [] }),
     ]).then(([w, n, s]) => {
       const ts = (w.tickets ?? []).filter((t: TicketG) => {
-        const hay = `${t.nombre} ${t.cliente || ''}`.toLowerCase();
+        const hay = t.nombre.toLowerCase();
         return !t.cerrado && pdnTerms.some(term => hay.includes(term));
       });
       setTickets(ts);
