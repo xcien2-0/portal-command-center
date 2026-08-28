@@ -105,7 +105,7 @@ const MAP_TILES = [
   {
     id: 'dark',
     label: 'Dark',
-    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
     opts: { subdomains: 'abcd', maxZoom: 18 },
     filter: 'brightness(0.9) saturate(1.1)',
   },
@@ -119,7 +119,7 @@ const MAP_TILES = [
   {
     id: 'light',
     label: 'Claro',
-    url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     opts: { subdomains: 'abcd', maxZoom: 18 },
     filter: 'brightness(0.95)',
   },

@@ -576,7 +576,7 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
-                url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png"
+                url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
                 attribution='&copy; CARTO'
               />
               <MapFitter vehiculos={vehiculosFiltrados} />

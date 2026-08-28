@@ -66,7 +66,7 @@ function SparkBar({ data, color, height = 40 }: { data: number[]; color: string;
 type ListItem = PowerDevice & { _source: 'nocboard'; _key: string };
 
 const TILE_LAYERS: Record<string, { url: string; label: string }> = {
-  dark: { url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', label: 'Oscuro' },
+  dark: { url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', label: 'Oscuro' },
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: 'Satélite' },
   streets: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', label: 'Calles' },
   topo: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', label: 'Topo' },

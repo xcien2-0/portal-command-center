@@ -537,7 +537,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         center: [23.5, -102.5], zoom: 5, zoomControl: true,
         attributionControl: false, minZoom: 4,
       });
-      const tile = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', {
+      const tile = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd', maxZoom: 18,
       }).addTo(map);
       tileRef.current = tile;
@@ -558,7 +558,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
     // Agregar nuevo tile
     const URLS: Record<string, [string, object]> = {
-      dark:      ['https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 18 }],
+      dark:      ['https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 18 }],
       satellite: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
       topo:      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
     };

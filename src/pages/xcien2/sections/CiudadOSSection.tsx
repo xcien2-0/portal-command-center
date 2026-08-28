@@ -193,7 +193,7 @@ type MapTile = 'dark' | 'satellite' | 'hybrid';
 
 const TILE_URLS: Record<MapTile, { base: string; labels?: string; opts: object }> = {
   dark: {
-    base: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}{r}.png',
+    base: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
     opts: { subdomains: 'abcd', maxZoom: 19 },
   },
   satellite: {
