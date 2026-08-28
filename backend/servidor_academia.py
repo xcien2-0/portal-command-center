@@ -3622,6 +3622,55 @@ def get_field_tickets(limit: int = 150, tipo: str = None, estado_op: int = None)
         if estado_op is None or op_idx == estado_op:
             tickets.append(t)
 
+    # ── Tareas project.task proyecto 240 (PDN) — merge ────────────────────────
+    PDN_KW = ["pdn", "piedras", "acuña", "acuna", "supervisor"]
+    CLOSED_STAGE_KW = {"done", "resuelto", "cerrado", "completado", "resolved", "closed", "listo", "entregado"}
+    try:
+        raw_pdn = models.execute_kw(odoo_db, uid, odoo_pass, "project.task", "search_read",
+            [[["project_id", "=", 240]]],
+            {"fields": ["id", "name", "stage_id", "user_ids", "partner_id",
+                        "create_date", "priority"],
+             "limit": 200, "order": "id desc"})
+        raw_pdn = [t for t in raw_pdn if any(kw in t.get("name", "").lower() for kw in PDN_KW)]
+
+        pdn_uids = list({u for t in raw_pdn for u in t.get("user_ids", [])})
+        pdn_user_names: dict = {}
+        if pdn_uids:
+            pdn_users = models.execute_kw(odoo_db, uid, odoo_pass, "res.users", "read",
+                [pdn_uids], {"fields": ["id", "name"]})
+            pdn_user_names = {u["id"]: u["name"] for u in pdn_users}
+
+        existing_odoo_ids = {t["odoo_id"] for t in tickets}
+        for t in raw_pdn:
+            if t["id"] in existing_odoo_ids:
+                continue
+            stage = t["stage_id"][1] if t.get("stage_id") else "Operaciones"
+            closed = any(kw in stage.lower() for kw in CLOSED_STAGE_KW)
+            asignados = [pdn_user_names.get(u, f"U{u}") for u in t.get("user_ids", [])]
+            op_idx = 3  # Operaciones por defecto para tareas PDN
+            ticket_pdn = {
+                "id":           f"PDN-{t['id']}",
+                "odoo_id":      t["id"],
+                "nombre":       t["name"],
+                "cliente":      t["partner_id"][1] if t.get("partner_id") else "PDN",
+                "tecnico":      asignados[0] if asignados else None,
+                "tipo":         "pdn",
+                "tipo_label":   "Tarea PDN",
+                "prioridad":    "alta" if t.get("priority") == "1" else "normal",
+                "etapa_odoo":   stage,
+                "etapa_op_idx": op_idx,
+                "etapa_op":     OP_STAGE_NAMES[op_idx],
+                "etapa_color":  OP_STAGE_COLORS[op_idx],
+                "fecha_creacion": t.get("create_date", ""),
+                "fecha_cierre":   None,
+                "cerrado":        closed,
+                "kanban_state":   "normal",
+            }
+            if estado_op is None or op_idx == estado_op:
+                tickets.append(ticket_pdn)
+    except Exception:
+        pass  # Si falla el merge PDN, no rompe el endpoint principal
+
     return {
         "total": len(tickets),
         "tickets": tickets,
