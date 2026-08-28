@@ -12932,11 +12932,16 @@ async def get_blackstone_tickets(_user: dict = Depends(get_current_user)):
         uid_o  = common.authenticate(DB, U, P, {})
         models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
 
+        PDN_KW = ["pdn", "piedras", "acuña", "acuna", "acu", "supervisor"]
+
         raw = models.execute_kw(DB, uid_o, P, "project.task", "search_read",
             [[["project_id", "=", 240]]],
             {"fields": ["id", "name", "stage_id", "user_ids", "partner_id",
                         "date_deadline", "create_date", "priority"],
-             "limit": 200, "order": "id desc"})
+             "limit": 500, "order": "id desc"})
+
+        # Filtrar solo tareas relacionadas con PDN
+        raw = [t for t in raw if any(kw in t.get("name", "").lower() for kw in PDN_KW)]
 
         all_uids = list({u for t in raw for u in t.get("user_ids", [])})
         user_names: dict = {}
