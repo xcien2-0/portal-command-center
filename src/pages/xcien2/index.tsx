@@ -131,7 +131,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   rrhh:      ['inicio','rrhh'],
 
   // ── Academia — cursos y materiales ───────────────────────────────────────
-  academico: ['inicio','academia','docs'],
+  academico: ['inicio','academia','docs','blackstone','fibra'],
   tecnico:   ['inicio','academia','docs'],
 
   // ── NOC Viewer — solo monitoreo básico (Armando y similares) ─────────────
@@ -695,10 +695,26 @@ interface ContentProps {
 }
 
 function Content({
-  section, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
+  section, rol, theme, activeThemeId, onThemeChange, onThemeReset, onApplyPreset,
   cities, alerts, activeTenantId, onTenantChange, bridgeData, onNocRefresh, backendStatus, odooStatus, observiumStatus, onSelect
-}: ContentProps & { backendStatus: 'online' | 'offline', odooStatus: 'conectado' | 'desconectado', observiumStatus: 'conectado' | 'desconectado', onSelect: (id: SectionId) => void }) {
+}: ContentProps & { rol: string; backendStatus: 'online' | 'offline', odooStatus: 'conectado' | 'desconectado', observiumStatus: 'conectado' | 'desconectado', onSelect: (id: SectionId) => void }) {
   const isMobile = useIsMobile();
+  // SectionGate — si el rol no tiene acceso a esta sección, muestra pantalla de acceso denegado
+  if (!canAccess(rol, section)) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 12, color: '#8B949E', background: theme.bg }}>
+        <div style={{ fontSize: 48 }}>🔒</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: '#E6EDF3' }}>Acceso restringido</div>
+        <div style={{ fontSize: 13 }}>Tu rol <strong>{rol}</strong> no tiene acceso a esta sección.</div>
+        <button onClick={() => onSelect('inicio')}
+          style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, background: '#009A5A',
+            color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+          Ir al inicio
+        </button>
+      </div>
+    );
+  }
   const padding = isMobile ? 16 : (theme.compact ? 20 : 32);
   const isFullHeight = section === 'red';
   return (
@@ -1223,6 +1239,7 @@ export default function Xcien2Page() {
         <SectionErrorBoundary section={section}>
           <Content
             section={section}
+            rol={rol}
             theme={theme}
             activeThemeId={activeThemeId}
             onThemeChange={patchTheme}
