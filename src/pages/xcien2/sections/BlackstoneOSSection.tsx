@@ -516,6 +516,19 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [prio, setPrio] = React.useState<'normal'|'urgente'|'critica'>('normal');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState('');
+  const [tecnicos, setTecnicos] = React.useState<{ id: number; nombre: string }[]>([]);
+  const [asignadoId, setAsignadoId] = React.useState<number | null>(null);
+  const [asignadoNombre, setAsignadoNombre] = React.useState('');
+  const [success, setSuccess] = React.useState(false);
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('xcien_token');
+    fetch(`${API_BASE}/api/blackstone/tecnicos-pdn`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.ok ? r.json() : { tecnicos: [] })
+      .then(d => setTecnicos(d.tecnicos ?? []))
+      .catch(() => {});
+  }, []);
 
   const submit = async () => {
     if (!titulo.trim()) { setErr('El título es obligatorio'); return; }
@@ -525,11 +538,18 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
       const r = await fetch(`${API_BASE}/api/blackstone/ticket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ titulo: titulo.trim(), descripcion: desc.trim(), prioridad: prio }),
+        body: JSON.stringify({
+          titulo: titulo.trim(),
+          descripcion: desc.trim(),
+          prioridad: prio,
+          asignado_odoo_id: asignadoId ?? undefined,
+          asignado_nombre: asignadoNombre,
+        }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Error');
-      onCreated();
+      setSuccess(true);
+      setTimeout(() => onCreated(), 1200);
     } catch (e: any) { setErr(e.message); setSaving(false); }
   };
 
@@ -539,7 +559,7 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
   };
   const boxStyle: React.CSSProperties = {
     background: SF, border: `1px solid ${GB}`, borderRadius: 12, padding: 28,
-    width: 420, maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: 16,
+    width: 440, maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: 16,
   };
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 12px', borderRadius: 8,
@@ -548,12 +568,25 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
   };
   const prioColors: Record<string, string> = { normal: BL, urgente: AM, critica: RD };
 
+  if (success) return (
+    <div style={overlayStyle}>
+      <div style={{ ...boxStyle, alignItems: 'center', gap: 12 }}>
+        <div style={{ fontSize: 36 }}>✅</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: G }}>Ticket creado en Odoo</div>
+        <div style={{ fontSize: 12, color: DM, textAlign: 'center' }}>
+          Notificación enviada por Telegram
+          {asignadoNombre && ` · asignado a ${asignadoNombre}`}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={boxStyle}>
         <div style={{ fontSize: 14, fontWeight: 700, color: TX }}>+ Nuevo Ticket PDN</div>
         <div style={{ fontSize: 10, color: DM, marginTop: -8 }}>
-          Se creará en Odoo Field Service · etapa NOC · prefijo [SUPERVISOR]
+          Se creará en Odoo Field Service · etapa New · prefijo [SUPERVISOR] · notificación Telegram automática
         </div>
 
         <div>
@@ -574,6 +607,24 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
               }}>{p}</button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: DM, marginBottom: 6 }}>ASIGNAR A</div>
+          <select
+            style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+            value={asignadoId ?? ''}
+            onChange={e => {
+              const sel = tecnicos.find(t => t.id === Number(e.target.value));
+              setAsignadoId(sel ? sel.id : null);
+              setAsignadoNombre(sel ? sel.nombre : '');
+            }}
+          >
+            <option value="">— Sin asignar —</option>
+            {tecnicos.map(t => (
+              <option key={t.id} value={t.id}>{t.nombre}</option>
+            ))}
+          </select>
         </div>
 
         <div>

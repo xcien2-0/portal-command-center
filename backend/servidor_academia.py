@@ -12796,7 +12796,36 @@ async def presence_active(section: str = "global", user: dict = Depends(get_curr
 class TicketPDNReq(BaseModel):
     titulo: str
     descripcion: str = ""
-    prioridad: str = "normal"   # normal | urgente | critica
+    prioridad: str = "normal"          # normal | urgente | critica
+    asignado_odoo_id: Optional[int] = None  # res.users id en Odoo
+    asignado_nombre: str = ""
+
+
+@app.get("/api/blackstone/tecnicos-pdn")
+async def get_tecnicos_pdn(_user: dict = Depends(get_current_user)):
+    """Lista de usuarios Odoo asignables a tickets PDN (proyecto 240)."""
+    import xmlrpc.client as _xrc_t, os as _os_t
+    HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+    DB   = _os_t.getenv("ODOO_DB", "wispi19")
+    U    = _os_t.getenv("ODOO_USER", "")
+    P    = _os_t.getenv("ODOO_PASSWORD", "")
+    try:
+        common = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid_o  = common.authenticate(DB, U, P, {})
+        models = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+        # Usuarios que tienen tareas asignadas en el proyecto Field Service PDN
+        tasks = models.execute_kw(DB, uid_o, P, "project.task", "search_read",
+            [[["project_id", "=", 240], ["user_ids", "!=", False]]],
+            {"fields": ["user_ids"], "limit": 200})
+        uid_set = {uid_val for t in tasks for uid_val in (t.get("user_ids") or [])}
+        if not uid_set:
+            uid_set = set()
+        users = models.execute_kw(DB, uid_o, P, "res.users", "search_read",
+            [[["id", "in", list(uid_set)], ["active", "=", True]]],
+            {"fields": ["id", "name", "login"], "limit": 100})
+        return {"tecnicos": [{"id": u["id"], "nombre": u["name"]} for u in users]}
+    except Exception as e:
+        return {"tecnicos": [], "error": str(e)[:120]}
 
 @app.post("/api/blackstone/ticket")
 async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_user)):
@@ -12823,13 +12852,41 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
         # Prefijo supervisor para distinguir del flujo normal NOC/Dispatch
         nombre_final = f"[SUPERVISOR] {req.titulo.strip()}"
 
-        task_id = models.execute_kw(DB, uid_o, P, "project.task", "create", [{
+        task_vals: dict = {
             "name":        nombre_final,
             "description": req.descripcion or "",
             "project_id":  240,   # Field Service PDN
             "stage_id":    272,   # New
             "priority":    prio,
-        }])
+        }
+        if req.asignado_odoo_id:
+            task_vals["user_ids"] = [(4, req.asignado_odoo_id)]
+
+        task_id = models.execute_kw(DB, uid_o, P, "project.task", "create", [task_vals])
+
+        # Notificación Telegram
+        import httpx as _httpx
+        tg_token = _os_t.getenv("TELEGRAM_BOT_TOKEN", "")
+        tg_chat  = _os_t.getenv("TELEGRAM_CHAT_ID_REPORTES", "") or _os_t.getenv("TELEGRAM_CHAT_ID", "")
+        if tg_token and tg_chat:
+            prio_emoji = {"0": "🟢", "1": "🔴"}.get(prio, "🟢")
+            asignado_txt = f"👤 *Asignado:* {req.asignado_nombre}" if req.asignado_nombre else "👤 *Sin asignar*"
+            msg = (
+                f"🎫 *Nuevo ticket PDN creado*\n\n"
+                f"📋 *Título:* `{nombre_final}`\n"
+                f"{prio_emoji} *Prioridad:* {req.prioridad.upper()}\n"
+                f"{asignado_txt}\n"
+                f"👮 *Creado por:* {user.get('nombre', user.get('username', 'admin'))}\n"
+                f"🔗 [Ver en Odoo](https://odoo.wispi.mx/odoo/all-tasks/{task_id})"
+            )
+            try:
+                _httpx.post(
+                    f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                    json={"chat_id": tg_chat, "text": msg, "parse_mode": "Markdown"},
+                    timeout=8,
+                )
+            except Exception:
+                pass  # No fallar el endpoint si Telegram falla
 
         return {"ok": True, "task_id": task_id, "nombre": nombre_final}
 
