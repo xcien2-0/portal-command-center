@@ -441,17 +441,19 @@ function CampoPDN() {
           <div style={{ fontSize: 12, color: DM }}>Vehículo de Guillermo no localizado en GPS</div>
         )}
 
-        {/* MikroTik Acuña */}
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${GB}` }}>
-          <a href="http://localhost:8010" target="_blank" rel="noreferrer" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
-            background: `${BL}12`, border: `1px solid ${BL}40`, color: BL,
-            fontSize: 12, fontWeight: 600,
-          }}>
-            🌐 MikroTik Manager Acuña · :8010 ↗
-          </a>
-        </div>
+        {/* MikroTik Acuña — solo disponible en red interna */}
+        {(import.meta.env.VITE_MIKROTIK_URL as string) && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${GB}` }}>
+            <a href={import.meta.env.VITE_MIKROTIK_URL as string} target="_blank" rel="noreferrer" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
+              background: `${BL}12`, border: `1px solid ${BL}40`, color: BL,
+              fontSize: 12, fontWeight: 600,
+            }}>
+              🌐 MikroTik Manager Acuña ↗
+            </a>
+          </div>
+        )}
       </SectionCard>
 
       {/* Tickets de Guillermo */}
@@ -681,7 +683,7 @@ function KPIsPDN() {
 
 // ── LevantamientoTab — vista supervisión de levantamientos ───────────────────
 
-const CUADRILLAS_API = 'http://localhost:8020';
+const CUADRILLAS_API = (import.meta.env.VITE_CUADRILLAS_API as string) || 'http://localhost:8020';
 
 const TIPO_ICONS: Record<string, string> = {
   caja: '📦', radiobase: '📡', tramo_fibra: '〰️', acceso_cliente: '🏠',
@@ -785,6 +787,7 @@ function LevantamientoTab() {
   const [items, setItems]     = React.useState<any[]>([]);
   const [stats, setStats]     = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [offline, setOffline] = React.useState(false);
   const [zona, setZona]       = React.useState('PDN');
   const [tipo, setTipo]       = React.useState('');
   const [tab, setTab]         = React.useState<'tablero'|'mapa'|'registros'>('tablero');
@@ -793,6 +796,7 @@ function LevantamientoTab() {
 
   const load = React.useCallback(async () => {
     setLoading(true);
+    setOffline(false);
     try {
       const params = new URLSearchParams();
       if (zona) params.set('zona', zona);
@@ -803,6 +807,8 @@ function LevantamientoTab() {
       ]);
       if (rList.ok)  setItems((await rList.json()).levantamientos || []);
       if (rStats.ok) setStats(await rStats.json());
+    } catch {
+      setOffline(true);
     } finally { setLoading(false); }
   }, [zona, tipo, adminKey]);
 
@@ -816,6 +822,22 @@ function LevantamientoTab() {
     { id: 'mapa',      label: '🗺 Mapa' },
     { id: 'registros', label: '📋 Registros' },
   ] as const;
+
+  if (offline) return (
+    <div style={{ padding: 40, textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: TX, marginBottom: 6 }}>API de Cuadrillas no disponible</div>
+      <div style={{ fontSize: 12, color: DM, marginBottom: 20, lineHeight: 1.6 }}>
+        El servicio de levantamientos (<code>cuadrillas-mx :8020</code>) solo está<br />
+        disponible en red interna. Los datos del mapa y registros<br />
+        requieren conexión local o VPN.
+      </div>
+      <button onClick={load} style={{
+        padding: '9px 22px', borderRadius: 8, cursor: 'pointer',
+        background: GD, color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
+      }}>Reintentar</button>
+    </div>
+  );
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13, color: TX }}>
