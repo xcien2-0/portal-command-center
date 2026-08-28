@@ -193,7 +193,7 @@ type MapTile = 'dark' | 'satellite' | 'hybrid';
 
 const TILE_URLS: Record<MapTile, { base: string; labels?: string; opts: object }> = {
   dark: {
-    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    base: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     opts: { subdomains: 'abcd', maxZoom: 19 },
   },
   satellite: {

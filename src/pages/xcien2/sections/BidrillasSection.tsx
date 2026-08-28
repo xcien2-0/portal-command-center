@@ -576,7 +576,7 @@ function GPSTab({ theme }: { theme: ThemeConfig }) {
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; CARTO'
               />
               <MapFitter vehiculos={vehiculosFiltrados} />

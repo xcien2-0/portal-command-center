@@ -105,9 +105,9 @@ const MAP_TILES = [
   {
     id: 'dark',
     label: 'Dark',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     opts: { subdomains: 'abcd', maxZoom: 18 },
-    filter: 'brightness(0.9) saturate(1.1)',
+    filter: 'invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(0.8)',
   },
   {
     id: 'satellite',

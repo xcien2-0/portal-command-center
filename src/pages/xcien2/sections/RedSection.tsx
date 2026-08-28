@@ -537,9 +537,11 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         center: [23.5, -102.5], zoom: 5, zoomControl: true,
         attributionControl: false, minZoom: 4,
       });
-      const tile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      const tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         subdomains: 'abcd', maxZoom: 18,
       }).addTo(map);
+      const tp = document.querySelector('#red-section-map .leaflet-tile-pane') as HTMLElement | null;
+      if (tp) tp.style.filter = 'invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(0.8)';
       tileRef.current = tile;
       leafRef.current = L;
       mapRef.current  = map;
@@ -558,12 +560,18 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
     // Agregar nuevo tile
     const URLS: Record<string, [string, object]> = {
-      dark:      ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { subdomains: 'abcd', maxZoom: 18 }],
+      dark:      ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abcd', maxZoom: 18 }],
       satellite: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
       topo:      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
     };
     const [url, opts] = URLS[mapLayer];
     tileRef.current = L.tileLayer(url, opts).addTo(map);
+
+    // Aplicar filtro dark al cambiar de capa
+    const tp2 = document.querySelector('#red-section-map .leaflet-tile-pane') as HTMLElement | null;
+    if (tp2) tp2.style.filter = mapLayer === 'dark'
+      ? 'invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(0.8)'
+      : 'none';
 
     // Re-agregar overlay layers encima del tile nuevo
     Object.values(leafLayers.current).forEach((lyr: any) => {
