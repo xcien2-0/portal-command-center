@@ -1266,7 +1266,7 @@ function LevMap({ items, zona }: { items: any[]; zona: string }) {
       map = L.map(divRef.current!, { zoomControl: true, attributionControl: false });
       mapRef.current = map;
 
-      L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
       }).addTo(map);
 

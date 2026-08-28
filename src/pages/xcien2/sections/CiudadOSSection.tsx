@@ -193,7 +193,7 @@ type MapTile = 'dark' | 'satellite' | 'hybrid';
 
 const TILE_URLS: Record<MapTile, { base: string; labels?: string; opts: object }> = {
   dark: {
-    base: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     opts: { subdomains: 'abcd', maxZoom: 19 },
   },
   satellite: {
