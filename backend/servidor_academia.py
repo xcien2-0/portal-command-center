@@ -12852,6 +12852,16 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
         # Prefijo supervisor para distinguir del flujo normal NOC/Dispatch
         nombre_final = f"[SUPERVISOR] {req.titulo.strip()}"
 
+        # Heredar cuenta analítica del proyecto para no violar restricción Odoo
+        analytic_account_id = None
+        try:
+            proj = models.execute_kw(DB, uid_o, P, "project.project", "read",
+                [[240]], {"fields": ["analytic_account_id"]})
+            if proj and proj[0].get("analytic_account_id"):
+                analytic_account_id = proj[0]["analytic_account_id"][0]
+        except Exception:
+            pass
+
         task_vals: dict = {
             "name":        nombre_final,
             "description": req.descripcion or "",
@@ -12859,6 +12869,8 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
             "stage_id":    272,   # New
             "priority":    prio,
         }
+        if analytic_account_id:
+            task_vals["analytic_account_id"] = analytic_account_id
         if req.asignado_odoo_id:
             task_vals["user_ids"] = [(4, req.asignado_odoo_id)]
 
