@@ -601,6 +601,392 @@ function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
+// ── MemoriaTecnica — archivo vivo de juntas FO XCIEN ─────────────────────────
+
+interface Reunion {
+  id: string;
+  fecha: string;
+  titulo: string;
+  fuente: 'gmail' | 'manual';
+  autor?: string;
+  parsed?: {
+    resumen?: string;
+    participantes?: string[];
+    decisiones?: string[];
+    action_items?: { tarea: string; responsable?: string; fecha_limite?: string }[];
+    hallazgos_tecnicos?: string[];
+    riesgos?: string[];
+    estado_proyecto?: string;
+  };
+}
+
+interface EstadoActual {
+  resumen?: string;
+  avance_pct?: number;
+  semaforo?: 'verde' | 'amarillo' | 'rojo';
+  pendientes_criticos?: string[];
+  logros_recientes?: string[];
+  proximos_pasos?: string[];
+  generado?: string;
+}
+
+function MemoriaTecnica() {
+  const { user } = useAuth();
+  const [reuniones, setReuniones] = useState<Reunion[]>([]);
+  const [estado, setEstado] = useState<EstadoActual | null>(null);
+  const [hitos, setHitos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  // Modal nueva reunión
+  const [showModal, setShowModal] = useState(false);
+  const [modalTexto, setModalTexto] = useState('');
+  const [modalFecha, setModalFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [modalTitulo, setModalTitulo] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  // Hito rápido
+  const [hitoTexto, setHitoTexto] = useState('');
+  const [showHito, setShowHito] = useState(false);
+
+  const canEdit = user?.rol === 'admin' || user?.rol === 'supervisor' || user?.rol === 'gerente';
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('xcien_token');
+      const r = await fetch(`${API_BASE}/api/fibra/memoria`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setReuniones(d.reuniones ?? []);
+        setEstado(d.estado_actual ?? null);
+        setHitos(d.hitos ?? []);
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const submitReunion = async () => {
+    if (!modalTexto.trim()) { setSaveMsg('El texto de la reunión es obligatorio'); return; }
+    setSaving(true); setSaveMsg('');
+    try {
+      const token = localStorage.getItem('xcien_token');
+      const r = await fetch(`${API_BASE}/api/fibra/memoria/reunion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ texto: modalTexto, fecha: modalFecha, titulo: modalTitulo }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error');
+      setSaveMsg(`✓ Reunión registrada: ${d.titulo}`);
+      setModalTexto(''); setModalTitulo('');
+      setTimeout(() => { setShowModal(false); setSaveMsg(''); load(); }, 1500);
+    } catch (e: any) { setSaveMsg(e.message); }
+    setSaving(false);
+  };
+
+  const submitHito = async () => {
+    if (!hitoTexto.trim()) return;
+    try {
+      const token = localStorage.getItem('xcien_token');
+      await fetch(`${API_BASE}/api/fibra/memoria/hito`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ descripcion: hitoTexto, tipo: 'hito' }),
+      });
+      setHitoTexto(''); setShowHito(false); load();
+    } catch {}
+  };
+
+  const semColorMap = { verde: '#16a34a', amarillo: '#d97706', rojo: '#dc2626' };
+  const semLabel = { verde: 'En curso', amarillo: 'Atención requerida', rojo: 'Bloqueado' };
+
+  const filtradas = reuniones.filter(r => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (r.titulo + (r.parsed?.resumen ?? '') + (r.fecha ?? '')).toLowerCase().includes(q);
+  });
+
+  if (loading) return (
+    <div style={{ padding: 40, textAlign: 'center', color: DM, fontSize: 13 }}>
+      Cargando memoria técnica...
+    </div>
+  );
+
+  const sem = estado?.semaforo ?? 'verde';
+  const semColor = semColorMap[sem] ?? G;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Estado actual del proyecto */}
+      {estado && (
+        <SectionCard>
+          <SectionHeader icon="📡" title="Estado actual del proyecto" badge={semLabel[sem]} badgeColor={semColor} />
+          <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p style={{ margin: 0, fontSize: 13, color: TX, lineHeight: 1.6 }}>{estado.resumen}</p>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              {estado.avance_pct !== undefined && (
+                <div>
+                  <div style={{ fontSize: 11, color: DM, marginBottom: 4 }}>AVANCE ESTIMADO</div>
+                  <div style={{ background: `${G}22`, borderRadius: 6, height: 8, width: 180, overflow: 'hidden' }}>
+                    <div style={{ background: semColor, height: '100%', width: `${estado.avance_pct}%`, borderRadius: 6 }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: semColor, marginTop: 3, fontWeight: 700 }}>{estado.avance_pct}%</div>
+                </div>
+              )}
+            </div>
+            {estado.pendientes_criticos?.length ? (
+              <div>
+                <div style={{ fontSize: 11, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Pendientes críticos</div>
+                {estado.pendientes_criticos.map((p, i) => (
+                  <div key={i} style={{ fontSize: 12, color: TX, padding: '3px 0', borderBottom: `1px solid ${GB}` }}>
+                    ⚠ {p}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {estado.proximos_pasos?.length ? (
+              <div>
+                <div style={{ fontSize: 11, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Próximos pasos</div>
+                {estado.proximos_pasos.map((p, i) => (
+                  <div key={i} style={{ fontSize: 12, color: TX, padding: '3px 0' }}>→ {p}</div>
+                ))}
+              </div>
+            ) : null}
+            <div style={{ fontSize: 10, color: DM }}>
+              Estado generado {estado.generado ? new Date(estado.generado).toLocaleString('es-MX') : '—'}
+            </div>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Hitos del proyecto */}
+      {hitos.length > 0 && (
+        <SectionCard>
+          <SectionHeader icon="🏁" title="Hitos del proyecto" badge={hitos.length} />
+          <div style={{ padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[...hitos].reverse().map((h, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '4px 0', borderBottom: `1px solid ${GB}` }}>
+                <span style={{ fontSize: 11, color: DM, minWidth: 80 }}>{h.fecha}</span>
+                <span style={{ fontSize: 12, color: TX, flex: 1 }}>{h.descripcion}</span>
+                {h.autor && <span style={{ fontSize: 10, color: DM }}>{h.autor}</span>}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Barra de acciones */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar en memoria..."
+          style={{
+            flex: 1, minWidth: 200, padding: '7px 12px', fontSize: 12,
+            border: `1px solid ${GB}`, borderRadius: 8, outline: 'none', color: TX,
+          }}
+        />
+        {canEdit && (
+          <>
+            <button onClick={() => setShowModal(true)} style={{
+              padding: '7px 14px', background: G, color: '#fff', border: 'none',
+              borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>
+              + Agregar junta
+            </button>
+            <button onClick={() => setShowHito(v => !v)} style={{
+              padding: '7px 14px', background: BG, color: G, border: `1px solid ${G}55`,
+              borderRadius: 8, fontSize: 12, cursor: 'pointer',
+            }}>
+              🏁 Hito
+            </button>
+          </>
+        )}
+        <span style={{ fontSize: 11, color: DM }}>{reuniones.length} juntas</span>
+      </div>
+
+      {/* Hito rápido inline */}
+      {showHito && canEdit && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={hitoTexto}
+            onChange={e => setHitoTexto(e.target.value)}
+            placeholder="Describe el hito (decisión, logro, hallazgo)..."
+            style={{ flex: 1, padding: '7px 12px', fontSize: 12, border: `1px solid ${GB}`, borderRadius: 8, outline: 'none', color: TX }}
+            onKeyDown={e => e.key === 'Enter' && submitHito()}
+          />
+          <button onClick={submitHito} style={{ padding: '7px 14px', background: G, color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+            Guardar
+          </button>
+        </div>
+      )}
+
+      {/* Timeline de reuniones */}
+      {filtradas.length === 0 ? (
+        <SectionCard>
+          <div style={{ padding: 40, textAlign: 'center', color: DM, fontSize: 13 }}>
+            {query ? 'Sin resultados para esa búsqueda.' : 'Aún no hay juntas registradas. Agrega la primera.'}
+          </div>
+        </SectionCard>
+      ) : (
+        <SectionCard>
+          <SectionHeader icon="📋" title="Reuniones del proyecto" badge={filtradas.length} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {filtradas.map((r, idx) => {
+              const p = r.parsed ?? {};
+              const isOpen = expanded === r.id;
+              const estColor = p.estado_proyecto === 'bloqueado' ? RD : p.estado_proyecto === 'en_revision' ? AM : G;
+              return (
+                <div key={r.id} style={{ borderBottom: idx < filtradas.length - 1 ? `1px solid ${GB}` : 'none' }}>
+                  <div
+                    onClick={() => setExpanded(isOpen ? null : r.id)}
+                    style={{
+                      padding: '12px 18px', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', gap: 12,
+                      background: isOpen ? `${G}08` : 'transparent',
+                    }}
+                  >
+                    <div style={{ minWidth: 70 }}>
+                      <div style={{ fontSize: 11, color: DM }}>{r.fecha}</div>
+                      <div style={{ fontSize: 10, color: DM, marginTop: 2 }}>
+                        {r.fuente === 'gmail' ? '📧' : '✍️'} {r.fuente}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TX }}>{r.titulo}</div>
+                      {p.resumen && (
+                        <div style={{ fontSize: 11, color: DM, marginTop: 2 }}>{p.resumen.slice(0, 100)}{p.resumen.length > 100 ? '…' : ''}</div>
+                      )}
+                    </div>
+                    {p.estado_proyecto && (
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 100, background: `${estColor}18`, color: estColor, border: `1px solid ${estColor}33` }}>
+                        {p.estado_proyecto}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 14, color: DM }}>{isOpen ? '▲' : '▼'}</span>
+                  </div>
+
+                  {isOpen && (
+                    <div style={{ padding: '4px 18px 16px 100px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {p.participantes?.length ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Participantes</div>
+                          <div style={{ fontSize: 12, color: TX }}>{p.participantes.join(', ')}</div>
+                        </div>
+                      ) : null}
+                      {p.decisiones?.length ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Decisiones</div>
+                          {p.decisiones.map((d, i) => <div key={i} style={{ fontSize: 12, color: TX, padding: '2px 0' }}>• {d}</div>)}
+                        </div>
+                      ) : null}
+                      {p.action_items?.length ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Action items</div>
+                          {p.action_items.map((ai, i) => (
+                            <div key={i} style={{ fontSize: 12, color: TX, padding: '3px 0', display: 'flex', gap: 8 }}>
+                              <span>☐</span>
+                              <span style={{ flex: 1 }}>{ai.tarea}</span>
+                              {ai.responsable && <span style={{ color: G, fontWeight: 600 }}>{ai.responsable}</span>}
+                              {ai.fecha_limite && <span style={{ color: DM }}>{ai.fecha_limite}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {p.hallazgos_tecnicos?.length ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Hallazgos técnicos</div>
+                          {p.hallazgos_tecnicos.map((h, i) => <div key={i} style={{ fontSize: 12, color: TX, padding: '2px 0' }}>⚙ {h}</div>)}
+                        </div>
+                      ) : null}
+                      {p.riesgos?.length ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: DM, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Riesgos</div>
+                          {p.riesgos.map((rr, i) => <div key={i} style={{ fontSize: 12, color: RD, padding: '2px 0' }}>⚠ {rr}</div>)}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Modal agregar reunión */}
+      {showModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: SF, borderRadius: 14, width: '90%', maxWidth: 560,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.18)', padding: 28,
+            display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TX }}>Agregar junta FO / Blackstone</div>
+            <div style={{ fontSize: 12, color: DM }}>
+              Pega aquí las notas de la reunión (las notas de Gemini, el resumen de Elizabeth, o lo que tengas).
+              Claude extraerá decisiones y action items automáticamente.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input
+                value={modalFecha}
+                onChange={e => setModalFecha(e.target.value)}
+                type="date"
+                style={{ padding: '7px 10px', border: `1px solid ${GB}`, borderRadius: 8, fontSize: 12, color: TX, outline: 'none' }}
+              />
+              <input
+                value={modalTitulo}
+                onChange={e => setModalTitulo(e.target.value)}
+                placeholder="Título (opcional — Claude lo infiere)"
+                style={{ flex: 1, padding: '7px 10px', border: `1px solid ${GB}`, borderRadius: 8, fontSize: 12, color: TX, outline: 'none' }}
+              />
+            </div>
+            <textarea
+              value={modalTexto}
+              onChange={e => setModalTexto(e.target.value)}
+              placeholder="Pega aquí las notas completas de la reunión..."
+              rows={10}
+              style={{
+                resize: 'vertical', padding: '10px 12px', border: `1px solid ${GB}`,
+                borderRadius: 8, fontSize: 12, color: TX, outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            {saveMsg && (
+              <div style={{ fontSize: 12, color: saveMsg.startsWith('✓') ? G : RD }}>{saveMsg}</div>
+            )}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowModal(false); setSaveMsg(''); }} style={{
+                padding: '8px 18px', background: BG, color: DM, border: `1px solid ${GB}`,
+                borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              }}>
+                Cancelar
+              </button>
+              <button onClick={submitReunion} disabled={saving} style={{
+                padding: '8px 20px', background: saving ? DM : G, color: '#fff',
+                border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                cursor: saving ? 'default' : 'pointer',
+              }}>
+                {saving ? 'Procesando con Claude...' : 'Guardar reunión'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KPIsPDN() {
   const [tickets, setTickets] = useState<TicketG[]>([]);
   const [alertas, setAlertas] = useState<any[]>([]);
@@ -1190,6 +1576,7 @@ export default function BlackstoneOSSection({ theme: _theme }: { theme: ThemeCon
     { id: 'campo',        icon: '🔧', label: 'Guillermo',    content: <CampoPDN /> },
     { id: 'kpis',         icon: '📊', label: 'KPIs PDN',    content: <KPIsPDN /> },
     { id: 'levantamiento',icon: '📍', label: 'Levantamientos', content: <LevantamientoTab /> },
+    { id: 'memoria',      icon: '🧠', label: 'Memoria FO',   content: <MemoriaTecnica /> },
   ];
 
   return (

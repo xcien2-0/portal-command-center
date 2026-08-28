@@ -12837,6 +12837,164 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
         raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
 
 
+# ─── Fibra Óptica XCIEN — Memoria Técnica ─────────────────────────────────────
+
+FIBRA_MEMORIA_PATH = os.path.join(BASE_DIR, "data", "blackstone_memoria.json")
+FIBRA_SYNC_SCRIPT  = os.path.join(BASE_DIR, "blackstone_memoria_sync.py")
+
+def _load_fibra_memoria():
+    if not os.path.exists(FIBRA_MEMORIA_PATH):
+        return {
+            "proyecto": "Fibra Óptica XCIEN · Blackstone PDN",
+            "creado": datetime.now().strftime("%Y-%m-%d"),
+            "version": 1,
+            "reuniones": [],
+            "hitos": [],
+            "estado_actual": None,
+        }
+    with open(FIBRA_MEMORIA_PATH) as f:
+        return json.load(f)
+
+def _save_fibra_memoria(data):
+    with open(FIBRA_MEMORIA_PATH, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+class MemoriaReunionReq(BaseModel):
+    texto: str           # notas crudas de la reunión
+    fecha: str = ""      # YYYY-MM-DD, vacío = hoy
+    titulo: str = ""     # título opcional
+
+@app.get("/api/fibra/memoria")
+async def get_fibra_memoria(user: dict = Depends(get_current_user)):
+    """Retorna la memoria técnica completa del proyecto FO XCIEN."""
+    data = _load_fibra_memoria()
+    reuniones = sorted(data.get("reuniones", []), key=lambda r: r.get("fecha", ""), reverse=True)
+    return {
+        "proyecto": data.get("proyecto"),
+        "total_reuniones": len(reuniones),
+        "estado_actual": data.get("estado_actual"),
+        "hitos": data.get("hitos", []),
+        "reuniones": reuniones[:50],
+    }
+
+@app.post("/api/fibra/memoria/reunion")
+async def agregar_reunion_fibra(req: MemoriaReunionReq, user: dict = Depends(get_current_user)):
+    """Agrega una reunión manual a la memoria técnica. Admin o supervisor."""
+    if user.get("rol") not in ("admin", "supervisor", "gerente"):
+        raise HTTPException(status_code=403, detail="Solo admins y supervisores pueden agregar reuniones")
+
+    import hashlib as _hl
+    import anthropic as _ant
+
+    fecha = req.fecha.strip() or datetime.now().strftime("%Y-%m-%d")
+    digest = _hl.md5(f"{fecha}:{req.texto[:200]}".encode()).hexdigest()[:8]
+    rid = f"fo_{fecha.replace('-','')}_{digest}"
+
+    data = _load_fibra_memoria()
+    existing = {r.get("id") for r in data.get("reuniones", [])}
+    if rid in existing:
+        return {"ok": True, "id": rid, "nuevo": False, "msg": "Reunión ya registrada"}
+
+    # Parsear con Claude
+    try:
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        parsed = {}
+        if api_key:
+            client = _ant.Anthropic(api_key=api_key)
+            prompt = f"""Analiza estas notas de reunión del proyecto Fibra Óptica XCIEN (Blackstone PDN).
+
+Texto:
+{req.texto[:6000]}
+
+Devuelve ÚNICAMENTE JSON:
+{{"titulo":"","participantes":[],"resumen":"","temas":[],"decisiones":[],"action_items":[{{"tarea":"","responsable":"","fecha_limite":null}}],"hallazgos_tecnicos":[],"riesgos":[],"estado_proyecto":"normal"}}"""
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = resp.content[0].text.strip()
+            raw = re.sub(r"^```\w*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+            parsed = json.loads(raw)
+    except Exception as e:
+        logger.warning(f"Claude parse error: {e}")
+        parsed = {"titulo": req.titulo or f"Junta FO {fecha}", "resumen": req.texto[:300]}
+
+    reunion = {
+        "id": rid,
+        "fecha": fecha,
+        "titulo": parsed.get("titulo") or req.titulo or f"Junta FO {fecha}",
+        "fuente": "manual",
+        "raw": req.texto[:3000],
+        "parsed": parsed,
+        "procesado": datetime.now().isoformat(),
+        "autor": user.get("nombre", user.get("email", "?")),
+    }
+
+    data.setdefault("reuniones", []).append(reunion)
+
+    # Regenerar estado actual
+    try:
+        reuniones_ord = sorted(data["reuniones"], key=lambda r: r.get("fecha",""), reverse=True)[:8]
+        ctx = []
+        for r in reuniones_ord:
+            p = r.get("parsed", {})
+            ctx.append(f"[{r.get('fecha','?')}] {p.get('titulo', r.get('titulo','?'))} — "
+                       f"Decisiones: {'; '.join(p.get('decisiones',[]))} — "
+                       f"Items: {'; '.join(t.get('tarea','') for t in p.get('action_items',[]))}")
+        if api_key and ctx:
+            client2 = _ant.Anthropic(api_key=api_key)
+            r2 = client2.messages.create(
+                model="claude-haiku-4-5-20251001", max_tokens=600,
+                messages=[{"role":"user","content":
+                    f"Estado proyecto FO XCIEN (PDN):\n{chr(10).join(ctx)}\n\n"
+                    'JSON: {"resumen":"","avance_pct":0,"pendientes_criticos":[],"logros_recientes":[],"proximos_pasos":[],"semaforo":"verde"}'}],
+            )
+            raw2 = r2.content[0].text.strip()
+            raw2 = re.sub(r"^```\w*\n?", "", raw2); raw2 = re.sub(r"\n?```$", "", raw2)
+            estado = json.loads(raw2)
+            estado["generado"] = datetime.now().isoformat()
+            data["estado_actual"] = estado
+    except Exception as e:
+        logger.warning(f"Estado update error: {e}")
+
+    _save_fibra_memoria(data)
+    return {"ok": True, "id": rid, "nuevo": True, "titulo": reunion["titulo"],
+            "estado_actual": data.get("estado_actual")}
+
+@app.post("/api/fibra/memoria/hito")
+async def agregar_hito_fibra(
+    descripcion: str = Body(..., embed=True),
+    tipo: str = Body("hito", embed=True),
+    fecha: str = Body("", embed=True),
+    user: dict = Depends(get_current_user)
+):
+    """Registra un hito o decisión importante en la memoria del proyecto."""
+    if user.get("rol") not in ("admin", "supervisor", "gerente"):
+        raise HTTPException(status_code=403, detail="Solo admins/supervisores")
+    data = _load_fibra_memoria()
+    data.setdefault("hitos", []).append({
+        "fecha": fecha or datetime.now().strftime("%Y-%m-%d"),
+        "descripcion": descripcion,
+        "tipo": tipo,
+        "autor": user.get("nombre", "?"),
+    })
+    _save_fibra_memoria(data)
+    return {"ok": True, "total_hitos": len(data["hitos"])}
+
+@app.post("/api/fibra/memoria/sync-gmail")
+async def sync_gmail_fibra(dias: int = Body(7, embed=True), user: dict = Depends(get_current_user)):
+    """Dispara sync de Gmail en background. Solo admin."""
+    if user.get("rol") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    import subprocess as _sp
+    if not os.path.exists(FIBRA_SYNC_SCRIPT):
+        raise HTTPException(status_code=404, detail="Script de sync no encontrado")
+    _sp.Popen([sys.executable, FIBRA_SYNC_SCRIPT, "--dias", str(dias)],
+              stdout=_sp.DEVNULL, stderr=_sp.DEVNULL)
+    return {"ok": True, "msg": f"Sync Gmail iniciado (últimos {dias} días). Refresca en 30s."}
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
