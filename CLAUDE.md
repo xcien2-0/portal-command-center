@@ -7,7 +7,7 @@ Portal web de operaciones para XCIEN Networks. Centraliza NOC, campo (WFM), inve
 - **Frontend**: React 18 + TypeScript + Vite (puerto 8080 dev)
 - **Backend**: FastAPI Python — `backend/servidor_academia.py` (puerto **8002**)
 - **Estilos**: Tailwind CSS + shadcn/ui + sistema de temas con CSS variables
-- **Datos reales**: Odoo wispi17 (inventario, WFM, RRHH, ventas, academia)
+- **Datos reales**: Odoo wispi19 (inventario, WFM, RRHH, ventas, academia)
 - **Monitoreo**: Observium (NOC alertas) + UISP (dispositivos red)
 - **IA**: Claude Sonnet via Anthropic API — agentes y chat flotante
 - **PM2**: Process manager para producción (`ecosystem.config.cjs`)
@@ -120,7 +120,7 @@ TOKEN_SECRET=...             # JWT para tokens internos
 ## Deuda técnica conocida
 - Leaderboard de Academia hardcodeado (no llama a ningún endpoint)
 - War Room: conversación estática, no ejecuta agentes reales
-- Sin autenticación en el frontend (backend tiene JWT pero el frontend no lo usa)
+- ~~Sin autenticación en el frontend~~ — **Implementada**: JWT + RBAC 13 roles, 401 interceptor, rate limiting login
 - `servidor_academia.py` debería dividirse en routers FastAPI separados
 - Secciones FODA y Adopción muestran datos de demo sin advertencia visual
 - Bundle sin code splitting (Leaflet, Three.js cargan siempre)
