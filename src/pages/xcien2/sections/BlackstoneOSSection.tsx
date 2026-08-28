@@ -1218,6 +1218,48 @@ function KPIsPDN() {
         )}
       </SectionCard>
 
+      {/* Tareas Field Service PDN — lista completa */}
+      <SectionCard>
+        <SectionHeader icon="🎫" title="Tareas PDN — Proyecto 240" badge={tickets.length} badgeColor={G} />
+        {tickets.length === 0 ? (
+          <div style={{ padding: '32px 18px', textAlign: 'center', color: DM, fontSize: 12 }}>
+            {loading ? 'Cargando tareas...' : 'Sin tareas abiertas en proyecto PDN'}
+          </div>
+        ) : (
+          <div>
+            {tickets.map((t, i) => {
+              const prioColor = t.prioridad === 'urgent' ? RD : t.tipo === 'pdn' ? BL : GD;
+              return (
+                <div key={t.id} style={{
+                  padding: '11px 18px',
+                  borderBottom: i < tickets.length - 1 ? `1px solid ${GB}` : 'none',
+                  borderLeft: `3px solid ${prioColor}`,
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: DM, marginBottom: 2 }}>{t.id}</div>
+                    <div style={{ fontSize: 12, color: TX, fontFamily: 'system-ui, sans-serif', fontWeight: 500, marginBottom: 3 }}>
+                      {t.nombre}
+                    </div>
+                    <div style={{ fontSize: 10, color: DM }}>
+                      {t.tecnico ? `👤 ${t.tecnico}` : '—'} · {t.etapa_op || 'Sin etapa'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, color: DM, marginBottom: 4 }}>{tiempoAtras(t.fecha_creacion)}</div>
+                    <a
+                      href={`https://odoo.wispi.mx/odoo/all-tasks/${t.odoo_id}`}
+                      target="_blank" rel="noreferrer"
+                      style={{ fontSize: 9, color: G, textDecoration: 'none', fontWeight: 700 }}
+                    >Ver en Odoo ↗</a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
       {/* Prospectos Amistad resumen */}
       <SectionCard style={{ padding: 18 }}>
         <div style={{ fontSize: 10, color: DM, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
