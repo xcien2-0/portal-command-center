@@ -18,6 +18,39 @@ export const XCIEN_CORPORATE_THEME: ThemeConfig = {
   compact:      false,
 };
 
+// ── Plaza Monterrey ───────────────────────────────────────────────────────────
+export const MTY_CONFIG: PlazaConfig = {
+  id: 'mty',
+  nombre: 'Monterrey',
+  estado_mx: 'Nuevo León',
+  emoji: '🏔️',
+  fibra_plaza_id: 'mty',
+  tecnico_filter: '',
+  ticket_terms: ['monterrey', 'mty', 'neutra', 'neutral', 'nl'],
+  noc_terms: ['monterrey', 'mty', 'nl'],
+  blocker: 'Red en piloto — tramos rentados Neutra Networks · Convenio en proceso',
+  equipo: [
+    { nombre: 'Gustavo Cavazos',     rol: 'Responsable de plaza',  emoji: '👔' },
+    { nombre: 'José Miguel Macías',  rol: 'Supervisor / Auditor',  emoji: '🛡️' },
+  ],
+};
+
+// ── Plaza Saltillo ─────────────────────────────────────────────────────────────
+export const SLT_CONFIG: PlazaConfig = {
+  id: 'slt',
+  nombre: 'Saltillo',
+  estado_mx: 'Coahuila',
+  emoji: '🌵',
+  fibra_plaza_id: 'slt',
+  tecnico_filter: '',
+  ticket_terms: ['saltillo', 'slt', 'coahuila'],
+  noc_terms: ['saltillo', 'slt'],
+  blocker: 'Mediano plazo — infraestructura pendiente · Sin RZ disponible aún',
+  equipo: [
+    { nombre: 'José Miguel Macías',  rol: 'Supervisor / Auditor',  emoji: '🛡️' },
+  ],
+};
+
 // ── Plaza Piedras Negras ───────────────────────────────────────────────────────
 export const PDN_CONFIG: PlazaConfig = {
   id: 'pdn',

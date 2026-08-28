@@ -79,6 +79,7 @@ const RadioBasesSection       = lazy(() => import('./sections/RadioBasesSection'
 const FlotillaSection         = lazy(() => import('./sections/FlotillaSection'));
 const OdooDocsSection         = lazy(() => import('./sections/OdooDocsSection'));
 const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSection'));
+const FibraXCIENSection       = lazy(() => import('./sections/FibraXCIENSection'));
 const UsuariosAdminSection    = lazy(() => import('./sections/UsuariosAdminSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
@@ -107,7 +108,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
                'ventas','integridad','reportes-kpi','auditoria-odoo',          // financiero
                'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
                'estrategia2030','agentes','comite','docs','reportlab','analytics',
-               'blackstone','iblack'],
+               'blackstone','fibra_xcien','iblack'],
 
   // ── Finanzas — datos financieros, auditoría, KPIs ────────────────────────
   finanzas:  ['inicio','ventas','integridad','reportes-kpi','auditoria-odoo',
@@ -115,7 +116,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
 
   // ── NOC — operaciones de red, campo, alertas ──────────────────────────────
   noc:       ['inicio','noc','cast','red','infra-energia','incidentes',
-               'telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone'],
+               'telegram','wfm','bidrillas','helpdesk','docs','radiobases','blackstone','fibra_xcien'],
 
   // ── WFM / Campo — trabajo en campo, inventario ───────────────────────────
   wfm:       ['inicio','wfm','bidrillas','scan','inv-transfers','docs','sala_juntas','radiobases'],
@@ -124,7 +125,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   comercial: ['inicio','sala_juntas','proyectos','docs'],
 
   // ── Preventa — propuestas, proyectos, fibra y PDN ────────────────────────
-  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs','fibra','blackstone'],
+  preventa:  ['inicio','proyectos','plan2026','sala_juntas','docs','fibra','fibra_xcien','blackstone'],
 
   // ── Almacén — inventario físico únicamente ───────────────────────────────
   almacen:   ['inicio','scan','inv-transfers','docs'],
@@ -133,7 +134,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   rrhh:      ['inicio','rrhh'],
 
   // ── Academia — cursos y materiales ───────────────────────────────────────
-  academico: ['inicio','academia','docs','blackstone','fibra'],
+  academico: ['inicio','academia','docs','blackstone','fibra_xcien','fibra'],
   tecnico:   ['inicio','academia','docs'],
 
   // ── NOC Viewer — solo monitoreo básico (Armando y similares) ─────────────
@@ -166,7 +167,8 @@ const NAV: NavEntry[] = [
   { id: 'infra-energia', label: 'Infraestructura Energía', icon: '⚡', group: 'Monitoreo' },
   { id: 'red',           label: 'Mapa de Red',             icon: '🗺️', group: 'Monitoreo' },
   { id: 'sync',          label: 'Sincronización Datos',    icon: '🔄', group: 'Monitoreo' },
-  { id: 'blackstone',    label: 'blackstoneOS · PDN',      icon: '🏙️', group: 'Monitoreo' },
+  { id: 'fibra_xcien',   label: 'Fibra Óptica XCIEN',       icon: '🔆', group: 'Monitoreo' },
+  { id: 'blackstone',    label: 'Blackstone · PDN',         icon: '🏙️', group: 'Monitoreo' },
   { id: 'incidentes',    label: 'Incidentes',              icon: '🚨', group: 'Monitoreo' },
   { id: 'telegram',      label: 'Bot de Alarmas',          icon: '🔔', group: 'Monitoreo' },
 
@@ -282,7 +284,8 @@ const SECTION_TITLE: Record<SectionId, string> = {
   'token-ai': 'Consumo de Tokens AI',
   plan2026:  'Plan de Trabajo 2026',
   proyectos: 'Tablero de Proyectos',
-  fibra:      'Fibra Óptica X100',
+  fibra:       'Fibra Óptica X100',
+  fibra_xcien: 'Fibra Óptica XCIEN',
   radiobases: 'Radio Bases XCIEN',
   iblack:     'iBlack · Zona de Cliente + Cuadrillas',
   'infra-energia': 'Infraestructura Energía',
@@ -764,6 +767,7 @@ function Content({
       {section === 'etiquetas'     && <InventarioSection theme={theme} initialTab="etiquetas" />}
       {section === 'inv-transfers' && <InventarioTransfersSection theme={theme} />}
       {section === 'blackstone'     && <BlackstoneOSSection theme={theme} />}
+      {section === 'fibra_xcien'    && <FibraXCIENSection   theme={theme} />}
 
       {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
       {section === 'odoo-docs'      && <OdooDocsSection theme={theme} />}
