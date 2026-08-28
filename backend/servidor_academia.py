@@ -16,7 +16,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("XCIEN-BACKEND")
-from fastapi import FastAPI, HTTPException, Response, Request, Depends
+from fastapi import FastAPI, HTTPException, Response, Request, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -12846,7 +12846,7 @@ def _load_fibra_memoria():
     if not os.path.exists(FIBRA_MEMORIA_PATH):
         return {
             "proyecto": "Fibra Óptica XCIEN · Blackstone PDN",
-            "creado": datetime.now().strftime("%Y-%m-%d"),
+            "creado": dt_datetime.now().strftime("%Y-%m-%d"),
             "version": 1,
             "reuniones": [],
             "hitos": [],
@@ -12886,7 +12886,7 @@ async def agregar_reunion_fibra(req: MemoriaReunionReq, user: dict = Depends(get
     import hashlib as _hl
     import anthropic as _ant
 
-    fecha = req.fecha.strip() or datetime.now().strftime("%Y-%m-%d")
+    fecha = req.fecha.strip() or dt_datetime.now().strftime("%Y-%m-%d")
     digest = _hl.md5(f"{fecha}:{req.texto[:200]}".encode()).hexdigest()[:8]
     rid = f"fo_{fecha.replace('-','')}_{digest}"
 
@@ -12928,7 +12928,7 @@ Devuelve ÚNICAMENTE JSON:
         "fuente": "manual",
         "raw": req.texto[:3000],
         "parsed": parsed,
-        "procesado": datetime.now().isoformat(),
+        "procesado": dt_datetime.now().isoformat(),
         "autor": user.get("nombre", user.get("email", "?")),
     }
 
@@ -12954,7 +12954,7 @@ Devuelve ÚNICAMENTE JSON:
             raw2 = r2.content[0].text.strip()
             raw2 = re.sub(r"^```\w*\n?", "", raw2); raw2 = re.sub(r"\n?```$", "", raw2)
             estado = json.loads(raw2)
-            estado["generado"] = datetime.now().isoformat()
+            estado["generado"] = dt_datetime.now().isoformat()
             data["estado_actual"] = estado
     except Exception as e:
         logger.warning(f"Estado update error: {e}")
@@ -12975,7 +12975,7 @@ async def agregar_hito_fibra(
         raise HTTPException(status_code=403, detail="Solo admins/supervisores")
     data = _load_fibra_memoria()
     data.setdefault("hitos", []).append({
-        "fecha": fecha or datetime.now().strftime("%Y-%m-%d"),
+        "fecha": fecha or dt_datetime.now().strftime("%Y-%m-%d"),
         "descripcion": descripcion,
         "tipo": tipo,
         "autor": user.get("nombre", "?"),
