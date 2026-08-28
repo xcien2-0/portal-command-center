@@ -193,6 +193,12 @@ export default function RealMap({
       const initialTile = MAP_TILES[0];
       tileLayerRef.current = L.tileLayer(initialTile.url, initialTile.opts).addTo(map);
 
+      // Aplicar filtro dark en la carga inicial
+      setTimeout(() => {
+        const pane = document.querySelector(`#${containerId} .leaflet-tile-pane`) as HTMLElement | null;
+        if (pane) pane.style.filter = initialTile.filter;
+      }, 50);
+
       leafRef.current = L;
       mapRef.current  = map;
 

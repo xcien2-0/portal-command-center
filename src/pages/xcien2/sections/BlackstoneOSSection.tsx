@@ -1053,13 +1053,14 @@ function KPIsPDN() {
     // Leer cajas Lancermex desde localStorage para incluir en el reporte
     let lancermexCajas = 0;
     try {
-      const raw = localStorage.getItem('lancermex_entries');
+      const raw = localStorage.getItem(LS_LANCEMEX);
       if (raw) { const entries = JSON.parse(raw); lancermexCajas = entries[0]?.cajas ?? 0; }
     } catch {}
     try {
+      const token = localStorage.getItem('xcien_token');
       const r = await fetch(`${API_BASE}/api/blackstone/reporte-pdn`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ lancermex_cajas: lancermexCajas }),
       });
       setReporting(r.ok ? 'ok' : 'err');

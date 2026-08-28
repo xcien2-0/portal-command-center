@@ -12804,26 +12804,30 @@ class TicketPDNReq(BaseModel):
 @app.get("/api/blackstone/tecnicos-pdn")
 async def get_tecnicos_pdn(_user: dict = Depends(get_current_user)):
     """Lista de usuarios Odoo asignables a tickets PDN (proyecto 240)."""
-    import xmlrpc.client as _xrc_t, os as _os_t
-    HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
-    DB   = _os_t.getenv("ODOO_DB", "wispi19")
-    U    = _os_t.getenv("ODOO_USER", "")
-    P    = _os_t.getenv("ODOO_PASSWORD", "")
-    try:
+    import asyncio as _aio, xmlrpc.client as _xrc_t, os as _os_t
+
+    def _query_tecnicos():
+        HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB   = _os_t.getenv("ODOO_DB", "wispi19")
+        U    = _os_t.getenv("ODOO_USER", "")
+        P    = _os_t.getenv("ODOO_PASSWORD", "")
         common = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
         uid_o  = common.authenticate(DB, U, P, {})
         models = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
-        # Usuarios que tienen tareas asignadas en el proyecto Field Service PDN
         tasks = models.execute_kw(DB, uid_o, P, "project.task", "search_read",
             [[["project_id", "=", 240], ["user_ids", "!=", False]]],
             {"fields": ["user_ids"], "limit": 200})
-        uid_set = {uid_val for t in tasks for uid_val in (t.get("user_ids") or [])}
+        uid_set = list({uid_val for t in tasks for uid_val in (t.get("user_ids") or [])})
         if not uid_set:
-            uid_set = set()
+            return []
         users = models.execute_kw(DB, uid_o, P, "res.users", "search_read",
-            [[["id", "in", list(uid_set)], ["active", "=", True]]],
-            {"fields": ["id", "name", "login"], "limit": 100})
-        return {"tecnicos": [{"id": u["id"], "nombre": u["name"]} for u in users]}
+            [[["id", "in", uid_set], ["active", "=", True]]],
+            {"fields": ["id", "name"], "limit": 100})
+        return [{"id": u["id"], "nombre": u["name"]} for u in users]
+
+    try:
+        tecnicos = await _aio.get_event_loop().run_in_executor(None, _query_tecnicos)
+        return {"tecnicos": tecnicos}
     except Exception as e:
         return {"tecnicos": [], "error": str(e)[:120]}
 
@@ -12833,26 +12837,26 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
     if user.get("rol") not in ("admin", "director"):
         raise HTTPException(status_code=403, detail="Solo administradores y directores pueden crear tickets PDN")
 
-    import xmlrpc.client as _xrc_t
-    import os as _os_t
+    import asyncio as _aio, xmlrpc.client as _xrc_t, os as _os_t, re as _re
+    import httpx as _httpx
 
-    HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
-    DB   = _os_t.getenv("ODOO_DB", "wispi19")
-    U    = _os_t.getenv("ODOO_USER", "")
-    P    = _os_t.getenv("ODOO_PASSWORD", "")
+    creado_por = user.get("nombre", user.get("username", "admin"))
 
-    try:
+    def _crear_en_odoo_y_notificar():
+        HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB   = _os_t.getenv("ODOO_DB", "wispi19")
+        U    = _os_t.getenv("ODOO_USER", "")
+        P    = _os_t.getenv("ODOO_PASSWORD", "")
+
         common = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
         uid_o  = common.authenticate(DB, U, P, {})
         models = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
 
         prio_map = {"urgente": "1", "critica": "1", "normal": "0"}
         prio = prio_map.get(req.prioridad.lower(), "0")
-
-        # Prefijo supervisor para distinguir del flujo normal NOC/Dispatch
         nombre_final = f"[SUPERVISOR] {req.titulo.strip()}"
 
-        # Heredar cuenta analítica del proyecto para no violar restricción Odoo
+        # Heredar cuenta analítica del proyecto
         analytic_account_id = None
         try:
             proj = models.execute_kw(DB, uid_o, P, "project.project", "read",
@@ -12865,8 +12869,8 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
         task_vals: dict = {
             "name":        nombre_final,
             "description": req.descripcion or "",
-            "project_id":  240,   # Field Service PDN
-            "stage_id":    272,   # New
+            "project_id":  240,
+            "stage_id":    272,
             "priority":    prio,
         }
         if analytic_account_id:
@@ -12876,19 +12880,19 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
 
         task_id = models.execute_kw(DB, uid_o, P, "project.task", "create", [task_vals])
 
-        # Notificación Telegram
-        import httpx as _httpx
+        # Notificación Telegram (sync httpx dentro del executor)
         tg_token = _os_t.getenv("TELEGRAM_BOT_TOKEN", "")
         tg_chat  = _os_t.getenv("TELEGRAM_CHAT_ID_REPORTES", "") or _os_t.getenv("TELEGRAM_CHAT_ID", "")
         if tg_token and tg_chat:
+            def _esc(s): return _re.sub(r'([*_`\[\]])', r'\\\1', s)
             prio_emoji = {"0": "🟢", "1": "🔴"}.get(prio, "🟢")
-            asignado_txt = f"👤 *Asignado:* {req.asignado_nombre}" if req.asignado_nombre else "👤 *Sin asignar*"
+            asignado_txt = f"👤 *Asignado:* {_esc(req.asignado_nombre)}" if req.asignado_nombre else "👤 *Sin asignar*"
             msg = (
                 f"🎫 *Nuevo ticket PDN creado*\n\n"
-                f"📋 *Título:* `{nombre_final}`\n"
+                f"📋 *Título:* `{_esc(nombre_final)}`\n"
                 f"{prio_emoji} *Prioridad:* {req.prioridad.upper()}\n"
                 f"{asignado_txt}\n"
-                f"👮 *Creado por:* {user.get('nombre', user.get('username', 'admin'))}\n"
+                f"👮 *Creado por:* {_esc(creado_por)}\n"
                 f"🔗 [Ver en Odoo](https://odoo.wispi.mx/odoo/all-tasks/{task_id})"
             )
             try:
@@ -12898,9 +12902,13 @@ async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_u
                     timeout=8,
                 )
             except Exception:
-                pass  # No fallar el endpoint si Telegram falla
+                pass
 
         return {"ok": True, "task_id": task_id, "nombre": nombre_final}
+
+    try:
+        result = await _aio.get_event_loop().run_in_executor(None, _crear_en_odoo_y_notificar)
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
