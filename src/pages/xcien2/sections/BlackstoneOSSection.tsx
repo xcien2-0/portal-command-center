@@ -1123,8 +1123,8 @@ function KPIsPDN() {
         />
       )}
 
-      {/* Botón nuevo ticket — solo admin */}
-      {user?.rol === 'admin' && (
+      {/* Botón nuevo ticket — admin y director */}
+      {(user?.rol === 'admin' || user?.rol === 'director') && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={() => setShowNuevoTicket(true)} style={{
             padding: '7px 18px', borderRadius: 20, border: `1.5px solid ${G}`,

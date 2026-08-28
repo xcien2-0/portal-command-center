@@ -12830,8 +12830,8 @@ async def get_tecnicos_pdn(_user: dict = Depends(get_current_user)):
 @app.post("/api/blackstone/ticket")
 async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_user)):
     """Crea un ticket en Odoo Field Service PDN. Solo admin."""
-    if user.get("rol") != "admin":
-        raise HTTPException(status_code=403, detail="Solo administradores pueden crear tickets PDN")
+    if user.get("rol") not in ("admin", "director"):
+        raise HTTPException(status_code=403, detail="Solo administradores y directores pueden crear tickets PDN")
 
     import xmlrpc.client as _xrc_t
     import os as _os_t
