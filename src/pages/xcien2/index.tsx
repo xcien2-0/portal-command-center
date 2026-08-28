@@ -27,6 +27,8 @@ import FeedbackWidget from '../../components/FeedbackWidget';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X as CloseIcon } from 'lucide-react';
 import { useVisibleInterval } from '../../hooks/useVisibleInterval';
+import { usePresence } from '../../hooks/usePresence';
+import PresenceAvatars from '../../components/PresenceAvatars';
 
 // ── Secciones lazy — se cargan solo cuando el usuario las abre ────────────────
 const HexoField3D        = lazy(() => import('../../components/HexoField3D'));
@@ -894,6 +896,7 @@ export default function Xcien2Page() {
   const [observiumStatus, setObserviumStatus] = useState<'conectado' | 'desconectado'>('desconectado');
   const rol = user?.rol ?? 'readonly';
   const navFiltrado = useMemo(() => NAV.filter(e => canAccess(rol, e.id)), [rol]);
+  const presenceOthers = usePresence(section);
   const { trackSection, track } = useAnalytics();
 
   const [section, setSection] = useState<SectionId>(() => {
@@ -1191,6 +1194,9 @@ export default function Xcien2Page() {
                 }}>{noLeidas > 99 ? '99' : noLeidas}</div>
               )}
             </button>
+
+            {/* Presencia — quién más está viendo esta sección */}
+            {!isMobile && <PresenceAvatars others={presenceOthers} section={section} />}
 
             {/* User badge real — en móvil solo el avatar, sin nombre/rol */}
             {user && (

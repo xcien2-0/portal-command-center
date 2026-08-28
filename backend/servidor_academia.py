@@ -12746,6 +12746,51 @@ async def infra_sitios_unificados():
     return JSONResponse({"ok": True, "total": len(result), "sitios": result})
 
 
+# ─── Presencia en tiempo real (tipo Google Docs) ──────────────────────────────
+
+_presence_store: dict = {}   # section -> {user_id: {nombre, email, rol, ts}}
+_presence_lock = threading.Lock()
+_PRESENCE_TTL = 45           # segundos sin ping → usuario ausente
+
+@app.post("/api/presence/ping")
+async def presence_ping(body: dict, user: dict = Depends(get_current_user)):
+    section = str(body.get("section", "global"))[:64]
+    uid = user["sub"]
+    now = time.time()
+    with _presence_lock:
+        _presence_store.setdefault(section, {})[uid] = {
+            "id": uid,
+            "nombre": user.get("nombre", user.get("email", "?")),
+            "email": user.get("email", ""),
+            "rol": user.get("rol", ""),
+            "ts": now,
+        }
+        for sec in list(_presence_store.keys()):
+            _presence_store[sec] = {
+                k: v for k, v in _presence_store[sec].items()
+                if now - v["ts"] < _PRESENCE_TTL
+            }
+    return {"ok": True}
+
+@app.delete("/api/presence/ping")
+async def presence_leave(body: dict, user: dict = Depends(get_current_user)):
+    section = str(body.get("section", ""))[:64]
+    uid = user["sub"]
+    with _presence_lock:
+        if section in _presence_store:
+            _presence_store[section].pop(uid, None)
+    return {"ok": True}
+
+@app.get("/api/presence/active")
+async def presence_active(section: str = "global", user: dict = Depends(get_current_user)):
+    now = time.time()
+    uid = user["sub"]
+    with _presence_lock:
+        sec = _presence_store.get(section, {})
+        others = [v for k, v in sec.items() if k != uid and now - v["ts"] < _PRESENCE_TTL]
+    return {"section": section, "others": others, "total": len(others)}
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
