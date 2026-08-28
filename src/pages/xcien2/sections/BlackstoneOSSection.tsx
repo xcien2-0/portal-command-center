@@ -4,6 +4,7 @@ import CiudadOSSection, { ExtraTab, PROSPECTOS_PDN } from './CiudadOSSection';
 import { PDN_CONFIG, XCIEN_CORPORATE_THEME } from './ciudadConfigs';
 import { ThemeConfig } from '../types';
 import { API_BASE } from '../../../config';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Paleta PDN fija (tema institucional claro)
 const G  = '#2d7a3a';
@@ -509,12 +510,106 @@ interface SidfCliente {
   plaza: string; velocidad?: string; noc_monitoreado?: boolean;
 }
 
+function NuevoTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [titulo, setTitulo] = React.useState('');
+  const [desc, setDesc] = React.useState('');
+  const [prio, setPrio] = React.useState<'normal'|'urgente'|'critica'>('normal');
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState('');
+
+  const submit = async () => {
+    if (!titulo.trim()) { setErr('El título es obligatorio'); return; }
+    setSaving(true); setErr('');
+    try {
+      const token = localStorage.getItem('xcien_token');
+      const r = await fetch(`${API_BASE}/api/blackstone/ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ titulo: titulo.trim(), descripcion: desc.trim(), prioridad: prio }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error');
+      onCreated();
+    } catch (e: any) { setErr(e.message); setSaving(false); }
+  };
+
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
+  const boxStyle: React.CSSProperties = {
+    background: SF, border: `1px solid ${GB}`, borderRadius: 12, padding: 28,
+    width: 420, maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: 16,
+  };
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', borderRadius: 8,
+    border: `1px solid ${GB}`, background: BG, color: TX, fontSize: 13,
+    fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box',
+  };
+  const prioColors: Record<string, string> = { normal: BL, urgente: AM, critica: RD };
+
+  return (
+    <div style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={boxStyle}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: TX }}>+ Nuevo Ticket PDN</div>
+        <div style={{ fontSize: 10, color: DM, marginTop: -8 }}>
+          Se creará en Odoo Field Service · etapa NOC · prefijo [SUPERVISOR]
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: DM, marginBottom: 6 }}>TÍTULO DEL TICKET *</div>
+          <input style={inputStyle} value={titulo} onChange={e => setTitulo(e.target.value)}
+            placeholder="Ej: SITIO PIEDRAS NEGRAS — Falla enlace principal" maxLength={120} />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: DM, marginBottom: 6 }}>PRIORIDAD</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['normal','urgente','critica'] as const).map(p => (
+              <button key={p} onClick={() => setPrio(p)} style={{
+                padding: '5px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                border: `1.5px solid ${prio === p ? prioColors[p] : GB}`,
+                background: prio === p ? `${prioColors[p]}18` : 'transparent',
+                color: prio === p ? prioColors[p] : DM, cursor: 'pointer', textTransform: 'capitalize',
+              }}>{p}</button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: DM, marginBottom: 6 }}>DESCRIPCIÓN (opcional)</div>
+          <textarea style={{ ...inputStyle, height: 80, resize: 'vertical' }}
+            value={desc} onChange={e => setDesc(e.target.value)}
+            placeholder="Hallazgo, contexto, cliente afectado..." />
+        </div>
+
+        {err && <div style={{ fontSize: 11, color: RD }}>{err}</div>}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{
+            padding: '7px 18px', borderRadius: 8, border: `1px solid ${GB}`,
+            background: 'transparent', color: DM, fontSize: 12, cursor: 'pointer',
+          }}>Cancelar</button>
+          <button onClick={submit} disabled={saving} style={{
+            padding: '7px 18px', borderRadius: 8, border: 'none',
+            background: saving ? `${G}88` : G, color: '#fff', fontSize: 12,
+            fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+          }}>{saving ? 'Creando…' : 'Crear Ticket'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function KPIsPDN() {
   const [tickets, setTickets] = useState<TicketG[]>([]);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [sidf, setSidf] = useState<SidfCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [reporting, setReporting] = useState<'idle'|'loading'|'ok'|'err'>('idle');
+  const [showNuevoTicket, setShowNuevoTicket] = React.useState(false);
+
+  const { user } = useAuth();
 
   const generateReport = async () => {
     setReporting('loading');
@@ -535,8 +630,9 @@ function KPIsPDN() {
     setTimeout(() => setReporting('idle'), 4000);
   };
 
-  useEffect(() => {
+  const load = React.useCallback(() => {
     const pdnTerms = ['piedras', 'acuña', 'acuna', 'pdn', 'acu'];
+    setLoading(true);
     Promise.all([
       fetch(`${API_BASE}/api/wfm/field-tickets?limit=200`).then(r => r.ok ? r.json() : { tickets: [] }),
       fetch(`${API_BASE}/api/noc/alerts?active_only=true&limit=500`).then(r => r.ok ? r.json() : {}),
@@ -557,6 +653,8 @@ function KPIsPDN() {
       setSidf((s.clientes ?? []).filter((c: SidfCliente) => c.plaza === 'pn'));
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const fallas     = tickets.filter(t => t.tipo === 'falla');
   const habs       = tickets.filter(t => t.tipo === 'habilitacion');
@@ -581,6 +679,26 @@ function KPIsPDN() {
 
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {showNuevoTicket && (
+        <NuevoTicketModal
+          onClose={() => setShowNuevoTicket(false)}
+          onCreated={() => { setShowNuevoTicket(false); /* refresca tickets */ load(); }}
+        />
+      )}
+
+      {/* Botón nuevo ticket — solo admin */}
+      {user?.rol === 'admin' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={() => setShowNuevoTicket(true)} style={{
+            padding: '7px 18px', borderRadius: 20, border: `1.5px solid ${G}`,
+            background: `${G}12`, color: G, fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ fontSize: 16 }}>+</span> Nuevo Ticket PDN
+          </button>
+        </div>
+      )}
+
       {/* KPI grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {kpis.map(k => (

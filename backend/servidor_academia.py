@@ -12791,6 +12791,52 @@ async def presence_active(section: str = "global", user: dict = Depends(get_curr
     return {"section": section, "others": others, "total": len(others)}
 
 
+# ─── Blackstone: Crear Ticket PDN ─────────────────────────────────────────────
+
+class TicketPDNReq(BaseModel):
+    titulo: str
+    descripcion: str = ""
+    prioridad: str = "normal"   # normal | urgente | critica
+
+@app.post("/api/blackstone/ticket")
+async def crear_ticket_pdn(req: TicketPDNReq, user: dict = Depends(get_current_user)):
+    """Crea un ticket en Odoo Field Service PDN. Solo admin."""
+    if user.get("rol") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden crear tickets PDN")
+
+    import xmlrpc.client as _xrc_t
+    import os as _os_t
+
+    HOST = _os_t.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+    DB   = _os_t.getenv("ODOO_DB", "wispi19")
+    U    = _os_t.getenv("ODOO_USER", "")
+    P    = _os_t.getenv("ODOO_PASSWORD", "")
+
+    try:
+        common = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid_o  = common.authenticate(DB, U, P, {})
+        models = _xrc_t.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+
+        prio_map = {"urgente": "1", "critica": "1", "normal": "0"}
+        prio = prio_map.get(req.prioridad.lower(), "0")
+
+        # Prefijo supervisor para distinguir del flujo normal NOC/Dispatch
+        nombre_final = f"[SUPERVISOR] {req.titulo.strip()}"
+
+        task_id = models.execute_kw(DB, uid_o, P, "project.task", "create", [{
+            "name":        nombre_final,
+            "description": req.descripcion or "",
+            "project_id":  240,   # Field Service PDN
+            "stage_id":    272,   # New
+            "priority":    prio,
+        }])
+
+        return {"ok": True, "task_id": task_id, "nombre": nombre_final}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")
