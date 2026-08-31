@@ -4,6 +4,7 @@ import { API_BASE } from '../../../config';
 import { RefreshCw, Filter, Radio, Activity, GitBranch, X, Cpu, Signal, Zap, Clock, Wifi, Share2, Building2 } from 'lucide-react';
 import NetworkGraph from '../../../components/NetworkGraph';
 import 'leaflet/dist/leaflet.css';
+import * as L from 'leaflet';
 import brand from '../../../brand';
 
 // ── Colores ────────────────────────────────────────────────────────────────────
@@ -423,7 +424,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // Helper: obtiene o crea un LayerGroup para la capa dada
   const getLayer = (id: string) => {
-    const L = leafRef.current;
+    
     const map = mapRef.current;
     if (!L || !map) return null;
     if (!leafLayers.current[id]) {
@@ -531,49 +532,40 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   // ── Inicializar Leaflet ──────────────────────────────────────────────────────
   useEffect(() => {
     if (mapRef.current) return;
-    import('leaflet').then(L => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      const map = L.map('red-section-map', {
-        center: [23.5, -102.5], zoom: 5, zoomControl: true,
-        attributionControl: false, minZoom: 4,
-      });
-      const tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        subdomains: 'abcd', maxZoom: 18,
-      }).addTo(map);
-      const tp = document.querySelector('#red-section-map .leaflet-tile-pane') as HTMLElement | null;
-      if (tp) tp.style.filter = 'invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(0.8)';
-      tileRef.current = tile;
-      leafRef.current = L;
-      mapRef.current  = map;
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    const map = L.map('red-section-map', {
+      center: [23.5, -102.5], zoom: 5, zoomControl: true,
+      attributionControl: false, minZoom: 4,
+      preferCanvas: true,
     });
+    const tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 19,
+      keepBuffer: 4,
+      updateWhenIdle: false,
+      updateWhenZooming: false,
+    }).addTo(map);
+    tileRef.current = tile;
+    leafRef.current = L;
+    mapRef.current  = map;
     return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
   }, []);
 
   // ── Cambiar capa de mapa ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current || !tileRef.current) return;
-    const L   = leafRef.current;
+    if (!mapRef.current || !tileRef.current) return;
     const map = mapRef.current;
 
-    // Quitar tile actual
     map.removeLayer(tileRef.current);
 
-    // Agregar nuevo tile
+    const TILE_OPT = { keepBuffer: 4, updateWhenIdle: false, updateWhenZooming: false };
     const URLS: Record<string, [string, object]> = {
-      dark:      ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abcd', maxZoom: 18 }],
-      satellite: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
-      topo:      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }],
+      dark:      ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, ...TILE_OPT }],
+      satellite: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, ...TILE_OPT }],
+      topo:      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, ...TILE_OPT }],
     };
     const [url, opts] = URLS[mapLayer];
     tileRef.current = L.tileLayer(url, opts).addTo(map);
 
-    // Aplicar filtro dark al cambiar de capa
-    const tp2 = document.querySelector('#red-section-map .leaflet-tile-pane') as HTMLElement | null;
-    if (tp2) tp2.style.filter = mapLayer === 'dark'
-      ? 'invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%) saturate(0.8)'
-      : 'none';
-
-    // Re-agregar overlay layers encima del tile nuevo
     Object.values(leafLayers.current).forEach((lyr: any) => {
       if (lyr && map.hasLayer(lyr)) { map.removeLayer(lyr); lyr.addTo(map); }
     });
@@ -581,8 +573,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar marcadores NOC (ciudades) ──────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const lyr = getLayer('nocboard');
     if (!lyr) return;
     lyr.clearLayers();
@@ -625,7 +617,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar topología ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
+    if (!mapRef.current) return;
     const lyr = getLayer('core');
     if (!lyr) return;
     lyr.clearLayers();
@@ -681,8 +673,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar dispositivos UISP sobre el mapa ───────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const lyr = getLayer('wireless');
     if (!lyr) return;
     lyr.clearLayers();
@@ -733,8 +725,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar servicios Odoo ────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const lyr = getLayer('odoo');
     if (!lyr) return;
     lyr.clearLayers();
@@ -814,7 +806,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar sitios telecom (KMZ portfolios MTP / CAPSA) ──────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
+    if (!mapRef.current) return;
     const lyr = getLayer('sitios');
     if (!lyr) return;
     lyr.clearLayers();
@@ -862,8 +854,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Capa Fibra ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const lyr = getLayer('fibra');
     if (!lyr) return;
     lyr.clearLayers();
@@ -910,8 +902,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Capa Clientes SIDF ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const lyr = getLayer('sidf');
     if (!lyr) return;
     lyr.clearLayers();
@@ -981,7 +973,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Capa GPS ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
+    if (!mapRef.current) return;
     const lyr = getLayer('gps');
     if (!lyr) return;
     lyr.clearLayers();
@@ -1039,12 +1031,12 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Prospectos PN ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
+    if (!mapRef.current) return;
     const lyr = getLayer('prospectos-pn');
     if (!lyr) return;
     lyr.clearLayers();
     if (!activeLayers.has('prospectos-pn')) return;
-    const L = leafRef.current;
+    
     PROSPECTOS_PN.forEach(p => {
       L.circleMarker([p.lat, p.lng], {
         radius: 8, color: '#000000', fillColor: '#39FF14',
@@ -1059,8 +1051,8 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {
-    if (!mapRef.current || !leafRef.current) return;
-    const L = leafRef.current;
+    if (!mapRef.current) return;
+    
     const map = mapRef.current;
     const turning_on = !kmzActive[group.id];
     setKmzActive(prev => ({ ...prev, [group.id]: turning_on }));
@@ -1120,7 +1112,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
 
   // ── Renderizar radiobases Odoo ───────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !leafRef.current) return;
+    if (!mapRef.current) return;
     const lyr = getLayer('rb-odoo');
     if (!lyr) return;
     lyr.clearLayers();
