@@ -413,8 +413,8 @@ if os.path.exists(DIST_DIR):
 async def serve_index():
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return FileResponse("static/index.html")
+        return FileResponse(index_path, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse("static/index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 # ─── Modelos Pydantic ─────────────────────────────────────────────────────────
 class QuizRequest(BaseModel):
@@ -13202,7 +13202,7 @@ async def spa_fallback(full_path: str):
         # 3. Si no es un archivo, servir index.html para que React Router maneje la ruta
         index_path = os.path.join(DIST_DIR, "index.html")
         if os.path.exists(index_path):
-            return FileResponse(index_path)
+            return FileResponse(index_path, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
     # 4. Fallback final a la versión legacy si no hay build de React
     legacy_index = os.path.join(BASE_DIR, "static", "index.html")
