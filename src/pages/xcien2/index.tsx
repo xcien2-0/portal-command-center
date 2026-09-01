@@ -147,7 +147,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   finanzas: ['inicio','docs','sala_juntas','rrhh'],
 
   // ══ PAC ÁREA 9 — ATENCIÓN A CLIENTES ════════════════════════════════════
-  atc:  ['inicio','noc','cast','helpdesk','call','docs'],
+  atc:  ['inicio','noc','helpdesk','call'],
 
   // ══ PAC ÁREA 10-13 — COMERCIAL (XCIEN / HUUS / LUMINET / GOBIERNO) ══════
   comercial:          ['inicio','sala_juntas','proyectos','docs','iblack'],
