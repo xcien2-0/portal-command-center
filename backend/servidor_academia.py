@@ -13302,6 +13302,130 @@ async def sync_gmail_fibra(dias: int = Body(7, embed=True), user: dict = Depends
               stdout=_sp.DEVNULL, stderr=_sp.DEVNULL)
     return {"ok": True, "msg": f"Sync Gmail iniciado (últimos {dias} días). Refresca en 30s."}
 
+# ─── ATC Efectividad ──────────────────────────────────────────────────────────
+
+@app.get("/api/atc/efectividad")
+def get_atc_efectividad(dias: int = 30):
+    """Métricas de efectividad del equipo ATC/CAST desde Odoo helpdesk.ticket."""
+    import xmlrpc.client as _xr
+    from datetime import datetime, timedelta, timezone
+    from collections import defaultdict
+
+    odoo_url  = os.environ.get("ODOO_URL", "https://odoo.wispi.mx")
+    odoo_db   = os.environ.get("ODOO_DB",  "wispi19")
+    odoo_user = os.environ.get("ODOO_USER")
+    odoo_pass = os.environ.get("ODOO_PASSWORD")
+
+    _CAST_TEAMS = [6, 39, 41, 44, 48, 60, 67]
+    STAGE_REINCIDENTE = 175
+    STAGE_RESUELTO_IDS = {54, 107}   # CAST Nvl:1-Resuelto, Solved
+
+    try:
+        common = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/common")
+        uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
+        if not uid:
+            raise HTTPException(status_code=503, detail="No se pudo autenticar en Odoo")
+        models = _xr.ServerProxy(f"{odoo_url}/xmlrpc/2/object")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error conectando Odoo: {e}")
+
+    desde = (datetime.now(timezone.utc) - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M:%S")
+    hoy   = datetime.now(timezone.utc).date()
+    semana_inicio = hoy - timedelta(days=hoy.weekday())
+
+    try:
+        raw = models.execute_kw(odoo_db, uid, odoo_pass, "helpdesk.ticket", "search_read",
+            [[["team_id", "in", _CAST_TEAMS], ["create_date", ">=", desde]]],
+            {"fields": ["id","name","user_id","stage_id","create_date","close_date","priority"], "limit": 2000, "order": "id desc"})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error leyendo Odoo: {e}")
+
+    por_agente = defaultdict(lambda: {
+        "total": 0, "cerrados": 0, "reincidentes": 0,
+        "tiempos_resolucion_h": [], "hoy": 0, "semana": 0
+    })
+    total = len(raw)
+    cerrados_total = 0
+    reincidentes_total = 0
+    hoy_total = 0
+    semana_total = 0
+    tiempos_todos = []
+
+    for t in raw:
+        ag = t.get("user_id")
+        nombre = ag[1] if ag else "Sin asignar"
+        d = por_agente[nombre]
+        d["total"] += 1
+
+        # Fechas
+        creado_str = t.get("create_date", "")
+        cerrado_str = t.get("close_date")
+        try:
+            creado_dt = datetime.strptime(creado_str[:10], "%Y-%m-%d").date()
+        except Exception:
+            creado_dt = None
+
+        if creado_dt == hoy:
+            d["hoy"] += 1
+            hoy_total += 1
+        if creado_dt and creado_dt >= semana_inicio:
+            d["semana"] += 1
+            semana_total += 1
+
+        stage_id = t["stage_id"][0] if t.get("stage_id") else 0
+        if stage_id == STAGE_REINCIDENTE:
+            d["reincidentes"] += 1
+            reincidentes_total += 1
+
+        if cerrado_str:
+            d["cerrados"] += 1
+            cerrados_total += 1
+            # Tiempo de resolución
+            try:
+                c_dt = datetime.strptime(creado_str[:19], "%Y-%m-%d %H:%M:%S")
+                cl_dt = datetime.strptime(cerrado_str[:19], "%Y-%m-%d %H:%M:%S")
+                hrs = round((cl_dt - c_dt).total_seconds() / 3600, 2)
+                if 0 < hrs < 720:   # descartar datos anómalos (>30 días)
+                    d["tiempos_resolucion_h"].append(hrs)
+                    tiempos_todos.append(hrs)
+            except Exception:
+                pass
+
+    # Calcular promedios por agente
+    agentes_list = []
+    for nombre, d in sorted(por_agente.items(), key=lambda x: -x[1]["total"]):
+        if nombre == "Sin asignar":
+            continue
+        trs = d["tiempos_resolucion_h"]
+        agentes_list.append({
+            "nombre": nombre,
+            "total": d["total"],
+            "cerrados": d["cerrados"],
+            "reincidentes": d["reincidentes"],
+            "resolucion_pct": round(d["cerrados"] / d["total"] * 100, 1) if d["total"] else 0,
+            "tiempo_prom_h": round(sum(trs) / len(trs), 1) if trs else None,
+            "hoy": d["hoy"],
+            "semana": d["semana"],
+        })
+
+    avg_tiempo = round(sum(tiempos_todos) / len(tiempos_todos), 1) if tiempos_todos else None
+
+    return {
+        "periodo_dias": dias,
+        "resumen": {
+            "total": total,
+            "cerrados": cerrados_total,
+            "abiertos": total - cerrados_total,
+            "reincidentes": reincidentes_total,
+            "resolucion_pct": round(cerrados_total / total * 100, 1) if total else 0,
+            "tiempo_prom_h": avg_tiempo,
+            "hoy": hoy_total,
+            "semana": semana_total,
+        },
+        "agentes": agentes_list,
+    }
+
+
 # ─── SPA Fallback ─────────────────────────────────────────────────────────────
 
 @app.get("/{full_path:path}")

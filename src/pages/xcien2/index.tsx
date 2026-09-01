@@ -82,6 +82,7 @@ const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSectio
 const FibraXCIENSection       = lazy(() => import('./sections/FibraXCIENSection'));
 const UsuariosAdminSection      = lazy(() => import('./sections/UsuariosAdminSection'));
 const UsuariosInvitadosSection  = lazy(() => import('./sections/UsuariosInvitadosSection'));
+const ATCEfectividadSection     = lazy(() => import('./sections/ATCEfectividadSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -110,7 +111,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
               'estrategia2030','agentes','comite','docs','reportlab','analytics',
               'blackstone','fibra_xcien','iblack','flotilla','wfm','bidrillas',
-              'usuarios-invitados'],
+              'usuarios-invitados','atc-efectividad'],
 
   // ══ PAC ÁREA 1 — OPERACIONES ════════════════════════════════════════════
   operaciones: ['inicio','wfm','bidrillas','scan','inv-transfers',
@@ -250,6 +251,7 @@ const NAV: NavEntry[] = [
   { id: 'superadmin',     label: 'Super Admin',       icon: '🔐', group: 'Sistema' },
   { id: 'usuarios-admin',     label: 'Gestión de Usuarios',  icon: '👥', group: 'Sistema' },
   { id: 'usuarios-invitados', label: 'Usuarios Invitados',   icon: '🎟️', group: 'Sistema' },
+  { id: 'atc-efectividad',   label: 'Efectividad ATC',       icon: '📞', group: 'Sistema' },
 ];
 
 // ── Lucide icon map ───────────────────────────────────────────────────────────
@@ -819,6 +821,7 @@ function Content({
       {section === 'cerebro'        && <CerebroSection       theme={theme} />}
       {section === 'usuarios-admin'     && <UsuariosAdminSection />}
       {section === 'usuarios-invitados' && <UsuariosInvitadosSection theme={theme} />}
+      {section === 'atc-efectividad'   && <ATCEfectividadSection   theme={theme} />}
 
       {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>
