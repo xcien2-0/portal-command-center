@@ -30,16 +30,14 @@ function LevelBadge({ level, color, icon }: { level: string; color: string; icon
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'ruta' | 'leaderboard' | 'cursos' | 'plazas' | 'areas' | 'rutas';
+type Tab = 'dashboard' | 'ruta' | 'leaderboard' | 'cursos' | 'rutas';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',   icon: '📊' },
-  { id: 'rutas',       label: 'Rutas',       icon: '🗺️' },
+  { id: 'rutas',       label: 'Áreas',       icon: '🏢' },
   { id: 'ruta',        label: 'Ruta',        icon: '🛤️' },
   { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
   { id: 'cursos',      label: 'Cursos',      icon: '📚' },
-  { id: 'areas',       label: 'Por Área',    icon: '🏢' },
-  { id: 'plazas',      label: 'Por Plaza',   icon: '🗺️' },
 ];
 
 // ── Rutas de Aprendizaje ──────────────────────────────────────────────────────
@@ -1211,8 +1209,6 @@ export default function AcademiaGerencial({ theme }: Props) {
         {tab === 'ruta'        && <TabRuta cursos={cursos} tecnicos={tecnicos} />}
         {tab === 'leaderboard' && <TabLeaderboard tecnicos={tecnicos} plazas={plazas} areas={areas} />}
         {tab === 'cursos'      && <TabCursos cursos={cursos} />}
-        {tab === 'areas'       && <TabAreas tecnicos={tecnicos} areas={areas} />}
-        {tab === 'plazas'      && <TabPlazas tecnicos={tecnicos} plazas={plazas} />}
       </div>
     </div>
   );
