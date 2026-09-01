@@ -921,6 +921,10 @@ export default function Xcien2Page() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwdStatus, setPwdStatus] = useState<'idle'|'loading'|'ok'|'error'>('idle');
+  const [pwdError, setPwdError] = useState('');
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiar } = useNotificaciones();
   const [bridgeData, setBridgeData] = useState({ current_task: 'Inactivo', status: 'idle', log: [], last_update: '' });
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline'>('offline');
@@ -1254,6 +1258,22 @@ export default function Xcien2Page() {
                   {user.nombre.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
                 </div>
                 <button
+                  onClick={() => { setPwdForm({ current:'', next:'', confirm:'' }); setPwdStatus('idle'); setPwdError(''); setShowChangePwd(true); }}
+                  title="Cambiar contraseña"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 28, height: 28, borderRadius: 6,
+                    background: 'rgba(99,102,241,0.06)',
+                    border: '1px solid rgba(99,102,241,0.15)',
+                    color: '#818cf8', cursor: 'pointer', fontSize: 13,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.14)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.06)'; }}
+                >
+                  🔑
+                </button>
+                <button
                   onClick={logout}
                   title="Cerrar sesión"
                   style={{
@@ -1345,6 +1365,87 @@ export default function Xcien2Page() {
         button:focus { outline:none }
       `}</style>
       {/* Matrix theme: hexo-particles 3D + scanline combinados */}
+      {/* ── Modal cambiar contraseña ─────────────────────────────────────────── */}
+      {showChangePwd && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setShowChangePwd(false)}>
+          <div style={{
+            background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 16, padding: '28px 32px', width: 360, maxWidth: '90vw',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#e5e7eb', marginBottom: 6 }}>🔑 Cambiar contraseña</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 20 }}>Ingresa tu contraseña actual y la nueva</div>
+
+            {(['current','next','confirm'] as const).map((f, i) => (
+              <div key={f} style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {f === 'current' ? 'Contraseña actual' : f === 'next' ? 'Nueva contraseña' : 'Confirmar nueva'}
+                </label>
+                <input
+                  type="password"
+                  value={pwdForm[f]}
+                  onChange={e => setPwdForm(p => ({ ...p, [f]: e.target.value }))}
+                  placeholder={i === 0 ? '••••••••' : 'Mínimo 8 caracteres'}
+                  style={{
+                    width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
+                    background: 'rgba(255,255,255,0.05)', color: '#e5e7eb',
+                    border: '1px solid rgba(255,255,255,0.1)', outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            ))}
+
+            {pwdStatus === 'error' && (
+              <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>
+                ⚠ {pwdError}
+              </div>
+            )}
+            {pwdStatus === 'ok' && (
+              <div style={{ fontSize: 12, color: '#00ff88', marginBottom: 12, padding: '8px 12px', background: 'rgba(0,255,136,0.08)', borderRadius: 6 }}>
+                ✓ Contraseña actualizada correctamente
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button onClick={() => setShowChangePwd(false)} style={{
+                flex: 1, padding: '9px 0', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+                background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              }}>Cancelar</button>
+              <button
+                disabled={pwdStatus === 'loading'}
+                onClick={async () => {
+                  if (pwdForm.next !== pwdForm.confirm) { setPwdStatus('error'); setPwdError('Las contraseñas no coinciden'); return; }
+                  if (pwdForm.next.length < 8) { setPwdStatus('error'); setPwdError('Mínimo 8 caracteres'); return; }
+                  setPwdStatus('loading');
+                  try {
+                    const token = localStorage.getItem('xcien_token') || '';
+                    const r = await fetch(`${API_BASE}/api/auth/change-password`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ current_password: pwdForm.current, new_password: pwdForm.next }),
+                    });
+                    const d = await r.json();
+                    if (r.ok) { setPwdStatus('ok'); setTimeout(() => setShowChangePwd(false), 1500); }
+                    else { setPwdStatus('error'); setPwdError(d.detail || 'Error al cambiar contraseña'); }
+                  } catch { setPwdStatus('error'); setPwdError('Error de red'); }
+                }}
+                style={{
+                  flex: 2, padding: '9px 0', borderRadius: 8, border: 'none',
+                  background: pwdStatus === 'loading' ? '#374151' : '#4f46e5',
+                  color: '#fff', cursor: pwdStatus === 'loading' ? 'default' : 'pointer',
+                  fontSize: 13, fontWeight: 700,
+                }}>
+                {pwdStatus === 'loading' ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeThemeId === 'matrix' && (
         <>
           <div className="matrix-bg" />
