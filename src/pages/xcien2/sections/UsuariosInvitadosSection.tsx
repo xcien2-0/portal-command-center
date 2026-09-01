@@ -63,8 +63,7 @@ export default function UsuariosInvitadosSection({ theme: _theme }: { theme: The
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data: Usuario[] = await r.json();
-      // Solo los que tienen campo invitado_por (los invitados formalmente)
-      setUsuarios(data.filter(u => u.invitado_por));
+      setUsuarios(data);
     } catch (e: any) {
       setError(e.message ?? 'Error al cargar usuarios');
     } finally {
@@ -101,7 +100,7 @@ export default function UsuariosInvitadosSection({ theme: _theme }: { theme: The
             color: 'rgba(255,255,255,.55)', marginBottom: 3 }}>Portal XCIEN 2.0</div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Seguimiento de Usuarios Invitados</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>
-            Fase de pruebas · {usuarios.length} accesos otorgados
+            Fase de pruebas · {usuarios.length} usuarios registrados
           </div>
         </div>
         <button onClick={cargar} style={{
