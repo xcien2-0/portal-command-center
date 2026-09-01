@@ -80,7 +80,8 @@ const FlotillaSection         = lazy(() => import('./sections/FlotillaSection'))
 const OdooDocsSection         = lazy(() => import('./sections/OdooDocsSection'));
 const BlackstoneOSSection     = lazy(() => import('./sections/BlackstoneOSSection'));
 const FibraXCIENSection       = lazy(() => import('./sections/FibraXCIENSection'));
-const UsuariosAdminSection    = lazy(() => import('./sections/UsuariosAdminSection'));
+const UsuariosAdminSection      = lazy(() => import('./sections/UsuariosAdminSection'));
+const UsuariosInvitadosSection  = lazy(() => import('./sections/UsuariosInvitadosSection'));
 const CallCenter         = lazy(() => import('../CallCenter'));
 const Gerencia           = lazy(() => import('../Gerencia'));
 const ReportesGobierno   = lazy(() => import('../ReportesGobierno'));
@@ -108,7 +109,8 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
               'ventas','integridad','reportes-kpi','auditoria-odoo',
               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
               'estrategia2030','agentes','comite','docs','reportlab','analytics',
-              'blackstone','fibra_xcien','iblack','flotilla','wfm','bidrillas'],
+              'blackstone','fibra_xcien','iblack','flotilla','wfm','bidrillas',
+              'usuarios-invitados'],
 
   // ══ PAC ÁREA 1 — OPERACIONES ════════════════════════════════════════════
   operaciones: ['inicio','wfm','bidrillas','scan','inv-transfers',
@@ -246,7 +248,8 @@ const NAV: NavEntry[] = [
   { id: 'backup',     label: 'Migración',        icon: '💾', group: 'Sistema' },
   { id: 'editor',     label: 'Configuración',    icon: '🎨', group: 'Sistema' },
   { id: 'superadmin',     label: 'Super Admin',       icon: '🔐', group: 'Sistema' },
-  { id: 'usuarios-admin', label: 'Gestión de Usuarios', icon: '👥', group: 'Sistema' },
+  { id: 'usuarios-admin',     label: 'Gestión de Usuarios',  icon: '👥', group: 'Sistema' },
+  { id: 'usuarios-invitados', label: 'Usuarios Invitados',   icon: '🎟️', group: 'Sistema' },
 ];
 
 // ── Lucide icon map ───────────────────────────────────────────────────────────
@@ -329,7 +332,8 @@ const SECTION_TITLE: Record<SectionId, string> = {
   cast:       'ATC NOC',
   helpdesk:   'Mesa de Ayuda',
   net2phone:     'Net2Phone Call Center',
-  'usuarios-admin': 'Gestión de Usuarios',
+  'usuarios-admin':     'Gestión de Usuarios',
+  'usuarios-invitados': 'Usuarios Invitados',
 };
 
 // ── UISP color constants ──────────────────────────────────────────────────────
@@ -813,7 +817,8 @@ function Content({
       {section === 'reportlab' && <ReportLabSection theme={theme} />}
       {section === 'superadmin'     && <SuperAdminSection    theme={theme} />}
       {section === 'cerebro'        && <CerebroSection       theme={theme} />}
-      {section === 'usuarios-admin' && <UsuariosAdminSection />}
+      {section === 'usuarios-admin'     && <UsuariosAdminSection />}
+      {section === 'usuarios-invitados' && <UsuariosInvitadosSection theme={theme} />}
 
       {section === 'bridge' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', maxHeight: 'calc(100vh - 140px)' }}>

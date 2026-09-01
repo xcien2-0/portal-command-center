@@ -167,7 +167,7 @@ export const PRESET_THEMES: PresetTheme[] = [
 ];
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'reportes-kpi' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'incidentes' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle' | 'ventas' | 'ventas-efectividad' | 'estrategia2030' | 'superadmin' | 'cerebro' | 'comite' | 'token-ai' | 'proyectos' | 'infra-energia' | 'backup' | 'impacto' | 'plan2026' | 'integridad' | 'analytics' | 'helpdesk' | 'net2phone' | 'fibra' | 'radiobases' | 'auditoria-odoo' | 'iblack' | 'odoo-docs' | 'blackstone' | 'city-mty' | 'city-slt' | 'usuarios-admin';
+export type SectionId = 'inicio' | 'noc' | 'red' | 'academia' | 'wfm' | 'call' | 'scan' | 'gerencia' | 'reports' | 'reportlab' | 'reportes-kpi' | 'tokens' | 'transacciones' | 'etiquetas' | 'editor' | 'holo' | 'foda' | 'bridge' | 'war-room' | 'incidentes' | 'mobile' | 'telegram' | 'docs' | 'adopcion' | 'bidrillas' | 'agentes' | 'rrhh' | 'sala_juntas' | 'inv-transfers' | 'merkle' | 'ventas' | 'ventas-efectividad' | 'estrategia2030' | 'superadmin' | 'cerebro' | 'comite' | 'token-ai' | 'proyectos' | 'infra-energia' | 'backup' | 'impacto' | 'plan2026' | 'integridad' | 'analytics' | 'helpdesk' | 'net2phone' | 'fibra' | 'radiobases' | 'auditoria-odoo' | 'iblack' | 'odoo-docs' | 'blackstone' | 'city-mty' | 'city-slt' | 'usuarios-admin' | 'usuarios-invitados';
 
 export interface NavItem {
   id: SectionId;
