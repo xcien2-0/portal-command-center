@@ -36,43 +36,8 @@ const VENDOR_ICONS: Record<string, string> = {
 interface KmzLayer  { id: string; name: string; }
 interface KmzGroup  { id: string; label: string; color: string; layers: KmzLayer[]; }
 
-// ── Prospectos industriales Piedras Negras (Next Ventures → destino XCIEN) ────
-const PROSPECTOS_PN = [
-  { name: 'Asfaltos y Pegamentos',  lat: 28.67908270651087,  lng: -100.5687768526713 },
-  { name: 'Day Star Trim',          lat: 28.67957388231126,  lng: -100.5705253784698 },
-  { name: 'Elastomeros',            lat: 28.68704699999893,  lng: -100.5553179999887 },
-  { name: 'Elektrocontact',         lat: 28.64844999999912,  lng: -100.5601849999906 },
-  { name: 'Elektrokontakt PDS',     lat: 28.64547999999907,  lng: -100.5298349999871 },
-  { name: 'ERICH JAEGER',           lat: 28.69730099999897,  lng: -100.5556609999869 },
-  { name: 'Fujikura',               lat: 28.69810599999892,  lng: -100.5567639999884 },
-  { name: 'Fujikura 2',             lat: 28.67908099999895,  lng: -100.5508979999869 },
-  { name: 'Fujikura 3',             lat: 28.67910199999896,  lng: -100.5529309999877 },
-  { name: 'General Aluminium',      lat: 28.68695699999899,  lng: -100.5551649999885 },
-  { name: 'GI Grupo',               lat: 28.72919399999885,  lng: -100.5199099999862 },
-  { name: 'Gondi',                  lat: 28.68706899999893,  lng: -100.5574139999884 },
-  { name: 'Lear 1',                 lat: 28.68133899999895,  lng: -100.5521769999882 },
-  { name: 'Lear 2',                 lat: 28.68122699999896,  lng: -100.5701909999888 },
-  { name: 'Lear 3',                 lat: 28.68129099999896,  lng: -100.5714159999887 },
-  { name: 'Lear 4',                 lat: 28.67739999999897,  lng: -100.5698699999888 },
-  { name: 'Lear 5',                 lat: 28.64570299999908,  lng: -100.5594769999907 },
-  { name: 'Littelfuse',             lat: 28.64529299999908,  lng: -100.5356489999875 },
-  { name: 'M&B Hangers',            lat: 28.64697599999908,  lng: -100.5578429999906 },
-  { name: 'Mex Star',               lat: 28.64604399999908,  lng: -100.5591019999905 },
-  { name: 'Nesse',                  lat: 28.72532699999888,  lng: -100.5227969999864 },
-  { name: 'Path Logistics',         lat: 28.64937799999907,  lng: -100.5590679999905 },
-  { name: 'PKC Group',              lat: 28.68128599999895,  lng: -100.5539429999882 },
-  { name: 'Prossesa',               lat: 28.59684599999918,  lng: -100.5851339999924 },
-  { name: 'Prysmian WH',            lat: 28.72056499999888,  lng: -100.5210000000000 },
-  { name: 'Prysmian',               lat: 28.68763799999897,  lng: -100.5556909999884 },
-  { name: 'Rassini',                lat: 28.68875299999897,  lng: -100.5209539999869 },
-  { name: 'Regal 2',                lat: 28.68195299999895,  lng: -100.5524769999882 },
-  { name: 'Regal 3',                lat: 28.67693399999897,  lng: -100.5512549999883 },
-  { name: 'Regal Amistad Sur',      lat: 28.64604399999908,  lng: -100.5211749999872 },
-  { name: 'Remy Borg Warner',       lat: 28.72832699999884,  lng: -100.5245059999864 },
-  { name: 'Structural Graphics',    lat: 28.68385699999896,  lng: -100.5562659999884 },
-  { name: 'Transformadores PN',     lat: 28.68758299999897,  lng: -100.5570529999883 },
-  { name: 'Us Liner',               lat: 28.64222499999908,  lng: -100.5299469999872 },
-] as const;
+// Prospectos industriales PN — se cargan desde /api/red/prospectos-pn
+interface ProspectoPN { name: string; lat: number; lng: number; }
 
 // ── Layer Registry — fuente única de verdad para capas del mapa ───────────────
 const LAYER_REGISTRY = [
@@ -400,6 +365,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
   const [fibraSitios,   setFibraSitios] = useState<any[]>([]);
   const [clientesSIDF,  setClientesSIDF] = useState<any[]>([]);
   const [gpsVehiculos,  setGpsVehiculos] = useState<any[]>([]);
+  const [prospectosPN,  setProspectosPN] = useState<ProspectoPN[]>([]);
 
   // Capas activas — única fuente de verdad para visibilidad
   const [activeLayers, setActiveLayers] = useState<Set<LayerId>>(
@@ -491,6 +457,14 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     fetch(`${API_BASE}/api/infra/sitios`)
       .then(r => r.ok ? r.json() : { sitios: [] })
       .then(data => setRbOdooData(Array.isArray(data) ? data : (data?.sitios ?? [])))
+      .catch(() => {});
+  }, []);
+
+  // ── Cargar prospectos industriales PN ───────────────────────────────────────
+  useEffect(() => {
+    fetch(`${API_BASE}/api/red/prospectos-pn`)
+      .then(r => r.ok ? r.json() : { prospectos: [] })
+      .then(data => setProspectosPN(data.prospectos ?? []))
       .catch(() => {});
   }, []);
 
@@ -1037,7 +1011,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
     lyr.clearLayers();
     if (!activeLayers.has('prospectos-pn')) return;
     
-    PROSPECTOS_PN.forEach(p => {
+    prospectosPN.forEach(p => {
       L.circleMarker([p.lat, p.lng], {
         radius: 8, color: '#000000', fillColor: '#39FF14',
         fillOpacity: 0.9, weight: 2,
@@ -1047,7 +1021,7 @@ export default function RedSection({ theme }: { theme: ThemeConfig }) {
         { className: 'noc-tooltip', sticky: true }
       ).addTo(lyr);
     });
-  }, [activeLayers]);
+  }, [activeLayers, prospectosPN]);
 
   // ── Toggle KMZ group ─────────────────────────────────────────────────────────
   const toggleKmzGroup = useCallback(async (group: KmzGroup) => {

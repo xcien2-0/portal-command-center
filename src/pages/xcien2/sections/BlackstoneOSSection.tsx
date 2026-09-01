@@ -9,15 +9,16 @@ import { useAuth } from '../../../contexts/AuthContext';
 // Paleta PDN fija (tema institucional claro)
 const G  = '#2d7a3a';
 const GD = '#1a3d2b';
-const GB = '#c8dccb';
-const BG = '#f8fdf9';
+const GB = '#d1e8d6';
+const BG = '#f4fbf6';
 const SF = '#ffffff';
-const TX = '#1a1a1a';
-const DM = '#5a5a5a';
-const RD = '#EF4444';
-const AM = '#F59E0B';
-const BL = '#3B82F6';
-const SH = '0 1px 3px rgba(0,0,0,0.08)';
+const TX = '#111827';
+const DM = '#6b7280';
+const RD = '#dc2626';
+const AM = '#d97706';
+const BL = '#2563eb';
+const PU = '#7c3aed';
+const SH = '0 1px 4px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04)';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,37 +31,59 @@ function tiempoAtras(fecha: string): string {
   return `${Math.floor((diff % 3600000) / 60000)}m`;
 }
 
-function SectionCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function SectionCard({ children, style, accent }: { children: React.ReactNode; style?: React.CSSProperties; accent?: string }) {
   return (
     <div style={{
-      background: SF, borderRadius: 12, border: `1px solid ${GB}`,
-      boxShadow: SH, ...style,
+      background: SF, borderRadius: 14, border: `1px solid ${GB}`,
+      boxShadow: SH, overflow: 'hidden',
+      ...(accent ? { borderTop: `3px solid ${accent}` } : {}),
+      ...style,
     }}>
       {children}
     </div>
   );
 }
 
-function SectionHeader({ icon, title, badge, badgeColor }: {
+function SectionHeader({ icon, title, badge, badgeColor, action }: {
   icon: string; title: string; badge?: number | string; badgeColor?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div style={{
-      padding: '12px 18px', borderBottom: `1px solid ${GB}`,
-      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '11px 18px', borderBottom: `1px solid ${GB}`,
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: `linear-gradient(135deg, ${BG} 0%, ${SF} 100%)`,
     }}>
-      <span style={{ fontSize: 10, color: DM }}>{icon}</span>
-      <span style={{ fontSize: 10, color: DM, letterSpacing: 1.5, textTransform: 'uppercase', flex: 1 }}>
+      <span style={{
+        width: 26, height: 26, borderRadius: 8,
+        background: `${GD}12`, border: `1px solid ${GD}20`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, flexShrink: 0,
+      }}>{icon}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: GD, letterSpacing: 0.3, flex: 1 }}>
         {title}
       </span>
+      {action}
       {badge !== undefined && (
         <span style={{
-          fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 100,
-          background: `${badgeColor ?? G}1a`, color: badgeColor ?? G,
-          border: `1px solid ${badgeColor ?? G}33`, minWidth: 24, textAlign: 'center',
+          fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 100,
+          background: `${badgeColor ?? G}18`, color: badgeColor ?? G,
+          border: `1px solid ${badgeColor ?? G}30`, minWidth: 24, textAlign: 'center',
+          fontVariantNumeric: 'tabular-nums',
         }}>{badge}</span>
       )}
     </div>
+  );
+}
+
+// Chip de estado reutilizable
+function StatusChip({ label, color }: { label: string; color: string }) {
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 800, padding: '2px 9px', borderRadius: 100,
+      background: `${color}15`, color, border: `1px solid ${color}30`,
+      textTransform: 'uppercase', letterSpacing: 0.5,
+    }}>{label}</span>
   );
 }
 
@@ -1403,9 +1426,13 @@ function LevantamientoTab() {
   const [offline, setOffline] = React.useState(false);
   const [zona, setZona]       = React.useState('PDN');
   const [tipo, setTipo]       = React.useState('');
-  const [tab, setTab]         = React.useState<'tablero'|'mapa'|'registros'>('tablero');
+  const [tab, setTab]         = React.useState<'tablero'|'mapa'|'registros'|'ordenes'>('ordenes');
   const [selected, setSelected] = React.useState<any>(null);
   const adminKey = localStorage.getItem('admin_apikey') || '';
+
+  // Órdenes FO desde Odoo
+  const [foTickets, setFoTickets]   = React.useState<TicketG[]>([]);
+  const [foLoading, setFoLoading]   = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1425,32 +1452,53 @@ function LevantamientoTab() {
     } finally { setLoading(false); }
   }, [zona, tipo, adminKey]);
 
+  const loadFoTickets = React.useCallback(async () => {
+    setFoLoading(true);
+    try {
+      const token = localStorage.getItem('xcien_token');
+      const r = await fetch(`${API_BASE}/api/blackstone/fo-tickets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setFoTickets(d.tickets ?? []);
+      }
+    } catch { /* offline ok */ }
+    setFoLoading(false);
+  }, []);
+
   React.useEffect(() => { load(); }, [load]);
+
+  // Cargar fo-tickets al montar Y cuando se cambia a ese tab
+  React.useEffect(() => { loadFoTickets(); }, [loadFoTickets]);
+  React.useEffect(() => {
+    if (tab === 'ordenes') loadFoTickets();
+  }, [tab, loadFoTickets]);
 
   const fmt = (ts: string) => ts ? new Date(ts.replace(' ', 'T') + 'Z').toLocaleString('es-MX',
     { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+
+  const fmtDate = (d: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-MX',
+    { day: 'numeric', month: 'short' }) : '—';
 
   const TABS = [
     { id: 'tablero',   label: '📊 Tablero' },
     { id: 'mapa',      label: '🗺 Mapa' },
     { id: 'registros', label: '📋 Registros' },
+    { id: 'ordenes',   label: '📡 Órdenes FO' },
   ] as const;
 
-  if (offline) return (
-    <div style={{ padding: 40, textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: TX, marginBottom: 6 }}>API de Cuadrillas no disponible</div>
-      <div style={{ fontSize: 12, color: DM, marginBottom: 20, lineHeight: 1.6 }}>
-        El servicio de levantamientos (<code>cuadrillas-mx :8020</code>) solo está<br />
-        disponible en red interna. Los datos del mapa y registros<br />
-        requieren conexión local o VPN.
-      </div>
-      <button onClick={load} style={{
-        padding: '9px 22px', borderRadius: 8, cursor: 'pointer',
-        background: GD, color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
-      }}>Reintentar</button>
+  // Banner inline cuando cuadrillas no está disponible (no bloquea Órdenes FO)
+  const offlineBanner = offline ? (
+    <div style={{ padding: '10px 14px', borderRadius: 8, background: `${AM}12`, border: `1px solid ${AM}30`,
+      display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, fontSize: 12 }}>
+      <span style={{ fontSize: 16 }}>⚠️</span>
+      <span style={{ color: AM, fontWeight: 700 }}>Cuadrillas :8020 no disponible</span>
+      <span style={{ color: DM }}>— Mapa y registros requieren red interna o VPN</span>
+      <button onClick={load} style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: 6,
+        background: AM, color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Reintentar</button>
     </div>
-  );
+  ) : null;
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13, color: TX }}>
@@ -1473,6 +1521,8 @@ function LevantamientoTab() {
         ))}
         <button onClick={load} style={{ background: 'none', border: 'none', color: G, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>↻</button>
       </SectionCard>
+
+      {offlineBanner}
 
       {/* ── TABLERO ── */}
       {tab === 'tablero' && (
@@ -1628,7 +1678,7 @@ function LevantamientoTab() {
 
           {/* Detalle expandible */}
           {selected && (
-            <SectionCard style={{ marginTop: 12, padding: 16 }}>
+            <SectionCard style={{ marginTop: 12 }}>
               <SectionHeader icon="📋" title={`Detalle — ${(selected.tipo_elemento as string).replace('_', ' ')}`} />
               <div style={{ padding: '12px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
@@ -1671,6 +1721,117 @@ function LevantamientoTab() {
             </SectionCard>
           )}
         </>
+      )}
+      {/* ── ÓRDENES FO — Odoo CAE-Operaciones ── */}
+      {tab === 'ordenes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Hero card */}
+          <div style={{
+            background: `linear-gradient(135deg, ${GD} 0%, #2d7a3a 100%)`,
+            borderRadius: 14, padding: '20px 24px', color: '#fff',
+            display: 'flex', alignItems: 'center', gap: 16,
+          }}>
+            <div style={{ fontSize: 32 }}>📡</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: 'rgba(255,255,255,.55)', marginBottom: 3 }}>CAE — Operaciones</div>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>Órdenes de Levantamiento FO</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>
+                Tareas Odoo · Proyecto CAE-Operaciones · Fibra Óptica Piedras Negras
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#7fff9a', fontVariantNumeric: 'tabular-nums' }}>
+                {foLoading ? '…' : foTickets.filter(t => !t.cerrado).length}
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Activas</div>
+            </div>
+          </div>
+
+          <SectionCard accent={BL}>
+            <SectionHeader
+              icon="📡"
+              title="Órdenes FO — Odoo CAE-Operaciones"
+              badge={foTickets.filter(t => !t.cerrado).length}
+              badgeColor={BL}
+              action={
+                <button onClick={loadFoTickets} style={{
+                  background: 'none', border: 'none', color: G, cursor: 'pointer',
+                  fontSize: 16, padding: '0 4px', lineHeight: 1,
+                }} title="Recargar">↻</button>
+              }
+            />
+            {foLoading ? (
+              <div style={{ padding: '36px 18px', textAlign: 'center', color: DM, fontSize: 12 }}>
+                Cargando órdenes desde Odoo…
+              </div>
+            ) : foTickets.length === 0 ? (
+              <div style={{ padding: '36px 18px', textAlign: 'center' }}>
+                <div style={{ fontSize: 30, marginBottom: 8 }}>📭</div>
+                <div style={{ fontWeight: 700, color: TX, marginBottom: 4 }}>Sin órdenes FO activas</div>
+                <div style={{ fontSize: 12, color: DM }}>No hay tareas de levantamiento en el proyecto CAE-Operaciones.</div>
+              </div>
+            ) : (
+              foTickets.map((t, i) => {
+                const isUrgent = t.prioridad === 'urgent';
+                const accentColor = t.cerrado ? DM : isUrgent ? RD : BL;
+                const today = new Date().toISOString().slice(0, 10);
+                const isLate = t.date_deadline && t.date_deadline < today && !t.cerrado;
+                return (
+                  <div key={t.odoo_id} style={{
+                    padding: '14px 20px',
+                    borderBottom: i < foTickets.length - 1 ? `1px solid ${GB}` : 'none',
+                    borderLeft: `3px solid ${isLate ? RD : accentColor}`,
+                    display: 'flex', gap: 14, alignItems: 'flex-start',
+                    background: isLate ? `${RD}04` : 'transparent',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, fontFamily: 'monospace', color: DM, background: `${DM}12`,
+                          padding: '1px 6px', borderRadius: 4 }}>{t.id}</span>
+                        {isLate && <StatusChip label="VENCIDA" color={RD} />}
+                        {isUrgent && !isLate && <StatusChip label="URGENTE" color={AM} />}
+                        {t.cerrado && <StatusChip label="CERRADA" color={DM} />}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TX, marginBottom: 5, lineHeight: 1.4 }}>
+                        {t.nombre}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        {t.tecnico && (
+                          <span style={{ fontSize: 11, color: DM, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span>👤</span> {t.tecnico}
+                          </span>
+                        )}
+                        {t.cliente && (
+                          <span style={{ fontSize: 11, color: DM, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span>🏢</span> {t.cliente}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, color: DM }}>
+                          Etapa: <span style={{ color: TX, fontWeight: 600 }}>{t.etapa_op || '—'}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {(t as any).date_deadline && (
+                        <div style={{ fontSize: 11, fontWeight: 700, color: isLate ? RD : DM }}>
+                          {isLate ? '⚠ ' : ''}Límite: {fmtDate((t as any).date_deadline)}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 10, color: DM }}>{tiempoAtras(t.fecha_creacion)}</div>
+                      <a
+                        href={`https://odoo.wispi.mx/odoo/all-tasks/${t.odoo_id}`}
+                        target="_blank" rel="noreferrer"
+                        style={{ fontSize: 10, color: G, textDecoration: 'none', fontWeight: 700,
+                          display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                      >Ver en Odoo ↗</a>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </SectionCard>
+        </div>
       )}
     </div>
   );

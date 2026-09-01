@@ -1809,13 +1809,8 @@ def get_noc_hosts():
         for h in hosts
     ]
 
-def _aggregate_hosts_to_cities(hosts: list, active_alerts: list) -> list:
-    """Agrupa una lista de hosts (de uno o varios NOCBoards) por ciudad, con
-    coordenadas, scores y conteos — mismo formato que /api/noc/cities. Reusable
-    para graficar capas individuales (ej. solo Energía) en el mapa."""
-    # Coordenadas por ciudad (con y sin acentos para tolerar variantes de NOCBoard)
-    COORDS = {
-        "Monterrey":          {"lat": 25.6866,  "lng": -100.3161},
+_CITY_COORDS: dict = {
+    "Monterrey":          {"lat": 25.6866,  "lng": -100.3161},
         "Saltillo":           {"lat": 25.4232,  "lng": -100.9928},
         "Piedras Negras":     {"lat": 28.7000,  "lng": -100.5231},
         "San Luis Potosi":    {"lat": 22.1565,  "lng": -100.9855},
@@ -1877,7 +1872,13 @@ def _aggregate_hosts_to_cities(hosts: list, active_alerts: list) -> list:
         "Delicias":           {"lat": 28.1928,  "lng": -105.4694},
         "Brownsville":        {"lat": 25.9017,  "lng": -97.4975 },
         "Laredo":             {"lat": 27.5306,  "lng": -99.4803 },
-    }
+}
+
+def _aggregate_hosts_to_cities(hosts: list, active_alerts: list) -> list:
+    """Agrupa una lista de hosts (de uno o varios NOCBoards) por ciudad, con
+    coordenadas, scores y conteos — mismo formato que /api/noc/cities. Reusable
+    para graficar capas individuales (ej. solo Energía) en el mapa."""
+    COORDS = _CITY_COORDS
 
     # Normalizar nombre de ciudad (quitar acentos, lower) para deduplicar
     def _norm_city(name: str) -> str:
@@ -1973,6 +1974,11 @@ def _aggregate_hosts_to_cities(hosts: list, active_alerts: list) -> list:
         })
 
     return sorted(cities, key=lambda c: c["offline"], reverse=True)
+
+@app.get("/api/noc/city-coords")
+def get_city_coords():
+    """Mapa ciudad→coordenadas para uso en mapas del frontend."""
+    return _CITY_COORDS
 
 @app.get("/api/noc/cities")
 def get_noc_cities():
@@ -2288,6 +2294,11 @@ def get_energia_power():
             "lastSNMPPoll": h.get("lastSNMPPoll"),
             "hasMetrics": len(metric_keys) > 0,
         }
+        # Enriquecer con coordenadas de ciudad
+        city_name = h.get("city", "")
+        if city_name and city_name in _CITY_COORDS:
+            device["lat"] = _CITY_COORDS[city_name]["lat"]
+            device["lng"] = _CITY_COORDS[city_name]["lng"]
         if metric_keys:
             device["metrics"] = {
                 "batteryVoltage": metrics.get("battery_voltage", metrics.get("batteryVoltage")),
@@ -11151,6 +11162,47 @@ def red_clientes_sidf():
     ]
     return {"clientes": clientes, "total": len(clientes)}
 
+@app.get("/api/red/prospectos-pn")
+def red_prospectos_pn():
+    """Prospectos industriales Piedras Negras — para capa mapa."""
+    prospectos = [
+        {"name": "Asfaltos y Pegamentos",  "lat": 28.67908270651087,  "lng": -100.5687768526713},
+        {"name": "Day Star Trim",          "lat": 28.67957388231126,  "lng": -100.5705253784698},
+        {"name": "Elastomeros",            "lat": 28.68704699999893,  "lng": -100.5553179999887},
+        {"name": "Elektrocontact",         "lat": 28.64844999999912,  "lng": -100.5601849999906},
+        {"name": "Elektrokontakt PDS",     "lat": 28.64547999999907,  "lng": -100.5298349999871},
+        {"name": "ERICH JAEGER",           "lat": 28.69730099999897,  "lng": -100.5556609999869},
+        {"name": "Fujikura",               "lat": 28.69810599999892,  "lng": -100.5567639999884},
+        {"name": "Fujikura 2",             "lat": 28.67908099999895,  "lng": -100.5508979999869},
+        {"name": "Fujikura 3",             "lat": 28.67910199999896,  "lng": -100.5529309999877},
+        {"name": "General Aluminium",      "lat": 28.68695699999899,  "lng": -100.5551649999885},
+        {"name": "GI Grupo",               "lat": 28.72919399999885,  "lng": -100.5199099999862},
+        {"name": "Gondi",                  "lat": 28.68706899999893,  "lng": -100.5574139999884},
+        {"name": "Lear 1",                 "lat": 28.68133899999895,  "lng": -100.5521769999882},
+        {"name": "Lear 2",                 "lat": 28.68122699999896,  "lng": -100.5701909999888},
+        {"name": "Lear 3",                 "lat": 28.68129099999896,  "lng": -100.5714159999887},
+        {"name": "Lear 4",                 "lat": 28.67739999999897,  "lng": -100.5698699999888},
+        {"name": "Lear 5",                 "lat": 28.64570299999908,  "lng": -100.5594769999907},
+        {"name": "Littelfuse",             "lat": 28.64529299999908,  "lng": -100.5356489999875},
+        {"name": "M&B Hangers",            "lat": 28.64697599999908,  "lng": -100.5578429999906},
+        {"name": "Mex Star",               "lat": 28.64604399999908,  "lng": -100.5591019999905},
+        {"name": "Nesse",                  "lat": 28.72532699999888,  "lng": -100.5227969999864},
+        {"name": "Path Logistics",         "lat": 28.64937799999907,  "lng": -100.5590679999905},
+        {"name": "PKC Group",              "lat": 28.68128599999895,  "lng": -100.5539429999882},
+        {"name": "Prossesa",               "lat": 28.59684599999918,  "lng": -100.5851339999924},
+        {"name": "Prysmian WH",            "lat": 28.72056499999888,  "lng": -100.5210000000000},
+        {"name": "Prysmian",               "lat": 28.68763799999897,  "lng": -100.5556909999884},
+        {"name": "Rassini",                "lat": 28.68875299999897,  "lng": -100.5209539999869},
+        {"name": "Regal 2",                "lat": 28.68195299999895,  "lng": -100.5524769999882},
+        {"name": "Regal 3",                "lat": 28.67693399999897,  "lng": -100.5512549999883},
+        {"name": "Regal Amistad Sur",      "lat": 28.64604399999908,  "lng": -100.5211749999872},
+        {"name": "Remy Borg Warner",       "lat": 28.72832699999884,  "lng": -100.5245059999864},
+        {"name": "Structural Graphics",    "lat": 28.68385699999896,  "lng": -100.5562659999884},
+        {"name": "Transformadores PN",     "lat": 28.68758299999897,  "lng": -100.5570529999883},
+        {"name": "Us Liner",               "lat": 28.64222499999908,  "lng": -100.5299469999872},
+    ]
+    return {"prospectos": prospectos, "total": len(prospectos)}
+
 # ─── Radio Bases ──────────────────────────────────────────────────────────────
 
 _RADIOBASES_DRIVE_FILE   = os.path.join(BASE_DIR, "data", "radiobases_drive.json")
@@ -13024,6 +13076,72 @@ async def get_blackstone_tickets(_user: dict = Depends(get_current_user)):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error Odoo: {str(e)[:200]}")
+
+
+@app.get("/api/blackstone/fo-tickets")
+async def get_blackstone_fo_tickets(_user: dict = Depends(get_current_user)):
+    """Tareas de levantamiento FO del proyecto CAE - Operaciones (project_id=341)."""
+    import asyncio as _aio, xmlrpc.client as _xrc
+
+    CLOSED_KW = {"done", "resuelto", "cerrado", "completado", "resolved",
+                 "closed", "listo", "entregado"}
+
+    def _fetch():
+        HOST = os.getenv("ODOO_URL", "https://odoo.wispi.mx").rstrip("/")
+        DB   = os.getenv("ODOO_DB", "wispi19")
+        U    = os.getenv("ODOO_USER", "")
+        P    = os.getenv("ODOO_PASSWORD", "")
+
+        common = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/common", allow_none=True)
+        uid_o  = common.authenticate(DB, U, P, {})
+        models = _xrc.ServerProxy(f"{HOST}/xmlrpc/2/object", allow_none=True)
+
+        # Proyecto CAE - Operaciones (ID 341) — tareas con keywords FO/levantamiento
+        FO_KW = ["levantamiento", " fo ", "fibra", "anillo", "otdr", "fusionadora",
+                 "empalme", "mufa", "cae", "cwdm"]
+
+        raw = models.execute_kw(DB, uid_o, P, "project.task", "search_read",
+            [[["project_id", "=", 341]]],
+            {"fields": ["id", "name", "stage_id", "user_ids", "partner_id",
+                        "date_deadline", "create_date", "priority", "state"],
+             "limit": 200, "order": "id desc"})
+
+        raw = [t for t in raw if any(kw in (" " + t.get("name", "") + " ").lower() for kw in FO_KW)]
+
+        all_uids = list({u for t in raw for u in t.get("user_ids", [])})
+        user_names: dict = {}
+        if all_uids:
+            users = models.execute_kw(DB, uid_o, P, "res.users", "read",
+                [all_uids], {"fields": ["id", "name"]})
+            user_names = {u["id"]: u["name"] for u in users}
+
+        tickets = []
+        for t in raw:
+            stage = t["stage_id"][1] if t.get("stage_id") else ""
+            closed = any(kw in stage.lower() for kw in CLOSED_KW)
+            asignados = [user_names.get(u, f"U{u}") for u in t.get("user_ids", [])]
+            deadline = (t.get("date_deadline") or "")[:10]
+            tickets.append({
+                "id":             f"CAE-{t['id']}",
+                "odoo_id":        t["id"],
+                "nombre":         t["name"],
+                "cliente":        t["partner_id"][1] if t.get("partner_id") else "",
+                "tecnico":        ", ".join(asignados) if asignados else None,
+                "tipo":           "fo",
+                "etapa_op":       stage,
+                "fecha_creacion": (t.get("create_date") or "")[:19],
+                "date_deadline":  deadline,
+                "prioridad":      "urgent" if t.get("priority") in ("1", "2", "3") else "normal",
+                "cerrado":        closed,
+            })
+
+        return {"tickets": tickets, "total": len(tickets)}
+
+    try:
+        result = await _aio.get_event_loop().run_in_executor(None, _fetch)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error Odoo FO: {str(e)[:200]}")
 
 
 # ─── Fibra Óptica XCIEN — Memoria Técnica ─────────────────────────────────────

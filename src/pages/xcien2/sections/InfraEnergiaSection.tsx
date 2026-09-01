@@ -18,6 +18,7 @@ const PURPLE = '#8B5CF6';
 interface PowerDevice {
   name: string; ip: string; city: string; site: string; status: string;
   type: string; vendor: string; protocol: string; healthScore: number;
+  lat?: number; lng?: number;
   ping: { reachable: boolean; latency: number; packetLoss: number };
   lastSNMPPoll: string | null; hasMetrics: boolean;
   metrics?: {
@@ -72,18 +73,7 @@ const TILE_LAYERS: Record<string, { url: string; label: string }> = {
   topo: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', label: 'Topo' },
 };
 
-const CITY_COORDS: Record<string, [number, number]> = {
-  'Monterrey': [25.6866, -100.3161], 'Guadalajara': [20.6597, -103.3496],
-  'Querétaro': [20.5888, -100.3899], 'Saltillo': [25.4232, -100.9924],
-  'Guadalupe': [25.6775, -100.2597], 'Pesquería': [25.7758, -100.0461],
-  'Apodaca': [25.7819, -100.1884], 'Chihuahua': [28.6353, -106.0889],
-  'San Luis Potosí': [22.1565, -100.9855], 'Reynosa': [26.0923, -98.2775],
-  'Torreón': [25.5428, -103.4068], 'Piedras Negras': [28.7001, -100.5232],
-  'León': [21.1221, -101.6840], 'Zapopan': [20.7217, -103.3893],
-  'Ramos Arizpe': [25.5384, -100.9488], 'Santa Catarina': [25.6732, -100.4593],
-  'San Pedro': [25.6600, -100.4025], 'Monclova': [26.9069, -101.4214],
-  'Coyotepec': [19.7703, -99.2058], 'San Juan del Río': [20.3893, -99.9960],
-};
+// Coordenadas de ciudad vienen del backend (/api/noc/energia/power → lat/lng)
 
 function MapPanel({ devices, U }: { devices: PowerDevice[]; U: any }) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -135,11 +125,10 @@ function MapPanel({ devices, U }: { devices: PowerDevice[]; U: any }) {
       const offlineIcon = makeIcon(RED, 10, false);
 
       devices.forEach(d => {
-        const coords = CITY_COORDS[d.city];
-        if (!coords) return;
+        if (!d.lat || !d.lng) return;
         const jitter = () => (Math.random() - 0.5) * 0.02;
         const icon = d.status !== 'online' ? offlineIcon : d.hasMetrics ? snmpActiveIcon : nocIcon;
-        const marker = L.marker([coords[0] + jitter(), coords[1] + jitter()], { icon });
+        const marker = L.marker([d.lat + jitter(), d.lng + jitter()], { icon });
         const label = d.name.replace(/_/g, ' ').replace(/MONTERREY /g,'').replace(/QUERÉTARO /g,'QRO ');
         marker.bindTooltip(label, { permanent: false, direction: 'top', className: 'noc-tooltip', offset: [0, -8] });
         marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px;min-width:180px"><b>${d.name.replace(/_/g, ' ')}</b><br><span style="color:#888">${d.ip}</span><br>${d.city} · <b style="color:${d.status==='online'?'#00C896':'#FF4757'}">${d.status}</b>${d.hasMetrics && d.metrics ? `<br>Bat: <b>${d.metrics.batteryVoltage??'—'}V</b>` : ''}</div>`);
