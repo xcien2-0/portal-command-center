@@ -61,7 +61,8 @@ const TelegramBotSection = lazy(() => import('./sections/TelegramBotSection'));
 const DocsSection        = lazy(() => import('./sections/DocsSection'));
 const BackupSection      = lazy(() => import('./sections/BackupSection'));
 const ReportLabSection   = lazy(() => import('./sections/ReportLabSection'));
-const AuditoriaOdooSection = lazy(() => import('./sections/AuditoriaOdooSection'));
+const AuditoriaOdooSection   = lazy(() => import('./sections/AuditoriaOdooSection'));
+const AuditoriasPlazasSection = lazy(() => import('./sections/AuditoriasPlazasSection'));
 const FinanzasSection    = lazy(() => import('./sections/FinanzasSection'));
 const ReportesKPISection      = lazy(() => import('./sections/ReportesKPISection'));
 const IncidentesSection       = lazy(() => import('./sections/IncidentesSection'));
@@ -107,7 +108,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
   admin:    '*',
 
   director: ['inicio','impacto','noc','cast','red','infra-energia','incidentes',
-              'ventas','integridad','reportes-kpi','auditoria-odoo',
+              'ventas','integridad','reportes-kpi','auditoria-odoo','auditorias-plazas',
               'rrhh','sala_juntas','proyectos','plan2026','fibra','radiobases',
               'estrategia2030','agentes','comite','docs','reportlab','analytics',
               'blackstone','fibra_xcien','iblack','flotilla','wfm','bidrillas',
@@ -115,7 +116,7 @@ const ROLE_SECTIONS: Record<string, SectionId[] | '*'> = {
 
   // ══ PAC ÁREA 1 — OPERACIONES ════════════════════════════════════════════
   operaciones: ['inicio','wfm','bidrillas','scan','inv-transfers',
-                'docs','sala_juntas','radiobases','blackstone','cast'],
+                'docs','sala_juntas','radiobases','blackstone','cast','auditorias-plazas'],
   wfm:         ['inicio','wfm','bidrillas','scan','inv-transfers',  // alias legacy
                 'docs','sala_juntas','radiobases','blackstone','cast'],
 
@@ -212,8 +213,9 @@ const NAV: NavEntry[] = [
   { id: 'call',          label: 'Call Center',          icon: '📞', group: 'Campo & Inventario' },
   { id: 'scan',          label: 'Inventario & Scanner', icon: '🔍', group: 'Campo & Inventario' },
   { id: 'inv-transfers', label: 'Transferencias',       icon: '🏷️', group: 'Campo & Inventario' },
-  { id: 'auditoria-odoo', label: 'Auditoría Odoo',     icon: '🔎', group: 'Campo & Inventario' },
-  { id: 'odoo-docs',      label: 'Guías Odoo',          icon: '📖', group: 'Campo & Inventario' },
+  { id: 'auditoria-odoo',    label: 'Auditoría Odoo',     icon: '🔎', group: 'Campo & Inventario' },
+  { id: 'auditorias-plazas', label: 'Auditorías de Plazas', icon: '📋', group: 'Campo & Inventario' },
+  { id: 'odoo-docs',         label: 'Guías Odoo',          icon: '📖', group: 'Campo & Inventario' },
 
   // ── Comercial ──────────────────────────────────────────────────────────────
   { id: 'ventas',             label: 'Resumen Ventas',       icon: '📈', group: 'Comercial' },
@@ -803,7 +805,8 @@ function Content({
       {section === 'blackstone'     && <BlackstoneOSSection theme={theme} />}
       {section === 'fibra_xcien'    && <FibraXCIENSection   theme={theme} />}
 
-      {section === 'auditoria-odoo' && <AuditoriaOdooSection theme={theme} />}
+      {section === 'auditoria-odoo'    && <AuditoriaOdooSection   theme={theme} />}
+      {section === 'auditorias-plazas' && <AuditoriasPlazasSection theme={theme} />}
       {section === 'odoo-docs'      && <OdooDocsSection theme={theme} />}
       {section === 'flotilla'       && <FlotillaSection theme={theme} />}
       {section === 'iblack'         && <IBlackSection theme={theme} />}
