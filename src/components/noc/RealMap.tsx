@@ -212,11 +212,26 @@ export default function RealMap({
       map.on('moveend zoomend', () => {
         drawArcs(map, L, svg, citiesRef.current, selectedRef.current);
       });
+
+      // Fix invalid size when container was hidden during init
+      requestAnimationFrame(() => { map.invalidateSize(); });
+      setTimeout(() => { map.invalidateSize(); }, 300);
     });
 
     return () => {
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; fittedRef.current = false; }
     };
+  }, []);
+
+  // Re-invalidate when container becomes visible (resize observer)
+  useEffect(() => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      if (mapRef.current) mapRef.current.invalidateSize();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // ── Swap tile layer when mapType changes ─────────────────────────────────
