@@ -76,6 +76,8 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
   const [filtroEmp, setFiltroEmp]   = useState('todas');
   const [online, setOnline]     = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [msg, setMsg] = useState('');
+  const showToast = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 4000); };
   const [formData, setFormData] = useState({
     nombre: '', categoria: 'equipo_red', empresa: 'empresa_a', regimen: 'PROPIO',
     site: '', numero_serie: '', marca: '', modelo: '', ip: '', network_code: 'X100'
@@ -118,12 +120,12 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        alert("✅ Activo registrado y sincronizado con NOCBoard");
+        showToast("✅ Activo registrado y sincronizado con NOCBoard");
         setShowForm(false);
         setFormData({ ...formData, nombre: '', ip: '', numero_serie: '' });
         fetchAll();
       }
-    } catch (err) { alert("Error registrando activo"); }
+    } catch (err) { showToast("✗ Error registrando activo"); }
   };
 
   const sites   = [...new Set(activos.map(a => a.site).filter(Boolean))];
@@ -154,6 +156,7 @@ export default function EtiquetasSection({ theme, activeThemeId }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
       {activeThemeId === 'matrix' && <MatrixBackground />}
+      {msg && <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, padding: '10px 18px', borderRadius: 10, background: msg.startsWith('✅') ? '#00C89622' : '#FF475722', border: `1px solid ${msg.startsWith('✅') ? '#00C896' : '#FF4757'}`, color: msg.startsWith('✅') ? '#00C896' : '#FF4757', fontSize: 13, fontWeight: 600 }}>{msg}</div>}
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

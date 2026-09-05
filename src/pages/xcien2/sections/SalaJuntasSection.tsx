@@ -87,6 +87,8 @@ export default function SalaJuntasSection({ theme }: Props) {
   const [gcalCals,  setGcalCals]  = useState<GCalendar[]>([]);
   const [gcalSel,   setGcalSel]   = useState<string[]>([]);
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [gcalErr, setGcalErr] = useState('');
+  const showGcalErr = (m: string) => { setGcalErr(m); setTimeout(() => setGcalErr(''), 5000); };
 
   // Source visibility
   const [showSrc, setShowSrc] = useState<Record<string,boolean>>({
@@ -184,7 +186,7 @@ export default function SalaJuntasSection({ theme }: Props) {
     setGcalLoading(true);
     try {
       const r = await fetch(`${API_BASE}/api/calendario/auth`);
-      if (!r.ok) { alert('Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env'); return; }
+      if (!r.ok) { showGcalErr('Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env'); return; }
       const { url } = await r.json();
       window.location.href = url;
     } finally { setGcalLoading(false); }
@@ -233,6 +235,7 @@ export default function SalaJuntasSection({ theme }: Props) {
             <div style={{ width:1, height:18, background:border, margin:'0 4px' }} />
 
             {/* Google Calendar connect/disconnect */}
+            {gcalErr && <span style={{ fontSize: 11, color: '#FF4757', padding: '4px 8px', background: '#FF475720', borderRadius: 6 }}>{gcalErr}</span>}
             {!gcalConn ? (
               <button onClick={connectGcal} disabled={gcalLoading} style={{
                 padding:'5px 14px', borderRadius:8, fontSize:12, cursor:'pointer',

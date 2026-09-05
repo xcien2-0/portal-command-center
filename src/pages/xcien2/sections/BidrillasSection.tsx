@@ -329,7 +329,9 @@ function DesempenoTab({ theme }: { theme: ThemeConfig }) {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/wfm/bidrillas/desempeno`)
-      .then(r => r.json()).then(setData).finally(() => setLoading(false));
+      .then(r => r.json())
+      .then(json => setData(json && typeof json === 'object' && !Array.isArray(json) ? json : null))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: theme.dim }}>Calculando scores desde Odoo...</div>;

@@ -1350,6 +1350,8 @@ function PromocionView({ theme }: { theme: ThemeConfig }) {
   const [newLink, setNewLink] = useState('');
   const [syncing, setSyncing] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [certErr, setCertErr] = useState('');
+  const showCertErr = (m: string) => { setCertErr(m); setTimeout(() => setCertErr(''), 4000); };
 
   const copyLink = (url: string, id: number) => {
     navigator.clipboard.writeText(url).then(() => { setCopied(id); setTimeout(() => setCopied(null), 2000); });
@@ -1380,7 +1382,7 @@ function PromocionView({ theme }: { theme: ThemeConfig }) {
     setDownloadingId(prom.id);
     try {
       const r = await fetch(`${API_BASE}/api/academia/promociones/${prom.id}/certificado`);
-      if (!r.ok) { alert('Certificado no disponible (examen sin registro formal en Odoo)'); return; }
+      if (!r.ok) { showCertErr('Certificado no disponible (examen sin registro formal en Odoo)'); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1486,9 +1488,12 @@ function PromocionView({ theme }: { theme: ThemeConfig }) {
                           </button>
                         )}
                         {p.estado === 'aprobado' && hasOdoo && (
-                          <button onClick={() => downloadCert(p)} disabled={downloadingId === p.id} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #00C89640', background: 'rgba(0,200,150,0.06)', color: '#00C896', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                            {downloadingId === p.id ? '...' : 'Cert.'}
-                          </button>
+                          <>
+                            <button onClick={() => downloadCert(p)} disabled={downloadingId === p.id} style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid #00C89640', background: 'rgba(0,200,150,0.06)', color: '#00C896', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                              {downloadingId === p.id ? '...' : 'Cert.'}
+                            </button>
+                            {certErr && <span style={{ fontSize: 10, color: '#FF4757' }}>{certErr}</span>}
+                          </>
                         )}
                       </div>
                     </div>

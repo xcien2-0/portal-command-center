@@ -962,6 +962,8 @@ function NocValidacionPanel({ theme, order, onRefresh }: NocPanelProps) {
   const [noc, setNoc] = useState(order?.noc ?? null);
   const [loading, setLoading]   = useState(false);
   const [saving, setSaving]     = useState<string | null>(null);
+  const [errMsg, setErrMsg]     = useState('');
+  const showErr = (msg: string) => { setErrMsg(msg); setTimeout(() => setErrMsg(''), 5000); };
 
   // Ping form
   const [ipDestino, setIpDestino]   = useState(order?.aprovisionamiento?.gateway ?? '');
@@ -1022,7 +1024,7 @@ function NocValidacionPanel({ theme, order, onRefresh }: NocPanelProps) {
         body: JSON.stringify({ order_id: order.id, observaciones, usuario: 'Supervisor NOC' }),
       });
       if (res.ok) { await fetchNoc(); onRefresh(); }
-      else { const e = await res.json(); alert(e.detail); }
+      else { const e = await res.json(); showErr(e.detail ?? 'Error'); }
     } finally { setSaving(null); }
   };
 
@@ -1197,6 +1199,8 @@ function AprovisionamientoPanel({ theme, order, onRefresh }: AproProps) {
     notas_config: apro?.notas_config ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const showErr = (msg: string) => { setErrMsg(msg); setTimeout(() => setErrMsg(''), 5000); };
 
   if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
 
@@ -1219,7 +1223,7 @@ function AprovisionamientoPanel({ theme, order, onRefresh }: AproProps) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       if (res.ok) onRefresh();
-      else { const e = await res.json(); alert(e.detail); }
+      else { const e = await res.json(); showErr(e.detail ?? 'Error'); }
     } finally { setSaving(false); }
   };
 
@@ -1336,6 +1340,8 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
   const [showDetener, setShowDetener] = useState(false);
   const [motivoDetener, setMotivoDetener] = useState('');
   const [savingDetener, setSavingDetener] = useState(false);
+  const [errMsg, setErrMsg]         = useState('');
+  const showErr = (msg: string) => { setErrMsg(msg); setTimeout(() => setErrMsg(''), 5000); };
 
   if (!order) return <div style={{ color: theme.dim, fontSize: 13 }}>Selecciona una orden.</div>;
 
@@ -1357,7 +1363,7 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
         body: JSON.stringify({ order_id: order.id, respuesta, equipos, fecha_estimada: fecha || null, motivo, usuario: 'Jefe Almacén' }),
       });
       if (res.ok) { onRefresh(); }
-      else { const e = await res.json(); alert(e.detail); }
+      else { const e = await res.json(); showErr(e.detail ?? 'Error'); }
     } finally { setSaving(false); }
   };
 
@@ -1373,7 +1379,7 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
         body: JSON.stringify({ order_id: order.id, motivo: motivoDetener, responsable_almacen: 'Jefe Almacén', usuario: 'Jefe Almacén' }),
       });
       if (res.ok) { setShowDetener(false); setMotivoDetener(''); onRefresh(); }
-      else { const e = await res.json(); alert(e.detail); }
+      else { const e = await res.json(); showErr(e.detail ?? 'Error'); }
     } finally { setSavingDetener(false); }
   };
 
@@ -1382,7 +1388,7 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
     try {
       const res = await fetch(`${API_BASE}/api/wfm/almacen/liberar/${order.id}?usuario=Jefe+Almacén`, { method: 'POST' });
       if (res.ok) { onRefresh(); }
-      else { const e = await res.json(); alert(e.detail); }
+      else { const e = await res.json(); showErr(e.detail ?? 'Error'); }
     } finally { setSavingDetener(false); }
   };
 
@@ -1390,6 +1396,7 @@ function AlmacenPanel({ theme, order, onRefresh }: AlmacenPanelProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {errMsg && <div style={{ padding: '8px 12px', background: '#FF475720', border: '1px solid #FF475760', borderRadius: 8, fontSize: 12, color: '#FF4757' }}>{errMsg}</div>}
       {/* Banner ESPERA_ALMACEN si ya está detenido */}
       {esDetenido && (
         <div style={{ padding: 14, background: 'rgba(249,115,22,0.1)', borderRadius: 10, border: '2px solid rgba(249,115,22,0.4)' }}>
@@ -1899,6 +1906,8 @@ function EvidenciasPanel({ theme, order, onRefresh }: EvidenciasPanelProps) {
   const [previewFotos, setPreviewFotos] = useState<{ tipo: 'antes' | 'despues'; dataUrl: string; filename: string }[]>([]);
   const [loadedEv, setLoadedEv] = useState<WFMOrder['evidencias'] | null>(null);
   const [loadingEv, setLoadingEv] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const showErr = (msg: string) => { setErrMsg(msg); setTimeout(() => setErrMsg(''), 5000); };
   const fileInputAntes   = useRef<HTMLInputElement>(null);
   const fileInputDespues = useRef<HTMLInputElement>(null);
 
@@ -1953,7 +1962,7 @@ function EvidenciasPanel({ theme, order, onRefresh }: EvidenciasPanelProps) {
         body: JSON.stringify({ order_id: order.id, notas, usuario: 'Técnico' })
       });
       if (res.ok) { await loadEvidencias(); onRefresh(); }
-      else { const err = await res.json(); alert(err.detail); }
+      else { const err = await res.json(); showErr(err.detail ?? 'Error al cerrar'); }
     } finally { setClosing(false); }
   };
 
@@ -3153,6 +3162,7 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
 
   // Forms
   const [newOrder, setNewOrder] = useState({ cliente: '', servicio: '' });
+  const [pmMsg, setPmMsg]       = useState('');
 
   const [syncing, setSyncing] = useState(false);
 
@@ -3517,12 +3527,13 @@ export default function WFMSection({ theme, activeThemeId }: Props) {
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ command: 'generate_bidrillas_pdf' })
                             });
-                            alert("Reporte 'Higiene Total' generado exitosamente en /backend/db/");
+                            setPmMsg("✅ Reporte 'Higiene Total' generado en /backend/db/"); setTimeout(() => setPmMsg(''), 5000);
                           }}
                           style={{ width: '100%', padding: 10, background: G, border: 'none', borderRadius: 6, color: '#000', fontWeight: 800, cursor: 'pointer' }}
                         >
                           GENERAR REPORTE DE CIERRE PDF
                         </button>
+                        {pmMsg && <div style={{ marginTop: 10, padding: '6px 10px', background: '#00ff8820', borderRadius: 6, fontSize: 11, color: G }}>{pmMsg}</div>}
                       </div>
                     </div>
                   )}

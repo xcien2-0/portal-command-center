@@ -156,6 +156,8 @@ export default function TokensSection({ theme, activeThemeId }: { theme: ThemeCo
   const [backendOnline, setOnline]    = useState(false);
   const [showForm, setShowForm]       = useState(false);
   const [formData, setFormData]       = useState({ tipo: 'alta', nombre: '', detalle: '', empresa: 'empresa_a' });
+  const [tokenErr, setTokenErr]       = useState('');
+  const showErr = (m: string) => { setTokenErr(m); setTimeout(() => setTokenErr(''), 4000); };
 
   const loadTokens = () => {
     fetch(`${API_BASE}/api/tokens`)
@@ -183,7 +185,7 @@ export default function TokensSection({ theme, activeThemeId }: { theme: ThemeCo
         setFormData({ tipo: 'alta', nombre: '', detalle: '', empresa: 'empresa_a' });
         loadTokens();
       }
-    } catch (e) { alert("Error al generar token"); }
+    } catch (e) { showErr("✗ Error al generar token"); }
   };
 
   const filtrados = tokens.filter(t => {
@@ -197,7 +199,8 @@ export default function TokensSection({ theme, activeThemeId }: { theme: ThemeCo
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
       {activeThemeId === 'matrix' && <MatrixBackground />}
-      
+      {tokenErr && <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, padding: '10px 18px', borderRadius: 10, background: '#FF475722', border: '1px solid #FF4757', color: '#FF4757', fontSize: 13, fontWeight: 600 }}>{tokenErr}</div>}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>Registro de Tokens</h2>
