@@ -711,7 +711,7 @@ export default function FlotillaSection({ theme }: { theme?: any }) {
   const sinGarantia   = vehiculos.filter(v => !v.mantenimiento.garantia_vigente).length;
 
   return (
-    <div className="p-4 space-y-4 max-w-5xl mx-auto">
+    <div className="p-4 space-y-4" style={{ width: '100%', boxSizing: 'border-box' }}>
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-2">
