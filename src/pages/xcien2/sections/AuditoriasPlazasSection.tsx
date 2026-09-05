@@ -123,7 +123,7 @@ export default function AuditoriasPlazasSection({ theme }: { theme: ThemeConfig 
   );
 
   return (
-    <div style={{ padding: '20px 24px', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '20px 24px', width: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
