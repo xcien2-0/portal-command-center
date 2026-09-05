@@ -66,7 +66,6 @@ const PLAZAS: Plaza[] = [
   },
   { id: 'mty', nombre: 'Plaza MTY', ciudad: 'Monterrey', icon: '🏔️', estado: 'proximo', periodo: '—', semanaAuditoria: '—', rbs: [], tecnicos: [], vehiculos: [], areas: [], hallazgos: [], correctivos: [] },
   { id: 'slt', nombre: 'Plaza SLT', ciudad: 'Saltillo',  icon: '🌵', estado: 'proximo', periodo: '—', semanaAuditoria: '—', rbs: [], tecnicos: [], vehiculos: [], areas: [], hallazgos: [], correctivos: [] },
-  { id: 'ags', nombre: 'Plaza AGS', ciudad: 'Aguascalientes', icon: '🌶️', estado: 'proximo', periodo: '—', semanaAuditoria: '—', rbs: [], tecnicos: [], vehiculos: [], areas: [], hallazgos: [], correctivos: [] },
 ];
 
 // ── Colores nivel ─────────────────────────────────────────────────────────────
@@ -633,7 +632,7 @@ export default function AuditoriasPlazasSection({ theme }: { theme: ThemeConfig 
       {/* ── Footer ── */}
       <div style={{ marginTop: 20, padding: '10px 0', borderTop: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: DIM }}>
         <span>📋 Alcance: Rodrigo Flores · Director Operaciones XCIEN · 10 jul 2026</span>
-        <span>Plaza PDN como modelo base · Expandir a MTY · SLT · AGS</span>
+        <span>Plaza PDN como modelo base · Expandir a MTY · SLT</span>
       </div>
     </div>
   );
