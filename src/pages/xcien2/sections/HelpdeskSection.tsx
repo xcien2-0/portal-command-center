@@ -88,6 +88,7 @@ export default function HelpdeskSection() {
   const [equipos,       setEquipos]       = useState<Equipo[]>([]);
   const [resumen,       setResumen]       = useState<Resumen | null>(null);
   const [tickets,       setTickets]       = useState<Ticket[]>([]);
+  const [reportMsg,     setReportMsg]     = useState('');
   const [total,         setTotal]         = useState(0);
   const [analytics,     setAnalytics]     = useState<Analytics | null>(null);
   const [teamId,        setTeamId]        = useState<number | null>(null);
@@ -97,7 +98,7 @@ export default function HelpdeskSection() {
   const [showDrop,      setShowDrop]      = useState(false);
   const [tab,           setTab]           = useState<Tab>('tickets');
   const trackTab = useTabTrack('helpdesk');
-  const [periodo,       setPeriodo]       = useState('mes');
+  const [periodo,       setPeriodo]       = useState('hoy');
   const [agrup,         setAgrup]         = useState('dia');
   const [reportLoading, setReportLoading] = useState(false);
   const LIMIT = 50;
@@ -120,7 +121,7 @@ export default function HelpdeskSection() {
     const r = await fetch(`/api/helpdesk/tickets?${params}`);
     if (r.ok) {
       const d = await r.json();
-      setTickets(d.tickets); setTotal(d.total);
+      setTickets(Array.isArray(d.tickets) ? d.tickets : []); setTotal(d.total ?? 0);
     }
     setLoading(false);
   }, []);
@@ -153,8 +154,8 @@ export default function HelpdeskSection() {
     if (teamId) params.set('team_id', String(teamId));
     const r = await fetch(`/api/helpdesk/reporte-pdf?${params}`, { method: 'POST' });
     setReportLoading(false);
-    if (r.ok) alert('Reporte enviado a Telegram ✅');
-    else alert('Error al generar reporte');
+    setReportMsg(r.ok ? '✅ Reporte enviado a Telegram' : '✗ Error al generar reporte');
+    setTimeout(() => setReportMsg(''), 5000);
   };
 
   const totalPages = Math.ceil(total / LIMIT);
@@ -230,6 +231,11 @@ export default function HelpdeskSection() {
             <FileText size={12} />
             {reportLoading ? 'Generando…' : 'PDF → Telegram'}
           </button>
+          {reportMsg && (
+            <span style={{ fontSize: 11, color: reportMsg.startsWith('✅') ? G : '#ef4444', fontWeight: 600 }}>
+              {reportMsg}
+            </span>
+          )}
         </div>
       </div>
 
@@ -384,9 +390,9 @@ export default function HelpdeskSection() {
             ].map(g => (
               <div key={g.key} style={{ background: '#111827', border: '1px solid #1f2937',
                 borderRadius: 10, padding: 16 }}>
-                <MiniBar data={analytics.tendencia} colorKey={g.key} label={g.label} />
+                <MiniBar data={analytics.tendencia ?? []} colorKey={g.key} label={g.label} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                  {analytics.tendencia.slice(-5).map((b, i) => (
+                  {(analytics.tendencia ?? []).slice(-5).map((b, i) => (
                     <div key={i} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#f9fafb' }}>{b[g.key]}</div>
                       <div style={{ fontSize: 9, color: '#4b5563' }}>{b.periodo.slice(-5)}</div>
@@ -407,7 +413,7 @@ export default function HelpdeskSection() {
                 </tr>
               </thead>
               <tbody>
-                {[...analytics.tendencia].reverse().map((b, i) => {
+                {[...(analytics.tendencia ?? [])].reverse().map((b, i) => {
                   const pct = b.creados > 0 ? Math.round((b.resueltos/b.creados)*100) : 0;
                   return (
                     <tr key={i} style={{ borderBottom: '1px solid #0d1117',
@@ -434,10 +440,10 @@ export default function HelpdeskSection() {
       {tab === 'patrones' && analytics && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {[
-            { title: '📂 Por tipo de ticket',   data: analytics.por_tipo,      color: '#3b82f6' },
-            { title: '🏢 Por equipo',            data: analytics.por_equipo,    color: G         },
-            { title: '👤 Top agentes',           data: analytics.por_agente,    color: '#a855f7' },
-            { title: '🔴 Por prioridad',         data: analytics.por_prioridad, color: '#f59e0b' },
+            { title: '📂 Por tipo de ticket',   data: analytics.por_tipo      ?? [], color: '#3b82f6' },
+            { title: '🏢 Por equipo',            data: analytics.por_equipo    ?? [], color: G         },
+            { title: '👤 Top agentes',           data: analytics.por_agente    ?? [], color: '#a855f7' },
+            { title: '🔴 Por prioridad',         data: analytics.por_prioridad ?? [], color: '#f59e0b' },
           ].map(block => {
             const max = Math.max(...block.data.map(d => d.total), 1);
             return (

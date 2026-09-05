@@ -73,7 +73,8 @@ export default function UsuariosAdminSection() {
     try {
       const r = await fetch(`${API_BASE}/api/auth/usuarios`, { headers: { Authorization: `Bearer ${token()}` } });
       if (!r.ok) throw new Error(await r.text());
-      setUsuarios(await r.json());
+      const json = await r.json();
+      setUsuarios(Array.isArray(json) ? json : json.usuarios ?? []);
     } catch (e: any) { setError(e.message || 'Error al cargar usuarios'); }
     finally { setLoading(false); }
   }, []);

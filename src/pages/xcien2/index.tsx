@@ -757,7 +757,7 @@ function Content({
     );
   }
   const padding = isMobile ? 16 : (theme.compact ? 20 : 32);
-  const isFullHeight = section === 'red';
+  const isFullHeight = section === 'red' || section === 'noc';
   return (
     <div style={{
       flex: 1, overflowY: isFullHeight ? 'hidden' : 'auto',

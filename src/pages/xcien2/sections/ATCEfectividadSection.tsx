@@ -65,6 +65,7 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
 }
 
 const PERIODOS = [
+  { label: '1 día',   val: 1  },
   { label: '7 días',  val: 7  },
   { label: '30 días', val: 30 },
   { label: '90 días', val: 90 },
@@ -74,7 +75,7 @@ export default function ATCEfectividadSection({ theme: _theme }: { theme: ThemeC
   const [data,    setData]    = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
-  const [dias,    setDias]    = useState(30);
+  const [dias,    setDias]    = useState(1);
 
   const cargar = useCallback(async (d: number) => {
     setLoading(true); setError('');
@@ -84,7 +85,8 @@ export default function ATCEfectividadSection({ theme: _theme }: { theme: ThemeC
         headers: { Authorization: `Bearer ${tok}` },
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setData(await r.json());
+      const json = await r.json();
+      setData(json && typeof json === 'object' && !Array.isArray(json) ? json as Data : null);
     } catch (e: any) {
       setError(e.message ?? 'Error al cargar datos');
     } finally {

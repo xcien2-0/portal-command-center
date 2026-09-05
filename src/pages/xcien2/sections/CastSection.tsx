@@ -238,7 +238,8 @@ export default function CastSection() {
       if (!r.ok) throw new Error(`${r.status}`);
       const raw = await r.json();
       // Map API fields → Ticket interface
-      const tickets: Ticket[] = (raw.tickets ?? raw).map((t: any) => ({
+      const items = Array.isArray(raw.tickets) ? raw.tickets : Array.isArray(raw) ? raw : [];
+      const tickets: Ticket[] = items.map((t: any) => ({
         id:         t.id,
         ref:        t.ref || `#${t.id}`,
         name:       t.title ?? t.name ?? '',

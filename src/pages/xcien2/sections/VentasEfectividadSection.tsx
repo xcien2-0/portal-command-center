@@ -60,11 +60,11 @@ export default function VentasEfectividadSection() {
   useEffect(() => { load(); }, [load]);
 
   const rows: Grupo[] = data
-    ? tab === 'marca'    ? data.por_marca
-    : tab === 'vendedor' ? data.por_vendedor
-    : tab === 'canal'    ? data.por_canal
-    : tab === 'lider'    ? data.lideres_odoo.filter(x => !x.error)
-    :                      data.equipos_odoo
+    ? tab === 'marca'    ? (data.por_marca      ?? [])
+    : tab === 'vendedor' ? (data.por_vendedor   ?? [])
+    : tab === 'canal'    ? (data.por_canal      ?? [])
+    : tab === 'lider'    ? (data.lideres_odoo   ?? []).filter(x => !x.error)
+    :                      (data.equipos_odoo   ?? [])
     : [];
 
   const maxMrr = Math.max(...rows.map(r => r.mrr ?? r.total ?? 0), 1);
